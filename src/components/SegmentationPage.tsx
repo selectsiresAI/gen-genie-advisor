@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
-import { ArrowLeftRight, Download, PieChart as PieIcon, Settings, Filter, Layers3 } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import { ArrowLeftRight, Download, PieChart as PieIcon, Settings, Filter, Layers3, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -31,7 +31,7 @@ type Weights = {
   TPI: number; ["NM$"]: number; Milk: number; Fat: number; Protein: number; SCS: number; PTAT: number; 
 };
 
-type PrimaryIndex = "TPI" | "NM$" | "Custom";
+type PrimaryIndex = "TPI" | "NM$" | "HHP$" | "Custom";
 
 type SegmentConfig = {
   primaryIndex: PrimaryIndex;
@@ -93,6 +93,7 @@ function scoreAnimal(a: { TPI: number; ["NM$"]: number; Milk: number; Fat: numbe
 function getPrimaryValue(f: Female, primary: PrimaryIndex, statsForCustom: any, weights: Weights): number | null {
   if (primary === "TPI") return Number(f.TPI ?? null);
   if (primary === "NM$") return Number(f["NM$"] ?? null);
+  if (primary === "HHP$") return Number(f["NM$"] ?? null); // Using NM$ as HHP$ placeholder
   if (primary === "Custom") {
     try {
       const base = { TPI: f.TPI, ["NM$"]: f["NM$"], Milk: f.Milk, Fat: f.Fat, Protein: f.Protein, SCS: f.SCS, PTAT: f.PTAT };
@@ -152,7 +153,7 @@ function segmentAnimals(
 }
 
 const defaultSegConfig: SegmentConfig = {
-  primaryIndex: "NM$",
+  primaryIndex: "HHP$",
   donorCutoffPercent: 20,
   goodCutoffUpper: 70,
   scsMaxDonor: 2.9,
@@ -172,7 +173,7 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
   const [config, setConfig] = useState<SegmentConfig>(defaultSegConfig);
   const [customWeights, setCustomWeights] = useState<Weights>(weights);
   const [selectedTraits, setSelectedTraits] = useState({
-    TPI: true, HHP$: false, NM$: true, Milk: true, Fat: true, Protein: true,
+    HHP$: true, Milk: true, Fat: true, Protein: true,
     SCS: true, PTAT: true, DPR: true
   });
 
@@ -243,7 +244,7 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
               <h3 className="font-semibold text-lg">Índice base</h3>
               <div className="space-y-3">
                 {[
-                  { value: "HHP$", label: "HHP$", disabled: true },
+                  { value: "HHP$", label: "HHP$", disabled: false },
                   { value: "NM$", label: "NM$" }, 
                   { value: "TPI", label: "TPI" },
                   { value: "Custom", label: "Custom" }
@@ -349,9 +350,6 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
               <h3 className="font-semibold text-lg">Selecionar PTAs (grupo)</h3>
               <div className="grid grid-cols-3 gap-4">
                 {[
-                  { key: 'TPI', label: 'TPI', color: 'text-black' },
-                  { key: 'HHP$', label: 'HHP$', color: 'text-purple-600' },
-                  { key: 'NM$', label: 'NM$', color: 'text-purple-600' },
                   { key: 'Milk', label: 'Milk', color: 'text-black' },
                   { key: 'Fat', label: 'Fat', color: 'text-purple-600' },
                   { key: 'Protein', label: 'Protein', color: 'text-purple-600' },
@@ -375,37 +373,30 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
               </div>
               
               <div className="text-sm text-gray-600 mt-2">
-                Se nenhum traço for marcado, será usado NM$.
+                Se nenhum traço for marcado, será usado HHP$.
               </div>
             </div>
 
-            {/* Pesos do Índice */}
+            {/* Pesos do Índice - Mantendo os pesos das características selecionadas */}
             <div className="space-y-4">
-              <h3 className="font-semibold text-lg">Pesos do índice (z-score)</h3>
+              <h3 className="font-semibold text-lg">Pesos do índice</h3>
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { key: 'TPI', label: 'TPI' },
-                  { key: 'HHP$', label: 'HHP$', disabled: true },
-                  { key: 'NM$', label: 'NM$' },
                   { key: 'Milk', label: 'Milk' },
                   { key: 'Fat', label: 'Fat' },
                   { key: 'Protein', label: 'Protein' },
                   { key: 'SCS', label: 'SCS' },
-                  { key: 'PTAT', label: 'PTAT' },
-                  { key: 'DPR', label: 'DPR', disabled: true }
-                ].map((weight) => (
+                  { key: 'PTAT', label: 'PTAT' }
+                ].filter(weight => selectedTraits[weight.key as keyof typeof selectedTraits]).map((weight) => (
                   <div key={weight.key} className="flex items-center justify-between gap-2">
                     <Label className="text-sm">{weight.label}</Label>
                     <Input
                       type="number"
                       step="0.01"
-                      value={weight.key === 'HHP$' ? 0.25 : weight.key === 'DPR' ? 0 : customWeights[weight.key as keyof Weights] || 0}
+                      value={customWeights[weight.key as keyof Weights] || 0}
                       onChange={(e) => {
-                        if (!weight.disabled) {
-                          setCustomWeights(prev => ({...prev, [weight.key]: Number(e.target.value)}));
-                        }
+                        setCustomWeights(prev => ({...prev, [weight.key]: Number(e.target.value)}));
                       }}
-                      disabled={weight.disabled}
                       className="w-20"
                     />
                   </div>
@@ -420,43 +411,87 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
         </CardContent>
       </Card>
 
-      {/* Resultado com gráfico de pizza apenas */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <PieIcon className="h-5 w-5" />
-            Distribuição do Rebanho
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-              <Pie
-                data={groupStats}
-                cx="50%"
-                cy="50%"
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-                label={({name, percentage}) => `${name} (${percentage}%)`}
-              >
-                {groupStats.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
-                ))}
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
-          
-          <div className="mt-4 space-y-2">
-            {groupStats.map((stat) => (
-              <div key={stat.name} className="flex justify-between text-sm">
-                <span className="font-medium">{stat.name}:</span>
-                <span>{stat.value} animais ({stat.percentage}%)</span>
+      {/* Resultado com gráficos melhorados */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <PieIcon className="h-5 w-5" />
+              Distribuição do Rebanho
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={groupStats}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={120}
+                  paddingAngle={5}
+                  dataKey="value"
+                  label={({name, percentage}) => `${name} ${percentage}%`}
+                  labelLine={false}
+                >
+                  {groupStats.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+            
+            <div className="mt-4 space-y-3">
+              {groupStats.map((stat) => (
+                <div key={stat.name} className="flex items-center justify-between p-2 rounded-lg" style={{backgroundColor: `${COLORS[stat.name as keyof typeof COLORS]}15`}}>
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="w-4 h-4 rounded-full" 
+                      style={{backgroundColor: COLORS[stat.name as keyof typeof COLORS]}}
+                    />
+                    <span className="font-medium">{stat.name}</span>
+                  </div>
+                  <span className="text-sm font-semibold">{stat.value} animais ({stat.percentage}%)</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Análise Comparativa
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={groupStats} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]}>
+                  {groupStats.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+            
+            <div className="mt-4 space-y-2">
+              <div className="text-sm text-gray-600">
+                <strong>Recomendações:</strong>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              <div className="text-sm space-y-1">
+                <div>• Doadoras: Animais de elite para transferência de embriões</div>
+                <div>• Bom: Animais para reprodução natural premium</div>
+                <div>• Receptoras: Animais adequados para receber embriões</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Tabela completa de todos os animais */}
       <Card>
