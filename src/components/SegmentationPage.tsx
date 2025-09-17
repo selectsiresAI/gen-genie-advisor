@@ -420,87 +420,144 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
         </CardContent>
       </Card>
 
-      {/* Resultado com gráfico de pizza */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <PieIcon className="h-5 w-5" />
-              Distribuição do Rebanho
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={groupStats}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  label={({name, percentage}) => `${name} (${percentage}%)`}
-                >
-                  {groupStats.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-            
-            <div className="mt-4 space-y-2">
-              {groupStats.map((stat) => (
-                <div key={stat.name} className="flex justify-between text-sm">
-                  <span className="font-medium">{stat.name}:</span>
-                  <span>{stat.value} animais ({stat.percentage}%)</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+      {/* Resultado com gráfico de pizza apenas */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <PieIcon className="h-5 w-5" />
+            Distribuição do Rebanho
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie
+                data={groupStats}
+                cx="50%"
+                cy="50%"
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+                label={({name, percentage}) => `${name} (${percentage}%)`}
+              >
+                {groupStats.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
+                ))}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+          
+          <div className="mt-4 space-y-2">
+            {groupStats.map((stat) => (
+              <div key={stat.name} className="flex justify-between text-sm">
+                <span className="font-medium">{stat.name}:</span>
+                <span>{stat.value} animais ({stat.percentage}%)</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Tabela de Resultados */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Resultados da Segmentação</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-auto rounded-lg border max-h-80">
-              <table className="min-w-full w-full">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="px-3 py-2 text-left font-medium">Brinco</th>
-                    <th className="px-3 py-2 text-left font-medium">TPI</th>
-                    <th className="px-3 py-2 text-left font-medium">NM$</th>
-                    <th className="px-3 py-2 text-left font-medium">Grupo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {segmentedFemales.slice(0, 10).map((f) => (
-                    <tr key={f.id} className="border-b hover:bg-muted/50">
-                      <td className="px-3 py-2">{f.brinco}</td>
-                      <td className="px-3 py-2 font-semibold">{f.TPI}</td>
-                      <td className="px-3 py-2 font-semibold">{f["NM$"]}</td>
-                      <td className="px-3 py-2">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          f._grupo === "Doadoras" ? "bg-primary/10 text-primary" :
-                          f._grupo === "Bom" ? "bg-accent/10 text-accent-foreground" :
-                          "bg-muted text-muted-foreground"
-                        }`}>
-                          {f._grupo}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      {/* Tabela completa de todos os animais */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Lista Completa do Rebanho Segmentado</CardTitle>
+          <div className="flex items-center gap-2 mt-4">
+            <div className="relative flex-1">
+              <Input
+                placeholder="Buscar por brinco, pai, NAAB ou segmento"
+                className="pl-10"
+              />
+              <div className="absolute left-3 top-2.5">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="11" cy="11" r="8"/>
+                  <path d="21 21l-4.35-4.35"/>
+                </svg>
+              </div>
             </div>
-            <div className="text-sm text-muted-foreground mt-2">
-              Mostrando 10 de {segmentedFemales.length} animais
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            <Button className="bg-accent text-accent-foreground hover:bg-accent/90">
+              Aplicar segmentação
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-auto rounded-lg border">
+            <table className="min-w-full w-full">
+              <thead>
+                <tr className="border-b bg-black text-white">
+                  <th className="px-3 py-3 text-left font-medium">Segmento</th>
+                  <th className="px-3 py-3 text-left font-medium">Brinco</th>
+                  <th className="px-3 py-3 text-left font-medium">Nascimento</th>
+                  <th className="px-3 py-3 text-left font-medium">NAAB do Pai</th>
+                  <th className="px-3 py-3 text-left font-medium">Nome do Pai</th>
+                  <th className="px-3 py-3 text-left font-medium">HHP$</th>
+                  <th className="px-3 py-3 text-left font-medium cursor-pointer">
+                    TPI ▼
+                  </th>
+                  <th className="px-3 py-3 text-left font-medium">NM$</th>
+                  <th className="px-3 py-3 text-left font-medium">Leite (lbs)</th>
+                  <th className="px-3 py-3 text-left font-medium">Gordura (lbs)</th>
+                  <th className="px-3 py-3 text-left font-medium">Proteína (lbs)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {segmentedFemales
+                  .sort((a, b) => {
+                    // Ordenar por grupo: Doadoras primeiro, depois Bom, depois Receptoras
+                    const groupOrder = { "Doadoras": 1, "Bom": 2, "Receptoras": 3 };
+                    const aOrder = groupOrder[a._grupo as keyof typeof groupOrder] || 4;
+                    const bOrder = groupOrder[b._grupo as keyof typeof groupOrder] || 4;
+                    if (aOrder !== bOrder) return aOrder - bOrder;
+                    // Dentro do mesmo grupo, ordenar por TPI descrescente
+                    return b.TPI - a.TPI;
+                  })
+                  .map((f, index) => {
+                    // Contar quantas doadoras já apareceram antes desta linha
+                    const doadorasCount = segmentedFemales
+                      .sort((a, b) => {
+                        const groupOrder = { "Doadoras": 1, "Bom": 2, "Receptoras": 3 };
+                        const aOrder = groupOrder[a._grupo as keyof typeof groupOrder] || 4;
+                        const bOrder = groupOrder[b._grupo as keyof typeof groupOrder] || 4;
+                        if (aOrder !== bOrder) return aOrder - bOrder;
+                        return b.TPI - a.TPI;
+                      })
+                      .slice(0, index + 1)
+                      .filter(animal => animal._grupo === "Doadoras").length;
+                    
+                    const segmentLabel = f._grupo === "Doadoras" ? `Doadora #${doadorasCount}` : f._grupo || "—";
+                    
+                    return (
+                      <tr key={f.id} className="border-b hover:bg-gray-50">
+                        <td className="px-3 py-2">
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            f._grupo === "Doadoras" ? "bg-accent text-accent-foreground" :
+                            f._grupo === "Bom" ? "bg-blue-100 text-blue-800" :
+                            "bg-gray-100 text-gray-800"
+                          }`}>
+                            {segmentLabel}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2">{f.brinco}</td>
+                        <td className="px-3 py-2">{new Date(f.nascimento).toLocaleDateString('pt-BR')}</td>
+                        <td className="px-3 py-2">{f.naabPai}</td>
+                        <td className="px-3 py-2 text-red-600 font-medium">{f.nomePai}</td>
+                        <td className="px-3 py-2">—</td>
+                        <td className="px-3 py-2 font-semibold">{f.TPI}</td>
+                        <td className="px-3 py-2 font-semibold">{f["NM$"]}</td>
+                        <td className="px-3 py-2">{f.Milk}</td>
+                        <td className="px-3 py-2">{f.Fat}</td>
+                        <td className="px-3 py-2">{f.Protein}</td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+          <div className="text-sm text-muted-foreground mt-2">
+            Total: {segmentedFemales.length} animais
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
