@@ -14,7 +14,8 @@ type Female = {
   naabPai: string;
   nomePai: string;
   TPI: number;
-  ["NM$"]: number;
+  ["NM$"]?: number;
+  NM?: number;
   Milk: number;
   Fat: number;
   Protein: number;
@@ -23,7 +24,7 @@ type Female = {
   PTAT: number;
   year: number;
   _percentil?: number | null;
-  _grupo?: "Doadoras" | "Bom" | "Receptoras";
+  _grupo?: "Doadoras" | "Inter" | "Receptoras";
   _motivo?: string;
 };
 
@@ -31,7 +32,7 @@ type Weights = {
   TPI: number; ["NM$"]: number; Milk: number; Fat: number; Protein: number; SCS: number; PTAT: number; 
 };
 
-type PrimaryIndex = "TPI" | "NM$" | "HHP$" | "Protein" | "Custom";
+type PrimaryIndex = "HHP$" | "NM$" | "TPI" | "Protein" | "Custom";
 
 type SegmentConfig = {
   primaryIndex: PrimaryIndex;
@@ -46,7 +47,7 @@ type SegmentConfig = {
 // Color scheme matching Select Sires branding
 const COLORS = {
   Doadoras: "hsl(var(--primary))", // Red
-  Bom: "hsl(var(--accent))", // Green  
+  Inter: "hsl(var(--accent))", // Green  
   Receptoras: "hsl(var(--muted))", // Gray
 };
 
@@ -66,7 +67,7 @@ function toCSV(rows: any[], filename = "export.csv") {
   document.body.removeChild(link);
 }
 
-// Segmentation functions (duplicated to avoid import issues)
+// Segmentation functions
 function normalize(value: number, mean: number, sd: number) {
   return (value - mean) / (sd || 1);
 }
@@ -99,7 +100,8 @@ function getPrimaryValue(
   f: Female,
   primary: PrimaryIndex,
   statsForCustom: any,
-  weights: Weights
+  weights: Weights,
+  selectedTraits?: any
 ): number | null {
   // Leitores robustos para NM$/NM
   const nmCandidate =
@@ -116,12 +118,18 @@ function getPrimaryValue(
   }
   if (primary === "Custom") {
     try {
+      // Se nenhum traço for marcado em Custom, usar todos os traços por padrão
+      const hasAnySelected = selectedTraits ? Object.values(selectedTraits).some(Boolean) : false;
+      const effectiveWeights = hasAnySelected ? weights : {
+        TPI: 1, ["NM$"]: 1, Milk: 1, Fat: 1, Protein: 1, SCS: 1, PTAT: 1
+      };
+      
       const base = {
         TPI: f.TPI,
         ["NM$"]: Number(nmCandidate ?? 0),
         Milk: f.Milk, Fat: f.Fat, Protein: f.Protein, SCS: f.SCS, PTAT: f.PTAT,
       };
-      return scoreAnimal(base, statsForCustom || {}, weights);
+      return scoreAnimal(base, statsForCustom || {}, effectiveWeights);
     } catch {
       return null;
     }
@@ -144,12 +152,13 @@ function segmentAnimals(
   females: Female[],
   cfg: SegmentConfig,
   statsForCustom: any,
-  weights: Weights
+  weights: Weights,
+  selectedTraits?: any
 ): Female[] {
   // 1) Tenta com índice escolhido
   const base: Array<{ id: string; v: number }> = [];
   females.forEach((f) => {
-    const v = getPrimaryValue(f, cfg.primaryIndex, statsForCustom, weights);
+    const v = getPrimaryValue(f, cfg.primaryIndex, statsForCustom, weights, selectedTraits);
     if (v !== null && !Number.isNaN(v)) base.push({ id: f.id, v: Number(v) });
   });
 
@@ -180,11 +189,11 @@ function segmentAnimals(
       if (okSCS && okDPR) {
         return { ...f, _percentil: p, _grupo: "Doadoras", _motivo: "Top + saúde OK" };
       }
-      return { ...f, _percentil: p, _grupo: "Bom", _motivo: "Top, saúde insuficiente" };
+      return { ...f, _percentil: p, _grupo: "Inter", _motivo: "Top, saúde insuficiente" };
     }
 
     if (p !== null && p <= cfg.goodCutoffUpper) {
-      return { ...f, _percentil: p, _grupo: "Bom", _motivo: "Faixa intermediária" };
+      return { ...f, _percentil: p, _grupo: "Inter", _motivo: "Faixa intermediária" };
     }
 
     return { ...f, _percentil: p, _grupo: "Receptoras", _motivo: "Abaixo do limiar" };
@@ -230,7 +239,7 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
       return [];
     }
     
-    const result = segmentAnimals(farm.females, config, statsForCustom, customWeights);
+    const result = segmentAnimals(farm.females, config, statsForCustom, customWeights, selectedTraits);
     console.log("📊 Segmentation result:", {
       totalAnimals: result.length,
       groups: result.reduce((acc, f) => {
@@ -240,10 +249,10 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
     });
     
     return result;
-  }, [farm.females, config, statsForCustom, customWeights, applyBump]);
+  }, [farm.females, config, statsForCustom, customWeights, selectedTraits, applyBump]);
 
   const groupStats = useMemo(() => {
-    const stats = { Doadoras: 0, Bom: 0, Receptoras: 0 };
+    const stats = { Doadoras: 0, Inter: 0, Receptoras: 0 };
     segmentedFemales.forEach(f => {
       if (f._grupo) stats[f._grupo]++;
     });
@@ -295,7 +304,7 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Layers3 className="h-5 w-5" />
-            Segmentação por literatura (Doadoras / Bom / Receptoras)
+            Segmentação por literatura (Doadoras / Inter / Receptoras)
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -362,7 +371,7 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
               </div>
               
               <div className="text-sm text-gray-600 mt-2">
-                Padrão: {config.donorCutoffPercent}% doadoras / {100 - config.goodCutoffUpper}% receptoras (restante = Bom).
+                Padrão: {config.donorCutoffPercent}% doadoras / {100 - config.goodCutoffUpper}% receptoras (restante = Inter).
               </div>
             </div>
 
@@ -405,11 +414,16 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
             </div>
           </div>
 
-          {/* Grid inferior com 2 colunas - SEMPRE VISÍVEL */}
+          {/* Grid inferior com 2 colunas */}
           <div className="grid lg:grid-cols-2 gap-8 mt-8">
-            {/* Selecionar PTAs - SEMPRE VISÍVEL, não apenas para Custom */}
+            {/* Selecionar PTAs - Desabilitado quando não é Custom */}
             <div className="space-y-4">
               <h3 className="font-semibold text-lg">Selecionar PTAs (grupo)</h3>
+              {config.primaryIndex !== "Custom" && (
+                <div className="text-sm text-orange-600 bg-orange-50 p-2 rounded">
+                  Para editar pesos/traços, selecione Custom.
+                </div>
+              )}
               <div className="grid grid-cols-3 gap-4">
                 {[
                   { key: 'Milk', label: 'Milk', color: 'text-black' },
@@ -425,9 +439,13 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
                       id={trait.key}
                       checked={selectedTraits[trait.key as keyof typeof selectedTraits]}
                       onChange={() => toggleTrait(trait.key)}
+                      disabled={config.primaryIndex !== "Custom"}
                       className="w-4 h-4"
                     />
-                    <Label htmlFor={trait.key} className={trait.color}>
+                    <Label 
+                      htmlFor={trait.key} 
+                      className={`${trait.color} ${config.primaryIndex !== "Custom" ? 'text-muted-foreground' : ''}`}
+                    >
                       {trait.label}
                     </Label>
                   </div>
@@ -435,7 +453,7 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
               </div>
               
               <div className="text-sm text-gray-600 mt-2">
-                Se nenhum traço for marcado, será usado HHP$.
+                Se nenhum traço for marcado em Custom, usar todos os traços por padrão.
               </div>
             </div>
 
@@ -472,76 +490,50 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
               </div>
             )}
           </div>
+
+          {/* Botão de aplicar */}
+          <div className="flex justify-center mt-8">
+            <Button 
+              className="bg-accent text-accent-foreground hover:bg-accent/90"
+              onClick={() => setApplyBump((v) => v + 1)}
+            >
+              Aplicar segmentação
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Resultado com gráficos melhorados */}
+      {/* Gráficos e Tabela */}
       <div className="grid lg:grid-cols-2 gap-6">
+        {/* Gráfico de Pizza */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <PieIcon className="h-5 w-5" />
-              Distribuição do Rebanho
+              Distribuição da Segmentação
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={groupStats}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={120}
-                  paddingAngle={5}
-                  dataKey="value"
-                  label={({name, percentage}) => `${name} ${percentage}%`}
-                  labelLine={false}
-                >
-                  {groupStats.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-            
-            <div className="mt-4 space-y-3">
-              {groupStats.map((stat) => (
-                <div key={stat.name} className="flex items-center justify-between p-2 rounded-lg" style={{backgroundColor: `${COLORS[stat.name as keyof typeof COLORS]}15`}}>
-                  <div className="flex items-center gap-3">
-                    <div 
-                      className="w-4 h-4 rounded-full" 
-                      style={{backgroundColor: COLORS[stat.name as keyof typeof COLORS]}}
-                    />
-                    <span className="font-medium">{stat.name}</span>
-                  </div>
-                  <span className="text-sm font-semibold">{stat.value} animais ({stat.percentage}%)</span>
-                </div>
-              ))}
+            <div style={{ width: "100%", height: 300 }}>
+              <ResponsiveContainer>
+                <PieChart>
+                  <Pie
+                    data={groupStats}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percentage }) => `${name}: ${percentage}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {groupStats.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Análise Comparativa
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={groupStats} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]}>
-                  {groupStats.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
             
             <div className="mt-4 space-y-2">
               <div className="text-sm text-gray-600">
@@ -549,64 +541,68 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
               </div>
               <div className="text-sm space-y-1">
                 <div>• Doadoras: Animais de elite para transferência de embriões</div>
-                <div>• Bom: Animais para reprodução natural premium</div>
+                <div>• Inter: Animais para reprodução natural premium</div>
                 <div>• Receptoras: Animais adequados para receber embriões</div>
               </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* Gráfico de Barras */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Comparação por Grupos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div style={{ width: "100%", height: 300 }}>
+              <ResponsiveContainer>
+                <BarChart data={groupStats}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Bar dataKey="value" fill="hsl(var(--primary))" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Tabela completa de todos os animais */}
+      {/* Tabela de Resultados */}
       <Card>
         <CardHeader>
-          <CardTitle>Lista Completa do Rebanho Segmentado</CardTitle>
-          <div className="flex items-center gap-2 mt-4">
-            <div className="relative flex-1">
-              <Input
-                placeholder="Buscar por brinco, pai, NAAB ou segmento"
-                className="pl-10"
-              />
-              <div className="absolute left-3 top-2.5">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="11" cy="11" r="8"/>
-                  <path d="21 21l-4.35-4.35"/>
-                </svg>
-              </div>
-            </div>
-            <Button
-              className="bg-accent text-accent-foreground hover:bg-accent/90"
-              onClick={() => setApplyBump((v) => v + 1)}
-            >
-              Aplicar segmentação
-            </Button>
-          </div>
+          <CardTitle>Tabela de Animais Segmentados</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-auto rounded-lg border">
-            <table className="min-w-full w-full">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse border border-gray-300">
               <thead>
-                <tr className="border-b bg-black text-white">
-                  <th className="px-3 py-3 text-left font-medium">Segmento</th>
-                  <th className="px-3 py-3 text-left font-medium">Brinco</th>
-                  <th className="px-3 py-3 text-left font-medium">Nascimento</th>
-                  <th className="px-3 py-3 text-left font-medium">NAAB do Pai</th>
-                  <th className="px-3 py-3 text-left font-medium">Nome do Pai</th>
-                  <th className="px-3 py-3 text-left font-medium">HHP$</th>
-                  <th className="px-3 py-3 text-left font-medium cursor-pointer">
-                    TPI ▼
-                  </th>
-                  <th className="px-3 py-3 text-left font-medium">NM$</th>
-                  <th className="px-3 py-3 text-left font-medium">Leite (lbs)</th>
-                  <th className="px-3 py-3 text-left font-medium">Gordura (lbs)</th>
-                  <th className="px-3 py-3 text-left font-medium">Proteína (lbs)</th>
+                <tr className="bg-gray-100">
+                  <th className="border border-gray-300 px-3 py-2 text-left">Grupo</th>
+                  <th className="border border-gray-300 px-3 py-2 text-left">Brinco</th>
+                  <th className="border border-gray-300 px-3 py-2 text-left">NAAB Pai</th>
+                  <th className="border border-gray-300 px-3 py-2 text-left">Nome Pai</th>
+                  <th className="border border-gray-300 px-3 py-2 text-left">{config.primaryIndex}</th>
+                  <th className="border border-gray-300 px-3 py-2 text-left">TPI</th>
+                  <th className="border border-gray-300 px-3 py-2 text-left">NM$</th>
+                  <th className="border border-gray-300 px-3 py-2 text-left">Milk</th>
+                  <th className="border border-gray-300 px-3 py-2 text-left">Fat</th>
+                  <th className="border border-gray-300 px-3 py-2 text-left">Protein</th>
+                  <th className="border border-gray-300 px-3 py-2 text-left">DPR</th>
+                  <th className="border border-gray-300 px-3 py-2 text-left">SCS</th>
+                  <th className="border border-gray-300 px-3 py-2 text-left">PTAT</th>
+                  <th className="border border-gray-300 px-3 py-2 text-left">Percentil</th>
+                  <th className="border border-gray-300 px-3 py-2 text-left">Motivo</th>
                 </tr>
               </thead>
               <tbody>
                 {segmentedFemales
                   .sort((a, b) => {
-                    // Ordenar por grupo: Doadoras primeiro, depois Bom, depois Receptoras
-                    const groupOrder = { "Doadoras": 1, "Bom": 2, "Receptoras": 3 };
+                    // Ordenar por grupo: Doadoras primeiro, depois Inter, depois Receptoras
+                    const groupOrder = { "Doadoras": 1, "Inter": 2, "Receptoras": 3 };
                     const aOrder = groupOrder[a._grupo as keyof typeof groupOrder] || 4;
                     const bOrder = groupOrder[b._grupo as keyof typeof groupOrder] || 4;
                     if (aOrder !== bOrder) return aOrder - bOrder;
@@ -617,61 +613,63 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
                     // Contar quantas doadoras já apareceram antes desta linha
                     const doadorasCount = segmentedFemales
                       .sort((a, b) => {
-                        const groupOrder = { "Doadoras": 1, "Bom": 2, "Receptoras": 3 };
+                        const groupOrder = { "Doadoras": 1, "Inter": 2, "Receptoras": 3 };
                         const aOrder = groupOrder[a._grupo as keyof typeof groupOrder] || 4;
                         const bOrder = groupOrder[b._grupo as keyof typeof groupOrder] || 4;
                         if (aOrder !== bOrder) return aOrder - bOrder;
                         return b.TPI - a.TPI;
                       })
                       .slice(0, index + 1)
-                      .filter(animal => animal._grupo === "Doadoras").length;
-                    
-                    const segmentLabel = f._grupo === "Doadoras" ? `Doadora #${doadorasCount}` : f._grupo || "—";
-                    
+                      .filter(animal => animal._grupo === "Doadoras")
+                      .length;
+
+                    const segmentLabel = f._grupo === "Doadoras" ? `D${doadorasCount}` : f._grupo;
+
                     return (
                       <tr key={f.id} className="border-b hover:bg-gray-50">
                         <td className="px-3 py-2">
                           <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                             f._grupo === "Doadoras" ? "bg-accent text-accent-foreground" :
-                            f._grupo === "Bom" ? "bg-blue-100 text-blue-800" :
+                            f._grupo === "Inter" ? "bg-blue-100 text-blue-800" :
                             "bg-gray-100 text-gray-800"
                           }`}>
                             {segmentLabel}
                           </span>
                         </td>
-                        <td className="px-3 py-2">{f.brinco}</td>
-                        <td className="px-3 py-2">{new Date(f.nascimento).toLocaleDateString('pt-BR')}</td>
+                        <td className="px-3 py-2 font-medium">{f.brinco}</td>
                         <td className="px-3 py-2">{f.naabPai}</td>
                         <td className="px-3 py-2 text-red-600 font-medium">{f.nomePai}</td>
                         <td className="px-3 py-2">
-                  {(() => {
-                    const primary = config.primaryIndex;
-                    const nmCandidate = (f as any)["HHP$"] ?? (f as any)["NM$"] ?? (f as any).NM ?? null;
-                    if (primary === "TPI")  return isFinite(Number(f.TPI)) ? Number(f.TPI).toFixed(0) : "—";
-                    if (primary === "NM$" || primary === "HHP$")
-                      return isFinite(Number(nmCandidate)) ? Number(nmCandidate).toFixed(0) : "—";
-                    if (primary === "Protein") 
-                      return isFinite(Number(f.Protein)) ? Number(f.Protein).toFixed(0) : "—";
-                    if (primary === "Custom") {
-                      const val = getPrimaryValue(f, "Custom", statsForCustom, customWeights);
-                      return val !== null && isFinite(Number(val)) ? Number(val).toFixed(2) : "—";
-                    }
-                    return "—";
-                  })()}
+                          {(() => {
+                            const primary = config.primaryIndex;
+                            const nmCandidate = (f as any)["HHP$"] ?? (f as any)["NM$"] ?? (f as any).NM ?? null;
+                            if (primary === "TPI")  return isFinite(Number(f.TPI)) ? Number(f.TPI).toFixed(0) : "—";
+                            if (primary === "NM$" || primary === "HHP$")
+                              return isFinite(Number(nmCandidate)) ? Number(nmCandidate).toFixed(0) : "—";
+                            if (primary === "Protein") 
+                              return isFinite(Number(f.Protein)) ? Number(f.Protein).toFixed(0) : "—";
+                            if (primary === "Custom") {
+                              const val = getPrimaryValue(f, "Custom", statsForCustom, customWeights, selectedTraits);
+                              return val !== null && isFinite(Number(val)) ? Number(val).toFixed(2) : "—";
+                            }
+                            return "—";
+                          })()}
                         </td>
                         <td className="px-3 py-2 font-semibold">{f.TPI}</td>
                         <td className="px-3 py-2 font-semibold">{f["NM$"]}</td>
                         <td className="px-3 py-2">{f.Milk}</td>
                         <td className="px-3 py-2">{f.Fat}</td>
                         <td className="px-3 py-2">{f.Protein}</td>
+                        <td className="px-3 py-2">{f.DPR?.toFixed(1)}</td>
+                        <td className="px-3 py-2">{f.SCS?.toFixed(2)}</td>
+                        <td className="px-3 py-2">{f.PTAT?.toFixed(2)}</td>
+                        <td className="px-3 py-2">{f._percentil}%</td>
+                        <td className="px-3 py-2 text-sm text-gray-600">{f._motivo}</td>
                       </tr>
                     );
                   })}
               </tbody>
             </table>
-          </div>
-          <div className="text-sm text-muted-foreground mt-2">
-            Total: {segmentedFemales.length} animais
           </div>
         </CardContent>
       </Card>

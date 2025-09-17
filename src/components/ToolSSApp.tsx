@@ -37,7 +37,7 @@ type Female = {
   year: number;
   // Campos calculados na segmentação (não obrigatórios no seed)
   _percentil?: number | null;
-  _grupo?: "Doadoras" | "Bom" | "Receptoras";
+  _grupo?: "Doadoras" | "Inter" | "Receptoras";
   _motivo?: string;
 };
 
@@ -320,11 +320,11 @@ function segmentAnimals(
       if (okSCS && okDPR) {
         return { ...f, _percentil: p, _grupo: "Doadoras", _motivo: "Top + saúde OK" };
       }
-      return { ...f, _percentil: p, _grupo: "Bom", _motivo: "Top, saúde insuficiente" };
+      return { ...f, _percentil: p, _grupo: "Inter", _motivo: "Top, saúde insuficiente" };
     }
 
     if (p !== null && p <= cfg.goodCutoffUpper) {
-      return { ...f, _percentil: p, _grupo: "Bom", _motivo: "Faixa intermediária" };
+      return { ...f, _percentil: p, _grupo: "Inter", _motivo: "Faixa intermediária" };
     }
 
     return { ...f, _percentil: p, _grupo: "Receptoras", _motivo: "Abaixo do limiar" };
