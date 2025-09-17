@@ -544,7 +544,7 @@ export default function ToolSSApp() {
         />
       )}
 
-      {page === "calc" && farm && (
+      {page === "plano" && farm && (
         <CalcPage
           farm={farm}
           weights={weights}
