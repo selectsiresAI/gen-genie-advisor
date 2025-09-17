@@ -544,13 +544,9 @@ export default function ToolSSApp() {
         />
       )}
 
-      {page === "plano" && farm && (
-        <CalcPage
-          farm={farm}
-          weights={weights}
-          setWeights={setWeights}
-          bulls={rankedBulls}
-          onBack={() => setPage("fazenda")}
+      {page === "plano" && (
+        <PlanoApp
+          onBack={() => setPage("clientes")}
         />
       )}
 
@@ -613,7 +609,7 @@ function Header({
           <NavButton icon={<Layers3 size={16} />} label="Segmentação" onClick={() => onGoto("segmentacao")} />
           <NavButton icon={<SearchIcon size={16} />} label="Busca de touros" onClick={() => onGoto("touros")} />
           <NavButton icon={<LineIcon size={16} />} label="Gráficos" onClick={() => onGoto("graficos")} />
-          <NavButton icon={<Calculator size={16} />} label="Calculadora" onClick={() => onGoto("calc")} />
+          <NavButton icon={<Calculator size={16} />} label="Plano" onClick={() => onGoto("plano")} />
           <NavButton icon={<TrendingUp size={16} />} label="Nexus" onClick={() => onGoto("nexus")} />
           <NavButton icon={<FileText size={16} />} label="Informações" onClick={() => onGoto("info")} />
         </div>
@@ -690,7 +686,7 @@ function FarmHome({
     { icon: <Beef size={32} />, title: "Rebanho", desc: "Fêmeas genotipadas, PTAs e filtros", page: "rebanho" },
     { icon: <Layers3 size={32} />, title: "Segmentação", desc: "Doadoras, Bom, Receptoras", page: "segmentacao" },
     { icon: <SearchIcon size={32} />, title: "Busca de touros", desc: "Banco de touros e índices", page: "touros" },
-    { icon: <Calculator size={32} />, title: "Calculadora", desc: "Índice personalizado e ranking", page: "calc" },
+    { icon: <Calculator size={32} />, title: "Plano", desc: "Projeção genética e calculadora", page: "plano" },
     { icon: <LineIcon size={32} />, title: "Gráficos", desc: "Evolução e projeções", page: "graficos" },
     { icon: <TrendingUp size={32} />, title: "Nexus", desc: "Sistema de predição genética", page: "nexus" },
     { icon: <FileText size={32} />, title: "Informações", desc: "CDC B / instruções / avisos", page: "info" },
