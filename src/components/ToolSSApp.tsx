@@ -5,7 +5,7 @@ import {
 } from "recharts";
 import {
   Users, Search as SearchIcon, Calculator, FileText, LineChart as LineIcon,
-  Plus, Download, Upload, SlidersHorizontal, ArrowLeftRight, Layers3, PieChart as PieIcon, ArrowLeft
+  Plus, Download, Upload, SlidersHorizontal, ArrowLeftRight, Layers3, PieChart as PieIcon, ArrowLeft, Beef
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -577,7 +577,7 @@ function Header({
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 bg-primary rounded-full flex items-center justify-center">
-            <Users className="h-6 w-6 text-primary-foreground" />
+            <Beef className="h-6 w-6 text-primary-foreground" />
           </div>
           <div className="font-bold text-xl">
             TOOLSS <span className="font-normal text-sm text-muted-foreground">by Select Sires</span>
@@ -590,7 +590,7 @@ function Header({
               Clientes
             </Button>
           )}
-          <NavButton icon={<Users size={16} />} label="Rebanho" onClick={() => onGoto("rebanho")} />
+          <NavButton icon={<Beef size={16} />} label="Rebanho" onClick={() => onGoto("rebanho")} />
           <NavButton icon={<Layers3 size={16} />} label="Segmentação" onClick={() => onGoto("segmentacao")} />
           <NavButton icon={<SearchIcon size={16} />} label="Busca de touros" onClick={() => onGoto("touros")} />
           <NavButton icon={<LineIcon size={16} />} label="Gráficos" onClick={() => onGoto("graficos")} />
@@ -667,7 +667,7 @@ function FarmHome({
   client, farm, open,
 }: { client: Client; farm: Client["farms"][number]; open: (p: any) => void; }) {
   const cards = [
-    { icon: <Users size={32} />, title: "Rebanho", desc: "Fêmeas genotipadas, PTAs e filtros", page: "rebanho" },
+    { icon: <Beef size={32} />, title: "Rebanho", desc: "Fêmeas genotipadas, PTAs e filtros", page: "rebanho" },
     { icon: <Layers3 size={32} />, title: "Segmentação", desc: "Doadoras, Bom, Receptoras", page: "segmentacao" },
     { icon: <SearchIcon size={32} />, title: "Busca de touros", desc: "Banco de touros e índices", page: "touros" },
     { icon: <Calculator size={32} />, title: "Calculadora", desc: "Índice personalizado e ranking", page: "calc" },
