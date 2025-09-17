@@ -8,7 +8,7 @@ import { Table, TableHeader, TableRow, TableCell, TableBody, TableHead } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Plus, ArrowLeft, FileSpreadsheet, TrendingUp, Trash2, Download, Settings } from "lucide-react";
+import { Upload, Plus, ArrowLeft, FileSpreadsheet, TrendingUp, Trash2, Download } from "lucide-react";
 
 /* =======================================================================================
    1) PADRÃO STRICT: cabeçalho oficial + formatação + normalização + export XLSX
@@ -691,107 +691,35 @@ function PaginaRebanhoGeral({ fazendas, onBack }: { fazendas: Fazenda[]; onBack:
 }
 
 /* =======================================================================================
-   6) AUTO-SYNC (GitHub Gist) + APP (Home + CRUD Fazendas)
+   6) APP (Home + CRUD Fazendas)
 ======================================================================================= */
 
-type SyncSettings = { token: string; gistId?: string; filename?: string; };
-const SETTINGS_KEY = "nexus-settings";
 const DATA_KEY = "fazendas-data";
-const DEFAULT_FILENAME = "nexus-fazendas.json";
-
-async function gistGet(gistId: string, token: string) {
-  const res = await fetch(`https://api.github.com/gists/${gistId}`, { headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" } });
-  if (!res.ok) throw new Error(`Falha ao carregar Gist: ${res.status}`);
-  return res.json();
-}
-async function gistCreate(initial: any, token: string, filename = DEFAULT_FILENAME) {
-  const body = { description: "Nexus fazendas (auto-sync)", public: false, files: { [filename]: { content: JSON.stringify(initial, null, 2) } } };
-  const res = await fetch(`https://api.github.com/gists`, { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  if (!res.ok) throw new Error(`Falha ao criar Gist: ${res.status}`);
-  return res.json();
-}
-async function gistUpdate(gistId: string, data: any, token: string, filename = DEFAULT_FILENAME) {
-  const body = { files: { [filename]: { content: JSON.stringify(data, null, 2) } } };
-  const res = await fetch(`https://api.github.com/gists/${gistId}`, { method: "PATCH", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  if (!res.ok) throw new Error(`Falha ao salvar Gist: ${res.status}`);
-  return res.json();
-}
-
-function SettingsBar({ settings, onSave }: { settings: SyncSettings; onSave: (s: SyncSettings) => void; }) {
-  const [token, setToken] = useState(settings.token || "");
-  const [gistId, setGistId] = useState(settings.gistId || "");
-  const [filename, setFilename] = useState(settings.filename || DEFAULT_FILENAME);
-
-  return (
-    <Card className="mb-4">
-      <CardContent className="p-4 flex flex-col md:flex-row gap-2 items-start md:items-end">
-        <div className="font-semibold flex items-center gap-2"><Settings className="w-4 h-4" /> Auto-Sync (GitHub Gist)</div>
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2">
-          <Input placeholder="GitHub Token (escopo: gist)" value={token} onChange={(e) => setToken(e.target.value)} />
-          <Input placeholder="Gist ID (vazio cria um novo)" value={gistId} onChange={(e) => setGistId(e.target.value)} />
-          <Input placeholder="Arquivo (opcional)" value={filename} onChange={(e) => setFilename(e.target.value)} />
-        </div>
-        <Button onClick={() => onSave({ token: token.trim(), gistId: gistId.trim() || undefined, filename: (filename.trim() || DEFAULT_FILENAME) })}>Salvar</Button>
-      </CardContent>
-    </Card>
-  );
-}
 
 export default function AppNexus() {
   const { toast } = useToast();
   const [fazendas, setFazendas] = useState<Fazenda[]>([]);
   const [fazendaSel, setFazendaSel] = useState<Fazenda | null>(null);
   const [mostrarRG, setMostrarRG] = useState<boolean>(false);
-  const [settings, setSettings] = useState<SyncSettings>(() => {
-    try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}"); } catch { return {}; }
-  });
 
-  // pedir armazenamento persistente (melhor resiliência local)
-  useEffect(() => { (async () => { try { if ("storage" in navigator && "persist" in navigator.storage) await navigator.storage.persist(); } catch {} })(); }, []);
-
-  // carregar inicial: preferir remoto se settings válidas; senão localStorage
+  // carregar dados do localStorage na inicialização
   useEffect(() => {
-    (async () => {
-      const local = localStorage.getItem(DATA_KEY);
-      if (!settings?.token) { if (local) setFazendas(JSON.parse(local)); return; }
-
+    const local = localStorage.getItem(DATA_KEY);
+    if (local) {
       try {
-        if (settings.gistId) {
-          const g = await gistGet(settings.gistId, settings.token);
-          const fname = settings.filename || DEFAULT_FILENAME;
-          const content = g.files?.[fname]?.content;
-          if (content) { setFazendas(JSON.parse(content)); return; }
-        }
-        const base = local ? JSON.parse(local) : [];
-        const created = await gistCreate(base, settings.token, settings.filename || DEFAULT_FILENAME);
-        const newId = created.id;
-        const s2 = { ...settings, gistId: newId };
-        setSettings(s2);
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify(s2));
-        setFazendas(base);
-      } catch (e: any) {
-        if (local) setFazendas(JSON.parse(local));
-        toast({ title: "Auto-Sync desativado", description: "Não foi possível carregar do Gist. Verifique o token/Gist ID.", variant: "destructive" });
+        setFazendas(JSON.parse(local));
+      } catch {
+        // dados corrompidos, manter array vazio
       }
-    })();
-  }, []); // apenas na montagem
+    }
+  }, []);
 
-  // salvar local sempre
+  // salvar no localStorage sempre que fazendas mudar
   useEffect(() => {
-    try { localStorage.setItem(DATA_KEY, JSON.stringify(fazendas)); } catch {}
+    try { 
+      localStorage.setItem(DATA_KEY, JSON.stringify(fazendas)); 
+    } catch {}
   }, [fazendas]);
-
-  // auto-save remoto (debounce de 1.5s)
-  const saveTimer = useRef<number | null>(null);
-  useEffect(() => {
-    if (!settings?.token || !settings?.gistId) return;
-    if (saveTimer.current) window.clearTimeout(saveTimer.current);
-    saveTimer.current = window.setTimeout(async () => {
-      try { await gistUpdate(settings.gistId!, fazendas, settings.token!, settings.filename || DEFAULT_FILENAME); }
-      catch { /* silencioso */ }
-    }, 1500);
-    return () => { if (saveTimer.current) window.clearTimeout(saveTimer.current); };
-  }, [fazendas, settings]);
 
   // CRUD fazendas
   const addFarm = (nome: string, tecnico: string) => {
@@ -814,15 +742,6 @@ export default function AppNexus() {
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">Sistema Avançado de Predição Genética para Bovinos</p>
         </div>
 
-        {/* Auto-Sync */}
-        <SettingsBar
-          settings={settings}
-          onSave={(s) => {
-            setSettings(s);
-            localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
-            toast({ title: "Configurações salvas", description: s.gistId ? "Sync ativo." : "Um novo Gist será criado na próxima carga." });
-          }}
-        />
 
         {/* Rebanho Geral card com totais */}
         <Card className="mb-4 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setMostrarRG(true)}>
