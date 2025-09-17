@@ -5,12 +5,13 @@ import {
 } from "recharts";
 import {
   Users, Search as SearchIcon, Calculator, FileText, LineChart as LineIcon,
-  Plus, Download, Upload, SlidersHorizontal, ArrowLeftRight, Layers3, PieChart as PieIcon, ArrowLeft, Beef
+  Plus, Download, Upload, SlidersHorizontal, ArrowLeftRight, Layers3, PieChart as PieIcon, ArrowLeft, Beef, TrendingUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import SegmentationPage from "./SegmentationPage";
+import NexusApp from "./NexusApp";
 
 /**
  * ToolSS — MVP interativo (Lovable-ready)
@@ -333,7 +334,7 @@ function segmentAnimals(
 export default function ToolSSApp() {
   const [clients, setClients] = useState<Client[]>([]);
   const [query, setQuery] = useState("");
-  const [page, setPage] = useState<"clientes" | "fazenda" | "rebanho" | "touros" | "graficos" | "calc" | "info" | "segmentacao">("clientes");
+  const [page, setPage] = useState<"clientes" | "fazenda" | "rebanho" | "touros" | "graficos" | "calc" | "info" | "segmentacao" | "nexus">("clientes");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
   const [weights, setWeights] = useState<Weights>(defaultWeights);
@@ -561,6 +562,23 @@ export default function ToolSSApp() {
         />
       )}
 
+      {page === "nexus" && (
+        <div className="min-h-screen bg-background">
+          <div className="sticky top-0 z-40 border-b bg-card shadow-sm mb-6">
+            <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
+              <Button variant="outline" onClick={() => setPage("clientes")}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Voltar ao TOOLSS
+              </Button>
+              <div className="font-bold text-xl">
+                Nexus <span className="font-normal text-sm text-muted-foreground">Sistema de Predição Genética</span>
+              </div>
+            </div>
+          </div>
+          <NexusApp />
+        </div>
+      )}
+
       {page === "info" && farm && (
         <InfoPage onBack={() => setPage("fazenda")} />
       )}
@@ -595,6 +613,7 @@ function Header({
           <NavButton icon={<SearchIcon size={16} />} label="Busca de touros" onClick={() => onGoto("touros")} />
           <NavButton icon={<LineIcon size={16} />} label="Gráficos" onClick={() => onGoto("graficos")} />
           <NavButton icon={<Calculator size={16} />} label="Calculadora" onClick={() => onGoto("calc")} />
+          <NavButton icon={<TrendingUp size={16} />} label="Nexus" onClick={() => onGoto("nexus")} />
           <NavButton icon={<FileText size={16} />} label="Informações" onClick={() => onGoto("info")} />
         </div>
       </div>
@@ -672,6 +691,7 @@ function FarmHome({
     { icon: <SearchIcon size={32} />, title: "Busca de touros", desc: "Banco de touros e índices", page: "touros" },
     { icon: <Calculator size={32} />, title: "Calculadora", desc: "Índice personalizado e ranking", page: "calc" },
     { icon: <LineIcon size={32} />, title: "Gráficos", desc: "Evolução e projeções", page: "graficos" },
+    { icon: <TrendingUp size={32} />, title: "Nexus", desc: "Sistema de predição genética", page: "nexus" },
     { icon: <FileText size={32} />, title: "Informações", desc: "CDC B / instruções / avisos", page: "info" },
   ];
 
@@ -680,7 +700,7 @@ function FarmHome({
       <div className="text-2xl font-bold mb-2">#{client.id} {client.nome}</div>
       <div className="text-muted-foreground mb-6">{client.cidade}, {client.uf}</div>
 
-      <div className="grid md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid md:grid-cols-3 lg:grid-cols-7 gap-4">
         {cards.map((c) => (
           <Card key={c.title} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => open(c.page)}>
             <CardContent className="p-6 text-center">
