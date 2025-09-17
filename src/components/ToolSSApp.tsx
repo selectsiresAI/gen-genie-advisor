@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import SegmentationPage from "./SegmentationPage";
 import NexusApp from "./NexusApp";
+import PlanoApp from "./PlanoApp";
 
 /**
  * ToolSS — MVP interativo (Lovable-ready)
@@ -334,7 +335,7 @@ function segmentAnimals(
 export default function ToolSSApp() {
   const [clients, setClients] = useState<Client[]>([]);
   const [query, setQuery] = useState("");
-  const [page, setPage] = useState<"clientes" | "fazenda" | "rebanho" | "touros" | "graficos" | "calc" | "info" | "segmentacao" | "nexus">("clientes");
+  const [page, setPage] = useState<"clientes" | "fazenda" | "rebanho" | "touros" | "graficos" | "plano" | "info" | "segmentacao" | "nexus">("clientes");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
   const [weights, setWeights] = useState<Weights>(defaultWeights);
