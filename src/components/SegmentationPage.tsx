@@ -178,7 +178,28 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
   });
 
   const segmentedFemales = useMemo(() => {
-    return segmentAnimals(farm.females, config, statsForCustom, customWeights);
+    console.log("🔍 Debugging segmentation:", {
+      femalesCount: farm.females?.length || 0,
+      config,
+      weightsKeys: Object.keys(customWeights),
+      statsKeys: Object.keys(statsForCustom || {})
+    });
+    
+    if (!farm.females || farm.females.length === 0) {
+      console.log("❌ No females data available");
+      return [];
+    }
+    
+    const result = segmentAnimals(farm.females, config, statsForCustom, customWeights);
+    console.log("📊 Segmentation result:", {
+      totalAnimals: result.length,
+      groups: result.reduce((acc, f) => {
+        acc[f._grupo || 'undefined'] = (acc[f._grupo || 'undefined'] || 0) + 1;
+        return acc;
+      }, {} as any)
+    });
+    
+    return result;
   }, [farm.females, config, statsForCustom, customWeights]);
 
   const groupStats = useMemo(() => {
@@ -343,9 +364,9 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
             </div>
           </div>
 
-          {/* Grid inferior com 2 colunas */}
+          {/* Grid inferior com 2 colunas - SEMPRE VISÍVEL */}
           <div className="grid lg:grid-cols-2 gap-8 mt-8">
-            {/* Selecionar PTAs */}
+            {/* Selecionar PTAs - SEMPRE VISÍVEL, não apenas para Custom */}
             <div className="space-y-4">
               <h3 className="font-semibold text-lg">Selecionar PTAs (grupo)</h3>
               <div className="grid grid-cols-3 gap-4">
@@ -377,36 +398,38 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
               </div>
             </div>
 
-            {/* Pesos do Índice - Mantendo os pesos das características selecionadas */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg">Pesos do índice</h3>
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  { key: 'Milk', label: 'Milk' },
-                  { key: 'Fat', label: 'Fat' },
-                  { key: 'Protein', label: 'Protein' },
-                  { key: 'SCS', label: 'SCS' },
-                  { key: 'PTAT', label: 'PTAT' }
-                ].filter(weight => selectedTraits[weight.key as keyof typeof selectedTraits]).map((weight) => (
-                  <div key={weight.key} className="flex items-center justify-between gap-2">
-                    <Label className="text-sm">{weight.label}</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={customWeights[weight.key as keyof Weights] || 0}
-                      onChange={(e) => {
-                        setCustomWeights(prev => ({...prev, [weight.key]: Number(e.target.value)}));
-                      }}
-                      className="w-20"
-                    />
-                  </div>
-                ))}
+            {/* Pesos do Índice - Visível quando Custom é selecionado */}
+            {config.primaryIndex === "Custom" && (
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg">Pesos do índice</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {[
+                    { key: 'Milk', label: 'Milk' },
+                    { key: 'Fat', label: 'Fat' },
+                    { key: 'Protein', label: 'Protein' },
+                    { key: 'SCS', label: 'SCS' },
+                    { key: 'PTAT', label: 'PTAT' }
+                  ].filter(weight => selectedTraits[weight.key as keyof typeof selectedTraits]).map((weight) => (
+                    <div key={weight.key} className="flex items-center justify-between gap-2">
+                      <Label className="text-sm">{weight.label}</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={customWeights[weight.key as keyof Weights] || 0}
+                        onChange={(e) => {
+                          setCustomWeights(prev => ({...prev, [weight.key]: Number(e.target.value)}));
+                        }}
+                        className="w-20"
+                      />
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="text-sm text-gray-600 mt-2">
+                  SCS é penalizado automaticamente (sinal invertido).
+                </div>
               </div>
-              
-              <div className="text-sm text-gray-600 mt-2">
-                SCS é penalizado automaticamente (sinal invertido).
-              </div>
-            </div>
+            )}
           </div>
         </CardContent>
       </Card>
