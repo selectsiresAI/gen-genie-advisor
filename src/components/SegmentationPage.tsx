@@ -32,7 +32,7 @@ type Weights = {
   TPI: number; ["NM$"]: number; Milk: number; Fat: number; Protein: number; SCS: number; PTAT: number; 
 };
 
-type PrimaryIndex = "HHP$" | "NM$" | "TPI" | "Protein" | "Custom";
+type PrimaryIndex = "HHP$" | "NM$" | "TPI" | "Custom";
 
 type SegmentConfig = {
   primaryIndex: PrimaryIndex;
@@ -112,9 +112,6 @@ function getPrimaryValue(
   if (primary === "TPI")  return isFinite(Number(f.TPI)) ? Number(f.TPI) : null;
   if (primary === "NM$" || primary === "HHP$") {
     return isFinite(Number(nmCandidate)) ? Number(nmCandidate) : null;
-  }
-  if (primary === "Protein") {
-    return isFinite(Number(f.Protein)) ? Number(f.Protein) : null;
   }
   if (primary === "Custom") {
     try {
@@ -300,6 +297,36 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
         </div>
       </div>
 
+      {/* Processo para o Técnico */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-primary">
+            <Settings className="h-5 w-5" />
+            Processo para o Técnico - Checklist Pré-Segmentação
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid md:grid-cols-2 gap-4 text-sm">
+            <div>
+              <h4 className="font-semibold mb-2">1. Validação dos Dados</h4>
+              <ul className="space-y-1 text-muted-foreground">
+                <li>• Verificar se dados PTA estão atualizados</li>
+                <li>• Confirmar presença de HHP$/NM$ nas fêmeas</li>
+                <li>• Validar campos DPR e SCS preenchidos</li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-2">2. Configuração</h4>
+              <ul className="space-y-1 text-muted-foreground">
+                <li>• Definir % de doadoras conforme objetivo</li>
+                <li>• Ajustar gates sanitários (SCS ≤ 2.9)</li>
+                <li>• Verificar cortes percentuais</li>
+              </ul>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -317,7 +344,6 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
                   { value: "HHP$", label: "HHP$", disabled: false },
                   { value: "NM$", label: "NM$" }, 
                   { value: "TPI", label: "TPI" },
-                  { value: "Protein", label: "Protein" },
                   { value: "Custom", label: "Custom" }
                 ].map((option) => (
                   <div key={option.value} className="flex items-center space-x-2">
@@ -460,7 +486,7 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
             {/* Pesos do Índice - Visível quando Custom é selecionado */}
             {config.primaryIndex === "Custom" && (
               <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Pesos do índice</h3>
+                <h3 className="font-semibold text-lg">Pesos do índice customizado</h3>
                 <div className="grid grid-cols-2 gap-4">
                   {[
                     { key: 'Milk', label: 'Milk' },
@@ -646,8 +672,6 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
                             if (primary === "TPI")  return isFinite(Number(f.TPI)) ? Number(f.TPI).toFixed(0) : "—";
                             if (primary === "NM$" || primary === "HHP$")
                               return isFinite(Number(nmCandidate)) ? Number(nmCandidate).toFixed(0) : "—";
-                            if (primary === "Protein") 
-                              return isFinite(Number(f.Protein)) ? Number(f.Protein).toFixed(0) : "—";
                             if (primary === "Custom") {
                               const val = getPrimaryValue(f, "Custom", statsForCustom, customWeights, selectedTraits);
                               return val !== null && isFinite(Number(val)) ? Number(val).toFixed(2) : "—";
