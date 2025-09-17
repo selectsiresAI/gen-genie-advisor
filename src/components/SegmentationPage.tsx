@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
-import { ArrowLeftRight, Download, PieChart as PieIcon, Settings, Filter } from "lucide-react";
+import { ArrowLeftRight, Download, PieChart as PieIcon, Settings, Filter, Layers3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -170,31 +170,15 @@ interface SegmentationPageProps {
 
 export default function SegmentationPage({ farm, weights, statsForCustom, onBack }: SegmentationPageProps) {
   const [config, setConfig] = useState<SegmentConfig>(defaultSegConfig);
-  const [selectedGroup, setSelectedGroup] = useState<"all" | "Doadoras" | "Bom" | "Receptoras">("all");
-  const [search, setSearch] = useState("");
+  const [customWeights, setCustomWeights] = useState<Weights>(weights);
+  const [selectedTraits, setSelectedTraits] = useState({
+    TPI: true, HHP$: false, NM$: true, Milk: true, Fat: true, Protein: true,
+    SCS: true, PTAT: true, DPR: true
+  });
 
   const segmentedFemales = useMemo(() => {
-    return segmentAnimals(farm.females, config, statsForCustom, weights);
-  }, [farm.females, config, statsForCustom, weights]);
-
-  const filteredFemales = useMemo(() => {
-    let rows = segmentedFemales;
-    
-    if (selectedGroup !== "all") {
-      rows = rows.filter(f => f._grupo === selectedGroup);
-    }
-    
-    const q = search.trim().toLowerCase();
-    if (q) {
-      rows = rows.filter((r) =>
-        r.brinco.includes(q) ||
-        r.nomePai.toLowerCase().includes(q) ||
-        r.naabPai.toLowerCase().includes(q)
-      );
-    }
-    
-    return rows;
-  }, [segmentedFemales, selectedGroup, search]);
+    return segmentAnimals(farm.females, config, statsForCustom, customWeights);
+  }, [farm.females, config, statsForCustom, customWeights]);
 
   const groupStats = useMemo(() => {
     const stats = { Doadoras: 0, Bom: 0, Receptoras: 0 };
@@ -228,6 +212,10 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
     toCSV(exportData, `segmentacao_${farm.id}.csv`);
   };
 
+  const toggleTrait = (trait: string) => {
+    setSelectedTraits(prev => ({ ...prev, [trait]: !prev[trait as keyof typeof prev] }));
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
       <div className="flex items-center gap-2 mb-4">
@@ -241,76 +229,199 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Configuration Panel */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
-              Configuração de Segmentação
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label>Índice Primário</Label>
-              <Select value={config.primaryIndex} onValueChange={(value: PrimaryIndex) => 
-                setConfig({...config, primaryIndex: value})}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="TPI">TPI</SelectItem>
-                  <SelectItem value="NM$">NM$</SelectItem>
-                  <SelectItem value="Custom">Índice Customizado</SelectItem>
-                </SelectContent>
-              </Select>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Layers3 className="h-5 w-5" />
+            Segmentação por literatura (Doadoras / Bom / Receptoras)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid lg:grid-cols-3 gap-8">
+            {/* Índice Base */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg">Índice base</h3>
+              <div className="space-y-3">
+                {[
+                  { value: "HHP$", label: "HHP$", disabled: true },
+                  { value: "NM$", label: "NM$" }, 
+                  { value: "TPI", label: "TPI" },
+                  { value: "Custom", label: "Custom" }
+                ].map((option) => (
+                  <div key={option.value} className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      id={option.value}
+                      name="primaryIndex"
+                      value={option.value}
+                      checked={config.primaryIndex === option.value}
+                      disabled={option.disabled}
+                      onChange={(e) => setConfig({...config, primaryIndex: e.target.value as PrimaryIndex})}
+                      className="w-4 h-4"
+                    />
+                    <Label 
+                      htmlFor={option.value} 
+                      className={`${option.disabled ? 'text-muted-foreground' : ''} ${option.value === 'Custom' ? 'text-primary font-semibold' : ''}`}
+                    >
+                      {option.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="text-sm text-blue-600 mt-2">
+                Recomendado: HHP$ (Health & Productivity Profit) - índice holístico.
+              </div>
             </div>
 
-            <div>
-              <Label>Top % para Doadoras</Label>
-              <Input
-                type="number"
-                value={config.donorCutoffPercent}
-                onChange={(e) => setConfig({...config, donorCutoffPercent: Number(e.target.value)})}
-                min="1"
-                max="100"
-              />
+            {/* Cortes Percentuais */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg">Cortes percentuais</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-blue-600">Top % (Doadoras)</Label>
+                  <Input
+                    type="number"
+                    value={config.donorCutoffPercent}
+                    onChange={(e) => setConfig({...config, donorCutoffPercent: Number(e.target.value)})}
+                    min="1" max="100"
+                  />
+                </div>
+                <div>
+                  <Label className="text-blue-600">Bottom % (Receptoras)</Label>
+                  <Input
+                    type="number"
+                    value={100 - config.goodCutoffUpper}
+                    onChange={(e) => setConfig({...config, goodCutoffUpper: 100 - Number(e.target.value)})}
+                    min="1" max="100"
+                  />
+                </div>
+              </div>
+              
+              <div className="text-sm text-gray-600 mt-2">
+                Padrão: {config.donorCutoffPercent}% doadoras / {100 - config.goodCutoffUpper}% receptoras (restante = Bom).
+              </div>
             </div>
 
-            <div>
-              <Label>Limite Superior "Bom" (%)</Label>
-              <Input
-                type="number"
-                value={config.goodCutoffUpper}
-                onChange={(e) => setConfig({...config, goodCutoffUpper: Number(e.target.value)})}
-                min="1"
-                max="100"
-              />
+            {/* Gates Sanitários */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg">Gates sanitários e tipo</h3>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-blue-600">SCS máx.</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={config.scsMaxDonor}
+                    onChange={(e) => setConfig({...config, scsMaxDonor: Number(e.target.value)})}
+                  />
+                </div>
+                <div>
+                  <Label className="text-blue-600">DPR mín.</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={config.dprMinDonor}
+                    onChange={(e) => setConfig({...config, dprMinDonor: Number(e.target.value)})}
+                  />
+                </div>
+                <div>
+                  <Label className="text-blue-600">PTAT mín.</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={0}
+                    disabled
+                  />
+                </div>
+              </div>
+              
+              <div className="text-sm text-gray-600 mt-2">
+                Valores padrão alinhados à boa saúde do úbere (SCS≤3,0) e fertilidade não negativa (DPR≥0).
+              </div>
+            </div>
+          </div>
+
+          {/* Grid inferior com 2 colunas */}
+          <div className="grid lg:grid-cols-2 gap-8 mt-8">
+            {/* Selecionar PTAs */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg">Selecionar PTAs (grupo)</h3>
+              <div className="grid grid-cols-3 gap-4">
+                {[
+                  { key: 'TPI', label: 'TPI', color: 'text-black' },
+                  { key: 'HHP$', label: 'HHP$', color: 'text-purple-600' },
+                  { key: 'NM$', label: 'NM$', color: 'text-purple-600' },
+                  { key: 'Milk', label: 'Milk', color: 'text-black' },
+                  { key: 'Fat', label: 'Fat', color: 'text-purple-600' },
+                  { key: 'Protein', label: 'Protein', color: 'text-purple-600' },
+                  { key: 'SCS', label: 'SCS', color: 'text-black' },
+                  { key: 'PTAT', label: 'PTAT', color: 'text-purple-600' },
+                  { key: 'DPR', label: 'DPR', color: 'text-purple-600' }
+                ].map((trait) => (
+                  <div key={trait.key} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id={trait.key}
+                      checked={selectedTraits[trait.key as keyof typeof selectedTraits]}
+                      onChange={() => toggleTrait(trait.key)}
+                      className="w-4 h-4"
+                    />
+                    <Label htmlFor={trait.key} className={trait.color}>
+                      {trait.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="text-sm text-gray-600 mt-2">
+                Se nenhum traço for marcado, será usado NM$.
+              </div>
             </div>
 
-            <div>
-              <Label>SCS Máximo Doadoras</Label>
-              <Input
-                type="number"
-                step="0.1"
-                value={config.scsMaxDonor}
-                onChange={(e) => setConfig({...config, scsMaxDonor: Number(e.target.value)})}
-              />
+            {/* Pesos do Índice */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg">Pesos do índice (z-score)</h3>
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  { key: 'TPI', label: 'TPI' },
+                  { key: 'HHP$', label: 'HHP$', disabled: true },
+                  { key: 'NM$', label: 'NM$' },
+                  { key: 'Milk', label: 'Milk' },
+                  { key: 'Fat', label: 'Fat' },
+                  { key: 'Protein', label: 'Protein' },
+                  { key: 'SCS', label: 'SCS' },
+                  { key: 'PTAT', label: 'PTAT' },
+                  { key: 'DPR', label: 'DPR', disabled: true }
+                ].map((weight) => (
+                  <div key={weight.key} className="flex items-center justify-between gap-2">
+                    <Label className="text-sm">{weight.label}</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={weight.key === 'HHP$' ? 0.25 : weight.key === 'DPR' ? 0 : customWeights[weight.key as keyof Weights] || 0}
+                      onChange={(e) => {
+                        if (!weight.disabled) {
+                          setCustomWeights(prev => ({...prev, [weight.key]: Number(e.target.value)}));
+                        }
+                      }}
+                      disabled={weight.disabled}
+                      className="w-20"
+                    />
+                  </div>
+                ))}
+              </div>
+              
+              <div className="text-sm text-gray-600 mt-2">
+                SCS é penalizado automaticamente (sinal invertido).
+              </div>
             </div>
+          </div>
+        </CardContent>
+      </Card>
 
-            <div>
-              <Label>DPR Mínimo Doadoras</Label>
-              <Input
-                type="number"
-                step="0.1"
-                value={config.dprMinDonor}
-                onChange={(e) => setConfig({...config, dprMinDonor: Number(e.target.value)})}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Statistics Overview */}
+      {/* Resultado com gráfico de pizza */}
+      <div className="grid lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -348,92 +459,48 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
           </CardContent>
         </Card>
 
-        {/* Filter Panel */}
+        {/* Tabela de Resultados */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
-              Filtros
-            </CardTitle>
+            <CardTitle>Resultados da Segmentação</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label>Grupo</Label>
-              <Select value={selectedGroup} onValueChange={(value: typeof selectedGroup) => setSelectedGroup(value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os Grupos</SelectItem>
-                  <SelectItem value="Doadoras">Doadoras</SelectItem>
-                  <SelectItem value="Bom">Bom</SelectItem>
-                  <SelectItem value="Receptoras">Receptoras</SelectItem>
-                </SelectContent>
-              </Select>
+          <CardContent>
+            <div className="overflow-auto rounded-lg border max-h-80">
+              <table className="min-w-full w-full">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="px-3 py-2 text-left font-medium">Brinco</th>
+                    <th className="px-3 py-2 text-left font-medium">TPI</th>
+                    <th className="px-3 py-2 text-left font-medium">NM$</th>
+                    <th className="px-3 py-2 text-left font-medium">Grupo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {segmentedFemales.slice(0, 10).map((f) => (
+                    <tr key={f.id} className="border-b hover:bg-muted/50">
+                      <td className="px-3 py-2">{f.brinco}</td>
+                      <td className="px-3 py-2 font-semibold">{f.TPI}</td>
+                      <td className="px-3 py-2 font-semibold">{f["NM$"]}</td>
+                      <td className="px-3 py-2">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          f._grupo === "Doadoras" ? "bg-primary/10 text-primary" :
+                          f._grupo === "Bom" ? "bg-accent/10 text-accent-foreground" :
+                          "bg-muted text-muted-foreground"
+                        }`}>
+                          {f._grupo}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-
-            <div>
-              <Label>Buscar</Label>
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Brinco, NAAB pai ou nome do pai"
-              />
-            </div>
-
-            <div className="text-sm text-muted-foreground">
-              Mostrando {filteredFemales.length} de {segmentedFemales.length} animais
+            <div className="text-sm text-muted-foreground mt-2">
+              Mostrando 10 de {segmentedFemales.length} animais
             </div>
           </CardContent>
         </Card>
       </div>
-
-      {/* Results Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Resultados da Segmentação</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-auto rounded-lg border">
-            <table className="min-w-full w-full">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="px-3 py-2 text-left font-medium">Brinco</th>
-                  <th className="px-3 py-2 text-left font-medium">TPI</th>
-                  <th className="px-3 py-2 text-left font-medium">NM$</th>
-                  <th className="px-3 py-2 text-left font-medium">DPR</th>
-                  <th className="px-3 py-2 text-left font-medium">SCS</th>
-                  <th className="px-3 py-2 text-left font-medium">Percentil</th>
-                  <th className="px-3 py-2 text-left font-medium">Grupo</th>
-                  <th className="px-3 py-2 text-left font-medium">Motivo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredFemales.map((f) => (
-                  <tr key={f.id} className="border-b hover:bg-muted/50">
-                    <td className="px-3 py-2">{f.brinco}</td>
-                    <td className="px-3 py-2 font-semibold">{f.TPI}</td>
-                    <td className="px-3 py-2 font-semibold">{f["NM$"]}</td>
-                    <td className="px-3 py-2">{f.DPR}</td>
-                    <td className="px-3 py-2">{f.SCS.toFixed(2)}</td>
-                    <td className="px-3 py-2">{f._percentil ? `${f._percentil}%` : "—"}</td>
-                    <td className="px-3 py-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        f._grupo === "Doadoras" ? "bg-primary/10 text-primary" :
-                        f._grupo === "Bom" ? "bg-accent/10 text-accent-foreground" :
-                        "bg-muted text-muted-foreground"
-                      }`}>
-                        {f._grupo}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-sm text-muted-foreground">{f._motivo}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
