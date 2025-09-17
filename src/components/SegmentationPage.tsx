@@ -31,7 +31,7 @@ type Weights = {
   TPI: number; ["NM$"]: number; Milk: number; Fat: number; Protein: number; SCS: number; PTAT: number; 
 };
 
-type PrimaryIndex = "TPI" | "NM$" | "HHP$" | "Custom";
+type PrimaryIndex = "TPI" | "NM$" | "HHP$" | "Protein" | "Custom";
 
 type SegmentConfig = {
   primaryIndex: PrimaryIndex;
@@ -110,6 +110,9 @@ function getPrimaryValue(
   if (primary === "TPI")  return isFinite(Number(f.TPI)) ? Number(f.TPI) : null;
   if (primary === "NM$" || primary === "HHP$") {
     return isFinite(Number(nmCandidate)) ? Number(nmCandidate) : null;
+  }
+  if (primary === "Protein") {
+    return isFinite(Number(f.Protein)) ? Number(f.Protein) : null;
   }
   if (primary === "Custom") {
     try {
@@ -305,6 +308,7 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
                   { value: "HHP$", label: "HHP$", disabled: false },
                   { value: "NM$", label: "NM$" }, 
                   { value: "TPI", label: "TPI" },
+                  { value: "Protein", label: "Protein" },
                   { value: "Custom", label: "Custom" }
                 ].map((option) => (
                   <div key={option.value} className="flex items-center space-x-2">
@@ -640,18 +644,20 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
                         <td className="px-3 py-2">{f.naabPai}</td>
                         <td className="px-3 py-2 text-red-600 font-medium">{f.nomePai}</td>
                         <td className="px-3 py-2">
-                          {(() => {
-                            const primary = config.primaryIndex;
-                            const nmCandidate = (f as any)["HHP$"] ?? (f as any)["NM$"] ?? (f as any).NM ?? null;
-                            if (primary === "TPI")  return isFinite(Number(f.TPI)) ? Number(f.TPI).toFixed(0) : "—";
-                            if (primary === "NM$" || primary === "HHP$")
-                              return isFinite(Number(nmCandidate)) ? Number(nmCandidate).toFixed(0) : "—";
-                            if (primary === "Custom") {
-                              const val = getPrimaryValue(f, "Custom", statsForCustom, customWeights);
-                              return val !== null && isFinite(Number(val)) ? Number(val).toFixed(2) : "—";
-                            }
-                            return "—";
-                          })()}
+                  {(() => {
+                    const primary = config.primaryIndex;
+                    const nmCandidate = (f as any)["HHP$"] ?? (f as any)["NM$"] ?? (f as any).NM ?? null;
+                    if (primary === "TPI")  return isFinite(Number(f.TPI)) ? Number(f.TPI).toFixed(0) : "—";
+                    if (primary === "NM$" || primary === "HHP$")
+                      return isFinite(Number(nmCandidate)) ? Number(nmCandidate).toFixed(0) : "—";
+                    if (primary === "Protein") 
+                      return isFinite(Number(f.Protein)) ? Number(f.Protein).toFixed(0) : "—";
+                    if (primary === "Custom") {
+                      const val = getPrimaryValue(f, "Custom", statsForCustom, customWeights);
+                      return val !== null && isFinite(Number(val)) ? Number(val).toFixed(2) : "—";
+                    }
+                    return "—";
+                  })()}
                         </td>
                         <td className="px-3 py-2 font-semibold">{f.TPI}</td>
                         <td className="px-3 py-2 font-semibold">{f["NM$"]}</td>
