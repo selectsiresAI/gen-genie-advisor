@@ -1,15 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, AreaChart, Area, BarChart, Bar, ReferenceLine
+  ResponsiveContainer, AreaChart, Area, BarChart, Bar, ReferenceLine, PieChart, Pie, Cell
 } from "recharts";
 import {
-  Beef, Search as SearchIcon, Calculator, FileText, LineChart as LineIcon,
-  Plus, Download, Upload, Home, SlidersHorizontal, ArrowLeftRight, X
+  Users, Search as SearchIcon, Calculator, FileText, LineChart as LineIcon,
+  Plus, Download, Upload, SlidersHorizontal, ArrowLeftRight, Layers3, PieChart as PieIcon, ArrowLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import SegmentationPage from "./SegmentationPage";
 
 /**
  * ToolSS — MVP interativo (Lovable-ready)
@@ -24,14 +25,18 @@ type Female = {
   naabPai: string;
   nomePai: string;
   TPI: number;
-  NM$: number;
+  ["NM$"]: number;
   Milk: number;
   Fat: number;
   Protein: number;
-  DPR: number; // fertility
-  SCS: number; // CCS (lower better)
-  PTAT: number; // type
+  DPR: number; // fertilidade
+  SCS: number; // menor melhor
+  PTAT: number; // tipo
   year: number;
+  // Campos calculados na segmentação (não obrigatórios no seed)
+  _percentil?: number | null;
+  _grupo?: "Doadoras" | "Bom" | "Receptoras";
+  _motivo?: string;
 };
 
 type Bull = {
@@ -39,7 +44,7 @@ type Bull = {
   nome: string;
   pedigree: string;
   TPI: number;
-  NM$: number;
+  ["NM$"]: number;
   Milk: number;
   Fat: number;
   Protein: number;
@@ -61,8 +66,20 @@ type Client = {
   }>;
 };
 
-type Weights = {
-  TPI: number; NM$: number; Milk: number; Fat: number; Protein: number; SCS: number; PTAT: number;
+type Weights = { 
+  TPI: number; ["NM$"]: number; Milk: number; Fat: number; Protein: number; SCS: number; PTAT: number; 
+};
+
+// ------------------------ Segmentation Types ------------------------
+type PrimaryIndex = "TPI" | "NM$" | "Custom";
+type SegmentConfig = {
+  primaryIndex: PrimaryIndex;
+  donorCutoffPercent: number;   // ex.: 20 → Top 20% = Doadoras
+  goodCutoffUpper: number;      // ex.: 70 → Bom até 70%; resto Receptoras
+  scsMaxDonor: number;          // 2.9
+  dprMinDonor: number;          // 1.0
+  critical_dpr_lt: number;      // -1.0
+  critical_scs_gt: number;      // 3.0
 };
 
 // ------------------------ Utilities ------------------------
@@ -178,6 +195,7 @@ const seedClients: Client[] = [
 
 // ------------------------ Persistence ------------------------
 const STORAGE_KEY = "toolss_clients_v1";
+const SEGMENT_CFG_KEY = "toolss_segment_config_v1";
 
 function loadClients(): Client[] {
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -188,21 +206,42 @@ function saveClients(clients: Client[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
 }
 
-// ------------------------ Custom Index ------------------------
-const defaultWeights: Weights = { TPI: 0.35, NM$: 0.30, Milk: 0.10, Fat: 0.10, Protein: 0.10, SCS: 0.03, PTAT: 0.02 };
+const defaultSegConfig: SegmentConfig = {
+  primaryIndex: "NM$",
+  donorCutoffPercent: 20,
+  goodCutoffUpper: 70,
+  scsMaxDonor: 2.9,
+  dprMinDonor: 1.0,
+  critical_dpr_lt: -1.0,
+  critical_scs_gt: 3.0,
+};
 
-function scoreAnimal(a: { TPI: number; NM$: number; Milk: number; Fat: number; Protein: number; SCS: number; PTAT: number; }, stats: any, w: Weights) {
-  // Normaliza para z-score e aplica pesos; SCS entra negativo.
+function loadSegConfig(): SegmentConfig {
+  const raw = localStorage.getItem(SEGMENT_CFG_KEY);
+  if (!raw) return defaultSegConfig;
+  try { return { ...defaultSegConfig, ...(JSON.parse(raw) as SegmentConfig) }; }
+  catch { return defaultSegConfig; }
+}
+
+function saveSegConfig(cfg: SegmentConfig) {
+  localStorage.setItem(SEGMENT_CFG_KEY, JSON.stringify(cfg));
+}
+
+// ------------------------ Custom Index ------------------------
+const defaultWeights: Weights = { TPI: 0.35, ["NM$"]: 0.30, Milk: 0.10, Fat: 0.10, Protein: 0.10, SCS: 0.03, PTAT: 0.02 };
+
+function scoreAnimal(a: { TPI: number; ["NM$"]: number; Milk: number; Fat: number; Protein: number; SCS: number; PTAT: number; }, stats: any, w: Weights) {
+  // Normaliza por z-score e aplica pesos; SCS entra negativo (penaliza).
   const zTPI = normalize(a.TPI, stats.TPI.mean, stats.TPI.sd);
-  const zNM = normalize(a.NM$, stats.NM.mean, stats.NM.sd);
-  const zMilk = normalize(a.Milk, stats.Milk.mean, stats.Milk.sd);
-  const zFat = normalize(a.Fat, stats.Fat.mean, stats.Fat.sd);
-  const zProt = normalize(a.Protein, stats.Protein.mean, stats.Protein.sd);
-  const zSCS = normalize(a.SCS, stats.SCS.mean, stats.SCS.sd);
-  const zPTAT = normalize(a.PTAT, stats.PTAT.mean, stats.PTAT.sd);
+  const zNM  = normalize(a["NM$"], stats.NM.mean, stats.NM.sd);
+  const zMilk= normalize(a.Milk, stats.Milk.mean, stats.Milk.sd);
+  const zFat = normalize(a.Fat,  stats.Fat.mean, stats.Fat.sd);
+  const zProt= normalize(a.Protein, stats.Protein.mean, stats.Protein.sd);
+  const zSCS = normalize(a.SCS,  stats.SCS.mean, stats.SCS.sd);
+  const zPTAT= normalize(a.PTAT, stats.PTAT.mean, stats.PTAT.sd);
   return (
     w.TPI * zTPI +
-    w.NM$ * zNM +
+    w["NM$"] * zNM +
     w.Milk * zMilk +
     w.Fat * zFat +
     w.Protein * zProt +
@@ -216,7 +255,7 @@ function projectDaughter(m: Female, b: Bull): Female {
   return {
     ...m,
     TPI: Math.round((m.TPI + b.TPI) / 2),
-    NM$: Math.round((m.NM$ + b.NM$) / 2),
+    ["NM$"]: Math.round((m["NM$"] + b["NM$"]) / 2),
     Milk: Math.round((m.Milk + b.Milk) / 2),
     Fat: Math.round((m.Fat + b.Fat) / 2),
     Protein: Math.round((m.Protein + b.Protein) / 2),
@@ -226,11 +265,75 @@ function projectDaughter(m: Female, b: Bull): Female {
   };
 }
 
+// ------------------------ Segmentation Functions ------------------------
+function getPrimaryValue(f: Female, primary: PrimaryIndex, statsForCustom: any, weights: Weights): number | null {
+  if (primary === "TPI") return Number(f.TPI ?? null);
+  if (primary === "NM$") return Number(f["NM$"] ?? null);
+  if (primary === "Custom") {
+    try {
+      const base = { TPI: f.TPI, ["NM$"]: f["NM$"], Milk: f.Milk, Fat: f.Fat, Protein: f.Protein, SCS: f.SCS, PTAT: f.PTAT };
+      return scoreAnimal(base, statsForCustom, weights);
+    } catch { return null; }
+  }
+  return null;
+}
+
+function computePercentiles(values: Array<{ id: string; v: number }>): Map<string, number> {
+  // Ordena desc (maior índice = melhor) e atribui percentil 1..100
+  const sorted = [...values].sort((a, b) => b.v - a.v);
+  const n = sorted.length;
+  const map = new Map<string, number>();
+  sorted.forEach((item, i) => {
+    const p = Math.round(((i + 1) / n) * 100);
+    map.set(item.id, p);
+  });
+  return map;
+}
+
+function segmentAnimals(
+  females: Female[],
+  cfg: SegmentConfig,
+  statsForCustom: any,
+  weights: Weights
+): Female[] {
+  const base: Array<{ id: string; v: number }> = [];
+  females.forEach((f) => {
+    const v = getPrimaryValue(f, cfg.primaryIndex, statsForCustom, weights);
+    if (v === null || Number.isNaN(v)) return;
+    base.push({ id: f.id, v: Number(v) });
+  });
+  const pct = computePercentiles(base);
+
+  return females.map((f) => {
+    const p = pct.get(f.id) ?? null;
+    // Regras críticas → Receptoras
+    const crit = (f.DPR ?? 0) < cfg.critical_dpr_lt || (f.SCS ?? 0) > cfg.critical_scs_gt;
+    if (crit) {
+      return { ...f, _percentil: p, _grupo: "Receptoras", _motivo: "Crítico: DPR/SCS" };
+    }
+
+    if (p !== null && p <= cfg.donorCutoffPercent) {
+      const okSCS = (f.SCS ?? 99) <= cfg.scsMaxDonor;
+      const okDPR = (f.DPR ?? -99) >= cfg.dprMinDonor;
+      if (okSCS && okDPR) {
+        return { ...f, _percentil: p, _grupo: "Doadoras", _motivo: "Top + saúde OK" };
+      }
+      return { ...f, _percentil: p, _grupo: "Bom", _motivo: "Top, saúde insuficiente" };
+    }
+
+    if (p !== null && p <= cfg.goodCutoffUpper) {
+      return { ...f, _percentil: p, _grupo: "Bom", _motivo: "Faixa intermediária" };
+    }
+
+    return { ...f, _percentil: p, _grupo: "Receptoras", _motivo: "Abaixo do limiar" };
+  });
+}
+
 // ------------------------ Main App ------------------------
 export default function ToolSSApp() {
   const [clients, setClients] = useState<Client[]>([]);
   const [query, setQuery] = useState("");
-  const [page, setPage] = useState<"clientes" | "fazenda" | "rebanho" | "touros" | "graficos" | "calc" | "info">("clientes");
+  const [page, setPage] = useState<"clientes" | "fazenda" | "rebanho" | "touros" | "graficos" | "calc" | "info" | "segmentacao">("clientes");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
   const [weights, setWeights] = useState<Weights>(defaultWeights);
@@ -280,18 +383,18 @@ export default function ToolSSApp() {
 
   // Agregados p/ gráficos por ano
   const aggByYear = (rows: Female[]) => {
-    const map: Record<number, { year: number; TPI: number; NM$: number; count: number; Milk: number; Fat: number; Protein: number; }> = {};
+    const map: Record<number, { year: number; TPI: number; ["NM$"]: number; count: number; Milk: number; Fat: number; Protein: number; }> = {};
     rows.forEach((r) => {
       const y = r.year || new Date(r.nascimento).getFullYear();
-      if (!map[y]) map[y] = { year: y, TPI: 0, NM$: 0, Milk: 0, Fat: 0, Protein: 0, count: 0 };
-      map[y].TPI += r.TPI; map[y].NM$ += r.NM$;
+      if (!map[y]) map[y] = { year: y, TPI: 0, ["NM$"]: 0, Milk: 0, Fat: 0, Protein: 0, count: 0 };
+      map[y].TPI += r.TPI; map[y]["NM$"] += r["NM$"];
       map[y].Milk += r.Milk; map[y].Fat += r.Fat; map[y].Protein += r.Protein; map[y].count += 1;
     });
     return Object.values(map)
       .map((d) => ({
         year: d.year,
         TPI: Math.round(d.TPI / d.count),
-        NM$: Math.round(d.NM$ / d.count),
+        ["NM$"]: Math.round(d["NM$"] / d.count),
         Milk: Math.round(d.Milk / d.count),
         Fat: Math.round(d.Fat / d.count),
         Protein: Math.round(d.Protein / d.count),
@@ -333,7 +436,7 @@ export default function ToolSSApp() {
         nome: r.Nome || r.Name || r.nome || "",
         pedigree: r.Pedigree || r.pedigree || "",
         TPI: Number(r.TPI || r.tpi || 0),
-        NM$: Number(r["NM$"] || r.NM || r.nm || 0),
+        ["NM$"]: Number(r["NM$"] || r.NM || r.nm || 0),
         Milk: Number(r.Milk || r.Leite || 0),
         Fat: Number(r.Fat || r.Gordura || 0),
         Protein: Number(r.Protein || r.Proteina || r.Proteína || 0),
@@ -359,7 +462,7 @@ export default function ToolSSApp() {
         nascimento: r.Nascimento || r.Birth || "2023-01-01",
         naabPai: r.NaabPai || r.naabPai || r.SireNaab || "",
         nomePai: r.NomePai || r.nomePai || r.Sire || "",
-        TPI: Number(r.TPI || 0), NM$: Number(r["NM$"] || r.NM || 0),
+        TPI: Number(r.TPI || 0), ["NM$"]: Number(r["NM$"] || r.NM || 0),
         Milk: Number(r.Milk || r.Leite || 0), Fat: Number(r.Fat || r.Gordura || 0),
         Protein: Number(r.Protein || r.Proteina || r.Proteína || 0),
         DPR: Number(r.DPR || 0), SCS: Number(r.SCS || r.CCS || 2.9),
@@ -449,6 +552,15 @@ export default function ToolSSApp() {
         />
       )}
 
+      {page === "segmentacao" && farm && (
+        <SegmentationPage
+          farm={farm}
+          weights={weights}
+          statsForCustom={stats}
+          onBack={() => setPage("fazenda")}
+        />
+      )}
+
       {page === "info" && farm && (
         <InfoPage onBack={() => setPage("fazenda")} />
       )}
@@ -465,7 +577,7 @@ function Header({
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 bg-primary rounded-full flex items-center justify-center">
-            <Beef className="h-6 w-6 text-primary-foreground" />
+            <Users className="h-6 w-6 text-primary-foreground" />
           </div>
           <div className="font-bold text-xl">
             TOOLSS <span className="font-normal text-sm text-muted-foreground">by Select Sires</span>
@@ -474,11 +586,12 @@ function Header({
         <div className="ml-auto flex items-center gap-2">
           {canGoHome && (
             <Button variant="outline" onClick={onHome} size="sm">
-              <Home className="h-4 w-4 mr-2" />
+              <ArrowLeft className="h-4 w-4 mr-2" />
               Clientes
             </Button>
           )}
-          <NavButton icon={<Beef size={16} />} label="Rebanho" onClick={() => onGoto("rebanho")} />
+          <NavButton icon={<Users size={16} />} label="Rebanho" onClick={() => onGoto("rebanho")} />
+          <NavButton icon={<Layers3 size={16} />} label="Segmentação" onClick={() => onGoto("segmentacao")} />
           <NavButton icon={<SearchIcon size={16} />} label="Busca de touros" onClick={() => onGoto("touros")} />
           <NavButton icon={<LineIcon size={16} />} label="Gráficos" onClick={() => onGoto("graficos")} />
           <NavButton icon={<Calculator size={16} />} label="Calculadora" onClick={() => onGoto("calc")} />
@@ -554,10 +667,11 @@ function FarmHome({
   client, farm, open,
 }: { client: Client; farm: Client["farms"][number]; open: (p: any) => void; }) {
   const cards = [
-    { icon: <Beef size={32} />, title: "Rebanho", desc: "Fêmeas genotipadas, PTAs e filtros", page: "rebanho" },
+    { icon: <Users size={32} />, title: "Rebanho", desc: "Fêmeas genotipadas, PTAs e filtros", page: "rebanho" },
+    { icon: <Layers3 size={32} />, title: "Segmentação", desc: "Doadoras, Bom, Receptoras", page: "segmentacao" },
     { icon: <SearchIcon size={32} />, title: "Busca de touros", desc: "Banco de touros e índices", page: "touros" },
     { icon: <Calculator size={32} />, title: "Calculadora", desc: "Índice personalizado e ranking", page: "calc" },
-    { icon: <LineIcon size={32} />, title: "Gráficos", desc: "Evolução do rebanho e projeções", page: "graficos" },
+    { icon: <LineIcon size={32} />, title: "Gráficos", desc: "Evolução e projeções", page: "graficos" },
     { icon: <FileText size={32} />, title: "Informações", desc: "CDC B / instruções / avisos", page: "info" },
   ];
 
@@ -566,7 +680,7 @@ function FarmHome({
       <div className="text-2xl font-bold mb-2">#{client.id} {client.nome}</div>
       <div className="text-muted-foreground mb-6">{client.cidade}, {client.uf}</div>
 
-      <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid md:grid-cols-3 lg:grid-cols-6 gap-4">
         {cards.map((c) => (
           <Card key={c.title} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => open(c.page)}>
             <CardContent className="p-6 text-center">
@@ -666,7 +780,7 @@ function HerdPage({ client, farm, onBack, onExport, onUpload }: any) {
                 {th("NAAB do Pai", "naabPai")}
                 {th("Nome do Pai", "nomePai")}
                 {th("TPI", "TPI")}
-                {th("NM$", "NM$")}
+                {th("NM$", "NM$" as keyof Female)}
                 {th("Leite (lbs)", "Milk")}
                 {th("Gordura (lbs)", "Fat")}
                 {th("Proteína (lbs)", "Protein")}
@@ -683,7 +797,7 @@ function HerdPage({ client, farm, onBack, onExport, onUpload }: any) {
                   <td className="px-3 py-2">{f.naabPai}</td>
                   <td className="px-3 py-2">{f.nomePai}</td>
                   <td className="px-3 py-2 font-semibold">{f.TPI}</td>
-                  <td className="px-3 py-2 font-semibold">{f.NM$}</td>
+                  <td className="px-3 py-2 font-semibold">{f["NM$"]}</td>
                   <td className="px-3 py-2">{f.Milk}</td>
                   <td className="px-3 py-2">{f.Fat}</td>
                   <td className="px-3 py-2">{f.Protein}</td>
@@ -793,7 +907,7 @@ function BullsPage({ bulls, weights, setWeights, selectedBulls, setSelectedBulls
                         <td className="px-3 py-2 font-medium">{b.nome}</td>
                         <td className="px-3 py-2 text-muted-foreground">{b.pedigree}</td>
                         <td className="px-3 py-2 font-semibold">{b.TPI}</td>
-                        <td className="px-3 py-2 font-semibold">{b.NM$}</td>
+                        <td className="px-3 py-2 font-semibold">{b["NM$"]}</td>
                         <td className="px-3 py-2">{b.Milk}</td>
                         <td className="px-3 py-2">{b.Fat}</td>
                         <td className="px-3 py-2">{b.Protein}</td>
@@ -825,7 +939,7 @@ function BullsPage({ bulls, weights, setWeights, selectedBulls, setSelectedBulls
             <WeightSlider k="PTAT" label="PTAT (Tipo)" />
             <WeightSlider k="SCS" label="CCS (penaliza)" />
             <div className="text-xs text-muted-foreground">
-              Soma de pesos: <b>{totalWeight.toFixed(2)}</b> (recomendado 1.00 ± 0.2)
+              Soma de pesos: <b>{Number(totalWeight).toFixed(2)}</b> (recomendado 1.00 ± 0.2)
             </div>
             <div className="text-sm text-muted-foreground">
               O score usa z-score por traço para evitar escalas diferentes e aplica penalização para SCS (menor é melhor).
@@ -1045,7 +1159,7 @@ function CalcPage({ farm, weights, setWeights, bulls, onBack }: any) {
                         <td className="px-3 py-2">{b.naab}</td>
                         <td className="px-3 py-2">{b.nome}</td>
                         <td className="px-3 py-2">{b.TPI}</td>
-                        <td className="px-3 py-2">{b.NM$}</td>
+                        <td className="px-3 py-2">{b["NM$"]}</td>
                         <td className="px-3 py-2">{b.Milk}</td>
                         <td className="px-3 py-2">{b.Fat}</td>
                         <td className="px-3 py-2">{b.Protein}</td>
