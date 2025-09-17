@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Legend,
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, ReferenceLine, PieChart, Pie, Cell
 } from "recharts";
 import {
@@ -974,7 +974,6 @@ function ChartsPage({ mothers, daughters, onBack }: any) {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="year" />
                 <YAxis />
-                <Tooltip />
                 <Legend />
                 <ReferenceLine y={avgTPI} stroke="hsl(var(--primary))" strokeDasharray="6 6" label={`Média ${Math.round(avgTPI)}`} />
                 <Line type="monotone" dataKey="TPI" name="Mães (média)" stroke="hsl(var(--foreground))" dot />
@@ -994,7 +993,6 @@ function ChartsPage({ mothers, daughters, onBack }: any) {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="year" />
                 <YAxis />
-                <Tooltip />
                 <Legend />
                 <ReferenceLine y={avgNM} stroke="hsl(var(--primary))" strokeDasharray="6 6" label={`Média ${Math.round(avgNM)}`} />
                 <Line type="monotone" dataKey="NM$" name="Mães (média)" stroke="hsl(var(--foreground))" dot />
@@ -1011,13 +1009,13 @@ function ChartsPage({ mothers, daughters, onBack }: any) {
             <CardTitle>Leite (lbs) — média anual</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={mothers}>
-                <CartesianGrid strokeDasharray="3 3"/>
-                <XAxis dataKey="year"/><YAxis/><Tooltip/><Legend/>
-                <Bar dataKey="Milk" name="Mães" fill="hsl(var(--foreground))"/>
-              </BarChart>
-            </ResponsiveContainer>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={mothers}>
+                  <CartesianGrid strokeDasharray="3 3"/>
+                  <XAxis dataKey="year"/><YAxis/><Legend/>
+                  <Bar dataKey="Milk" name="Mães" fill="hsl(var(--foreground))"/>
+                </BarChart>
+              </ResponsiveContainer>
           </CardContent>
         </Card>
         <Card>
@@ -1025,13 +1023,13 @@ function ChartsPage({ mothers, daughters, onBack }: any) {
             <CardTitle>Gordura (lbs) — média anual</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={mothers}>
-                <CartesianGrid strokeDasharray="3 3"/>
-                <XAxis dataKey="year"/><YAxis/><Tooltip/><Legend/>
-                <Bar dataKey="Fat" name="Mães" fill="hsl(var(--foreground))"/>
-              </BarChart>
-            </ResponsiveContainer>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={mothers}>
+                  <CartesianGrid strokeDasharray="3 3"/>
+                  <XAxis dataKey="year"/><YAxis/><Legend/>
+                  <Bar dataKey="Fat" name="Mães" fill="hsl(var(--foreground))"/>
+                </BarChart>
+              </ResponsiveContainer>
           </CardContent>
         </Card>
         <Card>
@@ -1039,13 +1037,13 @@ function ChartsPage({ mothers, daughters, onBack }: any) {
             <CardTitle>Proteína (lbs) — média anual</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={mothers}>
-                <CartesianGrid strokeDasharray="3 3"/>
-                <XAxis dataKey="year"/><YAxis/><Tooltip/><Legend/>
-                <Bar dataKey="Protein" name="Mães" fill="hsl(var(--foreground))"/>
-              </BarChart>
-            </ResponsiveContainer>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={mothers}>
+                  <CartesianGrid strokeDasharray="3 3"/>
+                  <XAxis dataKey="year"/><YAxis/><Legend/>
+                  <Bar dataKey="Protein" name="Mães" fill="hsl(var(--foreground))"/>
+                </BarChart>
+              </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>

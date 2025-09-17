@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { ArrowLeftRight, Download, PieChart as PieIcon, Settings, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -334,7 +334,6 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
                     <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
                   ))}
                 </Pie>
-                <Tooltip />
               </PieChart>
             </ResponsiveContainer>
             
