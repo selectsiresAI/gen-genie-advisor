@@ -71,34 +71,57 @@ function normalize(value: number, mean: number, sd: number) {
   return (value - mean) / (sd || 1);
 }
 
-function scoreAnimal(a: { TPI: number; ["NM$"]: number; Milk: number; Fat: number; Protein: number; SCS: number; PTAT: number; }, stats: any, w: Weights) {
-  const zTPI = normalize(a.TPI, stats.TPI.mean, stats.TPI.sd);
-  const zNM  = normalize(a["NM$"], stats.NM.mean, stats.NM.sd);
-  const zMilk= normalize(a.Milk, stats.Milk.mean, stats.Milk.sd);
-  const zFat = normalize(a.Fat,  stats.Fat.mean, stats.Fat.sd);
-  const zProt= normalize(a.Protein, stats.Protein.mean, stats.Protein.sd);
-  const zSCS = normalize(a.SCS,  stats.SCS.mean, stats.SCS.sd);
-  const zPTAT= normalize(a.PTAT, stats.PTAT.mean, stats.PTAT.sd);
+function scoreAnimal(
+  a: { TPI: number; ["NM$"]: number; Milk: number; Fat: number; Protein: number; SCS: number; PTAT: number; },
+  stats: any,
+  w: Weights
+) {
+  const zTPI  = normalize(a.TPI,      stats.TPI?.mean,   stats.TPI?.sd);
+  const zNM   = normalize(a["NM$"],   (stats["NM$"]?.mean ?? stats.NM?.mean), (stats["NM$"]?.sd ?? stats.NM?.sd));
+  const zMilk = normalize(a.Milk,     stats.Milk?.mean,  stats.Milk?.sd);
+  const zFat  = normalize(a.Fat,      stats.Fat?.mean,   stats.Fat?.sd);
+  const zProt = normalize(a.Protein,  stats.Protein?.mean, stats.Protein?.sd);
+  const zSCS  = normalize(a.SCS,      stats.SCS?.mean,   stats.SCS?.sd);
+  const zPTAT = normalize(a.PTAT,     stats.PTAT?.mean,  stats.PTAT?.sd);
+
   return (
-    w.TPI * zTPI +
-    w["NM$"] * zNM +
-    w.Milk * zMilk +
-    w.Fat * zFat +
-    w.Protein * zProt +
-    w.PTAT * zPTAT -
-    w.SCS * zSCS
+    w.TPI    * zTPI +
+    w["NM$"] * zNM  +
+    w.Milk   * zMilk +
+    w.Fat    * zFat +
+    w.Protein* zProt +
+    w.PTAT   * zPTAT -
+    w.SCS    * zSCS        // SCS penaliza
   );
 }
 
-function getPrimaryValue(f: Female, primary: PrimaryIndex, statsForCustom: any, weights: Weights): number | null {
-  if (primary === "TPI") return Number(f.TPI ?? null);
-  if (primary === "NM$") return Number(f["NM$"] ?? null);
-  if (primary === "HHP$") return Number(f["NM$"] ?? null); // Using NM$ as HHP$ placeholder
+function getPrimaryValue(
+  f: Female,
+  primary: PrimaryIndex,
+  statsForCustom: any,
+  weights: Weights
+): number | null {
+  // Leitores robustos para NM$/NM
+  const nmCandidate =
+    (f as any)["HHP$"] ??            // se já existir HHP$ de verdade
+    (f as any)["NM$"]  ??            // padrão com $
+    (f as any).NM       ?? null;     // fallback sem $
+
+  if (primary === "TPI")  return isFinite(Number(f.TPI)) ? Number(f.TPI) : null;
+  if (primary === "NM$" || primary === "HHP$") {
+    return isFinite(Number(nmCandidate)) ? Number(nmCandidate) : null;
+  }
   if (primary === "Custom") {
     try {
-      const base = { TPI: f.TPI, ["NM$"]: f["NM$"], Milk: f.Milk, Fat: f.Fat, Protein: f.Protein, SCS: f.SCS, PTAT: f.PTAT };
-      return scoreAnimal(base, statsForCustom, weights);
-    } catch { return null; }
+      const base = {
+        TPI: f.TPI,
+        ["NM$"]: Number(nmCandidate ?? 0),
+        Milk: f.Milk, Fat: f.Fat, Protein: f.Protein, SCS: f.SCS, PTAT: f.PTAT,
+      };
+      return scoreAnimal(base, statsForCustom || {}, weights);
+    } catch {
+      return null;
+    }
   }
   return null;
 }
@@ -120,13 +143,26 @@ function segmentAnimals(
   statsForCustom: any,
   weights: Weights
 ): Female[] {
+  // 1) Tenta com índice escolhido
   const base: Array<{ id: string; v: number }> = [];
   females.forEach((f) => {
     const v = getPrimaryValue(f, cfg.primaryIndex, statsForCustom, weights);
-    if (v === null || Number.isNaN(v)) return;
-    base.push({ id: f.id, v: Number(v) });
+    if (v !== null && !Number.isNaN(v)) base.push({ id: f.id, v: Number(v) });
   });
-  const pct = computePercentiles(base);
+
+  // 2) Se ficou vazio (ex.: dataset sem NM$/NM e usuário marcou HHP$),
+  //    faz fallback automático para TPI (evita todo mundo cair em Receptoras)
+  let pct: Map<string, number>;
+  if (base.length === 0) {
+    const fallbackBase: Array<{ id: string; v: number }> = [];
+    females.forEach((f) => {
+      if (isFinite(Number(f.TPI))) fallbackBase.push({ id: f.id, v: Number(f.TPI) });
+    });
+    console.warn("⚠️ Índice primário sem valores válidos. Usando fallback TPI para segmentação.");
+    pct = computePercentiles(fallbackBase);
+  } else {
+    pct = computePercentiles(base);
+  }
 
   return females.map((f) => {
     const p = pct.get(f.id) ?? null;
@@ -176,6 +212,7 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
     HHP$: true, Milk: true, Fat: true, Protein: true,
     SCS: true, PTAT: true, DPR: true
   });
+  const [applyBump, setApplyBump] = useState(0);
 
   const segmentedFemales = useMemo(() => {
     console.log("🔍 Debugging segmentation:", {
@@ -200,7 +237,7 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
     });
     
     return result;
-  }, [farm.females, config, statsForCustom, customWeights]);
+  }, [farm.females, config, statsForCustom, customWeights, applyBump]);
 
   const groupStats = useMemo(() => {
     const stats = { Doadoras: 0, Bom: 0, Receptoras: 0 };
@@ -533,7 +570,10 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
                 </svg>
               </div>
             </div>
-            <Button className="bg-accent text-accent-foreground hover:bg-accent/90">
+            <Button
+              className="bg-accent text-accent-foreground hover:bg-accent/90"
+              onClick={() => setApplyBump((v) => v + 1)}
+            >
               Aplicar segmentação
             </Button>
           </div>
@@ -599,7 +639,20 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
                         <td className="px-3 py-2">{new Date(f.nascimento).toLocaleDateString('pt-BR')}</td>
                         <td className="px-3 py-2">{f.naabPai}</td>
                         <td className="px-3 py-2 text-red-600 font-medium">{f.nomePai}</td>
-                        <td className="px-3 py-2">—</td>
+                        <td className="px-3 py-2">
+                          {(() => {
+                            const primary = config.primaryIndex;
+                            const nmCandidate = (f as any)["HHP$"] ?? (f as any)["NM$"] ?? (f as any).NM ?? null;
+                            if (primary === "TPI")  return isFinite(Number(f.TPI)) ? Number(f.TPI).toFixed(0) : "—";
+                            if (primary === "NM$" || primary === "HHP$")
+                              return isFinite(Number(nmCandidate)) ? Number(nmCandidate).toFixed(0) : "—";
+                            if (primary === "Custom") {
+                              const val = getPrimaryValue(f, "Custom", statsForCustom, customWeights);
+                              return val !== null && isFinite(Number(val)) ? Number(val).toFixed(2) : "—";
+                            }
+                            return "—";
+                          })()}
+                        </td>
                         <td className="px-3 py-2 font-semibold">{f.TPI}</td>
                         <td className="px-3 py-2 font-semibold">{f["NM$"]}</td>
                         <td className="px-3 py-2">{f.Milk}</td>
