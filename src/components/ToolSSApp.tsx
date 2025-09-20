@@ -1321,165 +1321,7 @@ function BullsPage({
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6 mb-6">
-        <div className="lg:col-span-2">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="relative flex-1">
-                  <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar touros por NAAB, nome, pedigree" className="pl-10" />
-                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-                </div>
-                <span className="text-xs text-muted-foreground">Selecionados: {selectedBulls.length}</span>
-              </div>
-              <div className="overflow-auto rounded-lg border">
-                <table className="min-w-[1800px] w-full">
-                  <thead>
-                    <tr>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">✓</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">NAAB</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Nome</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Registro</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Pedigree</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Nascimento</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">HHP$®</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">TPI</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">NM$</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">CM$</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FM$</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">GM$</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">F SAV</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PTAM</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">CFP</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PTAF</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PTAF%</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PTAP</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PTAP%</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PL</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">DPR</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">LIV</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">CCS</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">MAST</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">MET</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RP</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">DA</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">KET</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">MF</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PTAT</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">UDC</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FLC</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">SCE</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">DCE</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">SSB</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">DSB</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">H LIV</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">CCR</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">HCR</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FI</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">GL</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">EFC</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">BWC</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">STA</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">STR</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">DFM</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RUA</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RLS</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RTP</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FTL</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RW</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RLR</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FTA</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FLS</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FUA</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RUH</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RUW</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">UCL</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">UDP</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FTP</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RFI</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Beta-Caseína</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Kappa-Caseína</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Disponibilidade</th>
-                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Score</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((b: any) => <tr key={b.naab} className="odd:bg-card even:bg-muted/50">
-                        <td className="px-3 py-2">
-                          <input type="checkbox" checked={selectedBulls.includes(b.naab)} onChange={() => toggleSelect(b.naab)} />
-                        </td>
-                        <td className="px-3 py-2">{b.naab}</td>
-                        <td className="px-3 py-2 font-medium">{b.nome}</td>
-                        <td className="px-3 py-2">{b.registro || "-"}</td>
-                        <td className="px-3 py-2 text-muted-foreground">{b.pedigree}</td>
-                        <td className="px-3 py-2">{b.nascimento || "-"}</td>
-                        <td className="px-3 py-2 font-semibold">{b["HHP$"] || "-"}</td>
-                        <td className="px-3 py-2 font-semibold">{b.TPI}</td>
-                        <td className="px-3 py-2 font-semibold">{b["NM$"]}</td>
-                        <td className="px-3 py-2">{b["CM$"] || "-"}</td>
-                        <td className="px-3 py-2">{b["FM$"] || "-"}</td>
-                        <td className="px-3 py-2">{b["GM$"] || "-"}</td>
-                        <td className="px-3 py-2">{b["F SAV"] || "-"}</td>
-                        <td className="px-3 py-2">{b.PTAM || "-"}</td>
-                        <td className="px-3 py-2">{b.CFP || "-"}</td>
-                        <td className="px-3 py-2">{b.PTAF || "-"}</td>
-                        <td className="px-3 py-2">{b["PTAF%"] ? `${b["PTAF%"]}%` : "-"}</td>
-                        <td className="px-3 py-2">{b.PTAP || "-"}</td>
-                        <td className="px-3 py-2">{b["PTAP%"] ? `${b["PTAP%"]}%` : "-"}</td>
-                        <td className="px-3 py-2">{b.PL || "-"}</td>
-                        <td className="px-3 py-2">{b.DPR || "-"}</td>
-                        <td className="px-3 py-2">{b.LIV || "-"}</td>
-                        <td className="px-3 py-2">{b.SCS ? b.SCS.toFixed(2) : "-"}</td>
-                        <td className="px-3 py-2">{b.MAST || "-"}</td>
-                        <td className="px-3 py-2">{b.MET || "-"}</td>
-                        <td className="px-3 py-2">{b.RP || "-"}</td>
-                        <td className="px-3 py-2">{b.DA || "-"}</td>
-                        <td className="px-3 py-2">{b.KET || "-"}</td>
-                        <td className="px-3 py-2">{b.MF || "-"}</td>
-                        <td className="px-3 py-2">{b.PTAT ? b.PTAT.toFixed(2) : "-"}</td>
-                        <td className="px-3 py-2">{b.UDC || "-"}</td>
-                        <td className="px-3 py-2">{b.FLC || "-"}</td>
-                        <td className="px-3 py-2">{b.SCE || "-"}</td>
-                        <td className="px-3 py-2">{b.DCE || "-"}</td>
-                        <td className="px-3 py-2">{b.SSB || "-"}</td>
-                        <td className="px-3 py-2">{b.DSB || "-"}</td>
-                        <td className="px-3 py-2">{b["H LIV"] || "-"}</td>
-                        <td className="px-3 py-2">{b.CCR || "-"}</td>
-                        <td className="px-3 py-2">{b.HCR || "-"}</td>
-                        <td className="px-3 py-2">{b.FI || "-"}</td>
-                        <td className="px-3 py-2">{b.GL || "-"}</td>
-                        <td className="px-3 py-2">{b.EFC || "-"}</td>
-                        <td className="px-3 py-2">{b.BWC || "-"}</td>
-                        <td className="px-3 py-2">{b.STA || "-"}</td>
-                        <td className="px-3 py-2">{b.STR || "-"}</td>
-                        <td className="px-3 py-2">{b.DFM || "-"}</td>
-                        <td className="px-3 py-2">{b.RUA || "-"}</td>
-                        <td className="px-3 py-2">{b.RLS || "-"}</td>
-                        <td className="px-3 py-2">{b.RTP || "-"}</td>
-                        <td className="px-3 py-2">{b.FTL || "-"}</td>
-                        <td className="px-3 py-2">{b.RW || "-"}</td>
-                        <td className="px-3 py-2">{b.RLR || "-"}</td>
-                        <td className="px-3 py-2">{b.FTA || "-"}</td>
-                        <td className="px-3 py-2">{b.FLS || "-"}</td>
-                        <td className="px-3 py-2">{b.FUA || "-"}</td>
-                        <td className="px-3 py-2">{b.RUH || "-"}</td>
-                        <td className="px-3 py-2">{b.RUW || "-"}</td>
-                        <td className="px-3 py-2">{b.UCL || "-"}</td>
-                        <td className="px-3 py-2">{b.UDP || "-"}</td>
-                        <td className="px-3 py-2">{b.FTP || "-"}</td>
-                        <td className="px-3 py-2">{b.RFI || "-"}</td>
-                        <td className="px-3 py-2">{b["Beta-Caseina"] || "-"}</td>
-                        <td className="px-3 py-2">{b["Kappa-Caseina"] || "-"}</td>
-                        <td className="px-3 py-2">{b.disponibilidade || "—"}</td>
-                        <td className="px-3 py-2 font-bold">{(b._score as number)?.toFixed(2)}</td>
-                      </tr>)}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
+      <div className="mb-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -1503,6 +1345,161 @@ function BullsPage({
           </CardContent>
         </Card>
       </div>
+
+      <div className="mb-3 flex items-center gap-2">
+        <div className="relative flex-1">
+          <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar touros por NAAB, nome, pedigree" className="pl-10" />
+          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+        </div>
+        <span className="text-xs text-muted-foreground">Selecionados: {selectedBulls.length}</span>
+      </div>
+
+      <Card>
+        <div className="overflow-auto rounded-lg">
+          <table className="min-w-[1800px] w-full">
+            <thead>
+              <tr>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">✓</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">NAAB</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Nome</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Registro</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Pedigree</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Nascimento</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">HHP$®</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">TPI</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">NM$</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">CM$</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FM$</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">GM$</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">F SAV</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PTAM</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">CFP</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PTAF</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PTAF%</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PTAP</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PTAP%</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PL</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">DPR</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">LIV</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">CCS</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">MAST</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">MET</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RP</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">DA</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">KET</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">MF</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PTAT</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">UDC</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FLC</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">SCE</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">DCE</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">SSB</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">DSB</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">H LIV</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">CCR</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">HCR</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FI</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">GL</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">EFC</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">BWC</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">STA</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">STR</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">DFM</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RUA</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RLS</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RTP</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FTL</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RW</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RLR</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FTA</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FLS</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FUA</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RUH</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RUW</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">UCL</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">UDP</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FTP</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RFI</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Beta-Caseína</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Kappa-Caseína</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Disponibilidade</th>
+                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((b: any) => <tr key={b.naab} className="odd:bg-card even:bg-muted/50">
+                  <td className="px-3 py-2">
+                    <input type="checkbox" checked={selectedBulls.includes(b.naab)} onChange={() => toggleSelect(b.naab)} />
+                  </td>
+                  <td className="px-3 py-2">{b.naab}</td>
+                  <td className="px-3 py-2 font-medium">{b.nome}</td>
+                  <td className="px-3 py-2">{b.registro || "-"}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{b.pedigree}</td>
+                  <td className="px-3 py-2">{b.nascimento || "-"}</td>
+                  <td className="px-3 py-2 font-semibold">{b["HHP$"] || "-"}</td>
+                  <td className="px-3 py-2 font-semibold">{b.TPI}</td>
+                  <td className="px-3 py-2 font-semibold">{b["NM$"]}</td>
+                  <td className="px-3 py-2">{b["CM$"] || "-"}</td>
+                  <td className="px-3 py-2">{b["FM$"] || "-"}</td>
+                  <td className="px-3 py-2">{b["GM$"] || "-"}</td>
+                  <td className="px-3 py-2">{b["F SAV"] || "-"}</td>
+                  <td className="px-3 py-2">{b.PTAM || "-"}</td>
+                  <td className="px-3 py-2">{b.CFP || "-"}</td>
+                  <td className="px-3 py-2">{b.PTAF || "-"}</td>
+                  <td className="px-3 py-2">{b["PTAF%"] ? `${b["PTAF%"]}%` : "-"}</td>
+                  <td className="px-3 py-2">{b.PTAP || "-"}</td>
+                  <td className="px-3 py-2">{b["PTAP%"] ? `${b["PTAP%"]}%` : "-"}</td>
+                  <td className="px-3 py-2">{b.PL || "-"}</td>
+                  <td className="px-3 py-2">{b.DPR || "-"}</td>
+                  <td className="px-3 py-2">{b.LIV || "-"}</td>
+                  <td className="px-3 py-2">{b.SCS ? b.SCS.toFixed(2) : "-"}</td>
+                  <td className="px-3 py-2">{b.MAST || "-"}</td>
+                  <td className="px-3 py-2">{b.MET || "-"}</td>
+                  <td className="px-3 py-2">{b.RP || "-"}</td>
+                  <td className="px-3 py-2">{b.DA || "-"}</td>
+                  <td className="px-3 py-2">{b.KET || "-"}</td>
+                  <td className="px-3 py-2">{b.MF || "-"}</td>
+                  <td className="px-3 py-2">{b.PTAT ? b.PTAT.toFixed(2) : "-"}</td>
+                  <td className="px-3 py-2">{b.UDC || "-"}</td>
+                  <td className="px-3 py-2">{b.FLC || "-"}</td>
+                  <td className="px-3 py-2">{b.SCE || "-"}</td>
+                  <td className="px-3 py-2">{b.DCE || "-"}</td>
+                  <td className="px-3 py-2">{b.SSB || "-"}</td>
+                  <td className="px-3 py-2">{b.DSB || "-"}</td>
+                  <td className="px-3 py-2">{b["H LIV"] || "-"}</td>
+                  <td className="px-3 py-2">{b.CCR || "-"}</td>
+                  <td className="px-3 py-2">{b.HCR || "-"}</td>
+                  <td className="px-3 py-2">{b.FI || "-"}</td>
+                  <td className="px-3 py-2">{b.GL || "-"}</td>
+                  <td className="px-3 py-2">{b.EFC || "-"}</td>
+                  <td className="px-3 py-2">{b.BWC || "-"}</td>
+                  <td className="px-3 py-2">{b.STA || "-"}</td>
+                  <td className="px-3 py-2">{b.STR || "-"}</td>
+                  <td className="px-3 py-2">{b.DFM || "-"}</td>
+                  <td className="px-3 py-2">{b.RUA || "-"}</td>
+                  <td className="px-3 py-2">{b.RLS || "-"}</td>
+                  <td className="px-3 py-2">{b.RTP || "-"}</td>
+                  <td className="px-3 py-2">{b.FTL || "-"}</td>
+                  <td className="px-3 py-2">{b.RW || "-"}</td>
+                  <td className="px-3 py-2">{b.RLR || "-"}</td>
+                  <td className="px-3 py-2">{b.FTA || "-"}</td>
+                  <td className="px-3 py-2">{b.FLS || "-"}</td>
+                  <td className="px-3 py-2">{b.FUA || "-"}</td>
+                  <td className="px-3 py-2">{b.RUH || "-"}</td>
+                  <td className="px-3 py-2">{b.RUW || "-"}</td>
+                  <td className="px-3 py-2">{b.UCL || "-"}</td>
+                  <td className="px-3 py-2">{b.UDP || "-"}</td>
+                  <td className="px-3 py-2">{b.FTP || "-"}</td>
+                  <td className="px-3 py-2">{b.RFI || "-"}</td>
+                  <td className="px-3 py-2">{b["Beta-Caseina"] || "-"}</td>
+                  <td className="px-3 py-2">{b["Kappa-Caseina"] || "-"}</td>
+                  <td className="px-3 py-2">{b.disponibilidade || "—"}</td>
+                  <td className="px-3 py-2 font-bold">{(b._score as number)?.toFixed(2)}</td>
+                </tr>)}
+            </tbody>
+          </table>
+        </div>
+      </Card>
     </div>;
 }
 function ChartsPage({
