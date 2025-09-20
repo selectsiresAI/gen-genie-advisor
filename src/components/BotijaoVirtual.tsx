@@ -265,6 +265,25 @@ function BotijaoVirtualPage({ client, farm, bulls, selectedBulls = [], onBack }:
     });
   };
 
+  const duplicateItem = (originalItem: BotijaoItem) => {
+    const duplicatedItem: BotijaoItem = {
+      ...originalItem,
+      id: `${originalItem.touro.naab}-${Date.now()}-${Math.random()}`,
+      dataAdicao: new Date().toISOString()
+    };
+
+    setBotijao(prev => {
+      const updatedItens = [...prev.itens, duplicatedItem];
+      const estoqueAtual = calculateStock(updatedItens);
+      return {
+        ...prev,
+        itens: updatedItens,
+        dataAtualizacao: new Date().toISOString(),
+        estoqueAtual
+      };
+    });
+  };
+
   const addStockUpdate = () => {
     if (!newUpdate.touroId || !newUpdate.tecnico) return;
     
@@ -433,6 +452,386 @@ function BotijaoVirtualPage({ client, farm, bulls, selectedBulls = [], onBack }:
       </div>
 
 
+
+      {/* Controles */}
+      <div className="flex items-center gap-4 mb-6">
+        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus size={16} className="mr-2" />
+              Adicionar Touro
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Adicionar Touro ao Botijão</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Selecionar Touro</Label>
+                <Select 
+                  value={newItem.touro?.naab || ""} 
+                  onValueChange={(value) => {
+                    const touro = filteredBulls.find(b => b.naab === value);
+                    setNewItem(prev => ({ ...prev, touro }));
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Escolha um touro" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredBulls.map(bull => (
+                      <SelectItem key={bull.naab} value={bull.naab}>
+                        {bull.naab} - {bull.nome} ({bull.empresa || "S/Empresa"})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label>Tipo</Label>
+                  <Select 
+                    value={newItem.tipo} 
+                    onValueChange={(value: "Convencional" | "Sexado") => 
+                      setNewItem(prev => ({ ...prev, tipo: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Convencional">Convencional</SelectItem>
+                      <SelectItem value="Sexado">Sexado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>Doses</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={newItem.doses}
+                    onChange={(e) => setNewItem(prev => ({ 
+                      ...prev, 
+                      doses: parseInt(e.target.value) || 1 
+                    }))}
+                  />
+                </div>
+
+                <div>
+                  <Label>Preço por Dose (R$)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={newItem.preco}
+                    onChange={(e) => setNewItem(prev => ({ 
+                      ...prev, 
+                      preco: parseFloat(e.target.value) || 0 
+                    }))}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label>Distribuição por Categoria de Idade</Label>
+                <div className="grid grid-cols-4 gap-2 mt-2">
+                  {["Nov", "Prim", "Secund", "Mult"].map(cat => (
+                    <div key={cat}>
+                      <Label className="text-xs">{cat}</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={newItem.distribuicao?.[cat as keyof typeof newItem.distribuicao] || 0}
+                        onChange={(e) => setNewItem(prev => ({
+                          ...prev,
+                          distribuicao: {
+                            ...prev.distribuicao!,
+                            [cat]: parseInt(e.target.value) || 0
+                          }
+                        }))}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Label>Distribuição por Segmentação</Label>
+                <div className="grid grid-cols-3 gap-2 mt-2">
+                  {["Doadoras", "Intermediarias", "Receptoras"].map(seg => (
+                    <div key={seg}>
+                      <Label className="text-xs">{seg}</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={newItem.distribuicao?.[seg as keyof typeof newItem.distribuicao] || 0}
+                        onChange={(e) => setNewItem(prev => ({
+                          ...prev,
+                          distribuicao: {
+                            ...prev.distribuicao!,
+                            [seg]: parseInt(e.target.value) || 0
+                          }
+                        }))}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Label>Observações</Label>
+                <Input
+                  value={newItem.observacoes}
+                  onChange={(e) => setNewItem(prev => ({ ...prev, observacoes: e.target.value }))}
+                  placeholder="Observações sobre este touro..."
+                />
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={addItemToBotijao} disabled={!newItem.touro}>
+                  Adicionar
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Button 
+          variant="outline" 
+          onClick={() => setShowStockUpdateDialog(true)}
+          disabled={botijao.itens.length === 0}
+        >
+          <Clock size={16} className="mr-2" />
+          Atualizar Estoque
+        </Button>
+
+        <Button variant="outline" onClick={exportBotijao} disabled={botijao.itens.length === 0}>
+          <Download size={16} className="mr-2" />
+          Exportar
+        </Button>
+      </div>
+
+      {/* Tabela do Botijão */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Composição do Botijão Virtual ({stats.totalTouros} touros)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {botijao.itens.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              {selectedBulls.length > 0 ? 
+                "Processando touros selecionados..." : 
+                "Nenhum touro adicionado ao botijão ainda."
+              }
+            </div>
+          ) : (
+            <div className="overflow-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-3">NAAB</th>
+                    <th className="text-left p-3">Nome</th>
+                    <th className="text-left p-3">Empresa</th>
+                    <th className="text-left p-3">Tipo</th>
+                    <th className="text-left p-3">Doses</th>
+                    <th className="text-left p-3">Preço</th>
+                    <th className="text-left p-3">Nov</th>
+                    <th className="text-left p-3">Prim</th>
+                    <th className="text-left p-3">Sec</th>
+                    <th className="text-left p-3">Mult</th>
+                    <th className="text-left p-3">Doad</th>
+                    <th className="text-left p-3">Inter</th>
+                    <th className="text-left p-3">Recep</th>
+                    <th className="text-left p-3">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {botijao.itens.map((item) => (
+                    <tr key={item.id} className="border-b hover:bg-muted/50">
+                      <td className="p-3">{item.touro.naab}</td>
+                      <td className="p-3 font-medium">{item.touro.nome}</td>
+                      <td className="p-3">{item.touro.empresa || "-"}</td>
+                      <td className="p-3">
+                        <Badge variant={item.tipo === "Sexado" ? "default" : "secondary"}>
+                          {item.tipo}
+                        </Badge>
+                      </td>
+                      <td className="p-3">
+                        <span className="font-semibold">{item.doses}</span>
+                      </td>
+                      <td className="p-3">
+                        <span>R$ {item.preco.toFixed(2)}</span>
+                      </td>
+                      <td className="p-3">{item.distribuicao.Nov}</td>
+                      <td className="p-3">{item.distribuicao.Prim}</td>
+                      <td className="p-3">{item.distribuicao.Secund}</td>
+                      <td className="p-3">{item.distribuicao.Mult}</td>
+                      <td className="p-3">{item.distribuicao.Doadoras}</td>
+                      <td className="p-3">{item.distribuicao.Intermediarias}</td>
+                      <td className="p-3">{item.distribuicao.Receptoras}</td>
+                      <td className="p-3">
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingItem(item.id)}
+                            className="text-blue-600"
+                            title="Editar touro"
+                          >
+                            <Edit size={16} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => duplicateItem(item)}
+                            className="text-green-600"
+                            title="Duplicar touro"
+                          >
+                            <Plus size={16} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeItem(item.id)}
+                            className="text-red-600"
+                            title="Remover touro"
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Dialog para Editar Touro */}
+      <Dialog open={editingItem !== null} onOpenChange={(open) => !open && setEditingItem(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Editar Touro no Botijão</DialogTitle>
+          </DialogHeader>
+          {editingItem && (() => {
+            const item = botijao.itens.find(i => i.id === editingItem);
+            if (!item) return null;
+            
+            return (
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label>Tipo</Label>
+                    <Select 
+                      value={item.tipo} 
+                      onValueChange={(value: "Convencional" | "Sexado") => 
+                        updateItem(item.id, { tipo: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Convencional">Convencional</SelectItem>
+                        <SelectItem value="Sexado">Sexado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>Doses</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={item.doses}
+                      onChange={(e) => updateItem(item.id, { doses: parseInt(e.target.value) || 1 })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Preço por Dose (R$)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={item.preco}
+                      onChange={(e) => updateItem(item.id, { preco: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Distribuição por Categoria de Idade</Label>
+                  <div className="grid grid-cols-4 gap-2 mt-2">
+                    {["Nov", "Prim", "Secund", "Mult"].map(cat => (
+                      <div key={cat}>
+                        <Label className="text-xs">{cat}</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={item.distribuicao[cat as keyof typeof item.distribuicao]}
+                          onChange={(e) => updateItem(item.id, {
+                            distribuicao: {
+                              ...item.distribuicao,
+                              [cat]: parseInt(e.target.value) || 0
+                            }
+                          })}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Distribuição por Segmentação</Label>
+                  <div className="grid grid-cols-3 gap-2 mt-2">
+                    {["Doadoras", "Intermediarias", "Receptoras"].map(seg => (
+                      <div key={seg}>
+                        <Label className="text-xs">{seg}</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={item.distribuicao[seg as keyof typeof item.distribuicao]}
+                          onChange={(e) => updateItem(item.id, {
+                            distribuicao: {
+                              ...item.distribuicao,
+                              [seg]: parseInt(e.target.value) || 0
+                            }
+                          })}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Observações</Label>
+                  <Input
+                    value={item.observacoes || ""}
+                    onChange={(e) => updateItem(item.id, { observacoes: e.target.value })}
+                    placeholder="Observações sobre este touro..."
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setEditingItem(null)}>
+                    Fechar
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog para Atualização de Estoque */}
       <Dialog open={showStockUpdateDialog} onOpenChange={setShowStockUpdateDialog}>
