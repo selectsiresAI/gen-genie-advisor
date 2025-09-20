@@ -77,6 +77,26 @@ function BotijaoVirtualPage({ client, farm, bulls, selectedBulls = [], onBack }:
     dataAtualizacao: new Date().toISOString(),
     estoqueAtual: { total: 0, convencional: 0, sexado: 0 }
   });
+
+  // Carregar dados salvos do localStorage na inicialização
+  useEffect(() => {
+    const savedBotijao = localStorage.getItem(`botijao-${farm.id}`);
+    if (savedBotijao) {
+      try {
+        const parsedBotijao = JSON.parse(savedBotijao);
+        setBotijao(parsedBotijao);
+      } catch (error) {
+        console.error('Erro ao carregar botijão salvo:', error);
+      }
+    }
+  }, [farm.id]);
+
+  // Salvar no localStorage sempre que o botijão mudar
+  useEffect(() => {
+    if (botijao.itens.length > 0 || botijao.dataAtualizacao) {
+      localStorage.setItem(`botijao-${farm.id}`, JSON.stringify(botijao));
+    }
+  }, [botijao, farm.id]);
   
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEmpresa, setSelectedEmpresa] = useState<string>("todas");
@@ -109,6 +129,26 @@ function BotijaoVirtualPage({ client, farm, bulls, selectedBulls = [], onBack }:
     id: string;
   }[]>([]);
   const [editingNitrogen, setEditingNitrogen] = useState<string | null>(null);
+
+  // Carregar dados de nitrogênio salvos do localStorage
+  useEffect(() => {
+    const savedNitrogen = localStorage.getItem(`nitrogen-${farm.id}`);
+    if (savedNitrogen) {
+      try {
+        const parsedNitrogen = JSON.parse(savedNitrogen);
+        setNitrogenRecords(parsedNitrogen);
+      } catch (error) {
+        console.error('Erro ao carregar dados de nitrogênio:', error);
+      }
+    }
+  }, [farm.id]);
+
+  // Salvar dados de nitrogênio no localStorage sempre que mudarem
+  useEffect(() => {
+    if (nitrogenRecords.length > 0) {
+      localStorage.setItem(`nitrogen-${farm.id}`, JSON.stringify(nitrogenRecords));
+    }
+  }, [nitrogenRecords, farm.id]);
   
   const [editingItemData, setEditingItemData] = useState<BotijaoItem | null>(null);
   
@@ -360,6 +400,19 @@ function BotijaoVirtualPage({ client, farm, bulls, selectedBulls = [], onBack }:
 
   const deleteNitrogenRecord = (id: string) => {
     setNitrogenRecords(prev => prev.filter(record => record.id !== id));
+  };
+
+  // Função para limpar todos os dados salvos (útil para reset)
+  const clearAllData = () => {
+    localStorage.removeItem(`botijao-${farm.id}`);
+    localStorage.removeItem(`nitrogen-${farm.id}`);
+    setBotijao({
+      fazendaId: farm.id,
+      itens: [],
+      dataAtualizacao: new Date().toISOString(),
+      estoqueAtual: { total: 0, convencional: 0, sexado: 0 }
+    });
+    setNitrogenRecords([]);
   };
 
   const removeItem = (itemId: string) => {
@@ -1266,6 +1319,19 @@ function BotijaoVirtualPage({ client, farm, bulls, selectedBulls = [], onBack }:
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Botão para limpar todos os dados salvos */}
+      {(botijao.itens.length > 0 || nitrogenRecords.length > 0) && (
+        <div className="mt-6 flex justify-center">
+          <Button 
+            variant="outline" 
+            onClick={clearAllData} 
+            className="text-red-600 border-red-200 hover:bg-red-50"
+          >
+            Limpar Todos os Dados Salvos
+          </Button>
+        </div>
       )}
     </div>
   );
