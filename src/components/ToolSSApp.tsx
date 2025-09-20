@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, AreaChart, Area, BarChart, Bar, ReferenceLine, PieChart, Pie, Cell } from "recharts";
-import { Users, Search as SearchIcon, Calculator, FileText, LineChart as LineIcon, Plus, Download, Upload, SlidersHorizontal, ArrowLeftRight, Layers3, PieChart as PieIcon, ArrowLeft, Beef, TrendingUp, Zap } from "lucide-react";
+import { Users, Search as SearchIcon, Calculator, FileText, LineChart as LineIcon, Plus, Download, Upload, SlidersHorizontal, ArrowLeftRight, Layers3, PieChart as PieIcon, ArrowLeft, Beef, TrendingUp, Zap, Trash2 } from "lucide-react";
 import PastaArquivosPage from "./PastaArquivos";
 import SMSPage from "./SMS";
 import MetasPage from "./Metas";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import SegmentationPage from "./SegmentationPage";
 import NexusApp from "./NexusApp";
@@ -1196,15 +1197,85 @@ function HerdPage({
   const [order, setOrder] = useState<keyof Female>("TPI");
   const [dir, setDir] = useState<"asc" | "desc">("desc");
   const [search, setSearch] = useState("");
-  const females = useMemo(() => {
+  const [selectedFemales, setSelectedFemales] = useState<Set<string>>(new Set());
+  const [showFilters, setShowFilters] = useState(false);
+  const [yearFilter, setYearFilter] = useState("");
+  const [yearRangeStart, setYearRangeStart] = useState("");
+  const [yearRangeEnd, setYearRangeEnd] = useState("");
+  const [tpiPercentage, setTpiPercentage] = useState(30);
+
+  const filteredFemales = useMemo(() => {
     let rows = [...farm.females];
     const q = search.trim().toLowerCase();
     if (q) {
       rows = rows.filter((r: Female) => r.brinco.includes(q) || r.nomePai.toLowerCase().includes(q) || r.naabPai.toLowerCase().includes(q));
     }
+    
+    // Apply year filters
+    if (yearFilter) {
+      rows = rows.filter((f: Female) => {
+        const year = new Date(f.nascimento).getFullYear();
+        return year.toString() === yearFilter;
+      });
+    }
+    
+    if (yearRangeStart && yearRangeEnd) {
+      rows = rows.filter((f: Female) => {
+        const year = new Date(f.nascimento).getFullYear();
+        return year >= parseInt(yearRangeStart) && year <= parseInt(yearRangeEnd);
+      });
+    }
+
     rows.sort((a: any, b: any) => dir === "asc" ? (a[order] as number) - (b[order] as number) : (b[order] as number) - (a[order] as number));
     return rows;
-  }, [farm.females, order, dir, search]);
+  }, [farm.females, order, dir, search, yearFilter, yearRangeStart, yearRangeEnd]);
+
+  const handleSelectionChange = (id: string, selected: boolean) => {
+    setSelectedFemales(prev => {
+      const newSet = new Set(prev);
+      if (selected) {
+        newSet.add(id);
+      } else {
+        newSet.delete(id);
+      }
+      return newSet;
+    });
+  };
+
+  const selectTopTPI = () => {
+    const sorted = [...filteredFemales].sort((a, b) => b.TPI - a.TPI);
+    const topCount = Math.ceil(sorted.length * (tpiPercentage / 100));
+    const topAnimals = sorted.slice(0, topCount);
+    const newSelected = new Set(selectedFemales);
+    topAnimals.forEach(f => newSelected.add(f.id));
+    setSelectedFemales(newSelected);
+  };
+
+  const selectBornAfter2022 = () => {
+    const after2022 = filteredFemales.filter(f => new Date(f.nascimento).getFullYear() > 2022);
+    const newSelected = new Set(selectedFemales);
+    after2022.forEach(f => newSelected.add(f.id));
+    setSelectedFemales(newSelected);
+  };
+
+  const selectAll = () => {
+    const newSelected = new Set(selectedFemales);
+    filteredFemales.forEach(f => newSelected.add(f.id));
+    setSelectedFemales(newSelected);
+  };
+
+  const deselectAll = () => {
+    setSelectedFemales(new Set());
+  };
+
+  const bulkDelete = () => {
+    if (selectedFemales.size === 0) return;
+    if (confirm(`Excluir ${selectedFemales.size} fêmea(s) selecionada(s)?`)) {
+      // This would need to be connected to actual data management
+      console.log("Delete selected females:", Array.from(selectedFemales));
+      setSelectedFemales(new Set());
+    }
+  };
   const setSort = (k: keyof Female) => {
     if (order === k) setDir(dir === "asc" ? "desc" : "asc");else {
       setOrder(k);
@@ -1214,11 +1285,27 @@ function HerdPage({
   const th = (label: string, k: keyof Female) => <th onClick={() => setSort(k)} className="px-3 py-2 cursor-pointer whitespace-nowrap bg-foreground text-background sticky top-0">
       {label} {order === k ? dir === "asc" ? "▲" : "▼" : ""}
     </th>;
+  
   return <div className="max-w-7xl mx-auto px-4 py-6">
       <div className="flex items-center gap-2 mb-4">
         <Button variant="outline" onClick={onBack}>
           <ArrowLeftRight className="mr-2" size={16} /> Voltar
         </Button>
+        <div className="flex items-center gap-2">
+          <div className="text-sm text-muted-foreground">
+            Total: <span className="font-semibold">{farm.females.length}</span> animais
+          </div>
+          {filteredFemales.length !== farm.females.length && (
+            <div className="text-sm text-muted-foreground">
+              Filtrados: <span className="font-semibold">{filteredFemales.length}</span>
+            </div>
+          )}
+          {selectedFemales.size > 0 && (
+            <div className="text-sm font-semibold text-primary">
+              {selectedFemales.size} selecionados
+            </div>
+          )}
+        </div>
         <div className="ml-auto flex items-center gap-2">
           <label className="cursor-pointer">
             <Button variant="outline" asChild>
@@ -1233,6 +1320,87 @@ function HerdPage({
           </Button>
         </div>
       </div>
+
+      {/* Group Selection Controls */}
+      <Card className="mb-4">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <h3 className="text-lg font-semibold">Seleção em Grupo</h3>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <SlidersHorizontal className="w-4 h-4 mr-2" />
+              Filtros {showFilters ? "▲" : "▼"}
+            </Button>
+          </div>
+          
+          <div className="flex flex-wrap gap-2 mb-4">
+            <Button variant="outline" onClick={selectAll}>
+              Marcar Todas
+            </Button>
+            <Button variant="outline" onClick={deselectAll}>
+              Desmarcar Todas
+            </Button>
+            <Button variant="outline" onClick={selectTopTPI}>
+              Top {tpiPercentage}% TPI
+            </Button>
+            <Button variant="outline" onClick={selectBornAfter2022}>
+              Nascidas após 2022
+            </Button>
+            {selectedFemales.size > 0 && (
+              <Button variant="destructive" onClick={bulkDelete}>
+                <Trash2 className="w-4 h-4 mr-2" />
+                Excluir Selecionadas ({selectedFemales.size})
+              </Button>
+            )}
+          </div>
+
+          {showFilters && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Ano específico:</label>
+                <Input
+                  type="number"
+                  placeholder="Ex: 2023"
+                  value={yearFilter}
+                  onChange={(e) => setYearFilter(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Ano inicial:</label>
+                <Input
+                  type="number"
+                  placeholder="Ex: 2020"
+                  value={yearRangeStart}
+                  onChange={(e) => setYearRangeStart(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Ano final:</label>
+                <Input
+                  type="number"
+                  placeholder="Ex: 2024"
+                  value={yearRangeEnd}
+                  onChange={(e) => setYearRangeEnd(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">% Top TPI: {tpiPercentage}%</label>
+                <Input
+                  type="range"
+                  min="10"
+                  max="50"
+                  value={tpiPercentage}
+                  onChange={(e) => setTpiPercentage(Number(e.target.value))}
+                  className="w-full"
+                />
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="mb-3 flex items-center gap-2">
         <div className="relative flex-1">
@@ -1249,6 +1417,18 @@ function HerdPage({
           <table className="min-w-[1800px] w-full">
             <thead>
               <tr>
+                <th className="px-3 py-2 bg-foreground text-background sticky top-0">
+                  <Checkbox
+                    checked={filteredFemales.length > 0 && filteredFemales.every(f => selectedFemales.has(f.id))}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        selectAll();
+                      } else {
+                        deselectAll();
+                      }
+                    }}
+                  />
+                </th>
                 {th("Brinco", "brinco")}
                 {th("Nome", "nome")}
                 {th("ID CDCB", "idCDCB")}
@@ -1314,7 +1494,13 @@ function HerdPage({
               </tr>
             </thead>
             <tbody>
-              {females.map((f: Female) => <tr key={f.id} className="odd:bg-card even:bg-muted/50">
+              {filteredFemales.map((f: Female) => <tr key={f.id} className="odd:bg-card even:bg-muted/50">
+                  <td className="px-3 py-2">
+                    <Checkbox
+                      checked={selectedFemales.has(f.id)}
+                      onCheckedChange={(checked) => handleSelectionChange(f.id, !!checked)}
+                    />
+                  </td>
                   <td className="px-3 py-2">{f.brinco}</td>
                   <td className="px-3 py-2">{f.nome || "-"}</td>
                   <td className="px-3 py-2">{f.idCDCB || "-"}</td>
