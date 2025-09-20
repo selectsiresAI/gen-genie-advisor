@@ -954,26 +954,20 @@ export default function ToolSSApp() {
 
       {page === "plano" && <PlanoApp onBack={() => setPage("clientes")} />}
 
-      {showBotijaoVirtual && (
+      {(showBotijaoVirtual || page === "botijao") && farm && selectedClient && (
         <BotijaoVirtualPage 
           client={selectedClient}
           farm={farm}
           bulls={rankedBulls}
-          selectedBulls={selectedBullsForBotijao}
+          selectedBulls={showBotijaoVirtual ? selectedBullsForBotijao : []}
           onBack={() => {
-            setShowBotijaoVirtual(false);
-            setSelectedBullsForBotijao([]);
+            if (showBotijaoVirtual) {
+              setShowBotijaoVirtual(false);
+              setSelectedBullsForBotijao([]);
+            } else {
+              setPage("fazenda");
+            }
           }}
-        />
-      )}
-
-      {page === "botijao" && farm && selectedClient && (
-        <BotijaoVirtualPage 
-          client={selectedClient} 
-          farm={farm} 
-          bulls={rankedBulls} 
-          selectedBulls={[]}
-          onBack={() => setPage("fazenda")} 
         />
       )}
 
