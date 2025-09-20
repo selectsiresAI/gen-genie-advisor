@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import SegmentationPage from "./SegmentationPage";
 import NexusApp from "./NexusApp";
 import PlanoApp from "./PlanoApp";
@@ -759,6 +760,17 @@ export default function ToolSSApp() {
   const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
   const [weights, setWeights] = useState<Weights>(defaultWeights);
   const [selectedBulls, setSelectedBulls] = useState<string[]>([]); // naab
+  
+  // Bull selection and Botijão Virtual states
+  const [selectedBullsForBotijao, setSelectedBullsForBotijao] = useState<string[]>([]);
+  const [showAddToBotijaoDialog, setShowAddToBotijaoDialog] = useState(false);
+  const [showBotijaoVirtual, setShowBotijaoVirtual] = useState(false);
+  
+  // Bulls page states
+  const [selectedIndicePers, setSelectedIndicePers] = useState("tpi");
+  const [bullSearchTerm, setBullSearchTerm] = useState("");
+  const [selectedEmpresaBulls, setSelectedEmpresaBulls] = useState<string>("todas");
+
   const farm = useMemo(() => selectedClient?.farms.find(f => f.id === selectedFarmId) ?? null, [selectedClient, selectedFarmId]);
   useEffect(() => {
     const data = loadClients();
@@ -923,13 +935,71 @@ export default function ToolSSApp() {
 
       {page === "rebanho" && farm && selectedClient && <HerdPage client={selectedClient} farm={farm} onBack={() => setPage("fazenda")} onExport={() => toCSV(farm.females, `femeas_${selectedClient.id}.csv`)} onUpload={(e: any) => handleUpload(e, "females")} />}
 
-      {page === "touros" && farm && selectedClient && <BullsPage bulls={rankedBulls} weights={weights} setWeights={setWeights} selectedBulls={selectedBulls} setSelectedBulls={setSelectedBulls} onExport={() => toCSV(rankedBulls, `touros_${selectedClient.id}.csv`)} onUpload={(e: any) => handleUpload(e, "bulls")} onBack={() => setPage("fazenda")} />}
+      {page === "touros" && farm && selectedClient && <BullsPage 
+        bulls={rankedBulls} 
+        weights={weights} 
+        setWeights={setWeights} 
+        selectedBulls={selectedBulls} 
+        setSelectedBulls={setSelectedBulls} 
+        onExport={() => toCSV(rankedBulls, `touros_${selectedClient.id}.csv`)} 
+        onUpload={(e: any) => handleUpload(e, "bulls")} 
+        onBack={() => setPage("fazenda")} 
+        onAddToBotijao={(selectedNaabs: string[]) => {
+          setSelectedBullsForBotijao(selectedNaabs);
+          setShowAddToBotijaoDialog(true);
+        }}
+      />}
 
       {page === "graficos" && farm && <ChartsPage mothers={mothersSeries} daughters={daughtersSeries} onBack={() => setPage("fazenda")} />}
 
       {page === "plano" && <PlanoApp onBack={() => setPage("clientes")} />}
 
-      {page === "botijao" && farm && selectedClient && <BotijaoVirtualPage client={selectedClient} farm={farm} bulls={rankedBulls} onBack={() => setPage("fazenda")} />}
+      {showBotijaoVirtual && (
+        <BotijaoVirtualPage 
+          client={selectedClient}
+          farm={farm}
+          bulls={rankedBulls}
+          selectedBulls={selectedBullsForBotijao}
+          onBack={() => {
+            setShowBotijaoVirtual(false);
+            setSelectedBullsForBotijao([]);
+          }}
+        />
+      )}
+
+      {page === "botijao" && farm && selectedClient && (
+        <BotijaoVirtualPage 
+          client={selectedClient} 
+          farm={farm} 
+          bulls={rankedBulls} 
+          selectedBulls={[]}
+          onBack={() => setPage("fazenda")} 
+        />
+      )}
+
+      {/* Dialog para adicionar touros selecionados ao Botijão */}
+      <Dialog open={showAddToBotijaoDialog} onOpenChange={setShowAddToBotijaoDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adicionar Touros ao Botijão Virtual</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p>Você selecionou {selectedBullsForBotijao.length} touro(s) para adicionar ao Botijão Virtual.</p>
+            <p>Deseja continuar para o Botijão Virtual?</p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowAddToBotijaoDialog(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={() => {
+                setShowBotijaoVirtual(true);
+                setShowAddToBotijaoDialog(false);
+              }}>
+                Ir para Botijão
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {page === "segmentacao" && farm && <SegmentationPage farm={farm} weights={weights} statsForCustom={stats} onBack={() => setPage("fazenda")} />}
 
@@ -1312,7 +1382,8 @@ function BullsPage({
   setSelectedBulls,
   onExport,
   onUpload,
-  onBack
+  onBack,
+  onAddToBotijao
 }: any) {
   const [q, setQ] = useState("");
   const [selectedEmpresa, setSelectedEmpresa] = useState<string>("todas");
@@ -1363,6 +1434,14 @@ function BullsPage({
           <ArrowLeftRight className="mr-2" size={16} /> Voltar
         </Button>
         <div className="ml-auto flex items-center gap-2">
+          <Button 
+            onClick={() => onAddToBotijao && onAddToBotijao(selectedBulls)}
+            disabled={selectedBulls.length === 0}
+            variant="default"
+          >
+            <Plus size={16} className="mr-2" />
+            Adicionar ao Botijão ({selectedBulls.length})
+          </Button>
           <label className="cursor-pointer">
             <Button variant="outline" asChild>
               <span>
