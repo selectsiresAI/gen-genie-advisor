@@ -482,7 +482,7 @@ function BotijaoVirtualPage({ client, farm, bulls, selectedBulls = [], onBack }:
         </Button>
       </div>
 
-      {/* Painéis de Gestão de Estoque */}
+      {/* ÚNICO conjunto de Painéis de Gestão de Estoque */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="p-4">
@@ -533,7 +533,7 @@ function BotijaoVirtualPage({ client, farm, bulls, selectedBulls = [], onBack }:
         </Card>
       </div>
 
-      {/* Distribuição por Categoria */}
+      {/* ÚNICA Distribuição por Categoria */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-6">
         <Card>
           <CardContent className="p-3">
