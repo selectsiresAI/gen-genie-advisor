@@ -1732,7 +1732,7 @@ function ChartsPage({
 }
 
 function PanoramaRebanhoPage({ mothers, onBack }: any) {
-  const [selectedPTAs, setSelectedPTAs] = useState<string[]>(["TPI", "NM$", "Milk", "Fat", "Protein"]);
+  const [selectedPTAs, setSelectedPTAs] = useState<string[]>(["HHP$", "TPI", "NM$", "CM$", "FM$"]);
   const [showStats, setShowStats] = useState(true);
 
   const ptaOptions = [
@@ -1845,73 +1845,77 @@ function PanoramaRebanhoPage({ mothers, onBack }: any) {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        {selectedPTAs.map(ptaKey => {
-          const ptaInfo = ptaOptions.find(p => p.key === ptaKey);
-          const chartData = generateChartData(ptaKey);
-          const stats = calculateStats(ptaKey);
-          const trendLine = calculateTrendLine(chartData);
-          
-          return (
-            <Card key={ptaKey}>
-              <div className="bg-black text-white px-4 py-2">
-                <h3 className="font-bold">{ptaInfo?.name}</h3>
-              </div>
-              <CardContent className="pt-4">
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="year" />
-                    <YAxis />
-                    <ReferenceLine 
-                      y={stats.mean} 
-                      stroke="#00BFFF" 
-                      strokeDasharray="5 5" 
-                      label={{ value: `Média ${stats.mean.toFixed(0)}`, position: "top" }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="value" 
-                      stroke="#000" 
-                      strokeWidth={2}
-                      dot={{ fill: "#000", strokeWidth: 2, r: 4 }}
-                    />
-                    <Line 
-                      data={trendLine}
-                      type="monotone" 
-                      dataKey="trend" 
-                      stroke="#FF0000" 
-                      strokeDasharray="3 3"
-                      dot={false}
-                      name="Tendência"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-                
-                {showStats && (
-                  <div className="mt-4 space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span>Desvio Padrão:</span>
-                      <span>{stats.stdDev.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Min / Max:</span>
-                      <span>{stats.min.toFixed(1)} / {stats.max.toFixed(1)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Herdabilidade:</span>
-                      <span>{ptaInfo?.heritability}</span>
-                    </div>
+        {/* Render charts in the correct sequence by filtering ptaOptions */}
+        {ptaOptions
+          .filter(pta => selectedPTAs.includes(pta.key))
+          .map(ptaInfo => {
+            const chartData = generateChartData(ptaInfo.key);
+            const stats = calculateStats(ptaInfo.key);
+            const trendLine = calculateTrendLine(chartData);
+            
+            return (
+              <Card key={ptaInfo.key} className="overflow-hidden">
+                <div className="bg-black text-white px-4 py-2">
+                  <h3 className="font-bold">{ptaInfo.name}</h3>
+                </div>
+                <CardContent className="pt-4 p-4">
+                  <div className="w-full h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="year" />
+                        <YAxis domain={['dataMin - 10', 'dataMax + 10']} />
+                        <ReferenceLine 
+                          y={stats.mean} 
+                          stroke="#00BFFF" 
+                          strokeDasharray="5 5" 
+                          label={{ value: `Média ${stats.mean.toFixed(0)}`, position: "top" }}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="value" 
+                          stroke="#000" 
+                          strokeWidth={2}
+                          dot={{ fill: "#000", strokeWidth: 2, r: 4 }}
+                        />
+                        <Line 
+                          data={trendLine}
+                          type="monotone" 
+                          dataKey="trend" 
+                          stroke="#FF0000" 
+                          strokeDasharray="3 3"
+                          dot={false}
+                          name="Tendência"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
                   </div>
-                )}
-              </CardContent>
-              <div className="bg-red-600 text-white px-4 py-2">
-                <p className="text-sm font-medium">
-                  Animais abaixo da média: {stats.belowAvg.toFixed(0)}%
-                </p>
-              </div>
-            </Card>
-          );
-        })}
+                  
+                  {showStats && (
+                    <div className="mt-4 space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span>Desvio Padrão:</span>
+                        <span>{stats.stdDev.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Min / Max:</span>
+                        <span>{stats.min.toFixed(1)} / {stats.max.toFixed(1)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Herdabilidade:</span>
+                        <span>{ptaInfo.heritability}</span>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+                <div className="bg-red-600 text-white px-4 py-2">
+                  <p className="text-sm font-medium">
+                    Animais abaixo da média: {stats.belowAvg.toFixed(0)}%
+                  </p>
+                </div>
+              </Card>
+            );
+          })}
       </div>
     </div>
   );
@@ -2021,7 +2025,7 @@ function EvolucaoRebanhoPage({ mothers, daughters, onBack }: any) {
         </div>
       </div>
 
-      <div className="grid gap-6">
+      <div className="space-y-6">
         {selectedPTAs.map(ptaKey => {
           const chartData = generateComparisonData(ptaKey);
           const mothersTrend = calculateTrend(chartData, 'mothers');
@@ -2032,64 +2036,67 @@ function EvolucaoRebanhoPage({ mothers, daughters, onBack }: any) {
           const currentDaughtersAvg = chartData[chartData.length - 1]?.daughters || 0;
           
           return (
-            <Card key={ptaKey}>
+            <Card key={ptaKey} className="overflow-hidden">
               <div className="bg-black text-white px-4 py-3 flex justify-between items-center">
                 <h3 className="font-bold text-lg">{ptaKey}</h3>
                 <div className="flex gap-4 text-sm">
                   <span className={`font-medium ${mothersTrend > 0 ? 'text-green-300' : 'text-red-300'}`}>
-                    Mães: {mothersTrend > 0 ? '↗' : '↘'} {mothersTrend.toFixed(1)}/ano
-                  </span>
-                  <span className={`font-medium ${daughtersTrend > 0 ? 'text-green-300' : 'text-red-300'}`}>
-                    Filhas: {daughtersTrend > 0 ? '↗' : '↘'} {daughtersTrend.toFixed(1)}/ano
+                    Tendência {mothersTrend > 0 ? 'Positiva' : 'Negativa'}: {Math.abs(mothersTrend).toFixed(1)}/ano
                   </span>
                 </div>
               </div>
-              <CardContent className="pt-4">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Comparação em barras */}
-                  <div className="flex justify-center items-center">
-                    <div className="flex gap-4">
-                      <div className="text-center">
-                        <div className="bg-red-600 text-white px-6 py-12 rounded text-xl font-bold min-w-[100px] flex items-center justify-center">
-                          {currentMothersAvg}
-                        </div>
-                        <p className="mt-2 text-muted-foreground font-medium">Mães</p>
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-center">
+                  {/* Comparação em barras verticais como na imagem 3 */}
+                  <div className="flex justify-center items-end gap-4 h-32">
+                    <div className="text-center">
+                      <div 
+                        className="bg-red-600 text-white rounded text-sm font-bold min-w-[80px] flex items-center justify-center"
+                        style={{ height: `${Math.max(currentMothersAvg / 40, 20)}px` }}
+                      >
+                        {currentMothersAvg}
                       </div>
-                      <div className="text-center">
-                        <div className="bg-gray-800 text-white px-6 py-12 rounded text-xl font-bold min-w-[100px] flex items-center justify-center">
-                          {currentDaughtersAvg}
-                        </div>
-                        <p className="mt-2 text-muted-foreground font-medium">Filhas</p>
+                      <p className="mt-2 text-xs text-muted-foreground font-medium">Mães</p>
+                    </div>
+                    <div className="text-center">
+                      <div 
+                        className="bg-gray-800 text-white rounded text-sm font-bold min-w-[80px] flex items-center justify-center"
+                        style={{ height: `${Math.max(currentDaughtersAvg / 40, 20)}px` }}
+                      >
+                        {currentDaughtersAvg}
                       </div>
+                      <p className="mt-2 text-xs text-muted-foreground font-medium">Filhas</p>
                     </div>
                   </div>
                   
                   {/* Gráfico de evolução */}
-                  <div className="lg:col-span-2">
-                    <ResponsiveContainer width="100%" height={300}>
-                      <LineChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="year" />
-                        <YAxis />
-                        <Legend />
-                        <Line 
-                          type="monotone" 
-                          dataKey="mothers" 
-                          stroke="#DC2626" 
-                          strokeWidth={2} 
-                          dot={{ fill: "#DC2626", strokeWidth: 2, r: 4 }} 
-                          name="Mães" 
-                        />
-                        <Line 
-                          type="monotone" 
-                          dataKey="daughters" 
-                          stroke="#1F2937" 
-                          strokeWidth={2} 
-                          dot={{ fill: "#1F2937", strokeWidth: 2, r: 4 }} 
-                          name="Filhas" 
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
+                  <div className="lg:col-span-3">
+                    <div className="w-full h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="year" />
+                          <YAxis />
+                          <Legend />
+                          <Line 
+                            type="monotone" 
+                            dataKey="mothers" 
+                            stroke="#DC2626" 
+                            strokeWidth={2} 
+                            dot={{ fill: "#DC2626", strokeWidth: 2, r: 4 }} 
+                            name="Mães" 
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="daughters" 
+                            stroke="#1F2937" 
+                            strokeWidth={2} 
+                            dot={{ fill: "#1F2937", strokeWidth: 2, r: 4 }} 
+                            name="Filhas" 
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
                 </div>
               </CardContent>
