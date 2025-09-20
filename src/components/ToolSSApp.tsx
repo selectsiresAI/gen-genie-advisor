@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, AreaChart, Area, BarChart, Bar, ReferenceLine, PieChart, Pie, Cell } from "recharts";
 import { Users, Search as SearchIcon, Calculator, FileText, LineChart as LineIcon, Plus, Download, Upload, SlidersHorizontal, ArrowLeftRight, Layers3, PieChart as PieIcon, ArrowLeft, Beef, TrendingUp, Zap } from "lucide-react";
+import PastaArquivosPage from "./PastaArquivos";
+import SMSPage from "./SMS";
+import MetasPage from "./Metas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -755,7 +758,7 @@ function segmentAnimals(females: Female[], cfg: SegmentConfig, statsForCustom: a
 export default function ToolSSApp() {
   const [clients, setClients] = useState<Client[]>([]);
   const [query, setQuery] = useState("");
-  const [page, setPage] = useState<"clientes" | "fazenda" | "rebanho" | "touros" | "graficos" | "plano" | "info" | "segmentacao" | "nexus" | "botijao">("clientes");
+  const [page, setPage] = useState<"clientes" | "fazenda" | "rebanho" | "touros" | "graficos" | "plano" | "info" | "segmentacao" | "nexus" | "botijao" | "arquivos" | "sms" | "metas">("clientes");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
   const [weights, setWeights] = useState<Weights>(defaultWeights);
@@ -1012,7 +1015,11 @@ export default function ToolSSApp() {
           <NexusApp />
         </div>}
 
-      {page === "info" && farm && <InfoPage onBack={() => setPage("fazenda")} />}
+      {page === "arquivos" && farm && <PastaArquivosPage onBack={() => setPage("fazenda")} />}
+      
+      {page === "sms" && farm && <SMSPage farm={farm} onBack={() => setPage("fazenda")} />}
+      
+      {page === "metas" && farm && <MetasPage farm={farm} onBack={() => setPage("fazenda")} />}
     </div>;
 }
 
@@ -1047,7 +1054,6 @@ function Header({
           <NavButton icon={<LineIcon size={16} />} label="Gráficos" onClick={() => onGoto("graficos")} />
           <NavButton icon={<Calculator size={16} />} label="Plano" onClick={() => onGoto("plano")} />
           <NavButton icon={<TrendingUp size={16} />} label="Nexus" onClick={() => onGoto("nexus")} />
-          <NavButton icon={<FileText size={16} />} label="Informações" onClick={() => onGoto("info")} />
         </div>
       </div>
     </div>;
@@ -1150,10 +1156,20 @@ function FarmHome({
     desc: "Sistema de predição genética",
     page: "nexus"
   }, {
-    icon: <FileText size={32} />,
-    title: "Informações",
-    desc: "CDC B / instruções / avisos",
-    page: "info"
+    icon: <Upload size={32} />,
+    title: "Pasta de Arquivos",
+    desc: "Upload de Excel, PDF e documentos",
+    page: "arquivos"
+  }, {
+    icon: <ArrowLeftRight size={32} />,
+    title: "SMS",
+    desc: "Acasalamento de touros por categoria",
+    page: "sms"
+  }, {
+    icon: <PieIcon size={32} />,
+    title: "Metas",
+    desc: "Metas e anotações da fazenda",
+    page: "metas"
   }];
   return <div className="max-w-7xl mx-auto px-4 py-6">
       <div className="text-2xl font-bold mb-2">#{client.id} {client.nome}</div>
