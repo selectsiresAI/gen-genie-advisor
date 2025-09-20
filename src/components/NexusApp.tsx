@@ -326,19 +326,230 @@ function SortableHeader({ label, sortState, onSort }: { label: string; sortState
   );
 }
 
-function BancoFemeas({ data, onDownload, onSort, sortState }: { data: Animal[]; onDownload: () => void; onSort: (col: string) => void; sortState: { col: string | null; dir: string | null }; }) {
+function BancoFemeas({ 
+  data, 
+  onDownload, 
+  onSort, 
+  sortState, 
+  selectedFemeas = new Set(), 
+  onSelectionChange = () => {}, 
+  onBulkDelete = () => {} 
+}: { 
+  data: Animal[]; 
+  onDownload: () => void; 
+  onSort: (col: string) => void; 
+  sortState: { col: string | null; dir: string | null }; 
+  selectedFemeas?: Set<string>;
+  onSelectionChange?: (id: string, selected: boolean) => void;
+  onBulkDelete?: (ids: string[]) => void;
+}) {
   const cols = [...META_FEM, ...TRAIT_COLS_BANK];
+  const [showFilters, setShowFilters] = useState(false);
+  const [yearFilter, setYearFilter] = useState("");
+  const [yearRangeStart, setYearRangeStart] = useState("");
+  const [yearRangeEnd, setYearRangeEnd] = useState("");
+  const [tpiPercentage, setTpiPercentage] = useState(30);
+
+  const filteredData = useMemo(() => {
+    let filtered = [...data];
+    
+    if (yearFilter) {
+      filtered = filtered.filter(animal => {
+        const birthDate = animal["Data de Nascimento"];
+        if (!birthDate) return false;
+        const year = new Date(birthDate).getFullYear();
+        return year.toString() === yearFilter;
+      });
+    }
+    
+    if (yearRangeStart && yearRangeEnd) {
+      filtered = filtered.filter(animal => {
+        const birthDate = animal["Data de Nascimento"];
+        if (!birthDate) return false;
+        const year = new Date(birthDate).getFullYear();
+        return year >= parseInt(yearRangeStart) && year <= parseInt(yearRangeEnd);
+      });
+    }
+    
+    return filtered;
+  }, [data, yearFilter, yearRangeStart, yearRangeEnd]);
+
+  const selectTopTPI = () => {
+    const sorted = [...filteredData].sort((a, b) => nfloat(b.TPI) - nfloat(a.TPI));
+    const topCount = Math.ceil(sorted.length * (tpiPercentage / 100));
+    const topAnimals = sorted.slice(0, topCount);
+    topAnimals.forEach(animal => {
+      const id = animal["ID Animal"];
+      if (id) onSelectionChange(id, true);
+    });
+  };
+
+  const selectBornAfter2022 = () => {
+    const after2022 = filteredData.filter(animal => {
+      const birthDate = animal["Data de Nascimento"];
+      if (!birthDate) return false;
+      const year = new Date(birthDate).getFullYear();
+      return year > 2022;
+    });
+    after2022.forEach(animal => {
+      const id = animal["ID Animal"];
+      if (id) onSelectionChange(id, true);
+    });
+  };
+
+  const selectAll = () => {
+    filteredData.forEach(animal => {
+      const id = animal["ID Animal"];
+      if (id) onSelectionChange(id, true);
+    });
+  };
+
+  const deselectAll = () => {
+    filteredData.forEach(animal => {
+      const id = animal["ID Animal"];
+      if (id) onSelectionChange(id, false);
+    });
+  };
+
+  const deleteSelected = () => {
+    const selectedIds = Array.from(selectedFemeas);
+    if (selectedIds.length === 0) return;
+    if (confirm(`Excluir ${selectedIds.length} fêmea(s) selecionada(s)?`)) {
+      onBulkDelete(selectedIds);
+    }
+  };
+
   return (
     <Card>
       <CardContent className="p-6">
-        <div className="flex items-center justify-between mb-3">
-          <div className="text-lg font-semibold">Banco de Fêmeas</div>
-          <Button onClick={onDownload}><Download className="w-4 h-4 mr-2" />Download Excel</Button>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-4">
+            <div className="text-lg font-semibold">Banco de Fêmeas</div>
+            <Badge variant="secondary">{filteredData.length} animais</Badge>
+            {selectedFemeas.size > 0 && (
+              <Badge variant="default">{selectedFemeas.size} selecionados</Badge>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              Filtros {showFilters ? "▲" : "▼"}
+            </Button>
+            <Button onClick={onDownload}>
+              <Download className="w-4 h-4 mr-2" />Download Excel
+            </Button>
+          </div>
         </div>
+
+        {showFilters && (
+          <Card className="mb-4">
+            <CardContent className="p-4">
+              <div className="space-y-4">
+                <div className="text-sm font-medium">Filtros e Seleção</div>
+                
+                {/* Filtros por ano */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium">Ano específico</label>
+                    <Input
+                      type="number"
+                      placeholder="2023"
+                      value={yearFilter}
+                      onChange={(e) => setYearFilter(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium">Ano inicial</label>
+                    <Input
+                      type="number"
+                      placeholder="2020"
+                      value={yearRangeStart}
+                      onChange={(e) => setYearRangeStart(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium">Ano final</label>
+                    <Input
+                      type="number"
+                      placeholder="2024"
+                      value={yearRangeEnd}
+                      onChange={(e) => setYearRangeEnd(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Botões de seleção */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                  <Button variant="outline" size="sm" onClick={selectAll}>
+                    Selecionar Todas
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={deselectAll}>
+                    Desmarcar Todas
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={selectTopTPI}>
+                    Top {tpiPercentage}% TPI
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={selectBornAfter2022}>
+                    Nascidas após 2022
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    onClick={deleteSelected}
+                    disabled={selectedFemeas.size === 0}
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    Excluir ({selectedFemeas.size})
+                  </Button>
+                </div>
+
+                {/* Slider para percentual TPI */}
+                <div className="space-y-2">
+                  <label className="text-xs font-medium">
+                    Percentual para Top TPI: {tpiPercentage}%
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min="1"
+                      max="100"
+                      value={tpiPercentage}
+                      onChange={(e) => setTpiPercentage(parseInt(e.target.value))}
+                      className="flex-1"
+                    />
+                    <Input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={tpiPercentage}
+                      onChange={(e) => setTpiPercentage(parseInt(e.target.value) || 30)}
+                      className="w-16"
+                    />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox 
+                    checked={selectedFemeas.size > 0 && selectedFemeas.size === filteredData.length}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        selectAll();
+                      } else {
+                        deselectAll();
+                      }
+                    }}
+                  />
+                </TableHead>
                 {cols.map((c) => (
                   <TableHead key={c} className="min-w-[120px] p-2">
                     <SortableHeader label={c} sortState={sortState} onSort={onSort} />
@@ -347,15 +558,28 @@ function BancoFemeas({ data, onDownload, onSort, sortState }: { data: Animal[]; 
               </TableRow>
             </TableHeader>
             <TableBody>
-              {normalizeRowsStrict(data).map((r, i) => (
-                <TableRow key={i}>
-                  {cols.map((c) => (
-                    <TableCell key={c} className="p-2 text-sm">
-                      {c === "Nome da Fazenda" ? (r["Banco"] || "") : EXACT_HEADERS.includes(c as any) ? formatCell(c as any, r[c as any]) : (r[c] ?? "")}
+              {normalizeRowsStrict(filteredData).map((r, i) => {
+                const animalId = r["ID Animal"];
+                return (
+                  <TableRow key={i}>
+                    <TableCell className="p-2">
+                      <Checkbox 
+                        checked={animalId ? selectedFemeas.has(animalId) : false}
+                        onCheckedChange={(checked) => {
+                          if (animalId) {
+                            onSelectionChange(animalId, !!checked);
+                          }
+                        }}
+                      />
                     </TableCell>
-                  ))}
-                </TableRow>
-              ))}
+                    {cols.map((c) => (
+                      <TableCell key={c} className="p-2 text-sm">
+                        {c === "Nome da Fazenda" ? (r["Banco"] || "") : EXACT_HEADERS.includes(c as any) ? formatCell(c as any, r[c as any]) : (r[c] ?? "")}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
@@ -500,6 +724,7 @@ function PaginaFazenda({ fazenda, onBack, onUpdateFazenda }: { fazenda: Fazenda;
   const { toast } = useToast();
   const [sortState, setSortState] = useState<{ col: string | null; dir: string | null }>({ col: null, dir: null });
   const [selectedResults, setSelectedResults] = useState<Set<string>>(new Set());
+  const [selectedFemeas, setSelectedFemeas] = useState<Set<string>>(new Set());
   const [femeas, setFemeas] = useState<Animal[]>(fazenda.femeas || []);
   const [touros, setTouros] = useState<Animal[]>(fazenda.touros || []);
   const [resultadosAgrupados, setResultadosAgrupados] = useState<Record<string, Resultado[]>>({});
@@ -563,6 +788,20 @@ function PaginaFazenda({ fazenda, onBack, onUpdateFazenda }: { fazenda: Fazenda;
   }, [femeas, touros, fazenda, onUpdateFazenda, toast]);
 
   const onSelectChange = (key: string, selected: boolean) => { const s = new Set(selectedResults); selected ? s.add(key) : s.delete(key); setSelectedResults(s); };
+  
+  const onFemeaSelectionChange = (id: string, selected: boolean) => {
+    const s = new Set(selectedFemeas);
+    selected ? s.add(id) : s.delete(id);
+    setSelectedFemeas(s);
+  };
+
+  const onBulkDeleteFemeas = (ids: string[]) => {
+    const updatedFemeas = femeas.filter(f => !ids.includes(f["ID Animal"]));
+    setFemeas(updatedFemeas);
+    setSelectedFemeas(new Set());
+    onUpdateFazenda({ ...fazenda, femeas: updatedFemeas, touros, resultados: fazenda.resultados });
+    toast({ title: "Fêmeas excluídas", description: `${ids.length} fêmea(s) foram removidas.` });
+  };
 
   return (
     <div className="min-h-screen p-6">
@@ -592,7 +831,15 @@ function PaginaFazenda({ fazenda, onBack, onUpdateFazenda }: { fazenda: Fazenda;
           </TabsList>
 
           <TabsContent value="femeas">
-            <BancoFemeas data={femeas} onDownload={exportFem} onSort={onSortFem} sortState={sortState} />
+            <BancoFemeas 
+              data={femeas} 
+              onDownload={exportFem} 
+              onSort={onSortFem} 
+              sortState={sortState}
+              selectedFemeas={selectedFemeas}
+              onSelectionChange={onFemeaSelectionChange}
+              onBulkDelete={onBulkDeleteFemeas}
+            />
           </TabsContent>
 
           <TabsContent value="touros">
@@ -627,6 +874,7 @@ function PaginaFazenda({ fazenda, onBack, onUpdateFazenda }: { fazenda: Fazenda;
 function PaginaRebanhoGeral({ fazendas, onBack }: { fazendas: Fazenda[]; onBack: () => void; }) {
   const [sortState, setSortState] = useState<{ col: string | null; dir: string | null }>({ col: null, dir: null });
   const [selectedResults, setSelectedResults] = useState<Set<string>>(new Set());
+  const [selectedFemeas, setSelectedFemeas] = useState<Set<string>>(new Set());
   const dados = useMemo(() => {
     const femeas: Animal[] = [], touros: Animal[] = [], resultados: Resultado[] = [];
     fazendas.forEach((f) => { femeas.push(...f.femeas); touros.push(...f.touros); resultados.push(...f.resultados); });
@@ -653,6 +901,18 @@ function PaginaRebanhoGeral({ fazendas, onBack }: { fazendas: Fazenda[]; onBack:
     return { f, t };
   }, [fazendas]);
 
+  const onFemeaSelectionChange = (id: string, selected: boolean) => {
+    const s = new Set(selectedFemeas);
+    selected ? s.add(id) : s.delete(id);
+    setSelectedFemeas(s);
+  };
+
+  const onBulkDeleteFemeas = (ids: string[]) => {
+    // Note: Para rebanho geral, a exclusão deve ser mais cuidadosa
+    // pois afeta múltiplas fazendas. Aqui implementamos um aviso.
+    alert("Para excluir fêmeas do rebanho geral, acesse a fazenda específica.");
+  };
+
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -674,10 +934,18 @@ function PaginaRebanhoGeral({ fazendas, onBack }: { fazendas: Fazenda[]; onBack:
           </TabsList>
 
           <TabsContent value="femeas">
-            <BancoFemeas data={dados.femeas} onDownload={exportFem} onSort={(col) => {
-              const dirNext = !sortState.col || sortState.col !== col ? "asc" : sortState.dir === "asc" ? "desc" : sortState.dir === "desc" ? null : "asc";
-              setSortState({ col: dirNext ? col : null, dir: dirNext });
-            }} sortState={sortState} />
+            <BancoFemeas 
+              data={dados.femeas} 
+              onDownload={exportFem} 
+              onSort={(col) => {
+                const dirNext = !sortState.col || sortState.col !== col ? "asc" : sortState.dir === "asc" ? "desc" : sortState.dir === "desc" ? null : "asc";
+                setSortState({ col: dirNext ? col : null, dir: dirNext });
+              }} 
+              sortState={sortState}
+              selectedFemeas={selectedFemeas}
+              onSelectionChange={onFemeaSelectionChange}
+              onBulkDelete={onBulkDeleteFemeas}
+            />
           </TabsContent>
 
           <TabsContent value="touros"><BancoTouros data={dados.touros} onDownload={exportTou} /></TabsContent>
