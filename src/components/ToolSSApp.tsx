@@ -875,7 +875,6 @@ export default function ToolSSApp() {
         PTAT: Number(r.PTAT || r.Tipo || 0),
         empresa: r.Empresa || r.empresa || "SelectSires",
         disponibilidade: "Disponível"
-        disponibilidade: "Disponível"
       }));
       const newClients = clients.map(c => c.id !== selectedClient.id ? c : {
         ...c,
