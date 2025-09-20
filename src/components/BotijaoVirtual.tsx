@@ -102,6 +102,13 @@ function BotijaoVirtualPage({ client, farm, bulls, selectedBulls = [], onBack }:
     volume: 0,
     observacoes: ""
   });
+  const [nitrogenRecords, setNitrogenRecords] = useState<{
+    dataAbastecimento: string;
+    volume: number;
+    observacoes: string;
+    id: string;
+  }[]>([]);
+  const [editingNitrogen, setEditingNitrogen] = useState<string | null>(null);
   
   const [editingItemData, setEditingItemData] = useState<BotijaoItem | null>(null);
   
@@ -331,14 +338,28 @@ function BotijaoVirtualPage({ client, farm, bulls, selectedBulls = [], onBack }:
 
   // Add nitrogen supply
   const addNitrogenSupply = () => {
-    // Here you would typically save to a backend or state management
-    console.log("Nitrogen supply added:", nitrogenData);
+    const newRecord = {
+      ...nitrogenData,
+      id: `nitrogen-${Date.now()}-${Math.random()}`
+    };
+    
+    setNitrogenRecords(prev => [...prev, newRecord]);
     setNitrogenData({
       dataAbastecimento: new Date().toISOString().split('T')[0],
       volume: 0,
       observacoes: ""
     });
     setShowNitrogenDialog(false);
+  };
+
+  const editNitrogenRecord = (id: string, updatedData: Partial<typeof nitrogenData>) => {
+    setNitrogenRecords(prev => prev.map(record => 
+      record.id === id ? { ...record, ...updatedData } : record
+    ));
+  };
+
+  const deleteNitrogenRecord = (id: string) => {
+    setNitrogenRecords(prev => prev.filter(record => record.id !== id));
   };
 
   const removeItem = (itemId: string) => {
@@ -754,6 +775,28 @@ function BotijaoVirtualPage({ client, farm, bulls, selectedBulls = [], onBack }:
               </div>
             </DialogContent>
           </Dialog>
+
+          {/* Registros de Nitrogênio - Exibição ao lado */}
+          {nitrogenRecords.length > 0 && (
+            <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-950 p-2 rounded-lg">
+              <Snowflake size={16} className="text-blue-600" />
+              <div className="text-sm">
+                <span className="font-medium">Último N2:</span>
+                <span className="ml-1">
+                  {new Date(nitrogenRecords[nitrogenRecords.length - 1].dataAbastecimento).toLocaleDateString()} - 
+                  {nitrogenRecords[nitrogenRecords.length - 1].volume}L
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEditingNitrogen(nitrogenRecords[nitrogenRecords.length - 1].id)}
+                  className="ml-2 h-6 w-6 p-0"
+                >
+                  <Edit size={12} />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -1123,6 +1166,107 @@ function BotijaoVirtualPage({ client, farm, bulls, selectedBulls = [], onBack }:
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog para Editar Nitrogênio */}
+      <Dialog open={editingNitrogen !== null} onOpenChange={(open) => !open && setEditingNitrogen(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Registro de Nitrogênio</DialogTitle>
+          </DialogHeader>
+          {editingNitrogen && (() => {
+            const record = nitrogenRecords.find(r => r.id === editingNitrogen);
+            if (!record) return null;
+            
+            return (
+              <div className="space-y-4">
+                <div>
+                  <Label>Data do Abastecimento</Label>
+                  <Input
+                    type="date"
+                    value={record.dataAbastecimento}
+                    onChange={(e) => editNitrogenRecord(record.id, { 
+                      dataAbastecimento: e.target.value 
+                    })}
+                  />
+                </div>
+                
+                <div>
+                  <Label>Volume (Litros)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={record.volume}
+                    onChange={(e) => editNitrogenRecord(record.id, { 
+                      volume: parseFloat(e.target.value) || 0 
+                    })}
+                  />
+                </div>
+
+                <div>
+                  <Label>Observações</Label>
+                  <Input
+                    value={record.observacoes}
+                    onChange={(e) => editNitrogenRecord(record.id, { 
+                      observacoes: e.target.value 
+                    })}
+                    placeholder="Observações sobre o abastecimento..."
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => deleteNitrogenRecord(record.id)} 
+                    className="text-red-600"
+                  >
+                    Excluir
+                  </Button>
+                  <Button variant="outline" onClick={() => setEditingNitrogen(null)}>
+                    Fechar
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Histórico de Nitrogênio - Card separado */}
+      {nitrogenRecords.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Snowflake className="text-blue-600" size={20} />
+              Histórico de Abastecimento de Nitrogênio
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {nitrogenRecords.map((record) => (
+                <div key={record.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div>
+                    <div className="font-medium">
+                      {new Date(record.dataAbastecimento).toLocaleDateString()} - {record.volume}L
+                    </div>
+                    {record.observacoes && (
+                      <div className="text-sm text-muted-foreground">{record.observacoes}</div>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditingNitrogen(record.id)}
+                    className="text-blue-600"
+                  >
+                    <Edit size={16} />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
