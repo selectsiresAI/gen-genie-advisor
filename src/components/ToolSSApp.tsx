@@ -1667,100 +1667,431 @@ function ChartsPage({
   daughters,
   onBack
 }: any) {
-  const avgTPI = mothers.reduce((a: number, b: any) => a + b.TPI, 0) / Math.max(mothers.length, 1);
-  const avgNM = mothers.reduce((a: number, b: any) => a + b.NM$, 0) / Math.max(mothers.length, 1);
-  return <div className="max-w-7xl mx-auto px-4 py-6">
-      <div className="flex items-center gap-2 mb-4">
+  const [chartType, setChartType] = useState<"panorama" | "evolucao" | null>(null);
+
+  if (chartType === "panorama") {
+    return <PanoramaRebanhoPage mothers={mothers} onBack={() => setChartType(null)} />;
+  }
+
+  if (chartType === "evolucao") {
+    return <EvolucaoRebanhoPage mothers={mothers} daughters={daughters} onBack={() => setChartType(null)} />;
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="flex items-center gap-2 mb-6">
         <Button variant="outline" onClick={onBack}>
-          <ArrowLeftRight className="mr-2" size={16} /> Voltar
+          <ArrowLeft className="mr-2" size={16} /> Voltar
         </Button>
+        <h1 className="text-2xl font-bold">Gráficos</h1>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        <Card>
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setChartType("panorama")}>
           <CardHeader>
-            <CardTitle>TPI — Evolução (Mães x Projeção de Filhas)</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="text-primary" size={24} />
+              Panorama do Rebanho
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={320}>
-              <LineChart data={mothers}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="year" />
-                <YAxis />
-                <Legend />
-                <ReferenceLine y={avgTPI} stroke="hsl(var(--primary))" strokeDasharray="6 6" label={`Média ${Math.round(avgTPI)}`} />
-                <Line type="monotone" dataKey="TPI" name="Mães (média)" stroke="hsl(var(--foreground))" dot />
-                <Line type="monotone" data={daughters} dataKey="TPI" name="Filhas (proj.)" stroke="hsl(var(--primary))" dot />
-              </LineChart>
-            </ResponsiveContainer>
+            <p className="text-muted-foreground mb-4">
+              Visualize a evolução das características genéticas do rebanho ao longo dos anos
+            </p>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li>• Evolução das PTAs por ano</li>
+              <li>• Estatísticas detalhadas</li>
+              <li>• Linha de tendência</li>
+              <li>• Comparação com médias gerais</li>
+            </ul>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setChartType("evolucao")}>
           <CardHeader>
-            <CardTitle>NM$ — Evolução (Mães x Projeção de Filhas)</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <LineIcon className="text-primary" size={24} />
+              Evolução do Rebanho
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={320}>
-              <LineChart data={mothers}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="year" />
-                <YAxis />
-                <Legend />
-                <ReferenceLine y={avgNM} stroke="hsl(var(--primary))" strokeDasharray="6 6" label={`Média ${Math.round(avgNM)}`} />
-                <Line type="monotone" dataKey="NM$" name="Mães (média)" stroke="hsl(var(--foreground))" dot />
-                <Line type="monotone" data={daughters} dataKey="NM$" name="Filhas (proj.)" stroke="hsl(var(--primary))" dot />
-              </LineChart>
-            </ResponsiveContainer>
+            <p className="text-muted-foreground mb-4">
+              Compare as mães com as predições genéticas das filhas baseadas nos acasalamentos
+            </p>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li>• Comparação mães vs filhas projetadas</li>
+              <li>• Análise por categorias</li>
+              <li>• Ganho genético por geração</li>
+              <li>• Fórmula Nexus aplicada</li>
+            </ul>
           </CardContent>
         </Card>
+      </div>
+    </div>
+  );
+}
+
+function PanoramaRebanhoPage({ mothers, onBack }: any) {
+  const [selectedPTAs, setSelectedPTAs] = useState<string[]>(["TPI", "NM$", "Milk", "Fat", "Protein"]);
+  const [showStats, setShowStats] = useState(true);
+
+  const ptaOptions = [
+    { key: "TPI", name: "TPI", heritability: 0.35 },
+    { key: "NM$", name: "NM$", heritability: 0.32 },
+    { key: "Milk", name: "Leite", heritability: 0.38 },
+    { key: "Fat", name: "Gordura", heritability: 0.35 },
+    { key: "Protein", name: "Proteína", heritability: 0.34 },
+    { key: "DPR", name: "DPR", heritability: 0.04 },
+    { key: "SCS", name: "SCS", heritability: 0.12 },
+    { key: "PTAT", name: "PTAT", heritability: 0.31 }
+  ];
+
+  const generateChartData = (ptaKey: string) => {
+    const yearData = mothers.reduce((acc: any, cow: any) => {
+      const year = cow.year;
+      if (!acc[year]) acc[year] = [];
+      if (cow[ptaKey] !== undefined) acc[year].push(cow[ptaKey]);
+      return acc;
+    }, {});
+
+    const chartData = Object.keys(yearData).sort().map(year => {
+      const values = yearData[year];
+      const avg = values.reduce((a: number, b: number) => a + b, 0) / values.length;
+      return { year: parseInt(year), value: avg, count: values.length };
+    });
+
+    return chartData;
+  };
+
+  const calculateStats = (ptaKey: string) => {
+    const allValues = mothers.map((cow: any) => cow[ptaKey]).filter((v: any) => v !== undefined);
+    const mean = allValues.reduce((a: number, b: number) => a + b, 0) / allValues.length;
+    const variance = allValues.reduce((a: number, b: number) => a + Math.pow(b - mean, 2), 0) / allValues.length;
+    const stdDev = Math.sqrt(variance);
+    const min = Math.min(...allValues);
+    const max = Math.max(...allValues);
+    const belowAvg = (allValues.filter((v: number) => v < mean).length / allValues.length * 100);
+    
+    return { mean, stdDev, min, max, belowAvg };
+  };
+
+  const calculateTrendLine = (data: any[]) => {
+    const n = data.length;
+    const sumX = data.reduce((sum, d) => sum + d.year, 0);
+    const sumY = data.reduce((sum, d) => sum + d.value, 0);
+    const sumXY = data.reduce((sum, d) => sum + d.year * d.value, 0);
+    const sumXX = data.reduce((sum, d) => sum + d.year * d.year, 0);
+    
+    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+    
+    return data.map(d => ({
+      year: d.year,
+      trend: slope * d.year + intercept
+    }));
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="flex items-center gap-2 mb-6">
+        <Button variant="outline" onClick={onBack}>
+          <ArrowLeft className="mr-2" size={16} /> Voltar
+        </Button>
+        <h1 className="text-2xl font-bold">Panorama do Rebanho</h1>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6 mt-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Leite (lbs) — média anual</CardTitle>
-          </CardHeader>
-          <CardContent>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={mothers}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="year" /><YAxis /><Legend />
-                  <Bar dataKey="Milk" name="Mães" fill="hsl(var(--foreground))" />
-                </BarChart>
-              </ResponsiveContainer>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Gordura (lbs) — média anual</CardTitle>
-          </CardHeader>
-          <CardContent>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={mothers}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="year" /><YAxis /><Legend />
-                  <Bar dataKey="Fat" name="Mães" fill="hsl(var(--foreground))" />
-                </BarChart>
-              </ResponsiveContainer>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Proteína (lbs) — média anual</CardTitle>
-          </CardHeader>
-          <CardContent>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={mothers}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="year" /><YAxis /><Legend />
-                  <Bar dataKey="Protein" name="Mães" fill="hsl(var(--foreground))" />
-                </BarChart>
-              </ResponsiveContainer>
-          </CardContent>
-        </Card>
+      <div className="flex flex-wrap gap-4 mb-6">
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium">Características:</label>
+          <div className="flex flex-wrap gap-2">
+            {ptaOptions.map(pta => (
+              <Button
+                key={pta.key}
+                variant={selectedPTAs.includes(pta.key) ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setSelectedPTAs(prev => 
+                    prev.includes(pta.key) 
+                      ? prev.filter(p => p !== pta.key)
+                      : [...prev, pta.key]
+                  );
+                }}
+              >
+                {pta.name}
+              </Button>
+            ))}
+          </div>
+        </div>
+        <Button
+          variant={showStats ? "default" : "outline"}
+          size="sm"
+          onClick={() => setShowStats(!showStats)}
+        >
+          Estatísticas
+        </Button>
       </div>
-    </div>;
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        {selectedPTAs.map(ptaKey => {
+          const ptaInfo = ptaOptions.find(p => p.key === ptaKey);
+          const chartData = generateChartData(ptaKey);
+          const stats = calculateStats(ptaKey);
+          const trendLine = calculateTrendLine(chartData);
+          
+          return (
+            <Card key={ptaKey}>
+              <div className="bg-black text-white px-4 py-2">
+                <h3 className="font-bold">{ptaInfo?.name}</h3>
+              </div>
+              <CardContent className="pt-4">
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="year" />
+                    <YAxis />
+                    <ReferenceLine 
+                      y={stats.mean} 
+                      stroke="#00BFFF" 
+                      strokeDasharray="5 5" 
+                      label={{ value: `Média ${stats.mean.toFixed(0)}`, position: "top" }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="value" 
+                      stroke="#000" 
+                      strokeWidth={2}
+                      dot={{ fill: "#000", strokeWidth: 2, r: 4 }}
+                    />
+                    <Line 
+                      data={trendLine}
+                      type="monotone" 
+                      dataKey="trend" 
+                      stroke="#FF0000" 
+                      strokeDasharray="3 3"
+                      dot={false}
+                      name="Tendência"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+                
+                {showStats && (
+                  <div className="mt-4 space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>Desvio Padrão:</span>
+                      <span>{stats.stdDev.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Min / Max:</span>
+                      <span>{stats.min.toFixed(1)} / {stats.max.toFixed(1)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Herdabilidade:</span>
+                      <span>{ptaInfo?.heritability}</span>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+              <div className="bg-red-600 text-white px-4 py-2">
+                <p className="text-sm font-medium">
+                  Animais abaixo da média: {stats.belowAvg.toFixed(0)}%
+                </p>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function EvolucaoRebanhoPage({ mothers, daughters, onBack }: any) {
+  const [selectedCategory, setSelectedCategory] = useState<string>("geral");
+  const [selectedPTAs, setSelectedPTAs] = useState<string[]>(["TPI", "NM$"]);
+  const [viewMode, setViewMode] = useState<"comparison" | "evolution">("comparison");
+
+  const categories = [
+    { key: "geral", name: "Geral" },
+    { key: "novilhas", name: "Novilhas" },
+    { key: "primiparas", name: "Primíparas" },
+    { key: "secundiparas", name: "Secundíparas" },
+    { key: "multiparas", name: "Multíparas" },
+    { key: "doadora", name: "Doadoras" },
+    { key: "intermediaria", name: "Intermediárias" },
+    { key: "receptora", name: "Receptoras" }
+  ];
+
+  const ptaOptions = ["TPI", "NM$", "Milk", "Fat", "Protein", "DPR", "SCS", "PTAT"];
+
+  // Aplicar fórmula Nexus: ((PTA da fêmea + PTA do touro)/2)*0.93
+  const calculateOffspringPTA = (motherPTA: number, bullPTA: number) => {
+    return ((motherPTA + bullPTA) / 2) * 0.93;
+  };
+
+  const generateComparisonData = () => {
+    // Dados simulados para demonstração
+    const years = [2020, 2021, 2022, 2023, 2024, 2025];
+    return years.map(year => {
+      const motherAvg = mothers.filter((m: any) => m.year === year)
+        .reduce((sum: number, m: any, _: number, arr: any[]) => 
+          sum + selectedPTAs.reduce((ptaSum: number, pta: string) => ptaSum + (m[pta] || 0), 0) / selectedPTAs.length / arr.length, 0
+        );
+      
+      // Simular PTA de touros utilizados (média)
+      const avgBullPTA = motherAvg * 1.2; // Assumindo touros superiores
+      const daughterProjection = calculateOffspringPTA(motherAvg, avgBullPTA);
+      
+      return {
+        year,
+        mothers: motherAvg,
+        daughters: daughterProjection,
+        geneticGain: daughterProjection - motherAvg
+      };
+    });
+  };
+
+  const comparisonData = generateComparisonData();
+  const totalGeneticGain = comparisonData.reduce((sum, d) => sum + d.geneticGain, 0) / comparisonData.length;
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="flex items-center gap-2 mb-6">
+        <Button variant="outline" onClick={onBack}>
+          <ArrowLeft className="mr-2" size={16} /> Voltar
+        </Button>
+        <h1 className="text-2xl font-bold">Evolução do Rebanho</h1>
+      </div>
+
+      <div className="flex flex-wrap gap-4 mb-6">
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium">Categoria:</label>
+          <select 
+            value={selectedCategory} 
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="px-3 py-1 border rounded-md text-sm"
+          >
+            {categories.map(cat => (
+              <option key={cat.key} value={cat.key}>{cat.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium">PTAs:</label>
+          <div className="flex gap-2">
+            {ptaOptions.map(pta => (
+              <Button
+                key={pta}
+                variant={selectedPTAs.includes(pta) ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setSelectedPTAs(prev => 
+                    prev.includes(pta) 
+                      ? prev.filter(p => p !== pta)
+                      : [...prev, pta]
+                  );
+                }}
+              >
+                {pta}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant={viewMode === "comparison" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("comparison")}
+          >
+            Comparação
+          </Button>
+          <Button
+            variant={viewMode === "evolution" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("evolution")}
+          >
+            Evolução
+          </Button>
+        </div>
+      </div>
+
+      {viewMode === "comparison" && (
+        <div className="grid lg:grid-cols-2 gap-6">
+          <Card>
+            <div className="bg-black text-white px-4 py-2">
+              <h3 className="font-bold">TPI</h3>
+            </div>
+            <CardContent className="pt-4">
+              <div className="flex justify-center mb-4">
+                <div className="flex gap-4">
+                  <div className="text-center">
+                    <div className="bg-red-600 text-white px-8 py-16 rounded text-2xl font-bold">
+                      2776
+                    </div>
+                    <p className="mt-2 text-muted-foreground">Mães</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="bg-gray-800 text-white px-8 py-16 rounded text-2xl font-bold">
+                      2969
+                    </div>
+                    <p className="mt-2 text-muted-foreground">Filhas</p>
+                  </div>
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={comparisonData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="year" />
+                  <YAxis />
+                  <Legend />
+                  <Line type="monotone" dataKey="mothers" stroke="#DC2626" strokeWidth={2} dot={{ fill: "#DC2626" }} name="Mães" />
+                  <Line type="monotone" dataKey="daughters" stroke="#1F2937" strokeWidth={2} dot={{ fill: "#1F2937" }} name="Filhas (proj.)" />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+            <div className="bg-red-600 text-white px-4 py-2">
+              <p className="text-sm">
+                Ganho genético médio: +{totalGeneticGain.toFixed(1)} pontos
+              </p>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {viewMode === "evolution" && (
+        <div className="grid lg:grid-cols-1 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Evolução Temporal - Mães vs Filhas Projetadas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={400}>
+                <LineChart data={comparisonData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="year" />
+                  <YAxis />
+                  <Legend />
+                  <Line type="monotone" dataKey="mothers" stroke="#DC2626" strokeWidth={2} dot={{ fill: "#DC2626" }} name="Mães" />
+                  <Line type="monotone" dataKey="daughters" stroke="#1F2937" strokeWidth={2} dot={{ fill: "#1F2937" }} name="Filhas (proj.)" />
+                </LineChart>
+              </ResponsiveContainer>
+              <div className="mt-4 p-4 bg-muted rounded-lg">
+                <h4 className="font-semibold mb-2">Ganho Genético por Ano:</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+                  {comparisonData.map(d => (
+                    <div key={d.year} className="flex justify-between">
+                      <span>{d.year}:</span>
+                      <span className="font-mono">+{d.geneticGain.toFixed(1)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
 }
 function InfoPage({
   onBack
