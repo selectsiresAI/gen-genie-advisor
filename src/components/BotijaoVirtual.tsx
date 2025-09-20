@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Plus, Trash2, Search as SearchIcon, Filter, Download, Upload, Edit, Save, X, Clock, TrendingUp } from "lucide-react";
+import { Plus, Trash2, Search as SearchIcon, Filter, Download, Upload, Edit, Save, X, Clock, TrendingUp, ChevronUp, ChevronDown, Snowflake } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -90,6 +90,20 @@ function BotijaoVirtualPage({ client, farm, bulls, selectedBulls = [], onBack }:
     data: new Date().toISOString().split('T')[0],
     tecnico: ""
   });
+
+  // Sorting state
+  const [sortField, setSortField] = useState<string>("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  // Nitrogen supply state
+  const [showNitrogenDialog, setShowNitrogenDialog] = useState(false);
+  const [nitrogenData, setNitrogenData] = useState({
+    dataAbastecimento: new Date().toISOString().split('T')[0],
+    volume: 0,
+    observacoes: ""
+  });
+  
+  const [editingItemData, setEditingItemData] = useState<BotijaoItem | null>(null);
   
   const [newItem, setNewItem] = useState<Partial<BotijaoItem>>({
     touro: undefined,
@@ -249,7 +263,82 @@ function BotijaoVirtualPage({ client, farm, bulls, selectedBulls = [], onBack }:
         estoqueAtual
       };
     });
+    
+    // Update editing item data if it's the same item
+    if (editingItemData && editingItemData.id === itemId) {
+      setEditingItemData(prev => prev ? { ...prev, ...updates } : null);
+    }
+  };
+
+  const startEditingItem = (item: BotijaoItem) => {
+    setEditingItem(item.id);
+    setEditingItemData({ ...item });
+  };
+
+  const cancelEditing = () => {
     setEditingItem(null);
+    setEditingItemData(null);
+  };
+
+  const saveEditing = () => {
+    if (editingItemData) {
+      updateItem(editingItemData.id, editingItemData);
+    }
+    setEditingItem(null);
+    setEditingItemData(null);
+  };
+
+  // Sorting function
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  // Sort items
+  const sortedItems = useMemo(() => {
+    if (!sortField) return botijao.itens;
+    
+    return [...botijao.itens].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+      
+      switch (sortField) {
+        case "nome":
+          aValue = a.touro.nome.toLowerCase();
+          bValue = b.touro.nome.toLowerCase();
+          break;
+        case "tipo":
+          aValue = a.tipo.toLowerCase();
+          bValue = b.tipo.toLowerCase();
+          break;
+        case "empresa":
+          aValue = (a.touro.empresa || "").toLowerCase();
+          bValue = (b.touro.empresa || "").toLowerCase();
+          break;
+        default:
+          return 0;
+      }
+      
+      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [botijao.itens, sortField, sortDirection]);
+
+  // Add nitrogen supply
+  const addNitrogenSupply = () => {
+    // Here you would typically save to a backend or state management
+    console.log("Nitrogen supply added:", nitrogenData);
+    setNitrogenData({
+      dataAbastecimento: new Date().toISOString().split('T')[0],
+      volume: 0,
+      observacoes: ""
+    });
+    setShowNitrogenDialog(false);
   };
 
   const removeItem = (itemId: string) => {
@@ -453,169 +542,235 @@ function BotijaoVirtualPage({ client, farm, bulls, selectedBulls = [], onBack }:
 
 
 
-      {/* Controles */}
-      <div className="flex items-center gap-4 mb-6">
-        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus size={16} className="mr-2" />
-              Adicionar Touro
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Adicionar Touro ao Botijão</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>Selecionar Touro</Label>
-                <Select 
-                  value={newItem.touro?.naab || ""} 
-                  onValueChange={(value) => {
-                    const touro = filteredBulls.find(b => b.naab === value);
-                    setNewItem(prev => ({ ...prev, touro }));
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Escolha um touro" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredBulls.map(bull => (
-                      <SelectItem key={bull.naab} value={bull.naab}>
-                        {bull.naab} - {bull.nome} ({bull.empresa || "S/Empresa"})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
+      {/* Controles - Mantém apenas os necessários */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
+          <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus size={16} className="mr-2" />
+                Adicionar Touro
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Adicionar Touro ao Botijão</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
                 <div>
-                  <Label>Tipo</Label>
+                  <Label>Selecionar Touro</Label>
                   <Select 
-                    value={newItem.tipo} 
-                    onValueChange={(value: "Convencional" | "Sexado") => 
-                      setNewItem(prev => ({ ...prev, tipo: value }))
-                    }
+                    value={newItem.touro?.naab || ""} 
+                    onValueChange={(value) => {
+                      const touro = filteredBulls.find(b => b.naab === value);
+                      setNewItem(prev => ({ ...prev, touro }));
+                    }}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Escolha um touro" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Convencional">Convencional</SelectItem>
-                      <SelectItem value="Sexado">Sexado</SelectItem>
+                      {filteredBulls.map(bull => (
+                        <SelectItem key={bull.naab} value={bull.naab}>
+                          {bull.naab} - {bull.nome} ({bull.empresa || "S/Empresa"})
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div>
-                  <Label>Doses</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={newItem.doses}
-                    onChange={(e) => setNewItem(prev => ({ 
-                      ...prev, 
-                      doses: parseInt(e.target.value) || 1 
-                    }))}
-                  />
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label>Tipo</Label>
+                    <Select 
+                      value={newItem.tipo} 
+                      onValueChange={(value: "Convencional" | "Sexado") => 
+                        setNewItem(prev => ({ ...prev, tipo: value }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Convencional">Convencional</SelectItem>
+                        <SelectItem value="Sexado">Sexado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>Doses</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={newItem.doses}
+                      onChange={(e) => setNewItem(prev => ({ 
+                        ...prev, 
+                        doses: parseInt(e.target.value) || 1 
+                      }))}
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Preço por Dose (R$)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={newItem.preco}
+                      onChange={(e) => setNewItem(prev => ({ 
+                        ...prev, 
+                        preco: parseFloat(e.target.value) || 0 
+                      }))}
+                    />
+                  </div>
                 </div>
 
                 <div>
-                  <Label>Preço por Dose (R$)</Label>
+                  <Label>Distribuição por Categoria de Idade</Label>
+                  <div className="grid grid-cols-4 gap-2 mt-2">
+                    {["Nov", "Prim", "Secund", "Mult"].map(cat => (
+                      <div key={cat}>
+                        <Label className="text-xs">{cat}</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={newItem.distribuicao?.[cat as keyof typeof newItem.distribuicao] || 0}
+                          onChange={(e) => setNewItem(prev => ({
+                            ...prev,
+                            distribuicao: {
+                              ...prev.distribuicao!,
+                              [cat]: parseInt(e.target.value) || 0
+                            }
+                          }))}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Distribuição por Segmentação</Label>
+                  <div className="grid grid-cols-3 gap-2 mt-2">
+                    {["Doadoras", "Intermediarias", "Receptoras"].map(seg => (
+                      <div key={seg}>
+                        <Label className="text-xs">{seg}</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={newItem.distribuicao?.[seg as keyof typeof newItem.distribuicao] || 0}
+                          onChange={(e) => setNewItem(prev => ({
+                            ...prev,
+                            distribuicao: {
+                              ...prev.distribuicao!,
+                              [seg]: parseInt(e.target.value) || 0
+                            }
+                          }))}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Observações</Label>
+                  <Input
+                    value={newItem.observacoes}
+                    onChange={(e) => setNewItem(prev => ({ ...prev, observacoes: e.target.value }))}
+                    placeholder="Observações sobre este touro..."
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={addItemToBotijao} disabled={!newItem.touro}>
+                    Adicionar
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={showNitrogenDialog} onOpenChange={setShowNitrogenDialog}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Snowflake size={16} className="mr-2" />
+                Abastecimento N2
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Abastecimento de Nitrogênio</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label>Data do Abastecimento</Label>
+                  <Input
+                    type="date"
+                    value={nitrogenData.dataAbastecimento}
+                    onChange={(e) => setNitrogenData(prev => ({ 
+                      ...prev, 
+                      dataAbastecimento: e.target.value 
+                    }))}
+                  />
+                </div>
+                
+                <div>
+                  <Label>Volume (Litros)</Label>
                   <Input
                     type="number"
                     min="0"
-                    step="0.01"
-                    value={newItem.preco}
-                    onChange={(e) => setNewItem(prev => ({ 
+                    step="0.1"
+                    value={nitrogenData.volume}
+                    onChange={(e) => setNitrogenData(prev => ({ 
                       ...prev, 
-                      preco: parseFloat(e.target.value) || 0 
+                      volume: parseFloat(e.target.value) || 0 
                     }))}
                   />
                 </div>
-              </div>
 
-              <div>
-                <Label>Distribuição por Categoria de Idade</Label>
-                <div className="grid grid-cols-4 gap-2 mt-2">
-                  {["Nov", "Prim", "Secund", "Mult"].map(cat => (
-                    <div key={cat}>
-                      <Label className="text-xs">{cat}</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        value={newItem.distribuicao?.[cat as keyof typeof newItem.distribuicao] || 0}
-                        onChange={(e) => setNewItem(prev => ({
-                          ...prev,
-                          distribuicao: {
-                            ...prev.distribuicao!,
-                            [cat]: parseInt(e.target.value) || 0
-                          }
-                        }))}
-                      />
-                    </div>
-                  ))}
+                <div>
+                  <Label>Observações</Label>
+                  <Input
+                    value={nitrogenData.observacoes}
+                    onChange={(e) => setNitrogenData(prev => ({ 
+                      ...prev, 
+                      observacoes: e.target.value 
+                    }))}
+                    placeholder="Observações sobre o abastecimento..."
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setShowNitrogenDialog(false)}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={addNitrogenSupply}>
+                    Registrar Abastecimento
+                  </Button>
                 </div>
               </div>
+            </DialogContent>
+          </Dialog>
+        </div>
 
-              <div>
-                <Label>Distribuição por Segmentação</Label>
-                <div className="grid grid-cols-3 gap-2 mt-2">
-                  {["Doadoras", "Intermediarias", "Receptoras"].map(seg => (
-                    <div key={seg}>
-                      <Label className="text-xs">{seg}</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        value={newItem.distribuicao?.[seg as keyof typeof newItem.distribuicao] || 0}
-                        onChange={(e) => setNewItem(prev => ({
-                          ...prev,
-                          distribuicao: {
-                            ...prev.distribuicao!,
-                            [seg]: parseInt(e.target.value) || 0
-                          }
-                        }))}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowStockUpdateDialog(true)}
+            disabled={botijao.itens.length === 0}
+          >
+            <Clock size={16} className="mr-2" />
+            Atualizar Estoque
+          </Button>
 
-              <div>
-                <Label>Observações</Label>
-                <Input
-                  value={newItem.observacoes}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, observacoes: e.target.value }))}
-                  placeholder="Observações sobre este touro..."
-                />
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setShowAddDialog(false)}>
-                  Cancelar
-                </Button>
-                <Button onClick={addItemToBotijao} disabled={!newItem.touro}>
-                  Adicionar
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <Button 
-          variant="outline" 
-          onClick={() => setShowStockUpdateDialog(true)}
-          disabled={botijao.itens.length === 0}
-        >
-          <Clock size={16} className="mr-2" />
-          Atualizar Estoque
-        </Button>
-
-        <Button variant="outline" onClick={exportBotijao} disabled={botijao.itens.length === 0}>
-          <Download size={16} className="mr-2" />
-          Exportar
-        </Button>
+          <Button variant="outline" onClick={exportBotijao} disabled={botijao.itens.length === 0}>
+            <Download size={16} className="mr-2" />
+            Exportar
+          </Button>
+        </div>
       </div>
 
       {/* Tabela do Botijão */}
@@ -637,9 +792,39 @@ function BotijaoVirtualPage({ client, farm, bulls, selectedBulls = [], onBack }:
                 <thead>
                   <tr className="border-b">
                     <th className="text-left p-3">NAAB</th>
-                    <th className="text-left p-3">Nome</th>
-                    <th className="text-left p-3">Empresa</th>
-                    <th className="text-left p-3">Tipo</th>
+                    <th className="text-left p-3">
+                      <button 
+                        onClick={() => handleSort("nome")}
+                        className="flex items-center gap-1 hover:text-primary"
+                      >
+                        Nome
+                        {sortField === "nome" && (
+                          sortDirection === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                        )}
+                      </button>
+                    </th>
+                    <th className="text-left p-3">
+                      <button 
+                        onClick={() => handleSort("empresa")}
+                        className="flex items-center gap-1 hover:text-primary"
+                      >
+                        Empresa
+                        {sortField === "empresa" && (
+                          sortDirection === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                        )}
+                      </button>
+                    </th>
+                    <th className="text-left p-3">
+                      <button 
+                        onClick={() => handleSort("tipo")}
+                        className="flex items-center gap-1 hover:text-primary"
+                      >
+                        Tipo
+                        {sortField === "tipo" && (
+                          sortDirection === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                        )}
+                      </button>
+                    </th>
                     <th className="text-left p-3">Doses</th>
                     <th className="text-left p-3">Preço</th>
                     <th className="text-left p-3">Nov</th>
@@ -653,7 +838,7 @@ function BotijaoVirtualPage({ client, farm, bulls, selectedBulls = [], onBack }:
                   </tr>
                 </thead>
                 <tbody>
-                  {botijao.itens.map((item) => (
+                  {sortedItems.map((item) => (
                     <tr key={item.id} className="border-b hover:bg-muted/50">
                       <td className="p-3">{item.touro.naab}</td>
                       <td className="p-3 font-medium">{item.touro.nome}</td>
@@ -681,7 +866,7 @@ function BotijaoVirtualPage({ client, farm, bulls, selectedBulls = [], onBack }:
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => setEditingItem(item.id)}
+                            onClick={() => startEditingItem(item)}
                             className="text-blue-600"
                             title="Editar touro"
                           >
@@ -716,120 +901,129 @@ function BotijaoVirtualPage({ client, farm, bulls, selectedBulls = [], onBack }:
         </CardContent>
       </Card>
 
-      {/* Dialog para Editar Touro */}
-      <Dialog open={editingItem !== null} onOpenChange={(open) => !open && setEditingItem(null)}>
+      {/* Dialog para Editar Touro - Corrigido */}
+      <Dialog open={editingItem !== null} onOpenChange={(open) => !open && cancelEditing()}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Editar Touro no Botijão</DialogTitle>
           </DialogHeader>
-          {editingItem && (() => {
-            const item = botijao.itens.find(i => i.id === editingItem);
-            if (!item) return null;
-            
-            return (
-              <div className="space-y-4">
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <Label>Tipo</Label>
-                    <Select 
-                      value={item.tipo} 
-                      onValueChange={(value: "Convencional" | "Sexado") => 
-                        updateItem(item.id, { tipo: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Convencional">Convencional</SelectItem>
-                        <SelectItem value="Sexado">Sexado</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label>Doses</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={item.doses}
-                      onChange={(e) => updateItem(item.id, { doses: parseInt(e.target.value) || 1 })}
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Preço por Dose (R$)</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={item.preco}
-                      onChange={(e) => updateItem(item.id, { preco: parseFloat(e.target.value) || 0 })}
-                    />
-                  </div>
+          {editingItemData && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label>Tipo</Label>
+                  <Select 
+                    value={editingItemData.tipo} 
+                    onValueChange={(value: "Convencional" | "Sexado") => 
+                      setEditingItemData(prev => prev ? { ...prev, tipo: value } : null)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Convencional">Convencional</SelectItem>
+                      <SelectItem value="Sexado">Sexado</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
-                  <Label>Distribuição por Categoria de Idade</Label>
-                  <div className="grid grid-cols-4 gap-2 mt-2">
-                    {["Nov", "Prim", "Secund", "Mult"].map(cat => (
-                      <div key={cat}>
-                        <Label className="text-xs">{cat}</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          value={item.distribuicao[cat as keyof typeof item.distribuicao]}
-                          onChange={(e) => updateItem(item.id, {
-                            distribuicao: {
-                              ...item.distribuicao,
-                              [cat]: parseInt(e.target.value) || 0
-                            }
-                          })}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <Label>Distribuição por Segmentação</Label>
-                  <div className="grid grid-cols-3 gap-2 mt-2">
-                    {["Doadoras", "Intermediarias", "Receptoras"].map(seg => (
-                      <div key={seg}>
-                        <Label className="text-xs">{seg}</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          value={item.distribuicao[seg as keyof typeof item.distribuicao]}
-                          onChange={(e) => updateItem(item.id, {
-                            distribuicao: {
-                              ...item.distribuicao,
-                              [seg]: parseInt(e.target.value) || 0
-                            }
-                          })}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <Label>Observações</Label>
+                  <Label>Doses</Label>
                   <Input
-                    value={item.observacoes || ""}
-                    onChange={(e) => updateItem(item.id, { observacoes: e.target.value })}
-                    placeholder="Observações sobre este touro..."
+                    type="number"
+                    min="1"
+                    value={editingItemData.doses}
+                    onChange={(e) => setEditingItemData(prev => prev ? { 
+                      ...prev, 
+                      doses: parseInt(e.target.value) || 1 
+                    } : null)}
                   />
                 </div>
 
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setEditingItem(null)}>
-                    Fechar
-                  </Button>
+                <div>
+                  <Label>Preço por Dose (R$)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={editingItemData.preco}
+                    onChange={(e) => setEditingItemData(prev => prev ? { 
+                      ...prev, 
+                      preco: parseFloat(e.target.value) || 0 
+                    } : null)}
+                  />
                 </div>
               </div>
-            );
-          })()}
+
+              <div>
+                <Label>Distribuição por Categoria de Idade</Label>
+                <div className="grid grid-cols-4 gap-2 mt-2">
+                  {["Nov", "Prim", "Secund", "Mult"].map(cat => (
+                    <div key={cat}>
+                      <Label className="text-xs">{cat}</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={editingItemData.distribuicao[cat as keyof typeof editingItemData.distribuicao]}
+                        onChange={(e) => setEditingItemData(prev => prev ? {
+                          ...prev,
+                          distribuicao: {
+                            ...prev.distribuicao,
+                            [cat]: parseInt(e.target.value) || 0
+                          }
+                        } : null)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Label>Distribuição por Segmentação</Label>
+                <div className="grid grid-cols-3 gap-2 mt-2">
+                  {["Doadoras", "Intermediarias", "Receptoras"].map(seg => (
+                    <div key={seg}>
+                      <Label className="text-xs">{seg}</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={editingItemData.distribuicao[seg as keyof typeof editingItemData.distribuicao]}
+                        onChange={(e) => setEditingItemData(prev => prev ? {
+                          ...prev,
+                          distribuicao: {
+                            ...prev.distribuicao,
+                            [seg]: parseInt(e.target.value) || 0
+                          }
+                        } : null)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Label>Observações</Label>
+                <Input
+                  value={editingItemData.observacoes || ""}
+                  onChange={(e) => setEditingItemData(prev => prev ? { 
+                    ...prev, 
+                    observacoes: e.target.value 
+                  } : null)}
+                  placeholder="Observações sobre este touro..."
+                />
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={cancelEditing}>
+                  Cancelar
+                </Button>
+                <Button onClick={saveEditing}>
+                  Salvar Alterações
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
