@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, AreaChart, Area, BarChart, Bar, ReferenceLine, PieChart, Pie, Cell } from "recharts";
-import { Users, Search as SearchIcon, Calculator, FileText, LineChart as LineIcon, Plus, Download, Upload, SlidersHorizontal, ArrowLeftRight, Layers3, PieChart as PieIcon, ArrowLeft, Beef, TrendingUp } from "lucide-react";
+import { Users, Search as SearchIcon, Calculator, FileText, LineChart as LineIcon, Plus, Download, Upload, SlidersHorizontal, ArrowLeftRight, Layers3, PieChart as PieIcon, ArrowLeft, Beef, TrendingUp, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SegmentationPage from "./SegmentationPage";
 import NexusApp from "./NexusApp";
 import PlanoApp from "./PlanoApp";
+import BotijaoVirtualPage from "./BotijaoVirtual";
 
 /**
  * ToolSS — MVP interativo (Lovable-ready)
@@ -124,6 +126,7 @@ type Bull = {
   SCS: number;
   PTAT: number;
   disponibilidade?: "Disponível" | "Sem estoque";
+  empresa?: string; // Nova coluna empresa
   
   // Novos campos opcionais
   NAAB?: string;
@@ -223,7 +226,29 @@ type Weights = {
   PTAT: number;
 };
 
-// ------------------------ Segmentation Types ------------------------
+// Adicionar tipos para Botijão Virtual
+type BotijaoItem = {
+  touro: Bull;
+  tipo: "Convencional" | "Sexado";
+  doses: number;
+  distribuicao: {
+    // Por categoria de idade
+    Nov: number;      // Novilhas
+    Prim: number;     // Primíparas
+    Secund: number;   // Secundíparas
+    Mult: number;     // Multíparas
+    // Por segmentação
+    Doadoras: number;
+    Intermediarias: number;
+    Receptoras: number;
+  };
+};
+
+type BotijaoVirtual = {
+  fazendaId: string;
+  itens: BotijaoItem[];
+  dataAtualizacao: string;
+};
 type PrimaryIndex = "TPI" | "NM$" | "Custom";
 type SegmentConfig = {
   primaryIndex: PrimaryIndex;
@@ -729,7 +754,7 @@ function segmentAnimals(females: Female[], cfg: SegmentConfig, statsForCustom: a
 export default function ToolSSApp() {
   const [clients, setClients] = useState<Client[]>([]);
   const [query, setQuery] = useState("");
-  const [page, setPage] = useState<"clientes" | "fazenda" | "rebanho" | "touros" | "graficos" | "plano" | "info" | "segmentacao" | "nexus">("clientes");
+  const [page, setPage] = useState<"clientes" | "fazenda" | "rebanho" | "touros" | "graficos" | "plano" | "info" | "segmentacao" | "nexus" | "botijao">("clientes");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
   const [weights, setWeights] = useState<Weights>(defaultWeights);
@@ -848,6 +873,8 @@ export default function ToolSSApp() {
         Protein: Number(r.Protein || r.Proteina || r.Proteína || 0),
         SCS: Number(r.SCS || r.CCS || 0),
         PTAT: Number(r.PTAT || r.Tipo || 0),
+        empresa: r.Empresa || r.empresa || "SelectSires",
+        disponibilidade: "Disponível"
         disponibilidade: "Disponível"
       }));
       const newClients = clients.map(c => c.id !== selectedClient.id ? c : {
@@ -902,6 +929,8 @@ export default function ToolSSApp() {
       {page === "graficos" && farm && <ChartsPage mothers={mothersSeries} daughters={daughtersSeries} onBack={() => setPage("fazenda")} />}
 
       {page === "plano" && <PlanoApp onBack={() => setPage("clientes")} />}
+
+      {page === "botijao" && farm && selectedClient && <BotijaoVirtualPage client={selectedClient} farm={farm} bulls={rankedBulls} onBack={() => setPage("fazenda")} />}
 
       {page === "segmentacao" && farm && <SegmentationPage farm={farm} weights={weights} statsForCustom={stats} onBack={() => setPage("fazenda")} />}
 
@@ -1037,6 +1066,11 @@ function FarmHome({
     title: "Busca de touros",
     desc: "Banco de touros e índices",
     page: "touros"
+  }, {
+    icon: <Zap size={32} />,
+    title: "Botijão Virtual",
+    desc: "Montagem e gestão do botijão",
+    page: "botijao"
   }, {
     icon: <Calculator size={32} />,
     title: "Plano",
@@ -1282,11 +1316,34 @@ function BullsPage({
   onBack
 }: any) {
   const [q, setQ] = useState("");
+  const [selectedEmpresa, setSelectedEmpresa] = useState<string>("todas");
+  
   const filtered = useMemo(() => {
+    let filtered = bulls;
+    
+    // Filtro por busca
     const s = q.trim().toLowerCase();
-    if (!s) return bulls;
-    return bulls.filter((b: Bull) => b.nome.toLowerCase().includes(s) || b.naab.toLowerCase().includes(s) || b.pedigree.toLowerCase().includes(s));
-  }, [bulls, q]);
+    if (s) {
+      filtered = filtered.filter((b: Bull) => 
+        b.nome.toLowerCase().includes(s) || 
+        b.naab.toLowerCase().includes(s) || 
+        b.pedigree.toLowerCase().includes(s)
+      );
+    }
+    
+    // Filtro por empresa
+    if (selectedEmpresa !== "todas") {
+      filtered = filtered.filter((b: Bull) => b.empresa === selectedEmpresa);
+    }
+    
+    return filtered;
+  }, [bulls, q, selectedEmpresa]);
+
+  // Obter empresas únicas
+  const empresas = useMemo(() => {
+    const uniqueEmpresas = Array.from(new Set(bulls.map((bull: Bull) => bull.empresa).filter(Boolean)));
+    return uniqueEmpresas;
+  }, [bulls]);
   const toggleSelect = (naab: string) => {
     setSelectedBulls((prev: string[]) => prev.includes(naab) ? prev.filter(x => x !== naab) : [...prev, naab]);
   };
@@ -1348,82 +1405,96 @@ function BullsPage({
 
       <div className="mb-3 flex items-center gap-2">
         <div className="relative flex-1">
-          <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar touros por NAAB, nome, pedigree" className="pl-10" />
+          <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar touros por NAAB, nome ou pedigree" className="pl-10" />
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
         </div>
+        
+        <Select value={selectedEmpresa} onValueChange={setSelectedEmpresa}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Filtrar por empresa" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todas">Todas as empresas</SelectItem>
+            {empresas.map((empresa: string) => (
+              <SelectItem key={empresa} value={empresa}>{empresa}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        
         <span className="text-xs text-muted-foreground">Selecionados: {selectedBulls.length}</span>
       </div>
 
       <Card>
-        <div className="overflow-auto rounded-lg">
+        <div className="overflow-auto rounded-lg" style={{ maxHeight: '70vh' }}>
           <table className="min-w-[1800px] w-full">
-            <thead>
+            <thead className="sticky top-0 z-10">
               <tr>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">✓</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">NAAB</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Nome</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Registro</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Pedigree</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Nascimento</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">HHP$®</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">TPI</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">NM$</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">CM$</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FM$</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">GM$</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">F SAV</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PTAM</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">CFP</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PTAF</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PTAF%</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PTAP</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PTAP%</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PL</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">DPR</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">LIV</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">CCS</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">MAST</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">MET</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RP</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">DA</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">KET</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">MF</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PTAT</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">UDC</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FLC</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">SCE</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">DCE</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">SSB</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">DSB</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">H LIV</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">CCR</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">HCR</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FI</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">GL</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">EFC</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">BWC</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">STA</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">STR</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">DFM</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RUA</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RLS</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RTP</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FTL</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RW</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RLR</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FTA</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FLS</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FUA</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RUH</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RUW</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">UCL</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">UDP</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FTP</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RFI</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Beta-Caseína</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Kappa-Caseína</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Disponibilidade</th>
-                <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Score</th>
+                <th className="px-3 py-2 bg-foreground text-background">✓</th>
+                <th className="px-3 py-2 bg-foreground text-background">NAAB</th>
+                <th className="px-3 py-2 bg-foreground text-background">Nome</th>
+                <th className="px-3 py-2 bg-foreground text-background">Empresa</th>
+                <th className="px-3 py-2 bg-foreground text-background">Registro</th>
+                <th className="px-3 py-2 bg-foreground text-background">Pedigree</th>
+                <th className="px-3 py-2 bg-foreground text-background">Nascimento</th>
+                <th className="px-3 py-2 bg-foreground text-background">HHP$®</th>
+                <th className="px-3 py-2 bg-foreground text-background">TPI</th>
+                <th className="px-3 py-2 bg-foreground text-background">NM$</th>
+                <th className="px-3 py-2 bg-foreground text-background">CM$</th>
+                <th className="px-3 py-2 bg-foreground text-background">FM$</th>
+                <th className="px-3 py-2 bg-foreground text-background">GM$</th>
+                <th className="px-3 py-2 bg-foreground text-background">F SAV</th>
+                <th className="px-3 py-2 bg-foreground text-background">PTAM</th>
+                <th className="px-3 py-2 bg-foreground text-background">CFP</th>
+                <th className="px-3 py-2 bg-foreground text-background">PTAF</th>
+                <th className="px-3 py-2 bg-foreground text-background">PTAF%</th>
+                <th className="px-3 py-2 bg-foreground text-background">PTAP</th>
+                <th className="px-3 py-2 bg-foreground text-background">PTAP%</th>
+                <th className="px-3 py-2 bg-foreground text-background">PL</th>
+                <th className="px-3 py-2 bg-foreground text-background">DPR</th>
+                <th className="px-3 py-2 bg-foreground text-background">LIV</th>
+                <th className="px-3 py-2 bg-foreground text-background">CCS</th>
+                <th className="px-3 py-2 bg-foreground text-background">MAST</th>
+                <th className="px-3 py-2 bg-foreground text-background">MET</th>
+                <th className="px-3 py-2 bg-foreground text-background">RP</th>
+                <th className="px-3 py-2 bg-foreground text-background">DA</th>
+                <th className="px-3 py-2 bg-foreground text-background">KET</th>
+                <th className="px-3 py-2 bg-foreground text-background">MF</th>
+                <th className="px-3 py-2 bg-foreground text-background">PTAT</th>
+                <th className="px-3 py-2 bg-foreground text-background">UDC</th>
+                <th className="px-3 py-2 bg-foreground text-background">FLC</th>
+                <th className="px-3 py-2 bg-foreground text-background">SCE</th>
+                <th className="px-3 py-2 bg-foreground text-background">DCE</th>
+                <th className="px-3 py-2 bg-foreground text-background">SSB</th>
+                <th className="px-3 py-2 bg-foreground text-background">DSB</th>
+                <th className="px-3 py-2 bg-foreground text-background">H LIV</th>
+                <th className="px-3 py-2 bg-foreground text-background">CCR</th>
+                <th className="px-3 py-2 bg-foreground text-background">HCR</th>
+                <th className="px-3 py-2 bg-foreground text-background">FI</th>
+                <th className="px-3 py-2 bg-foreground text-background">GL</th>
+                <th className="px-3 py-2 bg-foreground text-background">EFC</th>
+                <th className="px-3 py-2 bg-foreground text-background">BWC</th>
+                <th className="px-3 py-2 bg-foreground text-background">STA</th>
+                <th className="px-3 py-2 bg-foreground text-background">STR</th>
+                <th className="px-3 py-2 bg-foreground text-background">DFM</th>
+                <th className="px-3 py-2 bg-foreground text-background">RUA</th>
+                <th className="px-3 py-2 bg-foreground text-background">RLS</th>
+                <th className="px-3 py-2 bg-foreground text-background">RTP</th>
+                <th className="px-3 py-2 bg-foreground text-background">FTL</th>
+                <th className="px-3 py-2 bg-foreground text-background">RW</th>
+                <th className="px-3 py-2 bg-foreground text-background">RLR</th>
+                <th className="px-3 py-2 bg-foreground text-background">FTA</th>
+                <th className="px-3 py-2 bg-foreground text-background">FLS</th>
+                <th className="px-3 py-2 bg-foreground text-background">FUA</th>
+                <th className="px-3 py-2 bg-foreground text-background">RUH</th>
+                <th className="px-3 py-2 bg-foreground text-background">RUW</th>
+                <th className="px-3 py-2 bg-foreground text-background">UCL</th>
+                <th className="px-3 py-2 bg-foreground text-background">UDP</th>
+                <th className="px-3 py-2 bg-foreground text-background">FTP</th>
+                <th className="px-3 py-2 bg-foreground text-background">RFI</th>
+                <th className="px-3 py-2 bg-foreground text-background">Beta-Caseína</th>
+                <th className="px-3 py-2 bg-foreground text-background">Kappa-Caseína</th>
+                <th className="px-3 py-2 bg-foreground text-background">Disponibilidade</th>
+                <th className="px-3 py-2 bg-foreground text-background">Score</th>
               </tr>
             </thead>
             <tbody>
@@ -1433,6 +1504,7 @@ function BullsPage({
                   </td>
                   <td className="px-3 py-2">{b.naab}</td>
                   <td className="px-3 py-2 font-medium">{b.nome}</td>
+                  <td className="px-3 py-2">{b.empresa || "-"}</td>
                   <td className="px-3 py-2">{b.registro || "-"}</td>
                   <td className="px-3 py-2 text-muted-foreground">{b.pedigree}</td>
                   <td className="px-3 py-2">{b.nascimento || "-"}</td>
