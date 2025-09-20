@@ -15,9 +15,10 @@ import PlanoApp from "./PlanoApp";
 
 // ------------------------ Types ------------------------
 type Female = {
+  // Identificação básica (obrigatórios para compatibilidade)
   id: string;
-  brinco: string;
-  nascimento: string; // ISO yyyy-mm-dd
+  brinco: string; // ID Fazenda 
+  nascimento: string; // Data de Nascimento ISO yyyy-mm-dd
   naabPai: string;
   nomePai: string;
   TPI: number;
@@ -29,12 +30,89 @@ type Female = {
   SCS: number; // menor melhor
   PTAT: number; // tipo
   year: number;
+  
+  // Novos campos opcionais
+  nome?: string;
+  idCDCB?: string;
+  pedigree?: string; // Pai/Avô Materno/BisaAvô Materno
+  
+  // Índices Econômicos
+  ["HHP$"]?: number;
+  ["CM$"]?: number;
+  ["FM$"]?: number;
+  ["GM$"]?: number;
+  ["F SAV"]?: number;
+  PTAM?: number;
+  CFP?: number;
+  
+  // Produção
+  PTAF?: number;
+  ["PTAF%"]?: number;
+  PTAP?: number;
+  ["PTAP%"]?: number;
+  PL?: number;
+  
+  // Fertilidade e Saúde
+  LIV?: number;
+  MAST?: number;
+  MET?: number;
+  RP?: number;
+  DA?: number;
+  KET?: number;
+  MF?: number;
+  
+  // Conformação
+  UDC?: number;
+  FLC?: number;
+  
+  // Facilidade de Parto
+  SCE?: number;
+  DCE?: number;
+  SSB?: number;
+  DSB?: number;
+  ["H LIV"]?: number;
+  
+  // Características Múltiplas
+  CCR?: number;
+  HCR?: number;
+  FI?: number;
+  GL?: number;
+  EFC?: number;
+  BWC?: number;
+  STA?: number;
+  STR?: number;
+  
+  // Características Lineares  
+  DFM?: number;
+  RUA?: number;
+  RLS?: number;
+  RTP?: number;
+  FTL?: number;
+  RW?: number;
+  RLR?: number;
+  FTA?: number;
+  FLS?: number;
+  FUA?: number;
+  RUH?: number;
+  RUW?: number;
+  UCL?: number;
+  UDP?: number;
+  FTP?: number;
+  
+  // Eficiência Alimentar
+  RFI?: number;
+  
+  // Genética das Proteínas
+  ["Beta-Casein"]?: string;
+  ["Kappa-Caseina"]?: string;
+  
   // Campos calculados na segmentação (não obrigatórios no seed)
   _percentil?: number | null;
   _grupo?: "Doadoras" | "Inter" | "Receptoras";
   _motivo?: string;
 };
 type Bull = {
+  // Identificação básica (obrigatórios para compatibilidade)
   naab: string;
   nome: string;
   pedigree: string;
@@ -46,6 +124,82 @@ type Bull = {
   SCS: number;
   PTAT: number;
   disponibilidade?: "Disponível" | "Sem estoque";
+  
+  // Novos campos opcionais
+  NAAB?: string;
+  registro?: string;
+  nascimento?: string; // Data de Nascimento
+  
+  // Índices Econômicos
+  ["HHP$"]?: number;
+  ["CM$"]?: number;
+  ["FM$"]?: number;
+  ["GM$"]?: number;
+  ["F SAV"]?: number;
+  PTAM?: number;
+  CFP?: number;
+  
+  // Produção
+  PTAF?: number;
+  ["PTAF%"]?: number;
+  PTAP?: number;
+  ["PTAP%"]?: number;
+  PL?: number;
+  
+  // Fertilidade e Saúde
+  DPR?: number;
+  LIV?: number;
+  MAST?: number;
+  MET?: number;
+  RP?: number;
+  DA?: number;
+  KET?: number;
+  MF?: number;
+  
+  // Conformação
+  UDC?: number;
+  FLC?: number;
+  
+  // Facilidade de Parto
+  SCE?: number;
+  DCE?: number;
+  SSB?: number;
+  DSB?: number;
+  ["H LIV"]?: number;
+  
+  // Características Múltiplas
+  CCR?: number;
+  HCR?: number;
+  FI?: number;
+  GL?: number;
+  EFC?: number;
+  BWC?: number;
+  STA?: number;
+  STR?: number;
+  
+  // Características Lineares  
+  DFM?: number;
+  RUA?: number;
+  RLS?: number;
+  RTP?: number;
+  FTL?: number;
+  RW?: number;
+  RLR?: number;
+  FTA?: number;
+  FLS?: number;
+  FUA?: number;
+  RUH?: number;
+  RUW?: number;
+  UCL?: number;
+  UDP?: number;
+  FTP?: number;
+  
+  // Eficiência Alimentar
+  RFI?: number;
+  
+  // Genética das Proteínas
+  ["Beta-Caseina"]?: string;
+  ["Kappa-Caseina"]?: string;
 };
 type Client = {
   id: number;
@@ -979,37 +1133,137 @@ function HerdPage({
 
       <Card>
         <div className="overflow-auto rounded-lg">
-          <table className="min-w-[900px] w-full">
+          <table className="min-w-[1800px] w-full">
             <thead>
               <tr>
                 {th("Brinco", "brinco")}
+                {th("Nome", "nome")}
+                {th("ID CDCB", "idCDCB")}
+                {th("Pedigree", "pedigree")}
                 {th("Nascimento", "nascimento")}
-                {th("NAAB do Pai", "naabPai")}
-                {th("Nome do Pai", "nomePai")}
+                {th("HHP$®", "HHP$" as keyof Female)}
                 {th("TPI", "TPI")}
                 {th("NM$", "NM$" as keyof Female)}
-                {th("Leite (lbs)", "Milk")}
-                {th("Gordura (lbs)", "Fat")}
-                {th("Proteína (lbs)", "Protein")}
+                {th("CM$", "CM$" as keyof Female)}
+                {th("FM$", "FM$" as keyof Female)}
+                {th("GM$", "GM$" as keyof Female)}
+                {th("F SAV", "F SAV" as keyof Female)}
+                {th("PTAM", "PTAM")}
+                {th("CFP", "CFP")}
+                {th("PTAF", "PTAF")}
+                {th("PTAF%", "PTAF%" as keyof Female)}
+                {th("PTAP", "PTAP")}
+                {th("PTAP%", "PTAP%" as keyof Female)}
+                {th("PL", "PL")}
                 {th("DPR", "DPR")}
+                {th("LIV", "LIV")}
                 {th("CCS", "SCS")}
+                {th("MAST", "MAST")}
+                {th("MET", "MET")}
+                {th("RP", "RP")}
+                {th("DA", "DA")}
+                {th("KET", "KET")}
+                {th("MF", "MF")}
                 {th("PTAT", "PTAT")}
+                {th("UDC", "UDC")}
+                {th("FLC", "FLC")}
+                {th("SCE", "SCE")}
+                {th("DCE", "DCE")}
+                {th("SSB", "SSB")}
+                {th("DSB", "DSB")}
+                {th("H LIV", "H LIV" as keyof Female)}
+                {th("CCR", "CCR")}
+                {th("HCR", "HCR")}
+                {th("FI", "FI")}
+                {th("GL", "GL")}
+                {th("EFC", "EFC")}
+                {th("BWC", "BWC")}
+                {th("STA", "STA")}
+                {th("STR", "STR")}
+                {th("DFM", "DFM")}
+                {th("RUA", "RUA")}
+                {th("RLS", "RLS")}
+                {th("RTP", "RTP")}
+                {th("FTL", "FTL")}
+                {th("RW", "RW")}
+                {th("RLR", "RLR")}
+                {th("FTA", "FTA")}
+                {th("FLS", "FLS")}
+                {th("FUA", "FUA")}
+                {th("RUH", "RUH")}
+                {th("RUW", "RUW")}
+                {th("UCL", "UCL")}
+                {th("UDP", "UDP")}
+                {th("FTP", "FTP")}
+                {th("RFI", "RFI")}
+                {th("Beta-Caseína", "Beta-Casein" as keyof Female)}
+                {th("Kappa-Caseína", "Kappa-Caseina" as keyof Female)}
               </tr>
             </thead>
             <tbody>
               {females.map((f: Female) => <tr key={f.id} className="odd:bg-card even:bg-muted/50">
                   <td className="px-3 py-2">{f.brinco}</td>
+                  <td className="px-3 py-2">{f.nome || "-"}</td>
+                  <td className="px-3 py-2">{f.idCDCB || "-"}</td>
+                  <td className="px-3 py-2">{f.pedigree || "-"}</td>
                   <td className="px-3 py-2">{new Date(f.nascimento).toLocaleDateString()}</td>
-                  <td className="px-3 py-2">{f.naabPai}</td>
-                  <td className="px-3 py-2">{f.nomePai}</td>
+                  <td className="px-3 py-2 font-semibold">{f["HHP$"] || "-"}</td>
                   <td className="px-3 py-2 font-semibold">{f.TPI}</td>
                   <td className="px-3 py-2 font-semibold">{f["NM$"]}</td>
-                  <td className="px-3 py-2">{f.Milk}</td>
-                  <td className="px-3 py-2">{f.Fat}</td>
-                  <td className="px-3 py-2">{f.Protein}</td>
+                  <td className="px-3 py-2">{f["CM$"] || "-"}</td>
+                  <td className="px-3 py-2">{f["FM$"] || "-"}</td>
+                  <td className="px-3 py-2">{f["GM$"] || "-"}</td>
+                  <td className="px-3 py-2">{f["F SAV"] || "-"}</td>
+                  <td className="px-3 py-2">{f.PTAM || "-"}</td>
+                  <td className="px-3 py-2">{f.CFP || "-"}</td>
+                  <td className="px-3 py-2">{f.PTAF || "-"}</td>
+                  <td className="px-3 py-2">{f["PTAF%"] ? `${f["PTAF%"]}%` : "-"}</td>
+                  <td className="px-3 py-2">{f.PTAP || "-"}</td>
+                  <td className="px-3 py-2">{f["PTAP%"] ? `${f["PTAP%"]}%` : "-"}</td>
+                  <td className="px-3 py-2">{f.PL || "-"}</td>
                   <td className="px-3 py-2">{f.DPR}</td>
+                  <td className="px-3 py-2">{f.LIV || "-"}</td>
                   <td className="px-3 py-2">{f.SCS.toFixed(2)}</td>
+                  <td className="px-3 py-2">{f.MAST || "-"}</td>
+                  <td className="px-3 py-2">{f.MET || "-"}</td>
+                  <td className="px-3 py-2">{f.RP || "-"}</td>
+                  <td className="px-3 py-2">{f.DA || "-"}</td>
+                  <td className="px-3 py-2">{f.KET || "-"}</td>
+                  <td className="px-3 py-2">{f.MF || "-"}</td>
                   <td className="px-3 py-2">{f.PTAT.toFixed(2)}</td>
+                  <td className="px-3 py-2">{f.UDC || "-"}</td>
+                  <td className="px-3 py-2">{f.FLC || "-"}</td>
+                  <td className="px-3 py-2">{f.SCE || "-"}</td>
+                  <td className="px-3 py-2">{f.DCE || "-"}</td>
+                  <td className="px-3 py-2">{f.SSB || "-"}</td>
+                  <td className="px-3 py-2">{f.DSB || "-"}</td>
+                  <td className="px-3 py-2">{f["H LIV"] || "-"}</td>
+                  <td className="px-3 py-2">{f.CCR || "-"}</td>
+                  <td className="px-3 py-2">{f.HCR || "-"}</td>
+                  <td className="px-3 py-2">{f.FI || "-"}</td>
+                  <td className="px-3 py-2">{f.GL || "-"}</td>
+                  <td className="px-3 py-2">{f.EFC || "-"}</td>
+                  <td className="px-3 py-2">{f.BWC || "-"}</td>
+                  <td className="px-3 py-2">{f.STA || "-"}</td>
+                  <td className="px-3 py-2">{f.STR || "-"}</td>
+                  <td className="px-3 py-2">{f.DFM || "-"}</td>
+                  <td className="px-3 py-2">{f.RUA || "-"}</td>
+                  <td className="px-3 py-2">{f.RLS || "-"}</td>
+                  <td className="px-3 py-2">{f.RTP || "-"}</td>
+                  <td className="px-3 py-2">{f.FTL || "-"}</td>
+                  <td className="px-3 py-2">{f.RW || "-"}</td>
+                  <td className="px-3 py-2">{f.RLR || "-"}</td>
+                  <td className="px-3 py-2">{f.FTA || "-"}</td>
+                  <td className="px-3 py-2">{f.FLS || "-"}</td>
+                  <td className="px-3 py-2">{f.FUA || "-"}</td>
+                  <td className="px-3 py-2">{f.RUH || "-"}</td>
+                  <td className="px-3 py-2">{f.RUW || "-"}</td>
+                  <td className="px-3 py-2">{f.UCL || "-"}</td>
+                  <td className="px-3 py-2">{f.UDP || "-"}</td>
+                  <td className="px-3 py-2">{f.FTP || "-"}</td>
+                  <td className="px-3 py-2">{f.RFI || "-"}</td>
+                  <td className="px-3 py-2">{f["Beta-Casein"] || "-"}</td>
+                  <td className="px-3 py-2">{f["Kappa-Caseina"] || "-"}</td>
                 </tr>)}
             </tbody>
           </table>
@@ -1079,11 +1333,74 @@ function BullsPage({
                 <span className="text-xs text-muted-foreground">Selecionados: {selectedBulls.length}</span>
               </div>
               <div className="overflow-auto rounded-lg border">
-                <table className="min-w-[900px] w-full">
+                <table className="min-w-[1800px] w-full">
                   <thead>
                     <tr>
                       <th className="px-3 py-2 sticky top-0 bg-foreground text-background">✓</th>
-                      {["NAAB", "Nome", "Pedigree", "TPI", "NM$", "Milk", "Fat", "Protein", "SCS", "PTAT", "Disponibilidade", "Score"].map(h => <th key={h} className="px-3 py-2 sticky top-0 bg-foreground text-background">{h}</th>)}
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">NAAB</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Nome</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Registro</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Pedigree</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Nascimento</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">HHP$®</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">TPI</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">NM$</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">CM$</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FM$</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">GM$</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">F SAV</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PTAM</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">CFP</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PTAF</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PTAF%</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PTAP</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PTAP%</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PL</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">DPR</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">LIV</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">CCS</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">MAST</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">MET</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RP</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">DA</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">KET</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">MF</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">PTAT</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">UDC</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FLC</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">SCE</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">DCE</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">SSB</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">DSB</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">H LIV</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">CCR</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">HCR</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FI</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">GL</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">EFC</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">BWC</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">STA</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">STR</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">DFM</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RUA</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RLS</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RTP</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FTL</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RW</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RLR</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FTA</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FLS</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FUA</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RUH</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RUW</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">UCL</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">UDP</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">FTP</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">RFI</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Beta-Caseína</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Kappa-Caseína</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Disponibilidade</th>
+                      <th className="px-3 py-2 sticky top-0 bg-foreground text-background">Score</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1093,14 +1410,66 @@ function BullsPage({
                         </td>
                         <td className="px-3 py-2">{b.naab}</td>
                         <td className="px-3 py-2 font-medium">{b.nome}</td>
+                        <td className="px-3 py-2">{b.registro || "-"}</td>
                         <td className="px-3 py-2 text-muted-foreground">{b.pedigree}</td>
+                        <td className="px-3 py-2">{b.nascimento || "-"}</td>
+                        <td className="px-3 py-2 font-semibold">{b["HHP$"] || "-"}</td>
                         <td className="px-3 py-2 font-semibold">{b.TPI}</td>
                         <td className="px-3 py-2 font-semibold">{b["NM$"]}</td>
-                        <td className="px-3 py-2">{b.Milk}</td>
-                        <td className="px-3 py-2">{b.Fat}</td>
-                        <td className="px-3 py-2">{b.Protein}</td>
-                        <td className="px-3 py-2">{b.SCS.toFixed(2)}</td>
-                        <td className="px-3 py-2">{b.PTAT.toFixed(2)}</td>
+                        <td className="px-3 py-2">{b["CM$"] || "-"}</td>
+                        <td className="px-3 py-2">{b["FM$"] || "-"}</td>
+                        <td className="px-3 py-2">{b["GM$"] || "-"}</td>
+                        <td className="px-3 py-2">{b["F SAV"] || "-"}</td>
+                        <td className="px-3 py-2">{b.PTAM || "-"}</td>
+                        <td className="px-3 py-2">{b.CFP || "-"}</td>
+                        <td className="px-3 py-2">{b.PTAF || "-"}</td>
+                        <td className="px-3 py-2">{b["PTAF%"] ? `${b["PTAF%"]}%` : "-"}</td>
+                        <td className="px-3 py-2">{b.PTAP || "-"}</td>
+                        <td className="px-3 py-2">{b["PTAP%"] ? `${b["PTAP%"]}%` : "-"}</td>
+                        <td className="px-3 py-2">{b.PL || "-"}</td>
+                        <td className="px-3 py-2">{b.DPR || "-"}</td>
+                        <td className="px-3 py-2">{b.LIV || "-"}</td>
+                        <td className="px-3 py-2">{b.SCS ? b.SCS.toFixed(2) : "-"}</td>
+                        <td className="px-3 py-2">{b.MAST || "-"}</td>
+                        <td className="px-3 py-2">{b.MET || "-"}</td>
+                        <td className="px-3 py-2">{b.RP || "-"}</td>
+                        <td className="px-3 py-2">{b.DA || "-"}</td>
+                        <td className="px-3 py-2">{b.KET || "-"}</td>
+                        <td className="px-3 py-2">{b.MF || "-"}</td>
+                        <td className="px-3 py-2">{b.PTAT ? b.PTAT.toFixed(2) : "-"}</td>
+                        <td className="px-3 py-2">{b.UDC || "-"}</td>
+                        <td className="px-3 py-2">{b.FLC || "-"}</td>
+                        <td className="px-3 py-2">{b.SCE || "-"}</td>
+                        <td className="px-3 py-2">{b.DCE || "-"}</td>
+                        <td className="px-3 py-2">{b.SSB || "-"}</td>
+                        <td className="px-3 py-2">{b.DSB || "-"}</td>
+                        <td className="px-3 py-2">{b["H LIV"] || "-"}</td>
+                        <td className="px-3 py-2">{b.CCR || "-"}</td>
+                        <td className="px-3 py-2">{b.HCR || "-"}</td>
+                        <td className="px-3 py-2">{b.FI || "-"}</td>
+                        <td className="px-3 py-2">{b.GL || "-"}</td>
+                        <td className="px-3 py-2">{b.EFC || "-"}</td>
+                        <td className="px-3 py-2">{b.BWC || "-"}</td>
+                        <td className="px-3 py-2">{b.STA || "-"}</td>
+                        <td className="px-3 py-2">{b.STR || "-"}</td>
+                        <td className="px-3 py-2">{b.DFM || "-"}</td>
+                        <td className="px-3 py-2">{b.RUA || "-"}</td>
+                        <td className="px-3 py-2">{b.RLS || "-"}</td>
+                        <td className="px-3 py-2">{b.RTP || "-"}</td>
+                        <td className="px-3 py-2">{b.FTL || "-"}</td>
+                        <td className="px-3 py-2">{b.RW || "-"}</td>
+                        <td className="px-3 py-2">{b.RLR || "-"}</td>
+                        <td className="px-3 py-2">{b.FTA || "-"}</td>
+                        <td className="px-3 py-2">{b.FLS || "-"}</td>
+                        <td className="px-3 py-2">{b.FUA || "-"}</td>
+                        <td className="px-3 py-2">{b.RUH || "-"}</td>
+                        <td className="px-3 py-2">{b.RUW || "-"}</td>
+                        <td className="px-3 py-2">{b.UCL || "-"}</td>
+                        <td className="px-3 py-2">{b.UDP || "-"}</td>
+                        <td className="px-3 py-2">{b.FTP || "-"}</td>
+                        <td className="px-3 py-2">{b.RFI || "-"}</td>
+                        <td className="px-3 py-2">{b["Beta-Caseina"] || "-"}</td>
+                        <td className="px-3 py-2">{b["Kappa-Caseina"] || "-"}</td>
                         <td className="px-3 py-2">{b.disponibilidade || "—"}</td>
                         <td className="px-3 py-2 font-bold">{(b._score as number)?.toFixed(2)}</td>
                       </tr>)}
