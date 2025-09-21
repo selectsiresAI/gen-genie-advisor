@@ -454,10 +454,9 @@ function Button({ onClick, children, variant = "primary" as const }: { onClick?:
 
 // ---------- Pages ----------
 function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.SetStateAction<AppState>> }) {
-  // Global store for anti-loop state management
   const planStore = usePlanStore();
   
-  // Load ToolSS data
+  // Load ToolSS data 
   const [toolssClients, setToolssClients] = useState<any[]>([]);
   const [selectedFarm, setSelectedFarm] = useState<any>(null);
   
@@ -480,20 +479,30 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
       console.warn("Erro ao carregar dados do ToolSSApp:", e);
     }
   }, [planStore.selectedFarmId]);
-
-  // Auto-calculate population when farm changes (always automatic now)
+  
+  // Auto-recalculate population when selectedFarmId or populationMode changes  
   useEffect(() => {
-    if (selectedFarm) {
-      console.log('Calculating population structure for farm:', selectedFarm.nome);
-      const counts = calculatePopulationStructure(selectedFarm);
-      const total = counts.heifers + counts.primiparous + counts.secundiparous + counts.multiparous;
-      console.log('Population counts calculated:', counts, 'Total:', total);
+    if (planStore.populationMode === 'auto' && planStore.selectedFarmId) {
+      console.log('Auto-calculating population for farm:', planStore.selectedFarmId);
+      const counts = calculatePopulationStructure({ id: planStore.selectedFarmId });
       planStore.setPopulationCounts(counts);
-    } else {
-      // Reset counts when no farm selected
-      planStore.setPopulationCounts({ heifers: 0, primiparous: 0, secundiparous: 0, multiparous: 0 });
     }
-  }, [selectedFarm]);
+  }, [planStore.selectedFarmId, planStore.populationMode]);
+
+  const handleRecalculate = () => {
+    if (planStore.selectedFarmId) {
+      const counts = calculatePopulationStructure({ id: planStore.selectedFarmId });
+      planStore.setPopulationCounts(counts);
+    }
+  };
+
+  // Update individual population counts in manual mode
+  const updatePopulationCount = (field: keyof typeof planStore.populationCounts, value: number) => {
+    if (planStore.populationMode === 'manual') {
+      const newCounts = { ...planStore.populationCounts, [field]: value };
+      planStore.setPopulationCounts(newCounts);
+    }
+  };
 
   // Auto-calculate mother averages when farm or PTAs change
   useEffect(() => {
@@ -651,44 +660,72 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
           <div>
             <h3 style={{ fontWeight: 700, marginBottom: 8 }}>Estrutura Populacional</h3>
             
-            {/* Badge automático */}
-            <div style={{ marginBottom: 12 }}>
-              <span style={{ 
-                display: "inline-block", 
-                padding: "4px 8px", 
-                backgroundColor: "#16a34a", 
-                color: "white", 
-                borderRadius: "4px", 
-                fontSize: "11px", 
-                fontWeight: "bold" 
-              }}>
-                Modo automático (front-end)
-              </span>
-              {!selectedFarm && (
-                <div style={{ fontSize: 11, color: COLORS.red, marginTop: 4 }}>
-                  ⚠️ Carregue/selecione um rebanho com banco de fêmeas para calcular
-                </div>
-              )}
-              {selectedFarm && (
+            {/* Auto/Manual Toggle */}
+            <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <button
-                  onClick={() => {
-                    const counts = calculatePopulationStructure(selectedFarm);
-                    planStore.setPopulationCounts(counts);
-                  }}
+                  onClick={() => planStore.setPopulationMode('auto')}
                   style={{
-                    marginLeft: 8,
-                    padding: "2px 6px",
-                    fontSize: "10px",
-                    backgroundColor: "#f3f4f6",
+                    padding: "4px 8px",
+                    fontSize: "11px",
+                    fontWeight: "bold",
+                    borderRadius: "4px",
                     border: "1px solid #d1d5db",
-                    borderRadius: "3px",
+                    backgroundColor: planStore.populationMode === 'auto' ? "#16a34a" : "#f3f4f6",
+                    color: planStore.populationMode === 'auto' ? "white" : "#374151",
                     cursor: "pointer"
                   }}
                 >
-                  Recalcular
+                  Automático
                 </button>
+                <button
+                  onClick={() => planStore.setPopulationMode('manual')}
+                  style={{
+                    padding: "4px 8px",
+                    fontSize: "11px",
+                    fontWeight: "bold",
+                    borderRadius: "4px",
+                    border: "1px solid #d1d5db",
+                    backgroundColor: planStore.populationMode === 'manual' ? "#16a34a" : "#f3f4f6",
+                    color: planStore.populationMode === 'manual' ? "white" : "#374151",
+                    cursor: "pointer"
+                  }}
+                >
+                  Manual
+                </button>
+              </div>
+              
+              {planStore.populationMode === 'auto' && (
+                <>
+                  {!planStore.selectedFarmId && (
+                    <div style={{ fontSize: 11, color: COLORS.red }}>
+                      ⚠️ Banco de fêmeas não disponível para esta fazenda
+                    </div>
+                  )}
+                  {planStore.selectedFarmId && (
+                    <button
+                      onClick={handleRecalculate}
+                      style={{
+                        padding: "2px 6px",
+                        fontSize: "10px",
+                        backgroundColor: "#f3f4f6",
+                        border: "1px solid #d1d5db",
+                        borderRadius: "3px",
+                        cursor: "pointer"
+                      }}
+                    >
+                      Recalcular
+                    </button>
+                  )}
+                </>
               )}
             </div>
+            
+            {planStore.populationMode === 'auto' && (
+              <div style={{ fontSize: 11, color: "#16a34a", marginBottom: 8 }}>
+                Estrutura calculada automaticamente: {total} fêmeas
+              </div>
+            )}
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               {/* Total de fêmeas aptas */}
@@ -708,8 +745,8 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
                 <Input
                   type="number"
                   value={planStore.populationCounts.heifers}
-                  onChange={() => {}}
-                  disabled={true}
+                  onChange={(v) => updatePopulationCount('heifers', v)}
+                  disabled={planStore.populationMode === 'auto'}
                 />
               </div>
               
@@ -719,8 +756,8 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
                 <Input
                   type="number"
                   value={planStore.populationCounts.primiparous}
-                  onChange={() => {}}
-                  disabled={true}
+                  onChange={(v) => updatePopulationCount('primiparous', v)}
+                  disabled={planStore.populationMode === 'auto'}
                 />
               </div>
               
@@ -730,8 +767,8 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
                 <Input
                   type="number"
                   value={planStore.populationCounts.secundiparous}
-                  onChange={() => {}}
-                  disabled={true}
+                  onChange={(v) => updatePopulationCount('secundiparous', v)}
+                  disabled={planStore.populationMode === 'auto'}
                 />
               </div>
               
@@ -741,21 +778,11 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
                 <Input
                   type="number"
                   value={planStore.populationCounts.multiparous}
-                  onChange={() => {}}
-                  disabled={true}
+                  onChange={(v) => updatePopulationCount('multiparous', v)}
+                  disabled={planStore.populationMode === 'auto'}
                 />
               </div>
             </div>
-            {selectedFarm && total > 0 && (
-              <div style={{ marginTop: 8, fontSize: 11, color: "#16a34a" }}>
-                ✅ Estrutura calculada automaticamente: {total} fêmeas
-              </div>
-            )}
-            {(!selectedFarm || total === 0) && (
-              <div style={{ marginTop: 8, fontSize: 11, color: "#ef4444" }} title="Carregue/selecione um rebanho com banco de fêmeas para calcular.">
-                ⚠️ Nenhuma fêmea encontrada para categorização
-              </div>
-            )}
           </div>
 
           {/* Parâmetros reprodutivos */}

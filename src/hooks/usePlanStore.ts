@@ -84,12 +84,14 @@ interface PlanState {
   // Core state
   selectedFarmId: string | null;
   selectedPTAList: string[]; // max 5, rótulos exibidos na ordem do usuário
+  populationMode: 'auto' | 'manual';
   populationCounts: PopulationCounts;
   motherAverages: Record<string, Record<string, number>>; // category -> pta -> value
   
   // Actions
   setSelectedFarmId: (farmId: string | null) => void;
   setSelectedPTAList: (labels: string[]) => void;
+  setPopulationMode: (mode: 'auto' | 'manual') => void;
   setPopulationCounts: (counts: PopulationCounts) => void;
   setMotherAverages: (averages: Record<string, Record<string, number>>) => void;
   
@@ -101,6 +103,7 @@ interface PlanState {
 const initialState = {
   selectedFarmId: null,
   selectedPTAList: ["HHP$®", "TPI", "NM$", "PL", "DPR"], // rótulos exibidos
+  populationMode: 'auto' as const,
   populationCounts: {
     heifers: 0,
     primiparous: 0, 
@@ -134,6 +137,13 @@ export const usePlanStore = create<PlanState>()(
         }
       },
       
+      setPopulationMode: (mode) => {
+        const current = get().populationMode;
+        if (current !== mode) {
+          console.log('populationMode=', mode);
+          set({ populationMode: mode });
+        }
+      },
       
       setPopulationCounts: (counts) => {
         const current = get().populationCounts;
@@ -157,6 +167,7 @@ export const usePlanStore = create<PlanState>()(
       partialize: (state) => ({
         selectedFarmId: state.selectedFarmId,
         selectedPTAList: state.selectedPTAList,
+        populationMode: state.populationMode,
         populationCounts: state.populationCounts
       })
     }
@@ -182,25 +193,49 @@ function getFemalesByFarm(farmId: string): any[] {
   return Array.isArray(appCache) ? appCache : [];
 }
 
-function deriveParity(f: any): number {
+function deriveParity(f: any): number | null {
   // Handle complex paridade structure: { _type: "undefined", value: "undefined" }
   let rawValue;
   
   if (f?.paridade && typeof f.paridade === 'object') {
     rawValue = f.paridade.value;
   } else {
-    rawValue = f?.paridade ?? f?.parity ?? f?.num_partos ?? f?.ordem_parto ?? 0;
+    rawValue = f?.paridade ?? f?.parity ?? f?.num_partos ?? f?.ordem_parto;
   }
   
   const parsed = Number(rawValue);
-  return Number.isFinite(parsed) ? parsed : 0;
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
-function countByParity(females: any[]) {
+function normalizeCategoria(raw: any): string | null {
+  if (!raw) return null;
+  const s = String(raw)
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .trim().toUpperCase().replace(/\s+/g, '');
+  if (s === 'NOVILHA' || s === 'NOVILHAS') return 'NOVILHA';
+  if (s === 'PRIMIPARA' || s === 'PRIMIPARAS') return 'PRIMIPARA';
+  if (s === 'SECUNDIPARA' || s === 'SECUNDIPARAS') return 'SECUNDIPARA';
+  if (s === 'MULTIPARA' || s === 'MULTIPARAS') return 'MULTIPARA';
+  return null;
+}
+
+function countByCategoria(females: any[]) {
   let n0 = 0, n1 = 0, n2 = 0, n3 = 0;
   
   for (const f of females) {
+    // First try categoria field
+    const cat = normalizeCategoria(f?.categoria);
+    if (cat) {
+      if (cat === 'NOVILHA') n0++;
+      else if (cat === 'PRIMIPARA') n1++;
+      else if (cat === 'SECUNDIPARA') n2++;
+      else if (cat === 'MULTIPARA') n3++;
+      continue;
+    }
+    
+    // Fallback to parity only if categoria is empty
     const p = deriveParity(f);
+    if (p === null) continue;
     if (p <= 0) n0++;
     else if (p === 1) n1++;
     else if (p === 2) n2++;
@@ -264,7 +299,7 @@ export const calculatePopulationStructure = (farm: any): PopulationCounts => {
   })));
   
   // Use pure counting function
-  const counts = countByParity(females);
+  const counts = countByCategoria(females);
   console.log('Category counts:', counts);
   
   return { 
