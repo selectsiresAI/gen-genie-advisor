@@ -481,6 +481,8 @@ const generateComprehensiveFemales = (): Female[] => {
 };
 
 const seedFemales: Female[] = generateComprehensiveFemales();
+console.log(`🎯 Geradas ${seedFemales.length} fêmeas para teste com dados completos`);
+console.log(`📋 Exemplo da primeira fêmea:`, seedFemales[0]);
 const seedBulls: Bull[] = [{
   naab: "7HO17191",
   nome: "Mican",
@@ -613,13 +615,20 @@ const seedClients: Client[] = [{
 }];
 
 // ------------------------ Persistence ------------------------
-const STORAGE_KEY = "toolss_clients_v1";
+const STORAGE_KEY = "toolss_clients_v2_with_500_females"; // Changed key to force reload of new data
 const SEGMENT_CFG_KEY = "toolss_segment_config_v1";
 function loadClients(): Client[] {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return seedClients;
   try {
-    return JSON.parse(raw) as Client[];
+    const loaded = JSON.parse(raw) as Client[];
+    // Force reload if client 1160 doesn't have enough females
+    const client1160 = loaded.find(c => c.id === 1160);
+    if (!client1160 || !client1160.farms[0] || client1160.farms[0].females.length < 500) {
+      console.log("🔄 Forcing reload of seed data with 500 females...");
+      return seedClients;
+    }
+    return loaded;
   } catch {
     return seedClients;
   }
@@ -818,6 +827,7 @@ export default function ToolSSApp() {
   const farm = useMemo(() => selectedClient?.farms.find(f => f.id === selectedFarmId) ?? null, [selectedClient, selectedFarmId]);
   useEffect(() => {
     const data = loadClients();
+    console.log(`📊 Carregando dados: Cliente 1160 tem ${data.find(c => c.id === 1160)?.farms[0]?.females.length || 0} fêmeas`);
     setClients(data);
   }, []);
   useEffect(() => {
