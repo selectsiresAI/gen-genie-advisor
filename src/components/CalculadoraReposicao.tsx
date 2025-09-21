@@ -5,8 +5,10 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from "recharts";
-import { ArrowLeft, ArrowRight, Download } from "lucide-react";
+import { ArrowLeft, ArrowRight, Download, Info } from "lucide-react";
 
 interface CalculadoraData {
   // Fase 1 - Variáveis de crescimento
@@ -131,6 +133,7 @@ const FASES = [
 export default function CalculadoraReposicao() {
   const [currentPhase, setCurrentPhase] = useState(1);
   const [data, setData] = useState<CalculadoraData>(defaultData);
+  const [useReferenceNumbers, setUseReferenceNumbers] = useState(false);
 
   useEffect(() => {
     // Calcular dados automaticamente quando necessário
@@ -225,25 +228,45 @@ export default function CalculadoraReposicao() {
   };
 
   const renderFase1 = () => (
-    <Card className="w-full max-w-6xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-4">
-          <span className="bg-destructive text-destructive-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
-            1
-          </span>
-          Fase 1 - Variáveis de crescimento
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
+    <TooltipProvider>
+      <Card className="w-full max-w-6xl mx-auto">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-4">
+            <span className="bg-destructive text-destructive-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
+              1
+            </span>
+            Fase 1 - Variáveis de crescimento
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center space-x-2 mb-4">
+            <Checkbox
+              id="use-reference"
+              checked={useReferenceNumbers}
+              onCheckedChange={(checked) => setUseReferenceNumbers(checked === true)}
+            />
+            <Label htmlFor="use-reference">Usar números referência</Label>
+          </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="space-y-4">
             <div>
-              <Label>Taxa de descarte</Label>
+              <div className="flex items-center gap-2">
+                <Label>Taxa de descarte</Label>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="w-4 h-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Referência: 20-25%</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <Input
                 type="number"
-                value={data.taxaDescarte}
+                value={useReferenceNumbers ? 22.5 : data.taxaDescarte}
                 onChange={(e) => setData({...data, taxaDescarte: Number(e.target.value)})}
                 className="mt-1"
+                disabled={useReferenceNumbers}
               />
             </div>
             <div>
@@ -256,33 +279,66 @@ export default function CalculadoraReposicao() {
               />
             </div>
             <div>
-              <Label>Aborto em vetustas</Label>
+              <div className="flex items-center gap-2">
+                <Label>Aborto em vetustas</Label>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="w-4 h-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Referência: 10-20%</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <Input
                 type="number"
-                value={data.abortoEmVetustas}
+                value={useReferenceNumbers ? 15 : data.abortoEmVetustas}
                 onChange={(e) => setData({...data, abortoEmVetustas: Number(e.target.value)})}
                 className="mt-1"
+                disabled={useReferenceNumbers}
               />
             </div>
             <div>
-              <Label>Novilhas de 2 a 12 meses</Label>
+              <div className="flex items-center gap-2">
+                <Label>Novilhas de 2 a 12 meses</Label>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="w-4 h-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Referência: 5-10%</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <Input
                 type="number"
-                value={data.novilhasDe2a12meses}
+                value={useReferenceNumbers ? 7.5 : data.novilhasDe2a12meses}
                 onChange={(e) => setData({...data, novilhasDe2a12meses: Number(e.target.value)})}
                 className="mt-1"
+                disabled={useReferenceNumbers}
               />
             </div>
           </div>
 
           <div className="space-y-4">
             <div>
-              <Label>Intervalo entre partos</Label>
+              <div className="flex items-center gap-2">
+                <Label>Intervalo entre partos</Label>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="w-4 h-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Referência: 12-13 meses</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <Input
                 type="number"
-                value={data.intervaloEntrePartos}
+                value={useReferenceNumbers ? 12.5 : data.intervaloEntrePartos}
                 onChange={(e) => setData({...data, intervaloEntrePartos: Number(e.target.value)})}
                 className="mt-1"
+                disabled={useReferenceNumbers}
               />
             </div>
             <div>
@@ -325,12 +381,23 @@ export default function CalculadoraReposicao() {
 
           <div className="space-y-4">
             <div>
-              <Label>Mortes do primeiro parto</Label>
+              <div className="flex items-center gap-2">
+                <Label>Mortes do primeiro parto</Label>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="w-4 h-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Referência: 20-25%</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <Input
                 type="number"
-                value={data.morteDoRebanhoDesejado}
+                value={useReferenceNumbers ? 22.5 : data.morteDoRebanhoDesejado}
                 onChange={(e) => setData({...data, morteDoRebanhoDesejado: Number(e.target.value)})}
                 className="mt-1"
+                disabled={useReferenceNumbers}
               />
             </div>
             <div>
@@ -373,45 +440,77 @@ export default function CalculadoraReposicao() {
         </div>
       </CardContent>
     </Card>
+    </TooltipProvider>
   );
 
   const renderFase2 = () => (
-    <Card className="w-full max-w-6xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-4">
-          <span className="bg-destructive text-destructive-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
-            2
-          </span>
-          Fase 2 - Dados de concepção
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-8">
+    <TooltipProvider>
+      <Card className="w-full max-w-6xl mx-auto">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-4">
+            <span className="bg-destructive text-destructive-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
+              2
+            </span>
+            Fase 2 - Dados de concepção
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-8">
+          <div className="flex items-center space-x-2 mb-4">
+            <Checkbox
+              id="use-reference-phase2"
+              checked={useReferenceNumbers}
+              onCheckedChange={(checked) => setUseReferenceNumbers(checked === true)}
+            />
+            <Label htmlFor="use-reference-phase2">Usar números referência</Label>
+          </div>
         <div className="space-y-6">
           <div>
             <h3 className="text-lg font-semibold mb-4">Taxa de concepção em vacas</h3>
             <div className="grid grid-cols-5 gap-4">
               <div>
-                <Label>Convencional</Label>
+                <div className="flex items-center gap-2">
+                  <Label>Convencional</Label>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="w-4 h-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Referência: 35-45%</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <Input
                   type="number"
-                  value={data.concepcaoVacas.convencional}
+                  value={useReferenceNumbers ? 40 : data.concepcaoVacas.convencional}
                   onChange={(e) => setData({
                     ...data,
                     concepcaoVacas: {...data.concepcaoVacas, convencional: Number(e.target.value)}
                   })}
                   className="mt-1"
+                  disabled={useReferenceNumbers}
                 />
               </div>
               <div>
-                <Label>Corte</Label>
+                <div className="flex items-center gap-2">
+                  <Label>Corte</Label>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="w-4 h-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Referência: 30-40%</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <Input
                   type="number"
-                  value={data.concepcaoVacas.corte}
+                  value={useReferenceNumbers ? 35 : data.concepcaoVacas.corte}
                   onChange={(e) => setData({
                     ...data,
                     concepcaoVacas: {...data.concepcaoVacas, corte: Number(e.target.value)}
                   })}
                   className="mt-1"
+                  disabled={useReferenceNumbers}
                 />
               </div>
               <div>
@@ -445,39 +544,72 @@ export default function CalculadoraReposicao() {
             <h3 className="text-lg font-semibold mb-4">Taxa de concepção em novilhas</h3>
             <div className="grid grid-cols-5 gap-4">
               <div>
-                <Label>Sêmen Sexado</Label>
+                <div className="flex items-center gap-2">
+                  <Label>Sêmen Sexado</Label>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="w-4 h-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Referência: 50-60%</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <Input
                   type="number"
-                  value={data.concepcaoNovilhas.semenSexado}
+                  value={useReferenceNumbers ? 55 : data.concepcaoNovilhas.semenSexado}
                   onChange={(e) => setData({
                     ...data,
                     concepcaoNovilhas: {...data.concepcaoNovilhas, semenSexado: Number(e.target.value)}
                   })}
                   className="mt-1"
+                  disabled={useReferenceNumbers}
                 />
               </div>
               <div>
-                <Label>Convencional</Label>
+                <div className="flex items-center gap-2">
+                  <Label>Convencional</Label>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="w-4 h-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Referência: 65-75%</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <Input
                   type="number"
-                  value={data.concepcaoNovilhas.convencional}
+                  value={useReferenceNumbers ? 70 : data.concepcaoNovilhas.convencional}
                   onChange={(e) => setData({
                     ...data,
                     concepcaoNovilhas: {...data.concepcaoNovilhas, convencional: Number(e.target.value)}
                   })}
                   className="mt-1"
+                  disabled={useReferenceNumbers}
                 />
               </div>
               <div>
-                <Label>Corte</Label>
+                <div className="flex items-center gap-2">
+                  <Label>Corte</Label>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="w-4 h-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Referência: 55-65%</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <Input
                   type="number"
-                  value={data.concepcaoNovilhas.corte}
+                  value={useReferenceNumbers ? 60 : data.concepcaoNovilhas.corte}
                   onChange={(e) => setData({
                     ...data,
                     concepcaoNovilhas: {...data.concepcaoNovilhas, corte: Number(e.target.value)}
                   })}
                   className="mt-1"
+                  disabled={useReferenceNumbers}
                 />
               </div>
               <div>
@@ -509,6 +641,7 @@ export default function CalculadoraReposicao() {
         </div>
       </CardContent>
     </Card>
+    </TooltipProvider>
   );
 
   const renderFase3 = () => (
