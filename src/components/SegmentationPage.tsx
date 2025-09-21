@@ -981,42 +981,17 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
         </CardContent>
       </Card>
 
-      {/* Gráficos e Tabela */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Gráfico de Pizza */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <PieIcon className="h-5 w-5" />
-              Distribuição da Segmentação
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div style={{ width: "100%", height: 300 }}>
-              <ResponsiveContainer>
-                <PieChart>
-                  <Pie
-                    data={groupStats}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percentage }) => `${name}: ${percentage}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {groupStats.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-          </div>
-
-          {/* Gates Section */}
-          <div className="mt-8 space-y-4">
+      {/* Gates - Valores de Corte */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Gates - Valores de Corte
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-lg">Gates - Valores de Corte</h3>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
@@ -1169,7 +1144,6 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
             <div className="text-sm text-gray-600 mt-2">
               Configure valores mínimos e/ou máximos para cada PTA. Animais fora dos limites serão automaticamente classificados como Receptoras.
             </div>
-          </div>
             
             <div className="mt-4 space-y-2">
               <div className="text-sm text-gray-600">
@@ -1180,6 +1154,41 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
                 <div>• Inter: Animais para reprodução natural premium</div>
                 <div>• Receptoras: Animais adequados para receber embriões</div>
               </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Gráficos e Tabela */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Gráfico de Pizza */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <PieIcon className="h-5 w-5" />
+              Distribuição da Segmentação
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div style={{ width: "100%", height: 300 }}>
+              <ResponsiveContainer>
+                <PieChart>
+                  <Pie
+                    data={groupStats}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percentage }) => `${name}: ${percentage}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {groupStats.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
