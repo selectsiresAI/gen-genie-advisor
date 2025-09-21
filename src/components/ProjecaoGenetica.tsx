@@ -155,13 +155,48 @@ const LS_KEY = "projGen_MVP_state_v2";
 
 function useAppState() {
   const [state, setState] = useState<AppState>(() => {
-    const raw = localStorage.getItem(LS_KEY);
-    if (raw) {
-      try {
-        return JSON.parse(raw) as AppState;
-      } catch {}
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<AppState>;
+        // Merge saved data with default state, ensuring we have all required fields
+        const today = new Date();
+        return {
+          farm: {
+            farmName: "",
+            technician: "",
+            date: today.toISOString().slice(0, 10),
+            objective: "",
+          },
+          structure: { total: 0, novilhas: 0, primiparas: 0, secundiparas: 0, multiparas: 0 },
+          repro: {
+            service: { novilhas: 0, primiparas: 0, secundiparas: 0, multiparas: 0 },
+            conception: { novilhas: 0, primiparas: 0, secundiparas: 0, multiparas: 0 },
+            preex: { novilhas: 0, primiparas: 0, secundiparas: 0, multiparas: 0 },
+          },
+          mothers: {
+            values: {
+              novilhas: {},
+              primiparas: {},
+              secundiparas: {},
+              multiparas: {},
+            },
+          },
+          bulls: [],
+          selectedPTAs: ["NM$", "TPI", "PL", "SCS", "DPR"],
+          numberOfBulls: 3,
+          toolssBulls: [], // Never persisted
+          selectedClient: null, // Never persisted
+          selectedFarm: null, // Never persisted
+          autoCalculatePopulation: false,
+          ...parsed // Override with saved values
+        } as AppState;
+      }
+    } catch (error) {
+      console.warn('Failed to load state from localStorage:', error);
     }
-    // Estado inicial vazio
+    
+    // Default state if loading fails
     const today = new Date();
     return {
       farm: {
@@ -185,7 +220,7 @@ function useAppState() {
         },
       },
       bulls: [],
-      selectedPTAs: ["NM$", "TPI", "PL", "SCS", "DPR"], // PTAs padrão
+      selectedPTAs: ["NM$", "TPI", "PL", "SCS", "DPR"],
       numberOfBulls: 3,
       toolssBulls: [],
       selectedClient: null,
@@ -194,9 +229,66 @@ function useAppState() {
     } as AppState;
   });
 
+  // Cleanup old localStorage data on mount to prevent quota issues
   useEffect(() => {
-    localStorage.setItem(LS_KEY, JSON.stringify(state));
-  }, [state]);
+    const cleanupOldData = () => {
+      const keysToRemove = [
+        'projGen_MVP_state_v1', 
+        'toolss_old_data',
+        'old_female_data',
+        'old_bull_data'
+      ];
+      keysToRemove.forEach(key => {
+        try {
+          localStorage.removeItem(key);
+        } catch (e) {}
+      });
+    };
+    cleanupOldData();
+  }, []);
+
+  useEffect(() => {
+    try {
+      // Only persist essential data, not heavy objects like toolssBulls
+      const persistedState = {
+        farm: state.farm,
+        structure: state.structure,
+        repro: state.repro,
+        mothers: state.mothers,
+        bulls: state.bulls, // Keep user-configured bulls but not the full database
+        selectedPTAs: state.selectedPTAs,
+        numberOfBulls: state.numberOfBulls,
+        autoCalculatePopulation: state.autoCalculatePopulation
+        // Exclude: toolssBulls, selectedClient, selectedFarm (too heavy)
+      };
+      
+      localStorage.setItem(LS_KEY, JSON.stringify(persistedState));
+    } catch (error) {
+      console.warn('Failed to save state to localStorage:', error);
+      // Clear old data if quota exceeded
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        console.log('Clearing old localStorage data to free space...');
+        // Clear old keys
+        const keysToRemove = ['projGen_MVP_state_v1', 'toolss_old_data'];
+        keysToRemove.forEach(key => {
+          try {
+            localStorage.removeItem(key);
+          } catch (e) {}
+        });
+        
+        // Try again with minimal state
+        try {
+          const minimalState = {
+            selectedPTAs: state.selectedPTAs,
+            numberOfBulls: state.numberOfBulls
+          };
+          localStorage.setItem(LS_KEY, JSON.stringify(minimalState));
+        } catch (e) {
+          console.warn('Could not save even minimal state');
+        }
+      }
+    }
+  }, [state.farm, state.structure, state.repro, state.mothers, state.bulls, state.selectedPTAs, state.numberOfBulls, state.autoCalculatePopulation]);
 
   // Carrega dados do ToolSSApp do localStorage
   useEffect(() => {
