@@ -11,6 +11,8 @@ type Female = {
   id: string;
   brinco: string;
   nascimento: string;
+  ordemParto?: number; // Ordem de parto
+  categoria?: string; // Categoria do animal
   naabPai: string;
   nomePai: string;
   TPI: number;
@@ -609,6 +611,9 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
                 <tr className="bg-gray-100">
                   <th className="border border-gray-300 px-3 py-2 text-left">Grupo</th>
                   <th className="border border-gray-300 px-3 py-2 text-left">Brinco</th>
+                  <th className="border border-gray-300 px-3 py-2 text-left">Nascimento</th>
+                  <th className="border border-gray-300 px-3 py-2 text-left">Ordem de Parto</th>
+                  <th className="border border-gray-300 px-3 py-2 text-left">Categoria</th>
                   <th className="border border-gray-300 px-3 py-2 text-left">NAAB Pai</th>
                   <th className="border border-gray-300 px-3 py-2 text-left">Nome Pai</th>
                   <th className="border border-gray-300 px-3 py-2 text-left">{config.primaryIndex}</th>
@@ -663,6 +668,9 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
                           </span>
                         </td>
                         <td className="px-3 py-2 font-medium">{f.brinco}</td>
+                        <td className="px-3 py-2">{new Date(f.nascimento).toLocaleDateString()}</td>
+                        <td className="px-3 py-2">{f.ordemParto || "-"}</td>
+                        <td className="px-3 py-2">{f.categoria || "-"}</td>
                         <td className="px-3 py-2">{f.naabPai}</td>
                         <td className="px-3 py-2 text-red-600 font-medium">{f.nomePai}</td>
                         <td className="px-3 py-2">

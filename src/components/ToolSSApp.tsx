@@ -26,6 +26,8 @@ type Female = {
   id: string;
   brinco: string; // ID Fazenda 
   nascimento: string; // Data de Nascimento ISO yyyy-mm-dd
+  ordemParto?: number; // Ordem de parto
+  categoria?: string; // Categoria do animal
   naabPai: string;
   nomePai: string;
   TPI: number;
@@ -307,6 +309,8 @@ const seedFemales: Female[] = [{
   id: "F3382",
   brinco: "3382",
   nascimento: "2023-06-01",
+  ordemParto: 1,
+  categoria: "Novilha",
   naabPai: "029HO19791",
   nomePai: "Haven",
   TPI: 2526,
@@ -322,6 +326,8 @@ const seedFemales: Female[] = [{
   id: "F3407",
   brinco: "3407",
   nascimento: "2023-06-01",
+  ordemParto: 1,
+  categoria: "Novilha",
   naabPai: "208HO00355",
   nomePai: "Cason",
   TPI: 2507,
@@ -337,6 +343,8 @@ const seedFemales: Female[] = [{
   id: "F3151",
   brinco: "3151",
   nascimento: "2022-06-01",
+  ordemParto: 2,
+  categoria: "Primípara",
   naabPai: "011HO15225",
   nomePai: "Luche",
   TPI: 2500,
@@ -352,6 +360,8 @@ const seedFemales: Female[] = [{
   id: "F3370",
   brinco: "3370",
   nascimento: "2023-06-01",
+  ordemParto: 1,
+  categoria: "Novilha",
   naabPai: "029HO19829",
   nomePai: "Stormy",
   TPI: 2496,
@@ -367,6 +377,8 @@ const seedFemales: Female[] = [{
   id: "F3280",
   brinco: "3280",
   nascimento: "2023-06-01",
+  ordemParto: 1,
+  categoria: "Novilha",
   naabPai: "029HO19829",
   nomePai: "Stormy",
   TPI: 2496,
@@ -382,6 +394,8 @@ const seedFemales: Female[] = [{
   id: "F3185",
   brinco: "3185",
   nascimento: "2023-06-01",
+  ordemParto: 1,
+  categoria: "Novilha",
   naabPai: "011HO15225",
   nomePai: "Luche",
   TPI: 2476,
@@ -397,6 +411,8 @@ const seedFemales: Female[] = [{
   id: "F3430",
   brinco: "3430",
   nascimento: "2023-06-01",
+  ordemParto: 1,
+  categoria: "Novilha",
   naabPai: "208HO00355",
   nomePai: "Cason",
   TPI: 2472,
@@ -414,6 +430,8 @@ const seedFemales: Female[] = [{
   id: "F2019A",
   brinco: "2890",
   nascimento: "2019-05-20",
+  ordemParto: 4,
+  categoria: "Multípara",
   naabPai: "007HO14195",
   nomePai: "Legacy",
   TPI: 1818,
@@ -429,6 +447,8 @@ const seedFemales: Female[] = [{
   id: "F2021A",
   brinco: "3001",
   nascimento: "2021-03-15",
+  ordemParto: 3,
+  categoria: "Secundípara",
   naabPai: "250HO12961",
   nomePai: "Gameday",
   TPI: 2016,
@@ -1434,6 +1454,8 @@ function HerdPage({
                 {th("ID CDCB", "idCDCB")}
                 {th("Pedigree", "pedigree")}
                 {th("Nascimento", "nascimento")}
+                {th("Ordem de Parto", "ordemParto")}
+                {th("Categoria", "categoria")}
                 {th("HHP$®", "HHP$" as keyof Female)}
                 {th("TPI", "TPI")}
                 {th("NM$", "NM$" as keyof Female)}
@@ -1506,6 +1528,8 @@ function HerdPage({
                   <td className="px-3 py-2">{f.idCDCB || "-"}</td>
                   <td className="px-3 py-2">{f.pedigree || "-"}</td>
                   <td className="px-3 py-2">{new Date(f.nascimento).toLocaleDateString()}</td>
+                  <td className="px-3 py-2">{f.ordemParto || "-"}</td>
+                  <td className="px-3 py-2">{f.categoria || "-"}</td>
                   <td className="px-3 py-2 font-semibold">{f["HHP$"] || "-"}</td>
                   <td className="px-3 py-2 font-semibold">{f.TPI}</td>
                   <td className="px-3 py-2 font-semibold">{f["NM$"]}</td>
