@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { usePlanStore, PTA_MAPPING, getPTADisplayLabel, normalizePTAKey, calculatePopulationStructure, calculateMotherAverages, getBullPTAValue } from "../hooks/usePlanStore";
 
 /**
  * Projeção Genética MVP – Select Sires (Frontend Only, Single File)
@@ -34,14 +35,8 @@ const CATEGORIES: { key: CategoryKey; label: string }[] = [
   { key: "multiparas", label: "Multíparas" },
 ];
 
-// Lista completa de PTAs disponíveis
-const ALL_PTAS = [
-  "ÍHHP$®", "TPI", "NM$", "CM$", "FM$", "GM$", "F SAV", "PTAM", "CFP", "PTAF", "PTAF%", 
-  "PTAP", "PTAP%", "PL", "DPR", "LIV", "SCS", "MAST", "MET", "RP", "DA", "KET", "MF", 
-  "PTAT", "UDC", "FLC", "SCE", "DCE", "SSB", "DSB", "H LIV", "CCR", "HCR", "FI", "GL", 
-  "EFC", "BWC", "STA", "STR", "DFM", "RUA", "RLS", "RTP", "FTL", "RW", "RLR", "FTA", 
-  "FLS", "FUA", "RUH", "RUW", "UCL", "UDP", "FTP", "RFI"
-] as const;
+// Lista completa de PTAs disponíveis (display labels)
+const ALL_PTAS = Object.keys(PTA_MAPPING);
 
 type PTAKey = typeof ALL_PTAS[number];
 
@@ -146,83 +141,13 @@ function useCdnScripts() {
   return ready;
 }
 
-// Função para calcular PTAs médias das mães baseadas no rebanho
-function calculateMothersPTAs(selectedFarm: any, selectedPTAs: PTAKey[]): Record<CategoryKey, Record<string, number>> {
-  if (!selectedFarm || !selectedFarm.females || selectedPTAs.length === 0) {
-    return {
-      novilhas: {},
-      primiparas: {},
-      secundiparas: {},
-      multiparas: {}
-    };
-  }
-
-  const categories = {
-    novilhas: selectedFarm.females.filter((f: any) => f.categoria === "Calf" || f.categoria === "Heifer"),
-    primiparas: selectedFarm.females.filter((f: any) => f.categoria === "Primiparous"),
-    secundiparas: selectedFarm.females.filter((f: any) => f.categoria === "Secondiparous"),
-    multiparas: selectedFarm.females.filter((f: any) => f.categoria === "Multiparous")
-  };
-
-  const result: Record<CategoryKey, Record<string, number>> = {
-    novilhas: {},
-    primiparas: {},
-    secundiparas: {},
-    multiparas: {}
-  };
-
-  Object.entries(categories).forEach(([categoryKey, females]) => {
-    const key = categoryKey as CategoryKey;
-    selectedPTAs.forEach(ptaKey => {
-      const values = females.map((f: any) => {
-        // Handle special field names with brackets and mapping
-        let value = 0;
-        if (ptaKey === "ÍHHP$®") {
-          value = f["HHP$"] || 0;
-        } else if (ptaKey === "NM$") {
-          value = f["NM$"] || 0;
-        } else if (ptaKey === "CM$") {
-          value = f["CM$"] || 0;
-        } else if (ptaKey === "FM$") {
-          value = f["FM$"] || 0;
-        } else if (ptaKey === "GM$") {
-          value = f["GM$"] || 0;
-        } else if (ptaKey === "F SAV") {
-          value = f["F SAV"] || 0;
-        } else if (ptaKey === "PTAF%") {
-          value = f["PTAF%"] || 0;
-        } else if (ptaKey === "PTAP%") {
-          value = f["PTAP%"] || 0;
-        } else if (ptaKey === "H LIV") {
-          value = f["H LIV"] || 0;
-        } else {
-          // Standard field names without brackets
-          value = f[ptaKey] || 0;
-        }
-        return value;
-      }).filter(v => v !== 0);
-      const average = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
-      result[key][ptaKey] = average;
-    });
-  });
-
-  return result;
-}
-
-// Função para calcular estrutura populacional baseada no rebanho
-function calculatePopulationStructure(selectedFarm: any): StructurePopulation {
-  if (!selectedFarm || !selectedFarm.females) {
-    return { total: 0, novilhas: 0, primiparas: 0, secundiparas: 0, multiparas: 0 };
-  }
-
-  const novilhas = selectedFarm.females.filter((f: any) => f.categoria === "Calf" || f.categoria === "Heifer").length;
-  const primiparas = selectedFarm.females.filter((f: any) => f.categoria === "Primiparous").length;  
-  const secundiparas = selectedFarm.females.filter((f: any) => f.categoria === "Secondiparous").length;
-  const multiparas = selectedFarm.females.filter((f: any) => f.categoria === "Multiparous").length;
-  const total = novilhas + primiparas + secundiparas + multiparas;
-
-  return { total, novilhas, primiparas, secundiparas, multiparas };
-}
+// Category mapping for backwards compatibility
+const CATEGORY_MAP = {
+  novilhas: "heifers",
+  primiparas: "primiparous", 
+  secundiparas: "secundiparous",
+  multiparas: "multiparous"
+};
 
 // ---------- Estado & Persistência ----------
 const LS_KEY = "projGen_MVP_state_v2";
@@ -285,21 +210,10 @@ function useAppState() {
     }
   }, []);
 
-  // Auto-update population structure and mothers PTA when farm is selected
+  // Hydrate store from localStorage once on load
   useEffect(() => {
-    if (state.selectedFarm && state.autoCalculatePopulation) {
-      const newStructure = calculatePopulationStructure(state.selectedFarm);
-      setState(prev => ({ ...prev, structure: newStructure }));
-    }
-  }, [state.selectedFarm, state.autoCalculatePopulation]);
-
-  // Auto-update mothers PTA when farm or selected PTAs change
-  useEffect(() => {
-    if (state.selectedFarm && state.selectedPTAs.length > 0) {
-      const mothersPTAs = calculateMothersPTAs(state.selectedFarm, state.selectedPTAs);
-      setState(prev => ({ ...prev, mothers: { values: mothersPTAs } }));
-    }
-  }, [state.selectedFarm, state.selectedPTAs]);
+    console.log('selectedFarmId=', state.selectedFarm?.id || null, '(from localStorage)');
+  }, []);
 
   const loadTestData = () => {
     const today = new Date().toISOString().slice(0, 10);
@@ -374,8 +288,9 @@ function useAppState() {
   return { state, setState, loadTestData, clearAll };
 }
 
-// ---------- Cálculos ----------
 function useCalculations(state: AppState) {
+  const planStore = usePlanStore();
+  
   const result = useMemo(() => {
     const semenFemale = (semen: SemenType) => (semen === "Sexado" ? 0.9 : 0.47);
 
@@ -393,8 +308,8 @@ function useCalculations(state: AppState) {
       };
 
       const ptaPondNumerator: Record<string, number> = {};
-      state.selectedPTAs.forEach(pta => {
-        ptaPondNumerator[pta] = 0;
+      planStore.selectedPTAKeys.forEach(ptaKey => {
+        ptaPondNumerator[ptaKey] = 0;
       });
 
       CATEGORIES.forEach(({ key }) => {
@@ -407,22 +322,24 @@ function useCalculations(state: AppState) {
         bezPorCat[key] = bez;
         bezerrasTotais += bez;
 
-        state.selectedPTAs.forEach((pta) => {
-          const ptaMae = state.mothers.values[key][pta] || 0;
-          const ptaTouro = b.pta[pta] || 0;
+        planStore.selectedPTAKeys.forEach((ptaKey) => {
+          const categoryKey = CATEGORY_MAP[key as keyof typeof CATEGORY_MAP];
+          const ptaMae = planStore.motherAverages[categoryKey]?.[ptaKey] || 0;
+          const ptaTouro = b.pta[ptaKey] || 0;
           const ptaFilha = (ptaMae + ptaTouro) / 2;
-          ptaPondNumerator[pta] += ptaFilha * bez;
+          ptaPondNumerator[ptaKey] += ptaFilha * bez;
         });
       });
 
       const ptaPond: Record<string, number> = {};
-      state.selectedPTAs.forEach((pta) => {
-        ptaPond[pta] = bezerrasTotais > 0 ? ptaPondNumerator[pta] / bezerrasTotais : 0;
+      planStore.selectedPTAKeys.forEach((ptaKey) => {
+        ptaPond[ptaKey] = bezerrasTotais > 0 ? ptaPondNumerator[ptaKey] / bezerrasTotais : 0;
       });
 
       const custoPorBezerra = bezerrasTotais > 0 ? valorTotal / bezerrasTotais : 0;
-      const retornoGen = (ptaPond["NM$"] || 0) * bezerrasTotais; // R$ com base no NM$ médio ponderado
-      const roi = retornoGen - valorTotal; // R$
+      const nmDollarKey = planStore.selectedPTAKeys.find(k => k === "nm_dollar");
+      const retornoGen = nmDollarKey ? (ptaPond[nmDollarKey] || 0) * bezerrasTotais : 0;
+      const roi = retornoGen - valorTotal;
 
       return {
         bull: b,
@@ -443,21 +360,21 @@ function useCalculations(state: AppState) {
     const totalValor = byBull.reduce((s, r) => s + r.valorTotal, 0);
 
     const ptaPondGeral: Record<string, number> = {};
-    state.selectedPTAs.forEach(pta => {
-      ptaPondGeral[pta] = 0;
+    planStore.selectedPTAKeys.forEach(ptaKey => {
+      ptaPondGeral[ptaKey] = 0;
     });
 
     if (totalBez > 0) {
-      state.selectedPTAs.forEach((pta) => {
-        const num = byBull.reduce((s, r) => s + (r.ptaPond[pta] || 0) * r.bezerrasTotais, 0);
-        ptaPondGeral[pta] = num / totalBez;
+      planStore.selectedPTAKeys.forEach((ptaKey) => {
+        const num = byBull.reduce((s, r) => s + (r.ptaPond[ptaKey] || 0) * r.bezerrasTotais, 0);
+        ptaPondGeral[ptaKey] = num / totalBez;
       });
     }
 
     const custoMedioBezerra = totalBez > 0 ? totalValor / totalBez : 0;
 
     return { byBull, totalBez, totalValor, ptaPondGeral, custoMedioBezerra };
-  }, [state]);
+  }, [state, planStore.selectedPTAKeys, planStore.motherAverages]);
 
   return result;
 }
@@ -536,12 +453,12 @@ function Button({ onClick, children, variant = "primary" as const }: { onClick?:
 
 // ---------- Pages ----------
 function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.SetStateAction<AppState>> }) {
-  // Soma validação
-  const sumCats = st.structure.novilhas + st.structure.primiparas + st.structure.secundiparas + st.structure.multiparas;
-  const overflow = sumCats > st.structure.total && st.structure.total > 0;
-
-  // Carrega dados do ToolSSApp se disponível
+  // Global store for anti-loop state management
+  const planStore = usePlanStore();
+  
+  // Load ToolSS data
   const [toolssClients, setToolssClients] = useState<any[]>([]);
+  const [selectedFarm, setSelectedFarm] = useState<any>(null);
   
   useEffect(() => {
     try {
@@ -549,30 +466,46 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
       if (toolssData) {
         const clients = JSON.parse(toolssData);
         setToolssClients(clients);
+        
+        // Restore selected farm from store
+        if (planStore.selectedFarmId) {
+          const farm = clients.flatMap((c: any) => c.farms).find((f: any) => f.id.toString() === planStore.selectedFarmId);
+          if (farm) {
+            setSelectedFarm(farm);
+          }
+        }
       }
     } catch (e) {
       console.warn("Erro ao carregar dados do ToolSSApp:", e);
     }
-  }, []);
+  }, [planStore.selectedFarmId]);
 
-  // Atualiza PTAs das mães quando rebanho ou PTAs selecionadas mudam
+  // Auto-calculate population when farm changes and mode is auto
   useEffect(() => {
-    if (st.selectedFarm && st.selectedPTAs.length > 0) {
-      const calculatedPTAs = calculateMothersPTAs(st.selectedFarm, st.selectedPTAs);
-      setSt(prev => ({ ...prev, mothers: { values: calculatedPTAs } }));
+    if (selectedFarm && planStore.populationMode === 'auto') {
+      const counts = calculatePopulationStructure(selectedFarm);
+      planStore.setPopulationCounts(counts);
     }
-  }, [st.selectedFarm, st.selectedPTAs, setSt]);
+  }, [selectedFarm, planStore.populationMode]);
 
-  // Atualiza estrutura populacional quando rebanho muda e auto-cálculo está ativado
+  // Auto-calculate mother averages when farm or PTAs change
   useEffect(() => {
-    if (st.selectedFarm && st.autoCalculatePopulation) {
-      const calculatedStructure = calculatePopulationStructure(st.selectedFarm);
-      setSt(prev => ({ ...prev, structure: calculatedStructure }));
+    if (selectedFarm && planStore.selectedPTAKeys.length > 0) {
+      const averages = calculateMotherAverages(selectedFarm, planStore.selectedPTAKeys);
+      planStore.setMotherAverages(averages);
     }
-  }, [st.selectedFarm, st.autoCalculatePopulation, setSt]);
+  }, [selectedFarm, planStore.selectedPTAKeys]);
 
-  const selectedClientData = toolssClients.find(c => c.id === st.selectedClient?.id);
+  const selectedClientData = toolssClients.find(c => 
+    selectedFarm && c.farms.some((f: any) => f.id === selectedFarm.id)
+  );
   const farms = selectedClientData?.farms || [];
+  
+  // Backwards compatibility - sync with old state
+  const sumCats = planStore.populationCounts.heifers + planStore.populationCounts.primiparous + 
+                  planStore.populationCounts.secundiparous + planStore.populationCounts.multiparous;
+  const total = sumCats;
+  const overflow = false; // Auto-calculated, no overflow possible
 
   return (
     <div>
@@ -604,46 +537,59 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
             <div>
               <Label>Cliente/Rebanho</Label>
               <Select 
-                value={st.selectedClient?.id ? st.selectedClient.id.toString() : ""} 
+                value={selectedClientData?.id ? selectedClientData.id.toString() : ""} 
                 onChange={(v) => {
                   if (v === "") {
-                    setSt(s => ({ ...s, selectedClient: null, selectedFarm: null }));
+                    setSelectedFarm(null);
+                    planStore.setSelectedFarmId(null);
                   } else {
                     const client = toolssClients.find(c => c.id === parseInt(v));
-                    setSt(s => ({ ...s, selectedClient: client, selectedFarm: null }));
+                    if (client && client.farms.length > 0) {
+                      // Auto-select first farm if only one
+                      if (client.farms.length === 1) {
+                        const farm = client.farms[0];
+                        setSelectedFarm(farm);
+                        planStore.setSelectedFarmId(farm.id.toString());
+                      } else {
+                        setSelectedFarm(null);
+                        planStore.setSelectedFarmId(null);
+                      }
+                    }
                   }
                 }}
                 options={[
                   { value: "", label: "Selecione um cliente" },
-                  ...toolssClients.map((c, index) => ({ value: c.id.toString(), label: `#${c.id} - ${c.nome}`, key: `client-${c.id}-${index}` }))
+                  ...toolssClients.map(c => ({ value: c.id.toString(), label: `#${c.id} - ${c.nome}` }))
                 ]}
               />
             </div>
             <div>
               <Label>Fazenda</Label>
               <Select 
-                value={st.selectedFarm?.id ? st.selectedFarm.id.toString() : ""} 
+                value={selectedFarm?.id ? selectedFarm.id.toString() : ""} 
                 onChange={(v) => {
-                  console.log("Farm selection changed:", v, farms);
                   if (v === "") {
-                    setSt(s => ({ ...s, selectedFarm: null }));
+                    setSelectedFarm(null);
+                    planStore.setSelectedFarmId(null);
                   } else {
                     const farm = farms.find((f: any) => f.id === parseInt(v));
-                    console.log("Selected farm:", farm);
-                    setSt(s => ({ ...s, selectedFarm: farm }));
+                    if (farm) {
+                      setSelectedFarm(farm);
+                      planStore.setSelectedFarmId(farm.id.toString());
+                    }
                   }
                 }}
                 options={[
                   { value: "", label: "Selecione uma fazenda" },
-                  ...farms.map((f: any, index) => ({ value: f.id.toString(), label: `${f.nome} (${f.females?.length || 0} fêmeas)`, key: `farm-${f.id}-${index}` }))
+                  ...farms.map((f: any) => ({ value: f.id.toString(), label: `${f.nome} (${f.females?.length || 0} fêmeas)` }))
                 ]}
               />
             </div>
           </div>
-          {st.selectedFarm && (
+          {selectedFarm && (
             <div style={{ marginTop: 12, padding: 10, background: "#f0f9ff", borderRadius: 8, fontSize: 12 }}>
-              <strong>Rebanho selecionado:</strong> {st.selectedFarm.nome}<br/>
-              <strong>Total de fêmeas:</strong> {st.selectedFarm.females?.length || 0}<br/>
+              <strong>Rebanho selecionado:</strong> {selectedFarm.nome}<br/>
+              <strong>Total de fêmeas:</strong> {selectedFarm.females?.length || 0}<br/>
               <strong>Distribuição automática por categoria será calculada</strong>
             </div>
           )}
@@ -653,34 +599,38 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
       {/* Seleção de PTAs */}
       <Section title="📊 Seleção de PTAs para Análise">
         <div style={{ marginBottom: 12 }}>
-          <Label>Selecione até 5 PTAs para análise (atual: {st.selectedPTAs.length}/5)</Label>
+          <Label>Selecione até 5 PTAs para análise (atual: {planStore.selectedPTAKeys.length}/5)</Label>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 8, marginTop: 8 }}>
-            {ALL_PTAS.map(pta => (
-              <label key={pta} style={{ 
-                display: "flex", 
-                alignItems: "center", 
-                gap: 4, 
-                fontSize: 11,
-                padding: 4,
-                borderRadius: 4,
-                background: st.selectedPTAs.includes(pta) ? "#e0f2fe" : "transparent",
-                cursor: "pointer"
-              }}>
-                <input 
-                  type="checkbox" 
-                  checked={st.selectedPTAs.includes(pta)}
-                  onChange={(e) => {
-                    if (e.target.checked && st.selectedPTAs.length < 5) {
-                      setSt(s => ({ ...s, selectedPTAs: [...s.selectedPTAs, pta] }));
-                    } else if (!e.target.checked) {
-                      setSt(s => ({ ...s, selectedPTAs: s.selectedPTAs.filter(p => p !== pta) }));
-                    }
-                  }}
-                  disabled={!st.selectedPTAs.includes(pta) && st.selectedPTAs.length >= 5}
-                />
-                {pta}
-              </label>
-            ))}
+            {ALL_PTAS.map(pta => {
+              const canonicalKey = normalizePTAKey(pta);
+              const isSelected = planStore.selectedPTAKeys.includes(canonicalKey);
+              return (
+                <label key={pta} style={{ 
+                  display: "flex", 
+                  alignItems: "center", 
+                  gap: 4, 
+                  fontSize: 11,
+                  padding: 4,
+                  borderRadius: 4,
+                  background: isSelected ? "#e0f2fe" : "transparent",
+                  cursor: "pointer"
+                }}>
+                  <input 
+                    type="checkbox" 
+                    checked={isSelected}
+                    onChange={(e) => {
+                      if (e.target.checked && planStore.selectedPTAKeys.length < 5) {
+                        planStore.setSelectedPTAKeys([...planStore.selectedPTAKeys, canonicalKey]);
+                      } else if (!e.target.checked) {
+                        planStore.setSelectedPTAKeys(planStore.selectedPTAKeys.filter(k => k !== canonicalKey));
+                      }
+                    }}
+                    disabled={!isSelected && planStore.selectedPTAKeys.length >= 5}
+                  />
+                  {pta}
+                </label>
+              );
+            })}
           </div>
         </div>
       </Section>
@@ -693,15 +643,27 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
             
             {/* Opção para cálculo automático */}
             <div style={{ marginBottom: 12, padding: 8, background: "#f8f9fa", borderRadius: 6 }}>
-              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, cursor: "pointer" }}>
-                <input 
-                  type="checkbox" 
-                  checked={st.autoCalculatePopulation}
-                  onChange={(e) => setSt(s => ({ ...s, autoCalculatePopulation: e.target.checked }))}
-                />
-                <strong>Calcular automaticamente com base no rebanho selecionado</strong>
-              </label>
-              {st.autoCalculatePopulation && !st.selectedFarm && (
+              <div style={{ display: "flex", gap: 16 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, cursor: "pointer" }}>
+                  <input 
+                    type="radio" 
+                    name="populationMode"
+                    checked={planStore.populationMode === 'auto'}
+                    onChange={() => planStore.setPopulationMode('auto')}
+                  />
+                  <strong>Automático</strong>
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, cursor: "pointer" }}>
+                  <input 
+                    type="radio" 
+                    name="populationMode"
+                    checked={planStore.populationMode === 'manual'}
+                    onChange={() => planStore.setPopulationMode('manual')}
+                  />
+                  <strong>Manual</strong>
+                </label>
+              </div>
+              {planStore.populationMode === 'auto' && !selectedFarm && (
                 <div style={{ fontSize: 11, color: COLORS.red, marginTop: 4 }}>
                   ⚠️ Selecione um rebanho para cálculo automático
                 </div>
@@ -714,30 +676,83 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
                 <Input 
                   type="number" 
                   min={0} 
-                  value={st.structure.total} 
-                  onChange={(v) => setSt((s) => ({ ...s, structure: { ...s.structure, total: v === "" ? 0 : v } }))}
-                  disabled={st.autoCalculatePopulation}
+                  value={total} 
+                  onChange={() => {}} // Read-only, calculated from categories
+                  disabled={true}
                 />
               </div>
-              {CATEGORIES.map(({ key, label }) => (
-                <div key={key}>
-                  <Label>{label}</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={(st.structure as any)[key]}
-                    onChange={(v) => setSt((s) => ({ ...s, structure: { ...s.structure, [key]: v === "" ? 0 : v } }))}
-                    disabled={st.autoCalculatePopulation}
-                  />
-                </div>
-              ))}
+              <div>
+                <Label>Novilhas</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={planStore.populationCounts.heifers}
+                  onChange={(v) => {
+                    if (planStore.populationMode === 'manual') {
+                      planStore.setPopulationCounts({
+                        ...planStore.populationCounts,
+                        heifers: v === "" ? 0 : v
+                      });
+                    }
+                  }}
+                  disabled={planStore.populationMode === 'auto'}
+                />
+              </div>
+              <div>
+                <Label>Primíparas</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={planStore.populationCounts.primiparous}
+                  onChange={(v) => {
+                    if (planStore.populationMode === 'manual') {
+                      planStore.setPopulationCounts({
+                        ...planStore.populationCounts,
+                        primiparous: v === "" ? 0 : v
+                      });
+                    }
+                  }}
+                  disabled={planStore.populationMode === 'auto'}
+                />
+              </div>
+              <div>
+                <Label>Secundíparas</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={planStore.populationCounts.secundiparous}
+                  onChange={(v) => {
+                    if (planStore.populationMode === 'manual') {
+                      planStore.setPopulationCounts({
+                        ...planStore.populationCounts,
+                        secundiparous: v === "" ? 0 : v
+                      });
+                    }
+                  }}
+                  disabled={planStore.populationMode === 'auto'}
+                />
+              </div>
+              <div>
+                <Label>Multíparas</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={planStore.populationCounts.multiparous}
+                  onChange={(v) => {
+                    if (planStore.populationMode === 'manual') {
+                      planStore.setPopulationCounts({
+                        ...planStore.populationCounts,
+                        multiparous: v === "" ? 0 : v
+                      });
+                    }
+                  }}
+                  disabled={planStore.populationMode === 'auto'}
+                />
+              </div>
             </div>
-            {overflow && (
-              <div style={{ marginTop: 8, color: COLORS.red, fontWeight: 700 }}>Somatório das categorias excede o Total de fêmeas.</div>
-            )}
-            {st.autoCalculatePopulation && st.selectedFarm && (
+            {planStore.populationMode === 'auto' && selectedFarm && (
               <div style={{ marginTop: 8, fontSize: 11, color: "#16a34a" }}>
-                ✅ Estrutura calculada automaticamente: {st.structure.total} fêmeas
+                ✅ Estrutura calculada automaticamente: {total} fêmeas
               </div>
             )}
           </div>
@@ -801,10 +816,10 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
         {/* PTA das mães */}
         <div style={{ marginTop: 16 }}>
           <h3 style={{ fontWeight: 700, marginBottom: 8 }}>PTA Média das Mães (por categoria)</h3>
-          {st.selectedFarm ? (
+          {selectedFarm ? (
             <div style={{ padding: 10, background: "#f0f9ff", borderRadius: 8, fontSize: 12, marginBottom: 8 }}>
               <strong>📊 Valores calculados automaticamente baseados no rebanho selecionado</strong><br/>
-              Rebanho: {st.selectedFarm.nome} ({st.selectedFarm.females?.length || 0} fêmeas)
+              Rebanho: {selectedFarm.nome} ({selectedFarm.females?.length || 0} fêmeas)
             </div>
           ) : (
             <div style={{ padding: 10, background: "#fef3c7", borderRadius: 8, fontSize: 12, marginBottom: 8 }}>
@@ -812,36 +827,35 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
             </div>
           )}
           
-          {st.selectedPTAs.length > 0 && (
+          {planStore.selectedPTAKeys.length > 0 && (
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
               <thead>
                 <tr style={{ background: COLORS.gray }}>
                   <th style={{ textAlign: "left", padding: 6 }}>Categoria</th>
-                  {st.selectedPTAs.map((attr) => (
-                    <th key={attr} style={{ textAlign: "left", padding: 6 }}>PTA {attr}</th>
+                  {planStore.selectedPTAKeys.map((ptaKey) => (
+                    <th key={ptaKey} style={{ textAlign: "left", padding: 6 }}>PTA {getPTADisplayLabel(ptaKey)}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {CATEGORIES.map(({ key, label }) => (
-                  <tr key={key}>
-                    <td style={{ padding: 6 }}>{label}</td>
-                    {st.selectedPTAs.map((attr) => (
-                      <td key={attr} style={{ padding: 6 }}>
+                {Object.entries(CATEGORY_MAP).map(([oldKey, newKey]) => (
+                  <tr key={oldKey}>
+                    <td style={{ padding: 6 }}>{CATEGORIES.find(c => c.key === oldKey)?.label}</td>
+                    {planStore.selectedPTAKeys.map((ptaKey) => (
+                      <td key={ptaKey} style={{ padding: 6 }}>
                         <Input
                           type="number"
-                          value={st.mothers.values[key][attr] || 0}
-                          onChange={(v) =>
-                            setSt((s) => ({
-                              ...s,
-                              mothers: {
-                                values: {
-                                  ...s.mothers.values,
-                                  [key]: { ...s.mothers.values[key], [attr]: v === "" ? 0 : v },
-                                },
-                              },
-                            }))
-                          }
+                          value={planStore.motherAverages[newKey]?.[ptaKey] || 0}
+                          onChange={(v) => {
+                            const newAverages = {
+                              ...planStore.motherAverages,
+                              [newKey]: {
+                                ...planStore.motherAverages[newKey],
+                                [ptaKey]: v === "" ? 0 : v
+                              }
+                            };
+                            planStore.setMotherAverages(newAverages);
+                          }}
                         />
                       </td>
                     ))}
@@ -857,7 +871,7 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
 }
 
 function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.SetStateAction<AppState>> }) {
-  // Carrega dados do ToolSSApp se disponível
+  const planStore = usePlanStore();
   const [toolssBulls, setToolssBulls] = useState<any[]>([]);
   
   useEffect(() => {
@@ -875,14 +889,14 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
     }
   }, []);
 
-  // Inicializa touros se necessário
+  // Inicializa touros se necessário - sem loops
   useEffect(() => {
     if (st.bulls.length < st.numberOfBulls) {
       const newBulls = [];
       for (let i = st.bulls.length; i < st.numberOfBulls; i++) {
         const defaultPTA: Record<string, number> = {};
-        st.selectedPTAs.forEach(pta => {
-          defaultPTA[pta] = 0;
+        planStore.selectedPTAKeys.forEach(ptaKey => {
+          defaultPTA[ptaKey] = 0;
         });
         
         newBulls.push({
@@ -900,21 +914,7 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
         setSt(s => ({ ...s, bulls: [...s.bulls, ...newBulls] }));
       }
     }
-  }, [st.numberOfBulls, st.bulls.length, st.selectedPTAs, setSt]);
-
-  // Update existing bulls PTAs when selectedPTAs changes
-  useEffect(() => {
-    setSt(s => ({
-      ...s,
-      bulls: s.bulls.map(bull => {
-        const updatedPTA: Record<string, number> = {};
-        s.selectedPTAs.forEach(pta => {
-          updatedPTA[pta] = bull.pta[pta] || 0;
-        });
-        return { ...bull, pta: updatedPTA };
-      })
-    }));
-  }, [st.selectedPTAs, setSt]);
+  }, [st.numberOfBulls, st.bulls.length, planStore.selectedPTAKeys.length]); // Stable dependency
 
   return (
     <div>
@@ -1000,33 +1000,34 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
                         console.log(`PTA ${pta}: ${value} (from bull ${selectedBull.nome})`);
                       });
                       
-                      setSt(s => ({ 
-                        ...s, 
-                        bulls: s.bulls.map((bull, i) => 
-                          i === idx ? {
-                            ...bull,
-                            name: selectedBull.nome,
-                            naab: selectedBull.naab,
-                            empresa: selectedBull.empresa || "",
-                            pta: updatedPTA
-                          } : bull
-                        )
-                      }));
-                    }
+                console.log('bullPTAs(keys order)=', planStore.selectedPTAKeys.map(k => `${getPTADisplayLabel(k)}:${updatedPTA[k]}`));
+                
+                setSt(s => ({ 
+                  ...s, 
+                  bulls: s.bulls.map((bull, i) => 
+                    i === idx ? {
+                      ...bull,
+                      name: selectedBull.nome,
+                      naab: selectedBull.naab,
+                      empresa: selectedBull.empresa || "",
+                      pta: updatedPTA
+                    } : bull
+                  )
+                }));
+              }
                   }
                 }}
                  options={[
                    { value: "", label: "Selecione um touro" },
-                   ...toolssBulls.map((bull, index) => ({
+                   ...toolssBulls.map((bull) => ({
                      value: bull.naab,
-                     label: `${bull.naab} - ${bull.nome} (${bull.empresa || "S/Empresa"})`,
-                     key: `${bull.naab}-${index}` // Add unique key to prevent warnings
+                     label: `${bull.naab} - ${bull.nome} (${bull.empresa || "S/Empresa"})`
                    }))
                  ]}
               />
               {b.naab && (
                 <div style={{ marginTop: 4, fontSize: 11, color: "#16a34a" }}>
-                  ✅ PTAs carregadas automaticamente para as {st.selectedPTAs.length} características selecionadas
+                  ✅ PTAs carregadas automaticamente para as {planStore.selectedPTAKeys.length} características selecionadas
                 </div>
               )}
             </div>
@@ -1074,14 +1075,22 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
 
           <div style={{ marginTop: 8 }}>
             <h4 style={{ marginBottom: 6, fontWeight: 700 }}>PTAs do Touro</h4>
-            <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(st.selectedPTAs.length, 5)}, 1fr)`, gap: 8 }}>
-              {st.selectedPTAs.map((attr) => (
-                <div key={attr}>
-                  <Label>{attr}</Label>
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(planStore.selectedPTAKeys.length, 5)}, 1fr)`, gap: 8 }}>
+              {planStore.selectedPTAKeys.map((ptaKey) => (
+                <div key={ptaKey}>
+                  <Label>{getPTADisplayLabel(ptaKey)}</Label>
                   <Input
                     type="number"
-                    value={b.pta[attr] || 0}
-                    onChange={(v) => setSt((s) => ({ ...s, bulls: s.bulls.map((bb, i) => (i === idx ? { ...bb, pta: { ...bb.pta, [attr]: v === "" ? 0 : v } } : bb)) }))}
+                    value={b.pta[ptaKey] || 0}
+                    onChange={(v) => setSt((s) => ({ 
+                      ...s, 
+                      bulls: s.bulls.map((bb, i) => (
+                        i === idx ? { 
+                          ...bb, 
+                          pta: { ...bb.pta, [ptaKey]: v === "" ? 0 : v } 
+                        } : bb
+                      )) 
+                    }))}
                   />
                 </div>
               ))}
@@ -1111,6 +1120,7 @@ function useCharts() {
 }
 
 function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCalculations> }) {
+  const planStore = usePlanStore();
   const { ready, createChart } = useCharts();
   const barRef = useRef<any>(null);
   const pieRef = useRef<any>(null);
@@ -1149,10 +1159,10 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
     });
 
     // 3) Radar: PTAs médias das filhas (ponderadas) – PTAs selecionadas
-    const radarLabels = st.selectedPTAs.map((k) => `PTA ${k}`);
+    const radarLabels = planStore.selectedPTAKeys.map((ptaKey) => `PTA ${getPTADisplayLabel(ptaKey)}`);
     const radarDatasets = calc.byBull.map((r) => ({ 
       label: `${r.bull.name || `Touro ${r.bull.id}`}`, 
-      data: st.selectedPTAs.map((k) => r.ptaPond[k] || 0) 
+      data: planStore.selectedPTAKeys.map((ptaKey) => r.ptaPond[ptaKey] || 0) 
     }));
     radarRef.current = createChart("chart-radar", {
       type: "radar",
@@ -1163,7 +1173,8 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
     // 4) Linha: Custo por bezerra × NM$ por touro
     const lineLabels = labelsBulls;
     const seriesCusto = calc.byBull.map((r) => r.custoPorBezerra);
-    const seriesNM = calc.byBull.map((r) => r.ptaPond["NM$"] || 0);
+    const nmDollarKey = planStore.selectedPTAKeys.find(k => k === "nm_dollar");
+    const seriesNM = calc.byBull.map((r) => r.ptaPond[nmDollarKey || ""] || 0);
     lineRef.current = createChart("chart-line", {
       type: "line",
       data: {
@@ -1204,11 +1215,11 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
           </div>
         }
       >
-        <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(st.selectedPTAs.length, 5)}, 1fr)`, gap: 12 }}>
-          {st.selectedPTAs.map((k) => (
-            <div key={k} style={{ background: COLORS.white, border: `1px dashed ${COLORS.gray}`, borderRadius: 10, padding: 10 }}>
-              <div style={{ fontSize: 12, color: COLORS.black }}>PTA média geral – {k}</div>
-              <div style={{ fontSize: 22, fontWeight: 800 }}>{NUM(calc.ptaPondGeral[k] || 0, 2)}</div>
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(planStore.selectedPTAKeys.length, 5)}, 1fr)`, gap: 12 }}>
+          {planStore.selectedPTAKeys.map((ptaKey) => (
+            <div key={ptaKey} style={{ background: COLORS.white, border: `1px dashed ${COLORS.gray}`, borderRadius: 10, padding: 10 }}>
+              <div style={{ fontSize: 12, color: COLORS.black }}>PTA média geral – {getPTADisplayLabel(ptaKey)}</div>
+              <div style={{ fontSize: 22, fontWeight: 800 }}>{NUM(calc.ptaPondGeral[ptaKey] || 0, 2)}</div>
             </div>
           ))}
         </div>
@@ -1226,8 +1237,8 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
                 <th style={{ textAlign: "right", padding: 6 }}>Doses Totais</th>
                 <th style={{ textAlign: "right", padding: 6 }}>R$ Total</th>
                 <th style={{ textAlign: "right", padding: 6 }}>Bezerras Totais</th>
-                {st.selectedPTAs.map((k) => (
-                  <th key={k} style={{ textAlign: "right", padding: 6 }}>PTA {k}</th>
+                {planStore.selectedPTAKeys.map((ptaKey) => (
+                  <th key={ptaKey} style={{ textAlign: "right", padding: 6 }}>PTA {getPTADisplayLabel(ptaKey)}</th>
                 ))}
                 <th style={{ textAlign: "right", padding: 6 }}>R$/Bezerra</th>
                 <th style={{ textAlign: "right", padding: 6 }}>ROI (R$)</th>
@@ -1243,8 +1254,8 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
                   <td style={{ textAlign: "right", padding: 6 }}>{NUM(r.dosesTotal, 0)}</td>
                   <td style={{ textAlign: "right", padding: 6 }}>{BRL(r.valorTotal)}</td>
                   <td style={{ textAlign: "right", padding: 6 }}>{NUM(r.bezerrasTotais, 2)}</td>
-                  {st.selectedPTAs.map((k) => (
-                    <td key={k} style={{ textAlign: "right", padding: 6 }}>{NUM(r.ptaPond[k] || 0, 2)}</td>
+                  {planStore.selectedPTAKeys.map((ptaKey) => (
+                    <td key={ptaKey} style={{ textAlign: "right", padding: 6 }}>{NUM(r.ptaPond[ptaKey] || 0, 2)}</td>
                   ))}
                   <td style={{ textAlign: "right", padding: 6 }}>{BRL(r.custoPorBezerra)}</td>
                   <td style={{ textAlign: "right", padding: 6, fontWeight: 800, color: r.roi >= 0 ? "#167C2B" : COLORS.red }}>{BRL(r.roi)}</td>
@@ -1288,11 +1299,14 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
           {/* Maior NM$ */}
           {(() => {
-            const bestNM = [...calc.byBull].sort((a, b) => (b.ptaPond["NM$"] || 0) - (a.ptaPond["NM$"] || 0))[0];
+            const nmDollarKey = planStore.selectedPTAKeys.find(k => k === "nm_dollar");
+            const bestNM = nmDollarKey ? [...calc.byBull].sort((a, b) => (b.ptaPond[nmDollarKey] || 0) - (a.ptaPond[nmDollarKey] || 0))[0] : null;
             return (
               <div style={{ border: `1px solid ${COLORS.gray}`, borderRadius: 10, padding: 10 }}>
                 <div style={{ fontSize: 12, color: COLORS.black }}>Maior NM$ médio</div>
-                <div style={{ fontSize: 18, fontWeight: 800 }}>{bestNM ? `${bestNM.bull.name || bestNM.bull.id} (${NUM(bestNM.ptaPond["NM$"] || 0, 2)})` : "–"}</div>
+                <div style={{ fontSize: 18, fontWeight: 800 }}>
+                  {bestNM && nmDollarKey ? `${bestNM.bull.name || bestNM.bull.id} (${NUM(bestNM.ptaPond[nmDollarKey] || 0, 2)})` : "–"}
+                </div>
               </div>
             );
           })()}
