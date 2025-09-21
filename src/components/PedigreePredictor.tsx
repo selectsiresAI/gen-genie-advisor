@@ -11,18 +11,17 @@ import { usePedigreeStore, PTA_MAPPING, PTA_LABELS, formatPTAValue, predictFromP
 import { Calculator, Upload, Download, Search } from 'lucide-react';
 import { read, utils, writeFileXLSX } from 'xlsx';
 
-// Function to get bull from ToolSSApp database
+// Same STORAGE_KEY used in ToolSSApp (Busca Touros page)
+const STORAGE_KEY = "toolss_clients_v3_with_150_bulls";
+
+// Function to get bull from ToolSSApp database - uses same logic as Busca Touros
 const fetchBullFromDatabase = async (naab: string): Promise<Bull | null> => {
   const cleanNaab = naab.toUpperCase().trim();
   console.log(`🔍 Nexus 2: Buscando touro com NAAB: ${cleanNaab}`);
   
   try {
-    // Get data from ToolSSApp localStorage - try v3 first (150 bulls), then v2
-    let toolssData = localStorage.getItem("toolss_clients_v3_with_150_bulls");
-    if (!toolssData) {
-      console.log('⚠️ V3 data not found, trying V2...');
-      toolssData = localStorage.getItem("toolss_clients_v2_with_500_females");
-    }
+    // Use same localStorage key as ToolSSApp/Busca Touros page
+    const toolssData = localStorage.getItem(STORAGE_KEY);
     
     if (!toolssData) {
       console.log('❌ Nenhum dado do ToolSSApp encontrado no localStorage');
@@ -196,35 +195,22 @@ const IndividualPrediction: React.FC = () => {
     clearPrediction
   } = usePedigreeStore();
 
-  // Add debug function to check localStorage
+  // Add debug function to check localStorage - uses same key as Busca Touros
   const debugLocalStorage = () => {
     console.log('🔧 DEBUG: Checking localStorage keys...');
     const keys = Object.keys(localStorage);
     console.log('📋 LocalStorage keys:', keys.filter(k => k.includes('toolss')));
     
-    const v3Data = localStorage.getItem("toolss_clients_v3_with_150_bulls");
-    const v2Data = localStorage.getItem("toolss_clients_v2_with_500_females");
+    const currentData = localStorage.getItem(STORAGE_KEY);
+    console.log(`🔍 Current database (${STORAGE_KEY}) exists:`, !!currentData);
     
-    console.log('🔍 V3 data exists:', !!v3Data);
-    console.log('🔍 V2 data exists:', !!v2Data);
-    
-    if (v3Data) {
-      const data = JSON.parse(v3Data);
+    if (currentData) {
+      const data = JSON.parse(currentData);
       const bullsCount = data?.[0]?.farms?.[0]?.bulls?.length || 0;
-      console.log('🐂 Bulls count in V3:', bullsCount);
+      console.log('🐂 Bulls count in current database:', bullsCount);
       if (bullsCount > 0) {
         const sampleBulls = data[0].farms[0].bulls.slice(0, 5).map((b: any) => ({ naab: b.naab, nome: b.nome }));
-        console.log('📋 Sample V3 bulls:', sampleBulls);
-      }
-    }
-    
-    if (v2Data) {
-      const data = JSON.parse(v2Data);
-      const bullsCount = data?.[0]?.farms?.[0]?.bulls?.length || 0;
-      console.log('🐂 Bulls count in V2:', bullsCount);
-      if (bullsCount > 0) {
-        const sampleBulls = data[0].farms[0].bulls.slice(0, 5).map((b: any) => ({ naab: b.naab, nome: b.nome }));
-        console.log('📋 Sample V2 bulls:', sampleBulls);
+        console.log('📋 Sample bulls from current database:', sampleBulls);
       }
     }
   };
