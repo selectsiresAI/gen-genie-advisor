@@ -1301,26 +1301,28 @@ function HerdPage({
     </th>;
   
   return <div className="max-w-7xl mx-auto px-4 py-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Button variant="outline" onClick={onBack}>
-          <ArrowLeftRight className="mr-2" size={16} /> Voltar
-        </Button>
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <div className="text-sm text-muted-foreground">
-            Total: <span className="font-semibold">{farm.females.length}</span> animais
+          <Button variant="outline" onClick={onBack}>
+            <ArrowLeftRight className="mr-2" size={16} /> Voltar
+          </Button>
+          <h1 className="text-2xl font-bold">{farm.nome}</h1>
+          {/* Contador de Animais - Mais Visível */}
+          <div className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-lg font-bold shadow-md">
+            📊 {farm.females.length} Fêmeas
           </div>
           {filteredFemales.length !== farm.females.length && (
-            <div className="text-sm text-muted-foreground">
-              Filtrados: <span className="font-semibold">{filteredFemales.length}</span>
+            <div className="bg-accent text-accent-foreground px-3 py-2 rounded-lg font-semibold">
+              Filtradas: {filteredFemales.length}
             </div>
           )}
           {selectedFemales.size > 0 && (
-            <div className="text-sm font-semibold text-primary">
-              {selectedFemales.size} selecionados
+            <div className="bg-destructive text-destructive-foreground px-3 py-2 rounded-lg font-semibold animate-pulse">
+              ✓ {selectedFemales.size} Selecionadas
             </div>
           )}
         </div>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex items-center gap-2">
           <label className="cursor-pointer">
             <Button variant="outline" asChild>
               <span>
@@ -1335,38 +1337,60 @@ function HerdPage({
         </div>
       </div>
 
-      {/* Group Selection Controls */}
-      <Card className="mb-4">
+      {/* Controles de Seleção em Grupo - Melhorados */}
+      <Card className="mb-6 border-2 border-primary/20">
+        <CardHeader className="bg-primary/5">
+          <CardTitle className="flex items-center gap-2 text-primary">
+            <Users className="w-5 h-5" />
+            Controles de Seleção em Grupo
+            {selectedFemales.size > 0 && (
+              <span className="bg-primary text-primary-foreground px-2 py-1 rounded-full text-sm">
+                {selectedFemales.size} selecionadas
+              </span>
+            )}
+          </CardTitle>
+        </CardHeader>
         <CardContent className="p-4">
           <div className="flex items-center gap-2 mb-4">
-            <h3 className="text-lg font-semibold">Seleção em Grupo</h3>
             <Button 
               variant="outline" 
               size="sm" 
               onClick={() => setShowFilters(!showFilters)}
+              className="bg-accent/10"
             >
               <SlidersHorizontal className="w-4 h-4 mr-2" />
-              Filtros {showFilters ? "▲" : "▼"}
+              Filtros Avançados {showFilters ? "▲" : "▼"}
             </Button>
           </div>
           
-          <div className="flex flex-wrap gap-2 mb-4">
-            <Button variant="outline" onClick={selectAll}>
-              Marcar Todas
+          {/* Botões de Ação Principal */}
+          <div className="flex flex-wrap gap-3 mb-4">
+            <Button variant="default" onClick={selectAll} className="bg-green-600 hover:bg-green-700">
+              ✓ Marcar Todas ({filteredFemales.length})
             </Button>
             <Button variant="outline" onClick={deselectAll}>
-              Desmarcar Todas
+              ✗ Desmarcar Todas
             </Button>
-            <Button variant="outline" onClick={selectTopTPI}>
-              Top {tpiPercentage}% TPI
-            </Button>
-            <Button variant="outline" onClick={selectBornAfter2022}>
-              Nascidas após 2022
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                value={tpiPercentage}
+                onChange={(e) => setTpiPercentage(Number(e.target.value))}
+                className="w-16"
+                min="1"
+                max="100"
+              />
+              <Button variant="secondary" onClick={selectTopTPI}>
+                🏆 Top {tpiPercentage}% TPI
+              </Button>
+            </div>
+            <Button variant="secondary" onClick={selectBornAfter2022}>
+              📅 Nascidas após 2022
             </Button>
             {selectedFemales.size > 0 && (
-              <Button variant="destructive" onClick={bulkDelete}>
+              <Button variant="destructive" onClick={bulkDelete} className="animate-pulse">
                 <Trash2 className="w-4 h-4 mr-2" />
-                Excluir Selecionadas ({selectedFemales.size})
+                🗑️ Excluir Selecionadas ({selectedFemales.size})
               </Button>
             )}
           </div>
