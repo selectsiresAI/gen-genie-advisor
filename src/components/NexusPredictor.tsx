@@ -1,35 +1,8 @@
 import React from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import PedigreePredictor from './PedigreePredictor';
+import NexusAppOriginal from './NexusApp';
 import { Calculator, Dna } from 'lucide-react';
-
-// Existing genomic prediction component placeholder
-const GenomicPredictor: React.FC = () => {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Dna className="w-5 h-5" />
-          Predição Genômica
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="text-center py-8 space-y-4">
-          <div className="text-lg font-semibold text-muted-foreground">
-            Predição com informação genômica pronta
-          </div>
-          <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            Esta funcionalidade já existe no sistema atual. Use as abas "Predições por doadora" e "Listagem Consolidada" 
-            para calcular predições baseadas em dados genômicos diretos de fêmeas e touros.
-          </p>
-          <Badge variant="outline">Funcionalidade Existente</Badge>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
 
 const NexusPredictor: React.FC = () => {
   return (
@@ -57,7 +30,7 @@ const NexusPredictor: React.FC = () => {
         </TabsList>
         
         <TabsContent value="genomic" className="mt-6">
-          <GenomicPredictor />
+          <NexusAppOriginal />
         </TabsContent>
         
         <TabsContent value="pedigree" className="mt-6">
