@@ -1260,6 +1260,7 @@ function HerdPage({
   const [yearRangeStart, setYearRangeStart] = useState("");
   const [yearRangeEnd, setYearRangeEnd] = useState("");
   const [tpiPercentage, setTpiPercentage] = useState(30);
+  const [customYearFilter, setCustomYearFilter] = useState(2022);
 
   const filteredFemales = useMemo(() => {
     let rows = [...farm.females];
@@ -1308,10 +1309,24 @@ function HerdPage({
     setSelectedFemales(newSelected);
   };
 
-  const selectBornAfter2022 = () => {
-    const after2022 = filteredFemales.filter(f => new Date(f.nascimento).getFullYear() > 2022);
+  const selectBornAfter = (year: number) => {
+    const afterYear = filteredFemales.filter(f => new Date(f.nascimento).getFullYear() > year);
     const newSelected = new Set(selectedFemales);
-    after2022.forEach(f => newSelected.add(f.id));
+    afterYear.forEach(f => newSelected.add(f.id));
+    setSelectedFemales(newSelected);
+  };
+
+  const selectBornIn = (year: number) => {
+    const inYear = filteredFemales.filter(f => new Date(f.nascimento).getFullYear() === year);
+    const newSelected = new Set(selectedFemales);
+    inYear.forEach(f => newSelected.add(f.id));
+    setSelectedFemales(newSelected);
+  };
+
+  const selectBornBefore = (year: number) => {
+    const beforeYear = filteredFemales.filter(f => new Date(f.nascimento).getFullYear() < year);
+    const newSelected = new Set(selectedFemales);
+    beforeYear.forEach(f => newSelected.add(f.id));
     setSelectedFemales(newSelected);
   };
 
@@ -1601,9 +1616,41 @@ function HerdPage({
                 🏆 Top {tpiPercentage}% TPI
               </Button>
             </div>
-            <Button variant="secondary" onClick={selectBornAfter2022}>
-              📅 Nascidas após 2022
-            </Button>
+            {/* Seleção por Ano */}
+            <div className="flex items-center gap-2 bg-blue-50 p-2 rounded-lg">
+              <span className="text-sm font-medium">Ano:</span>
+              <Select value={customYearFilter.toString()} onValueChange={(value) => setCustomYearFilter(Number(value))}>
+                <SelectTrigger className="w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[2024, 2023, 2022, 2021, 2020, 2019, 2018].map(year => (
+                    <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button 
+                variant="secondary" 
+                size="sm"
+                onClick={() => selectBornIn(customYearFilter)}
+              >
+                📅 Nascidas em {customYearFilter}
+              </Button>
+              <Button 
+                variant="secondary" 
+                size="sm"
+                onClick={() => selectBornAfter(customYearFilter)}
+              >
+                📅 Após {customYearFilter}
+              </Button>
+              <Button 
+                variant="secondary" 
+                size="sm"
+                onClick={() => selectBornBefore(customYearFilter)}
+              >
+                📅 Antes de {customYearFilter}
+              </Button>
+            </div>
             {selectedFemales.size > 0 && (
               <Button variant="destructive" onClick={bulkDelete} className="animate-pulse">
                 <Trash2 className="w-4 h-4 mr-2" />
