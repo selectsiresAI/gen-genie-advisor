@@ -16,14 +16,64 @@ type Female = {
   naabPai: string;
   nomePai: string;
   TPI: number;
+  ["HHP$"]?: number;
   ["NM$"]?: number;
+  ["CM$"]?: number;
+  ["FM$"]?: number;
+  ["GM$"]?: number;
+  ["F SAV"]?: number;
+  PTAM?: number;
+  CFP?: number;
+  PTAF?: number;
+  ["PTAF%"]?: number;
+  PTAP?: number;
+  ["PTAP%"]?: number;
+  PL?: number;
+  DPR: number;
+  LIV?: number;
+  SCS: number;
+  MAST?: number;
+  MET?: number;
+  RP?: number;
+  DA?: number;
+  KET?: number;
+  MF?: number;
+  PTAT: number;
+  UDC?: number;
+  FLC?: number;
+  SCE?: number;
+  DCE?: number;
+  SSB?: number;
+  DSB?: number;
+  ["H LIV"]?: number;
+  CCR?: number;
+  HCR?: number;
+  FI?: number;
+  GL?: number;
+  EFC?: number;
+  BWC?: number;
+  STA?: number;
+  STR?: number;
+  DFM?: number;
+  RUA?: number;
+  RLS?: number;
+  RTP?: number;
+  FTL?: number;
+  RW?: number;
+  RLR?: number;
+  FTA?: number;
+  FLS?: number;
+  FUA?: number;
+  RUH?: number;
+  RUW?: number;
+  UCL?: number;
+  UDP?: number;
+  FTP?: number;
+  RFI?: number;
   NM?: number;
   Milk: number;
   Fat: number;
   Protein: number;
-  DPR: number;
-  SCS: number;
-  PTAT: number;
   year: number;
   _percentil?: number | null;
   _grupo?: "Doadoras" | "Inter" | "Receptoras";
@@ -31,7 +81,64 @@ type Female = {
 };
 
 type Weights = { 
-  TPI: number; ["NM$"]: number; Milk: number; Fat: number; Protein: number; SCS: number; PTAT: number; 
+  ["HHP$"]: number;
+  TPI: number; 
+  ["NM$"]: number; 
+  ["CM$"]: number;
+  ["FM$"]: number;
+  ["GM$"]: number;
+  ["F SAV"]: number;
+  PTAM: number;
+  CFP: number;
+  PTAF: number;
+  ["PTAF%"]: number;
+  PTAP: number;
+  ["PTAP%"]: number;
+  PL: number;
+  DPR: number;
+  LIV: number;
+  SCS: number;
+  MAST: number;
+  MET: number;
+  RP: number;
+  DA: number;
+  KET: number;
+  MF: number;
+  PTAT: number;
+  UDC: number;
+  FLC: number;
+  SCE: number;
+  DCE: number;
+  SSB: number;
+  DSB: number;
+  ["H LIV"]: number;
+  CCR: number;
+  HCR: number;
+  FI: number;
+  GL: number;
+  EFC: number;
+  BWC: number;
+  STA: number;
+  STR: number;
+  DFM: number;
+  RUA: number;
+  RLS: number;
+  RTP: number;
+  FTL: number;
+  RW: number;
+  RLR: number;
+  FTA: number;
+  FLS: number;
+  FUA: number;
+  RUH: number;
+  RUW: number;
+  UCL: number;
+  UDP: number;
+  FTP: number;
+  RFI: number;
+  Milk: number; 
+  Fat: number; 
+  Protein: number; 
 };
 
 type PrimaryIndex = "HHP$" | "NM$" | "TPI" | "Custom";
@@ -44,6 +151,66 @@ type SegmentConfig = {
   dprMinDonor: number;
   critical_dpr_lt: number;
   critical_scs_gt: number;
+  gates: {
+    ["HHP$"]: { enabled: boolean; min?: number; max?: number };
+    TPI: { enabled: boolean; min?: number; max?: number };
+    ["NM$"]: { enabled: boolean; min?: number; max?: number };
+    ["CM$"]: { enabled: boolean; min?: number; max?: number };
+    ["FM$"]: { enabled: boolean; min?: number; max?: number };
+    ["GM$"]: { enabled: boolean; min?: number; max?: number };
+    ["F SAV"]: { enabled: boolean; min?: number; max?: number };
+    PTAM: { enabled: boolean; min?: number; max?: number };
+    CFP: { enabled: boolean; min?: number; max?: number };
+    PTAF: { enabled: boolean; min?: number; max?: number };
+    ["PTAF%"]: { enabled: boolean; min?: number; max?: number };
+    PTAP: { enabled: boolean; min?: number; max?: number };
+    ["PTAP%"]: { enabled: boolean; min?: number; max?: number };
+    PL: { enabled: boolean; min?: number; max?: number };
+    DPR: { enabled: boolean; min?: number; max?: number };
+    LIV: { enabled: boolean; min?: number; max?: number };
+    SCS: { enabled: boolean; min?: number; max?: number };
+    MAST: { enabled: boolean; min?: number; max?: number };
+    MET: { enabled: boolean; min?: number; max?: number };
+    RP: { enabled: boolean; min?: number; max?: number };
+    DA: { enabled: boolean; min?: number; max?: number };
+    KET: { enabled: boolean; min?: number; max?: number };
+    MF: { enabled: boolean; min?: number; max?: number };
+    PTAT: { enabled: boolean; min?: number; max?: number };
+    UDC: { enabled: boolean; min?: number; max?: number };
+    FLC: { enabled: boolean; min?: number; max?: number };
+    SCE: { enabled: boolean; min?: number; max?: number };
+    DCE: { enabled: boolean; min?: number; max?: number };
+    SSB: { enabled: boolean; min?: number; max?: number };
+    DSB: { enabled: boolean; min?: number; max?: number };
+    ["H LIV"]: { enabled: boolean; min?: number; max?: number };
+    CCR: { enabled: boolean; min?: number; max?: number };
+    HCR: { enabled: boolean; min?: number; max?: number };
+    FI: { enabled: boolean; min?: number; max?: number };
+    GL: { enabled: boolean; min?: number; max?: number };
+    EFC: { enabled: boolean; min?: number; max?: number };
+    BWC: { enabled: boolean; min?: number; max?: number };
+    STA: { enabled: boolean; min?: number; max?: number };
+    STR: { enabled: boolean; min?: number; max?: number };
+    DFM: { enabled: boolean; min?: number; max?: number };
+    RUA: { enabled: boolean; min?: number; max?: number };
+    RLS: { enabled: boolean; min?: number; max?: number };
+    RTP: { enabled: boolean; min?: number; max?: number };
+    FTL: { enabled: boolean; min?: number; max?: number };
+    RW: { enabled: boolean; min?: number; max?: number };
+    RLR: { enabled: boolean; min?: number; max?: number };
+    FTA: { enabled: boolean; min?: number; max?: number };
+    FLS: { enabled: boolean; min?: number; max?: number };
+    FUA: { enabled: boolean; min?: number; max?: number };
+    RUH: { enabled: boolean; min?: number; max?: number };
+    RUW: { enabled: boolean; min?: number; max?: number };
+    UCL: { enabled: boolean; min?: number; max?: number };
+    UDP: { enabled: boolean; min?: number; max?: number };
+    FTP: { enabled: boolean; min?: number; max?: number };
+    RFI: { enabled: boolean; min?: number; max?: number };
+    Milk: { enabled: boolean; min?: number; max?: number };
+    Fat: { enabled: boolean; min?: number; max?: number };
+    Protein: { enabled: boolean; min?: number; max?: number };
+  };
 };
 
 // Utility function for automatic categorization
@@ -148,7 +315,11 @@ function getPrimaryValue(
       // Se nenhum traço for marcado em Custom, usar todos os traços por padrão
       const hasAnySelected = selectedTraits ? Object.values(selectedTraits).some(Boolean) : false;
       const effectiveWeights = hasAnySelected ? weights : {
-        TPI: 1, ["NM$"]: 1, Milk: 1, Fat: 1, Protein: 1, SCS: 1, PTAT: 1
+        ["HHP$"]: 0, TPI: 1, ["NM$"]: 1, ["CM$"]: 0, ["FM$"]: 0, ["GM$"]: 0, ["F SAV"]: 0, PTAM: 0, CFP: 0,
+        PTAF: 0, ["PTAF%"]: 0, PTAP: 0, ["PTAP%"]: 0, PL: 0, DPR: 0, LIV: 0, SCS: 1, MAST: 0, MET: 0, RP: 0, DA: 0, KET: 0, MF: 0,
+        PTAT: 1, UDC: 0, FLC: 0, SCE: 0, DCE: 0, SSB: 0, DSB: 0, ["H LIV"]: 0, CCR: 0, HCR: 0, FI: 0, GL: 0, EFC: 0, BWC: 0, STA: 0,
+        STR: 0, DFM: 0, RUA: 0, RLS: 0, RTP: 0, FTL: 0, RW: 0, RLR: 0, FTA: 0, FLS: 0, FUA: 0, RUH: 0, RUW: 0, UCL: 0, UDP: 0, FTP: 0, RFI: 0,
+        Milk: 1, Fat: 1, Protein: 1
       };
       
       const base = {
@@ -235,21 +406,99 @@ const defaultSegConfig: SegmentConfig = {
   dprMinDonor: 1.0,
   critical_dpr_lt: -1.0,
   critical_scs_gt: 3.0,
+  gates: {
+    ["HHP$"]: { enabled: false },
+    TPI: { enabled: false },
+    ["NM$"]: { enabled: false },
+    ["CM$"]: { enabled: false },
+    ["FM$"]: { enabled: false },
+    ["GM$"]: { enabled: false },
+    ["F SAV"]: { enabled: false },
+    PTAM: { enabled: false },
+    CFP: { enabled: false },
+    PTAF: { enabled: false },
+    ["PTAF%"]: { enabled: false },
+    PTAP: { enabled: false },
+    ["PTAP%"]: { enabled: false },
+    PL: { enabled: false },
+    DPR: { enabled: false },
+    LIV: { enabled: false },
+    SCS: { enabled: false },
+    MAST: { enabled: false },
+    MET: { enabled: false },
+    RP: { enabled: false },
+    DA: { enabled: false },
+    KET: { enabled: false },
+    MF: { enabled: false },
+    PTAT: { enabled: false },
+    UDC: { enabled: false },
+    FLC: { enabled: false },
+    SCE: { enabled: false },
+    DCE: { enabled: false },
+    SSB: { enabled: false },
+    DSB: { enabled: false },
+    ["H LIV"]: { enabled: false },
+    CCR: { enabled: false },
+    HCR: { enabled: false },
+    FI: { enabled: false },
+    GL: { enabled: false },
+    EFC: { enabled: false },
+    BWC: { enabled: false },
+    STA: { enabled: false },
+    STR: { enabled: false },
+    DFM: { enabled: false },
+    RUA: { enabled: false },
+    RLS: { enabled: false },
+    RTP: { enabled: false },
+    FTL: { enabled: false },
+    RW: { enabled: false },
+    RLR: { enabled: false },
+    FTA: { enabled: false },
+    FLS: { enabled: false },
+    FUA: { enabled: false },
+    RUH: { enabled: false },
+    RUW: { enabled: false },
+    UCL: { enabled: false },
+    UDP: { enabled: false },
+    FTP: { enabled: false },
+    RFI: { enabled: false },
+    Milk: { enabled: false },
+    Fat: { enabled: false },
+    Protein: { enabled: false },
+  },
 };
 
 interface SegmentationPageProps {
   farm: { id: string; nome: string; females: Female[]; bulls: any[]; };
-  weights: Weights;
+  weights: { TPI: number; ["NM$"]: number; Milk: number; Fat: number; Protein: number; SCS: number; PTAT: number; };
   statsForCustom: any;
   onBack: () => void;
 }
 
 export default function SegmentationPage({ farm, weights, statsForCustom, onBack }: SegmentationPageProps) {
   const [config, setConfig] = useState<SegmentConfig>(defaultSegConfig);
-  const [customWeights, setCustomWeights] = useState<Weights>(weights);
+  const [customWeights, setCustomWeights] = useState<Weights>({
+    ["HHP$"]: 0,
+    TPI: weights.TPI || 1,
+    ["NM$"]: weights["NM$"] || 1,
+    ["CM$"]: 0, ["FM$"]: 0, ["GM$"]: 0, ["F SAV"]: 0, PTAM: 0, CFP: 0,
+    PTAF: 0, ["PTAF%"]: 0, PTAP: 0, ["PTAP%"]: 0, PL: 0, DPR: 0, LIV: 0,
+    SCS: weights.SCS || 1, MAST: 0, MET: 0, RP: 0, DA: 0, KET: 0, MF: 0,
+    PTAT: weights.PTAT || 1, UDC: 0, FLC: 0, SCE: 0, DCE: 0, SSB: 0, DSB: 0,
+    ["H LIV"]: 0, CCR: 0, HCR: 0, FI: 0, GL: 0, EFC: 0, BWC: 0, STA: 0,
+    STR: 0, DFM: 0, RUA: 0, RLS: 0, RTP: 0, FTL: 0, RW: 0, RLR: 0,
+    FTA: 0, FLS: 0, FUA: 0, RUH: 0, RUW: 0, UCL: 0, UDP: 0, FTP: 0, RFI: 0,
+    Milk: weights.Milk || 1, Fat: weights.Fat || 1, Protein: weights.Protein || 1
+  });
   const [selectedTraits, setSelectedTraits] = useState({
-    HHP$: true, Milk: true, Fat: true, Protein: true,
-    SCS: true, PTAT: true, DPR: true
+    ["HHP$"]: true, TPI: true, ["NM$"]: true, ["CM$"]: false, ["FM$"]: false, ["GM$"]: false,
+    ["F SAV"]: false, PTAM: false, CFP: false, PTAF: false, ["PTAF%"]: false, PTAP: false, ["PTAP%"]: false,
+    PL: false, DPR: true, LIV: false, SCS: true, MAST: false, MET: false, RP: false, DA: false, KET: false,
+    MF: false, PTAT: true, UDC: false, FLC: false, SCE: false, DCE: false, SSB: false, DSB: false,
+    ["H LIV"]: false, CCR: false, HCR: false, FI: false, GL: false, EFC: false, BWC: false, STA: false,
+    STR: false, DFM: false, RUA: false, RLS: false, RTP: false, FTL: false, RW: false, RLR: false,
+    FTA: false, FLS: false, FUA: false, RUH: false, RUW: false, UCL: false, UDP: false, FTP: false,
+    RFI: false, Milk: true, Fat: true, Protein: true
   });
   const [applyBump, setApplyBump] = useState(0);
 
@@ -316,15 +565,27 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
 
   const selectAllTraits = () => {
     setSelectedTraits({
-      HHP$: true, Milk: true, Fat: true, Protein: true,
-      SCS: true, PTAT: true, DPR: true
+      ["HHP$"]: true, TPI: true, ["NM$"]: true, ["CM$"]: true, ["FM$"]: true, ["GM$"]: true,
+      ["F SAV"]: true, PTAM: true, CFP: true, PTAF: true, ["PTAF%"]: true, PTAP: true, ["PTAP%"]: true,
+      PL: true, DPR: true, LIV: true, SCS: true, MAST: true, MET: true, RP: true, DA: true, KET: true,
+      MF: true, PTAT: true, UDC: true, FLC: true, SCE: true, DCE: true, SSB: true, DSB: true,
+      ["H LIV"]: true, CCR: true, HCR: true, FI: true, GL: true, EFC: true, BWC: true, STA: true,
+      STR: true, DFM: true, RUA: true, RLS: true, RTP: true, FTL: true, RW: true, RLR: true,
+      FTA: true, FLS: true, FUA: true, RUH: true, RUW: true, UCL: true, UDP: true, FTP: true,
+      RFI: true, Milk: true, Fat: true, Protein: true
     });
   };
 
   const deselectAllTraits = () => {
     setSelectedTraits({
-      HHP$: false, Milk: false, Fat: false, Protein: false,
-      SCS: false, PTAT: false, DPR: false
+      ["HHP$"]: false, TPI: false, ["NM$"]: false, ["CM$"]: false, ["FM$"]: false, ["GM$"]: false,
+      ["F SAV"]: false, PTAM: false, CFP: false, PTAF: false, ["PTAF%"]: false, PTAP: false, ["PTAP%"]: false,
+      PL: false, DPR: false, LIV: false, SCS: false, MAST: false, MET: false, RP: false, DA: false, KET: false,
+      MF: false, PTAT: false, UDC: false, FLC: false, SCE: false, DCE: false, SSB: false, DSB: false,
+      ["H LIV"]: false, CCR: false, HCR: false, FI: false, GL: false, EFC: false, BWC: false, STA: false,
+      STR: false, DFM: false, RUA: false, RLS: false, RTP: false, FTL: false, RW: false, RLR: false,
+      FTA: false, FLS: false, FUA: false, RUH: false, RUW: false, UCL: false, UDP: false, FTP: false,
+      RFI: false, Milk: false, Fat: false, Protein: false
     });
   };
 
@@ -536,14 +797,66 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
                   Para editar pesos/traços, selecione Custom.
                 </div>
               )}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-4 gap-4">
                 {[
+                  { key: 'HHP$', label: 'HHP$®', color: 'text-primary' },
+                  { key: 'TPI', label: 'TPI', color: 'text-primary' },
+                  { key: 'NM$', label: 'NM$', color: 'text-primary' },
+                  { key: 'CM$', label: 'CM$', color: 'text-blue-600' },
+                  { key: 'FM$', label: 'FM$', color: 'text-blue-600' },
+                  { key: 'GM$', label: 'GM$', color: 'text-blue-600' },
+                  { key: 'F SAV', label: 'F SAV', color: 'text-green-600' },
+                  { key: 'PTAM', label: 'PTAM', color: 'text-black' },
+                  { key: 'CFP', label: 'CFP', color: 'text-purple-600' },
+                  { key: 'PTAF', label: 'PTAF', color: 'text-purple-600' },
+                  { key: 'PTAF%', label: 'PTAF%', color: 'text-purple-600' },
+                  { key: 'PTAP', label: 'PTAP', color: 'text-purple-600' },
+                  { key: 'PTAP%', label: 'PTAP%', color: 'text-purple-600' },
+                  { key: 'PL', label: 'PL', color: 'text-green-600' },
+                  { key: 'DPR', label: 'DPR', color: 'text-purple-600' },
+                  { key: 'LIV', label: 'LIV', color: 'text-green-600' },
+                  { key: 'SCS', label: 'SCS', color: 'text-red-600' },
+                  { key: 'MAST', label: 'MAST', color: 'text-red-600' },
+                  { key: 'MET', label: 'MET', color: 'text-orange-600' },
+                  { key: 'RP', label: 'RP', color: 'text-purple-600' },
+                  { key: 'DA', label: 'DA', color: 'text-orange-600' },
+                  { key: 'KET', label: 'KET', color: 'text-orange-600' },
+                  { key: 'MF', label: 'MF', color: 'text-orange-600' },
+                  { key: 'PTAT', label: 'PTAT', color: 'text-purple-600' },
+                  { key: 'UDC', label: 'UDC', color: 'text-purple-600' },
+                  { key: 'FLC', label: 'FLC', color: 'text-purple-600' },
+                  { key: 'SCE', label: 'SCE', color: 'text-orange-600' },
+                  { key: 'DCE', label: 'DCE', color: 'text-orange-600' },
+                  { key: 'SSB', label: 'SSB', color: 'text-orange-600' },
+                  { key: 'DSB', label: 'DSB', color: 'text-orange-600' },
+                  { key: 'H LIV', label: 'H LIV', color: 'text-green-600' },
+                  { key: 'CCR', label: 'CCR', color: 'text-orange-600' },
+                  { key: 'HCR', label: 'HCR', color: 'text-orange-600' },
+                  { key: 'FI', label: 'FI', color: 'text-gray-600' },
+                  { key: 'GL', label: 'GL', color: 'text-gray-600' },
+                  { key: 'EFC', label: 'EFC', color: 'text-blue-600' },
+                  { key: 'BWC', label: 'BWC', color: 'text-orange-600' },
+                  { key: 'STA', label: 'STA', color: 'text-purple-600' },
+                  { key: 'STR', label: 'STR', color: 'text-purple-600' },
+                  { key: 'DFM', label: 'DFM', color: 'text-purple-600' },
+                  { key: 'RUA', label: 'RUA', color: 'text-purple-600' },
+                  { key: 'RLS', label: 'RLS', color: 'text-purple-600' },
+                  { key: 'RTP', label: 'RTP', color: 'text-purple-600' },
+                  { key: 'FTL', label: 'FTL', color: 'text-purple-600' },
+                  { key: 'RW', label: 'RW', color: 'text-purple-600' },
+                  { key: 'RLR', label: 'RLR', color: 'text-purple-600' },
+                  { key: 'FTA', label: 'FTA', color: 'text-purple-600' },
+                  { key: 'FLS', label: 'FLS', color: 'text-purple-600' },
+                  { key: 'FUA', label: 'FUA', color: 'text-purple-600' },
+                  { key: 'RUH', label: 'RUH', color: 'text-purple-600' },
+                  { key: 'RUW', label: 'RUW', color: 'text-purple-600' },
+                  { key: 'UCL', label: 'UCL', color: 'text-purple-600' },
+                  { key: 'UDP', label: 'UDP', color: 'text-purple-600' },
+                  { key: 'FTP', label: 'FTP', color: 'text-purple-600' },
+                  { key: 'RFI', label: 'RFI', color: 'text-blue-600' },
                   { key: 'Milk', label: 'Milk', color: 'text-black' },
                   { key: 'Fat', label: 'Fat', color: 'text-purple-600' },
-                  { key: 'Protein', label: 'Protein', color: 'text-purple-600' },
-                  { key: 'SCS', label: 'SCS', color: 'text-black' },
-                  { key: 'PTAT', label: 'PTAT', color: 'text-purple-600' },
-                  { key: 'DPR', label: 'DPR', color: 'text-purple-600' }
+                  { key: 'Protein', label: 'Protein', color: 'text-purple-600' }
                 ].map((trait) => (
                   <div key={trait.key} className="flex items-center space-x-2">
                     <input
@@ -556,7 +869,7 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
                     />
                     <Label 
                       htmlFor={trait.key} 
-                      className={`${trait.color} ${config.primaryIndex !== "Custom" ? 'text-muted-foreground' : ''}`}
+                      className={`text-xs ${trait.color} ${config.primaryIndex !== "Custom" ? 'text-muted-foreground' : ''}`}
                     >
                       {trait.label}
                     </Label>
@@ -573,16 +886,69 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
             {config.primaryIndex === "Custom" && (
               <div className="space-y-4">
                 <h3 className="font-semibold text-lg">Pesos do índice customizado</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4 max-h-96 overflow-y-auto">
                   {[
+                    { key: 'HHP$', label: 'HHP$®' },
+                    { key: 'TPI', label: 'TPI' },
+                    { key: 'NM$', label: 'NM$' },
+                    { key: 'CM$', label: 'CM$' },
+                    { key: 'FM$', label: 'FM$' },
+                    { key: 'GM$', label: 'GM$' },
+                    { key: 'F SAV', label: 'F SAV' },
+                    { key: 'PTAM', label: 'PTAM' },
+                    { key: 'CFP', label: 'CFP' },
+                    { key: 'PTAF', label: 'PTAF' },
+                    { key: 'PTAF%', label: 'PTAF%' },
+                    { key: 'PTAP', label: 'PTAP' },
+                    { key: 'PTAP%', label: 'PTAP%' },
+                    { key: 'PL', label: 'PL' },
+                    { key: 'DPR', label: 'DPR' },
+                    { key: 'LIV', label: 'LIV' },
+                    { key: 'SCS', label: 'SCS' },
+                    { key: 'MAST', label: 'MAST' },
+                    { key: 'MET', label: 'MET' },
+                    { key: 'RP', label: 'RP' },
+                    { key: 'DA', label: 'DA' },
+                    { key: 'KET', label: 'KET' },
+                    { key: 'MF', label: 'MF' },
+                    { key: 'PTAT', label: 'PTAT' },
+                    { key: 'UDC', label: 'UDC' },
+                    { key: 'FLC', label: 'FLC' },
+                    { key: 'SCE', label: 'SCE' },
+                    { key: 'DCE', label: 'DCE' },
+                    { key: 'SSB', label: 'SSB' },
+                    { key: 'DSB', label: 'DSB' },
+                    { key: 'H LIV', label: 'H LIV' },
+                    { key: 'CCR', label: 'CCR' },
+                    { key: 'HCR', label: 'HCR' },
+                    { key: 'FI', label: 'FI' },
+                    { key: 'GL', label: 'GL' },
+                    { key: 'EFC', label: 'EFC' },
+                    { key: 'BWC', label: 'BWC' },
+                    { key: 'STA', label: 'STA' },
+                    { key: 'STR', label: 'STR' },
+                    { key: 'DFM', label: 'DFM' },
+                    { key: 'RUA', label: 'RUA' },
+                    { key: 'RLS', label: 'RLS' },
+                    { key: 'RTP', label: 'RTP' },
+                    { key: 'FTL', label: 'FTL' },
+                    { key: 'RW', label: 'RW' },
+                    { key: 'RLR', label: 'RLR' },
+                    { key: 'FTA', label: 'FTA' },
+                    { key: 'FLS', label: 'FLS' },
+                    { key: 'FUA', label: 'FUA' },
+                    { key: 'RUH', label: 'RUH' },
+                    { key: 'RUW', label: 'RUW' },
+                    { key: 'UCL', label: 'UCL' },
+                    { key: 'UDP', label: 'UDP' },
+                    { key: 'FTP', label: 'FTP' },
+                    { key: 'RFI', label: 'RFI' },
                     { key: 'Milk', label: 'Milk' },
                     { key: 'Fat', label: 'Fat' },
                     { key: 'Protein', label: 'Protein' },
-                    { key: 'SCS', label: 'SCS' },
-                    { key: 'PTAT', label: 'PTAT' }
                   ].filter(weight => selectedTraits[weight.key as keyof typeof selectedTraits]).map((weight) => (
                     <div key={weight.key} className="flex items-center justify-between gap-2">
-                      <Label className="text-sm">{weight.label}</Label>
+                      <Label className="text-xs">{weight.label}</Label>
                       <Input
                         type="number"
                         step="0.01"
@@ -590,7 +956,7 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
                         onChange={(e) => {
                           setCustomWeights(prev => ({...prev, [weight.key]: Number(e.target.value)}));
                         }}
-                        className="w-20"
+                        className="w-20 h-8"
                       />
                     </div>
                   ))}
@@ -645,7 +1011,165 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
+          </div>
+
+          {/* Gates Section */}
+          <div className="mt-8 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-lg">Gates - Valores de Corte</h3>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const newConfig = { ...config };
+                    Object.keys(newConfig.gates).forEach(key => {
+                      newConfig.gates[key as keyof typeof newConfig.gates].enabled = true;
+                    });
+                    setConfig(newConfig);
+                  }}
+                  className="text-xs"
+                >
+                  Ativar Todos
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const newConfig = { ...config };
+                    Object.keys(newConfig.gates).forEach(key => {
+                      newConfig.gates[key as keyof typeof newConfig.gates].enabled = false;
+                    });
+                    setConfig(newConfig);
+                  }}
+                  className="text-xs"
+                >
+                  Desativar Todos
+                </Button>
+              </div>
             </div>
+            
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+              {[
+                { key: 'HHP$', label: 'HHP$®' },
+                { key: 'TPI', label: 'TPI' },
+                { key: 'NM$', label: 'NM$' },
+                { key: 'CM$', label: 'CM$' },
+                { key: 'FM$', label: 'FM$' },
+                { key: 'GM$', label: 'GM$' },
+                { key: 'F SAV', label: 'F SAV' },
+                { key: 'PTAM', label: 'PTAM' },
+                { key: 'CFP', label: 'CFP' },
+                { key: 'PTAF', label: 'PTAF' },
+                { key: 'PTAF%', label: 'PTAF%' },
+                { key: 'PTAP', label: 'PTAP' },
+                { key: 'PTAP%', label: 'PTAP%' },
+                { key: 'PL', label: 'PL' },
+                { key: 'DPR', label: 'DPR' },
+                { key: 'LIV', label: 'LIV' },
+                { key: 'SCS', label: 'SCS' },
+                { key: 'MAST', label: 'MAST' },
+                { key: 'MET', label: 'MET' },
+                { key: 'RP', label: 'RP' },
+                { key: 'DA', label: 'DA' },
+                { key: 'KET', label: 'KET' },
+                { key: 'MF', label: 'MF' },
+                { key: 'PTAT', label: 'PTAT' },
+                { key: 'UDC', label: 'UDC' },
+                { key: 'FLC', label: 'FLC' },
+                { key: 'SCE', label: 'SCE' },
+                { key: 'DCE', label: 'DCE' },
+                { key: 'SSB', label: 'SSB' },
+                { key: 'DSB', label: 'DSB' },
+                { key: 'H LIV', label: 'H LIV' },
+                { key: 'CCR', label: 'CCR' },
+                { key: 'HCR', label: 'HCR' },
+                { key: 'FI', label: 'FI' },
+                { key: 'GL', label: 'GL' },
+                { key: 'EFC', label: 'EFC' },
+                { key: 'BWC', label: 'BWC' },
+                { key: 'STA', label: 'STA' },
+                { key: 'STR', label: 'STR' },
+                { key: 'DFM', label: 'DFM' },
+                { key: 'RUA', label: 'RUA' },
+                { key: 'RLS', label: 'RLS' },
+                { key: 'RTP', label: 'RTP' },
+                { key: 'FTL', label: 'FTL' },
+                { key: 'RW', label: 'RW' },
+                { key: 'RLR', label: 'RLR' },
+                { key: 'FTA', label: 'FTA' },
+                { key: 'FLS', label: 'FLS' },
+                { key: 'FUA', label: 'FUA' },
+                { key: 'RUH', label: 'RUH' },
+                { key: 'RUW', label: 'RUW' },
+                { key: 'UCL', label: 'UCL' },
+                { key: 'UDP', label: 'UDP' },
+                { key: 'FTP', label: 'FTP' },
+                { key: 'RFI', label: 'RFI' },
+                { key: 'Milk', label: 'Milk' },
+                { key: 'Fat', label: 'Fat' },
+                { key: 'Protein', label: 'Protein' },
+              ].map((gate) => (
+                <div key={gate.key} className="border rounded-lg p-3 space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id={`gate-${gate.key}`}
+                      checked={config.gates[gate.key as keyof typeof config.gates]?.enabled || false}
+                      onChange={(e) => {
+                        const newConfig = { ...config };
+                        newConfig.gates[gate.key as keyof typeof newConfig.gates].enabled = e.target.checked;
+                        setConfig(newConfig);
+                      }}
+                      className="w-4 h-4"
+                    />
+                    <Label htmlFor={`gate-${gate.key}`} className="text-sm font-medium">
+                      {gate.label}
+                    </Label>
+                  </div>
+                  
+                  {config.gates[gate.key as keyof typeof config.gates]?.enabled && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-xs text-gray-600">Mín</Label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          placeholder="Min"
+                          value={config.gates[gate.key as keyof typeof config.gates]?.min || ''}
+                          onChange={(e) => {
+                            const newConfig = { ...config };
+                            newConfig.gates[gate.key as keyof typeof newConfig.gates].min = e.target.value ? Number(e.target.value) : undefined;
+                            setConfig(newConfig);
+                          }}
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-600">Máx</Label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          placeholder="Max"
+                          value={config.gates[gate.key as keyof typeof config.gates]?.max || ''}
+                          onChange={(e) => {
+                            const newConfig = { ...config };
+                            newConfig.gates[gate.key as keyof typeof newConfig.gates].max = e.target.value ? Number(e.target.value) : undefined;
+                            setConfig(newConfig);
+                          }}
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            <div className="text-sm text-gray-600 mt-2">
+              Configure valores mínimos e/ou máximos para cada PTA. Animais fora dos limites serão automaticamente classificados como Receptoras.
+            </div>
+          </div>
             
             <div className="mt-4 space-y-2">
               <div className="text-sm text-gray-600">
