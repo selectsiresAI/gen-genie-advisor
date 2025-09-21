@@ -686,17 +686,19 @@ const seedClients: Client[] = [{
 }];
 
 // ------------------------ Persistence ------------------------
-const STORAGE_KEY = "toolss_clients_v2_with_500_females"; // Changed key to force reload of new data
+const STORAGE_KEY = "toolss_clients_v3_with_150_bulls"; // Changed key to force reload of new bull data
 const SEGMENT_CFG_KEY = "toolss_segment_config_v1";
 function loadClients(): Client[] {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return seedClients;
   try {
     const loaded = JSON.parse(raw) as Client[];
-    // Force reload if client 1160 doesn't have enough females
+    // Force reload if client 1160 doesn't have enough females or bulls
     const client1160 = loaded.find(c => c.id === 1160);
-    if (!client1160 || !client1160.farms[0] || client1160.farms[0].females.length < 500) {
-      console.log("🔄 Forcing reload of seed data with 500 females...");
+    if (!client1160 || !client1160.farms[0] || 
+        client1160.farms[0].females.length < 500 || 
+        client1160.farms[0].bulls.length < 150) {
+      console.log("🔄 Forcing reload of seed data with 500 females and 150 bulls...");
       return seedClients;
     }
     return loaded;
