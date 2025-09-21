@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { usePlanStore, AVAILABLE_PTAS, calculatePopulationStructure, calculateMotherAverages, getBullPTAValue } from "../hooks/usePlanStore";
+import { toast } from "sonner";
 
 /**
  * Projeção Genética MVP – Select Sires (Frontend Only, Single File)
@@ -308,8 +309,8 @@ function useCalculations(state: AppState) {
       };
 
       const ptaPondNumerator: Record<string, number> = {};
-      planStore.selectedPTAKeys.forEach(ptaKey => {
-        ptaPondNumerator[ptaKey] = 0;
+      planStore.selectedPTAList.forEach(ptaLabel => {
+        ptaPondNumerator[ptaLabel] = 0;
       });
 
       CATEGORIES.forEach(({ key }) => {
@@ -322,23 +323,23 @@ function useCalculations(state: AppState) {
         bezPorCat[key] = bez;
         bezerrasTotais += bez;
 
-        planStore.selectedPTAKeys.forEach((ptaKey) => {
+        planStore.selectedPTAList.forEach((ptaLabel) => {
           const categoryKey = CATEGORY_MAP[key as keyof typeof CATEGORY_MAP];
-          const ptaMae = planStore.motherAverages[categoryKey]?.[ptaKey] || 0;
-          const ptaTouro = b.pta[ptaKey] || 0;
+          const ptaMae = planStore.motherAverages[categoryKey]?.[ptaLabel] || 0;
+          const ptaTouro = (b.pta[ptaLabel] === null ? 0 : b.pta[ptaLabel]) || 0;
           const ptaFilha = (ptaMae + ptaTouro) / 2;
-          ptaPondNumerator[ptaKey] += ptaFilha * bez;
+          ptaPondNumerator[ptaLabel] += ptaFilha * bez;
         });
       });
 
       const ptaPond: Record<string, number> = {};
-      planStore.selectedPTAKeys.forEach((ptaKey) => {
-        ptaPond[ptaKey] = bezerrasTotais > 0 ? ptaPondNumerator[ptaKey] / bezerrasTotais : 0;
+      planStore.selectedPTAList.forEach((ptaLabel) => {
+        ptaPond[ptaLabel] = bezerrasTotais > 0 ? ptaPondNumerator[ptaLabel] / bezerrasTotais : 0;
       });
 
       const custoPorBezerra = bezerrasTotais > 0 ? valorTotal / bezerrasTotais : 0;
-      const nmDollarKey = planStore.selectedPTAKeys.find(k => k === "nm_dollar");
-      const retornoGen = nmDollarKey ? (ptaPond[nmDollarKey] || 0) * bezerrasTotais : 0;
+      const nmDollarLabel = planStore.selectedPTAList.find(l => l === "NM$");
+      const retornoGen = nmDollarLabel ? (ptaPond[nmDollarLabel] || 0) * bezerrasTotais : 0;
       const roi = retornoGen - valorTotal;
 
       return {
@@ -360,21 +361,21 @@ function useCalculations(state: AppState) {
     const totalValor = byBull.reduce((s, r) => s + r.valorTotal, 0);
 
     const ptaPondGeral: Record<string, number> = {};
-    planStore.selectedPTAKeys.forEach(ptaKey => {
-      ptaPondGeral[ptaKey] = 0;
+    planStore.selectedPTAList.forEach(ptaLabel => {
+      ptaPondGeral[ptaLabel] = 0;
     });
 
     if (totalBez > 0) {
-      planStore.selectedPTAKeys.forEach((ptaKey) => {
-        const num = byBull.reduce((s, r) => s + (r.ptaPond[ptaKey] || 0) * r.bezerrasTotais, 0);
-        ptaPondGeral[ptaKey] = num / totalBez;
+      planStore.selectedPTAList.forEach((ptaLabel) => {
+        const num = byBull.reduce((s, r) => s + (r.ptaPond[ptaLabel] || 0) * r.bezerrasTotais, 0);
+        ptaPondGeral[ptaLabel] = num / totalBez;
       });
     }
 
     const custoMedioBezerra = totalBez > 0 ? totalValor / totalBez : 0;
 
     return { byBull, totalBez, totalValor, ptaPondGeral, custoMedioBezerra };
-  }, [state, planStore.selectedPTAKeys, planStore.motherAverages]);
+  }, [state, planStore.selectedPTAList, planStore.motherAverages]);
 
   return result;
 }
@@ -490,11 +491,11 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
 
   // Auto-calculate mother averages when farm or PTAs change
   useEffect(() => {
-    if (selectedFarm && planStore.selectedPTAKeys.length > 0) {
-      const averages = calculateMotherAverages(selectedFarm, planStore.selectedPTAKeys);
+    if (selectedFarm && planStore.selectedPTAList.length > 0) {
+      const averages = calculateMotherAverages(selectedFarm, planStore.selectedPTAList);
       planStore.setMotherAverages(averages);
     }
-  }, [selectedFarm, planStore.selectedPTAKeys]);
+  }, [selectedFarm, planStore.selectedPTAList]);
 
   const selectedClientData = toolssClients.find(c => 
     selectedFarm && c.farms.some((f: any) => f.id === selectedFarm.id)
@@ -599,10 +600,10 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
       {/* Seleção de PTAs */}
       <Section title="📊 Seleção de PTAs para Análise">
         <div style={{ marginBottom: 12 }}>
-          <Label>Selecione até 5 PTAs para análise (atual: {planStore.selectedPTAKeys.length}/5)</Label>
+          <Label>Selecione até 5 PTAs para análise (atual: {planStore.selectedPTAList.length}/5)</Label>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 8, marginTop: 8 }}>
             {ALL_PTAS.map(pta => {
-              const isSelected = planStore.selectedPTAKeys.includes(pta);
+              const isSelected = planStore.selectedPTAList.includes(pta);
               return (
                 <label key={pta} style={{ 
                   display: "flex", 
@@ -618,13 +619,17 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
                     type="checkbox" 
                     checked={isSelected}
                     onChange={(e) => {
-                      if (e.target.checked && planStore.selectedPTAKeys.length < 5) {
-                        planStore.setSelectedPTAKeys([...planStore.selectedPTAKeys, pta]);
-                      } else if (!e.target.checked) {
-                        planStore.setSelectedPTAKeys(planStore.selectedPTAKeys.filter(k => k !== pta));
+                      if (e.target.checked) {
+                        if (planStore.selectedPTAList.length < 5) {
+                          planStore.setSelectedPTAList([...planStore.selectedPTAList, pta]);
+                        } else {
+                          toast.error("Máximo de 5 PTAs permitidas.");
+                        }
+                      } else {
+                        planStore.setSelectedPTAList(planStore.selectedPTAList.filter(k => k !== pta));
                       }
                     }}
-                    disabled={!isSelected && planStore.selectedPTAKeys.length >= 5}
+                    disabled={!isSelected && planStore.selectedPTAList.length >= 5}
                   />
                   {pta}
                 </label>
@@ -826,13 +831,13 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
             </div>
           )}
           
-          {planStore.selectedPTAKeys.length > 0 && (
+          {planStore.selectedPTAList.length > 0 && (
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
               <thead>
                 <tr style={{ background: COLORS.gray }}>
                   <th style={{ textAlign: "left", padding: 6 }}>Categoria</th>
-                  {planStore.selectedPTAKeys.map((ptaKey) => (
-                    <th key={ptaKey} style={{ textAlign: "left", padding: 6 }}>PTA {ptaKey}</th>
+                  {planStore.selectedPTAList.map((ptaLabel) => (
+                    <th key={ptaLabel} style={{ textAlign: "left", padding: 6 }}>{ptaLabel}</th>
                   ))}
                 </tr>
               </thead>
@@ -840,17 +845,17 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
                 {Object.entries(CATEGORY_MAP).map(([oldKey, newKey]) => (
                   <tr key={oldKey}>
                     <td style={{ padding: 6 }}>{CATEGORIES.find(c => c.key === oldKey)?.label}</td>
-                    {planStore.selectedPTAKeys.map((ptaKey) => (
-                      <td key={ptaKey} style={{ padding: 6 }}>
+                    {planStore.selectedPTAList.map((ptaLabel) => (
+                      <td key={ptaLabel} style={{ padding: 6 }}>
                         <Input
                           type="number"
-                          value={planStore.motherAverages[newKey]?.[ptaKey] || 0}
+                          value={planStore.motherAverages[newKey]?.[ptaLabel] || 0}
                           onChange={(v) => {
                             const newAverages = {
                               ...planStore.motherAverages,
                               [newKey]: {
                                 ...planStore.motherAverages[newKey],
-                                [ptaKey]: v === "" ? 0 : v
+                                [ptaLabel]: v === "" ? 0 : v
                               }
                             };
                             planStore.setMotherAverages(newAverages);
@@ -894,8 +899,8 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
       const newBulls = [];
       for (let i = st.bulls.length; i < st.numberOfBulls; i++) {
         const defaultPTA: Record<string, number> = {};
-        planStore.selectedPTAKeys.forEach(ptaKey => {
-          defaultPTA[ptaKey] = 0;
+        planStore.selectedPTAList.forEach(ptaLabel => {
+          defaultPTA[ptaLabel] = 0;
         });
         
         newBulls.push({
@@ -913,7 +918,7 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
         setSt(s => ({ ...s, bulls: [...s.bulls, ...newBulls] }));
       }
     }
-  }, [st.numberOfBulls, st.bulls.length, planStore.selectedPTAKeys.length]); // Stable dependency
+  }, [st.numberOfBulls, st.bulls.length, planStore.selectedPTAList.length]); // Stable dependency
 
   return (
     <div>
@@ -936,7 +941,7 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
           </div>
           <div style={{ display: "flex", alignItems: "end" }}>
             <div style={{ fontSize: 12, color: COLORS.black }}>
-              PTAs selecionadas: {planStore.selectedPTAKeys.join(", ")}
+              PTAs selecionadas: {planStore.selectedPTAList.join(", ")}
             </div>
           </div>
         </div>
@@ -962,21 +967,21 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
                               name: "",
                               naab: "",
                               empresa: "",
-                              pta: Object.fromEntries(planStore.selectedPTAKeys.map(pta => [pta, 0]))
+                              pta: Object.fromEntries(planStore.selectedPTAList.map(pta => [pta, 0]))
                             } : bull
                           )
                         }));
                   } else {
                     const selectedBull = toolssBulls.find(bull => bull.naab === naab);
                     if (selectedBull) {
-                      const updatedPTA: Record<string, number> = {};
-                      planStore.selectedPTAKeys.forEach(pta => {
-                        // Use exact database column name to get value
-                        const value = getBullPTAValue(selectedBull, pta);
-                        updatedPTA[pta] = value;
+                      const updatedPTA: Record<string, number | null> = {};
+                      planStore.selectedPTAList.forEach(ptaLabel => {
+                        // Use label to get value via field mapping
+                        const value = getBullPTAValue(selectedBull, ptaLabel);
+                        updatedPTA[ptaLabel] = value;
                       });
                       
-                console.log('bullPTAs(keys order)=', planStore.selectedPTAKeys.map(k => `${k}:${updatedPTA[k]}`));
+                console.log('bullPTAs(keys order)=', planStore.selectedPTAList.map(k => `${k}:${updatedPTA[k] === null ? '—' : updatedPTA[k]}`));
                 
                 setSt(s => ({ 
                   ...s, 
@@ -1003,7 +1008,7 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
               />
               {b.naab && (
                 <div style={{ marginTop: 4, fontSize: 11, color: "#16a34a" }}>
-                  ✅ PTAs carregadas automaticamente para as {planStore.selectedPTAKeys.length} características selecionadas
+                  ✅ PTAs carregadas automaticamente para as {planStore.selectedPTAList.length} características selecionadas
                 </div>
               )}
             </div>
@@ -1051,22 +1056,26 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
 
           <div style={{ marginTop: 8 }}>
             <h4 style={{ marginBottom: 6, fontWeight: 700 }}>PTAs do Touro</h4>
-            <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(planStore.selectedPTAKeys.length, 5)}, 1fr)`, gap: 8 }}>
-              {planStore.selectedPTAKeys.map((ptaKey) => (
-                <div key={ptaKey}>
-                  <Label>{ptaKey}</Label>
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(planStore.selectedPTAList.length, 5)}, 1fr)`, gap: 8 }}>
+              {planStore.selectedPTAList.map((ptaLabel) => (
+                <div key={ptaLabel}>
+                  <Label>{ptaLabel}</Label>
                   <Input
-                    type="number"
-                    value={b.pta[ptaKey] || 0}
-                    onChange={(v) => setSt((s) => ({ 
-                      ...s, 
-                      bulls: s.bulls.map((bb, i) => (
-                        i === idx ? { 
-                          ...bb, 
-                          pta: { ...bb.pta, [ptaKey]: v === "" ? 0 : v } 
-                        } : bb
-                      )) 
-                    }))}
+                    type="text"
+                    value={b.pta[ptaLabel] === null ? "—" : (b.pta[ptaLabel] || 0)}
+                    onChange={(v) => {
+                      if (v === "—") return; // Don't allow editing "—"
+                      setSt((s) => ({ 
+                        ...s, 
+                        bulls: s.bulls.map((bb, i) => (
+                          i === idx ? { 
+                            ...bb, 
+                            pta: { ...bb.pta, [ptaLabel]: v === "" ? 0 : parseFloat(v) || 0 } 
+                          } : bb
+                        )) 
+                      }))
+                    }}
+                    disabled={b.pta[ptaLabel] === null}
                   />
                 </div>
               ))}
@@ -1135,10 +1144,10 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
     });
 
     // 3) Radar: PTAs médias das filhas (ponderadas) – PTAs selecionadas
-    const radarLabels = planStore.selectedPTAKeys.map((ptaKey) => `PTA ${ptaKey}`);
+    const radarLabels = planStore.selectedPTAList.map((ptaLabel) => `PTA ${ptaLabel}`);
     const radarDatasets = calc.byBull.map((r) => ({ 
       label: `${r.bull.name || `Touro ${r.bull.id}`}`, 
-      data: planStore.selectedPTAKeys.map((ptaKey) => r.ptaPond[ptaKey] || 0) 
+      data: planStore.selectedPTAList.map((ptaLabel) => r.ptaPond[ptaLabel] || 0) 
     }));
     radarRef.current = createChart("chart-radar", {
       type: "radar",
@@ -1149,8 +1158,8 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
     // 4) Linha: Custo por bezerra × NM$ por touro
     const lineLabels = labelsBulls;
     const seriesCusto = calc.byBull.map((r) => r.custoPorBezerra);
-    const nmDollarKey = planStore.selectedPTAKeys.find(k => k === "nm_dollar");
-    const seriesNM = calc.byBull.map((r) => r.ptaPond[nmDollarKey || ""] || 0);
+    const nmDollarLabel = planStore.selectedPTAList.find(l => l === "NM$");
+    const seriesNM = calc.byBull.map((r) => r.ptaPond[nmDollarLabel || ""] || 0);
     lineRef.current = createChart("chart-line", {
       type: "line",
       data: {
@@ -1191,11 +1200,11 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
           </div>
         }
       >
-        <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(planStore.selectedPTAKeys.length, 5)}, 1fr)`, gap: 12 }}>
-          {planStore.selectedPTAKeys.map((ptaKey) => (
-            <div key={ptaKey} style={{ background: COLORS.white, border: `1px dashed ${COLORS.gray}`, borderRadius: 10, padding: 10 }}>
-              <div style={{ fontSize: 12, color: COLORS.black }}>PTA média geral – {ptaKey}</div>
-              <div style={{ fontSize: 22, fontWeight: 800 }}>{NUM(calc.ptaPondGeral[ptaKey] || 0, 2)}</div>
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(planStore.selectedPTAList.length, 5)}, 1fr)`, gap: 12 }}>
+          {planStore.selectedPTAList.map((ptaLabel) => (
+            <div key={ptaLabel} style={{ background: COLORS.white, border: `1px dashed ${COLORS.gray}`, borderRadius: 10, padding: 10 }}>
+              <div style={{ fontSize: 12, color: COLORS.black }}>PTA média geral – {ptaLabel}</div>
+              <div style={{ fontSize: 22, fontWeight: 800 }}>{NUM(calc.ptaPondGeral[ptaLabel] || 0, 2)}</div>
             </div>
           ))}
         </div>
@@ -1213,8 +1222,8 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
                 <th style={{ textAlign: "right", padding: 6 }}>Doses Totais</th>
                 <th style={{ textAlign: "right", padding: 6 }}>R$ Total</th>
                 <th style={{ textAlign: "right", padding: 6 }}>Bezerras Totais</th>
-                {planStore.selectedPTAKeys.map((ptaKey) => (
-                  <th key={ptaKey} style={{ textAlign: "right", padding: 6 }}>PTA {ptaKey}</th>
+                {planStore.selectedPTAList.map((ptaLabel) => (
+                  <th key={ptaLabel} style={{ textAlign: "right", padding: 6 }}>PTA {ptaLabel}</th>
                 ))}
                 <th style={{ textAlign: "right", padding: 6 }}>R$/Bezerra</th>
                 <th style={{ textAlign: "right", padding: 6 }}>ROI (R$)</th>
@@ -1230,8 +1239,8 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
                   <td style={{ textAlign: "right", padding: 6 }}>{NUM(r.dosesTotal, 0)}</td>
                   <td style={{ textAlign: "right", padding: 6 }}>{BRL(r.valorTotal)}</td>
                   <td style={{ textAlign: "right", padding: 6 }}>{NUM(r.bezerrasTotais, 2)}</td>
-                  {planStore.selectedPTAKeys.map((ptaKey) => (
-                    <td key={ptaKey} style={{ textAlign: "right", padding: 6 }}>{NUM(r.ptaPond[ptaKey] || 0, 2)}</td>
+                  {planStore.selectedPTAList.map((ptaLabel) => (
+                    <td key={ptaLabel} style={{ textAlign: "right", padding: 6 }}>{NUM(r.ptaPond[ptaLabel] || 0, 2)}</td>
                   ))}
                   <td style={{ textAlign: "right", padding: 6 }}>{BRL(r.custoPorBezerra)}</td>
                   <td style={{ textAlign: "right", padding: 6, fontWeight: 800, color: r.roi >= 0 ? "#167C2B" : COLORS.red }}>{BRL(r.roi)}</td>
@@ -1275,13 +1284,13 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
           {/* Maior NM$ */}
           {(() => {
-            const nmDollarKey = planStore.selectedPTAKeys.find(k => k === "nm_dollar");
-            const bestNM = nmDollarKey ? [...calc.byBull].sort((a, b) => (b.ptaPond[nmDollarKey] || 0) - (a.ptaPond[nmDollarKey] || 0))[0] : null;
+            const nmDollarLabel = planStore.selectedPTAList.find(l => l === "NM$");
+            const bestNM = nmDollarLabel ? [...calc.byBull].sort((a, b) => (b.ptaPond[nmDollarLabel] || 0) - (a.ptaPond[nmDollarLabel] || 0))[0] : null;
             return (
               <div style={{ border: `1px solid ${COLORS.gray}`, borderRadius: 10, padding: 10 }}>
                 <div style={{ fontSize: 12, color: COLORS.black }}>Maior NM$ médio</div>
                 <div style={{ fontSize: 18, fontWeight: 800 }}>
-                  {bestNM && nmDollarKey ? `${bestNM.bull.name || bestNM.bull.id} (${NUM(bestNM.ptaPond[nmDollarKey] || 0, 2)})` : "–"}
+                  {bestNM && nmDollarLabel ? `${bestNM.bull.name || bestNM.bull.id} (${NUM(bestNM.ptaPond[nmDollarLabel] || 0, 2)})` : "–"}
                 </div>
               </div>
             );

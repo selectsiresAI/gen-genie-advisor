@@ -12,6 +12,65 @@ export const AVAILABLE_PTAS = [
   "RUW", "UCL", "UDP", "FTP", "RFI"
 ] as const;
 
+// Mapeamento rótulo ↔ campo do banco (uso interno, preservando rótulo na UI)
+export const LABEL_TO_FIELD: Record<string, string> = {
+  "HHP$®": "HHP$®", // Usar exatamente como está no banco
+  "TPI": "TPI",
+  "NM$": "NM$",
+  "CM$": "CM$",
+  "FM$": "FM$",
+  "GM$": "GM$",
+  "F SAV": "F SAV",
+  "PTAM": "PTAM",
+  "CFP": "CFP",
+  "PTAF": "PTAF",
+  "PTAF%": "PTAF%",
+  "PTAP": "PTAP",
+  "PTAP%": "PTAP%",
+  "PL": "PL",
+  "DPR": "DPR",
+  "LIV": "LIV",
+  "SCS": "SCS",
+  "MAST": "MAST",
+  "MET": "MET",
+  "RP": "RP",
+  "DA": "DA",
+  "KET": "KET",
+  "MF": "MF",
+  "PTAT": "PTAT",
+  "UDC": "UDC",
+  "FLC": "FLC",
+  "SCE": "SCE",
+  "DCE": "DCE",
+  "SSB": "SSB",
+  "DSB": "DSB",
+  "H LIV": "H LIV",
+  "CCR": "CCR",
+  "HCR": "HCR",
+  "FI": "FI",
+  "GL": "GL",
+  "EFC": "EFC",
+  "BWC": "BWC",
+  "STA": "STA",
+  "STR": "STR",
+  "DFM": "DFM",
+  "RUA": "RUA",
+  "RLS": "RLS",
+  "RTP": "RTP",
+  "FTL": "FTL",
+  "RW": "RW",
+  "RLR": "RLR",
+  "FTA": "FTA",
+  "FLS": "FLS",
+  "FUA": "FUA",
+  "RUH": "RUH",
+  "RUW": "RUW",
+  "UCL": "UCL",
+  "UDP": "UDP",
+  "FTP": "FTP",
+  "RFI": "RFI"
+};
+
 // Population structure interface
 interface PopulationCounts {
   heifers: number;
@@ -24,14 +83,14 @@ interface PopulationCounts {
 interface PlanState {
   // Core state
   selectedFarmId: string | null;
-  selectedPTAKeys: string[]; // max 5, exact database column names in user order
+  selectedPTAList: string[]; // max 5, rótulos exibidos na ordem do usuário
   populationMode: 'auto' | 'manual';
   populationCounts: PopulationCounts;
   motherAverages: Record<string, Record<string, number>>; // category -> pta -> value
   
   // Actions
   setSelectedFarmId: (farmId: string | null) => void;
-  setSelectedPTAKeys: (keys: string[]) => void;
+  setSelectedPTAList: (labels: string[]) => void;
   setPopulationMode: (mode: 'auto' | 'manual') => void;
   setPopulationCounts: (counts: PopulationCounts) => void;
   setMotherAverages: (averages: Record<string, Record<string, number>>) => void;
@@ -43,7 +102,7 @@ interface PlanState {
 // Initial state
 const initialState = {
   selectedFarmId: null,
-  selectedPTAKeys: ["HHP$®", "TPI", "NM$", "PL", "DPR"], // exact database column names
+  selectedPTAList: ["HHP$®", "TPI", "NM$", "PL", "DPR"], // rótulos exibidos
   populationMode: 'manual' as const,
   populationCounts: {
     heifers: 0,
@@ -68,13 +127,13 @@ export const usePlanStore = create<PlanState>()(
         }
       },
       
-      setSelectedPTAKeys: (keys) => {
-        const current = get().selectedPTAKeys;
-        const newKeys = keys.slice(0, 5); // max 5
-        if (JSON.stringify(current) !== JSON.stringify(newKeys)) {
-          console.log('selectedPTAKeys=', newKeys);
-          console.log('ptaHeaders=', newKeys.map(key => ({ label: key, key })));
-          set({ selectedPTAKeys: newKeys });
+      setSelectedPTAList: (labels) => {
+        const current = get().selectedPTAList;
+        const newLabels = labels.slice(0, 5); // max 5
+        if (JSON.stringify(current) !== JSON.stringify(newLabels)) {
+          console.log('selectedPTAList=', newLabels);
+          console.log('ptaHeaders=', newLabels.map(label => ({ label, key: LABEL_TO_FIELD[label] || label })));
+          set({ selectedPTAList: newLabels });
         }
       },
       
@@ -107,7 +166,7 @@ export const usePlanStore = create<PlanState>()(
       name: 'plan-storage',
       partialize: (state) => ({
         selectedFarmId: state.selectedFarmId,
-        selectedPTAKeys: state.selectedPTAKeys,
+        selectedPTAList: state.selectedPTAList,
         populationMode: state.populationMode,
         populationCounts: state.populationCounts
       })
@@ -138,8 +197,8 @@ export const calculatePopulationStructure = (farm: any): PopulationCounts => {
 };
 
 // Calculate mother averages from farm data
-export const calculateMotherAverages = (farm: any, ptaKeys: string[]): Record<string, Record<string, number>> => {
-  if (!farm?.females || ptaKeys.length === 0) {
+export const calculateMotherAverages = (farm: any, ptaLabels: string[]): Record<string, Record<string, number>> => {
+  if (!farm?.females || ptaLabels.length === 0) {
     return {};
   }
   
@@ -155,28 +214,30 @@ export const calculateMotherAverages = (farm: any, ptaKeys: string[]): Record<st
   Object.entries(categories).forEach(([categoryKey, females]) => {
     result[categoryKey] = {};
     
-  ptaKeys.forEach(ptaKey => {
-    const values = females.map((f: any) => {
-      // Use exact database column name to get value
-      const value = f[ptaKey] || 0;
-      return typeof value === 'number' ? value : 0;
-    }).filter(v => v !== 0);
-      
-      const average = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
-      result[categoryKey][ptaKey] = average;
-    });
+    ptaLabels.forEach(ptaLabel => {
+      const fieldName = LABEL_TO_FIELD[ptaLabel] || ptaLabel;
+      const values = females.map((f: any) => {
+        // Use mapped field name to get value from database
+        const value = f[fieldName] || 0;
+        return typeof value === 'number' ? value : 0;
+      }).filter(v => v !== 0);
+        
+        const average = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+        result[categoryKey][ptaLabel] = average; // Store with label as key
+      });
   });
   
   return result;
 };
 
-// Get bull PTA value using exact database column names
-export const getBullPTAValue = (bull: any, ptaKey: string): number => {
-  const value = bull[ptaKey];
+// Get bull PTA value using label to field mapping
+export const getBullPTAValue = (bull: any, ptaLabel: string): number | null => {
+  const fieldName = LABEL_TO_FIELD[ptaLabel] || ptaLabel;
+  const value = bull[fieldName];
   if (typeof value === 'number') {
-    console.log(`PTA ${ptaKey}: ${value} (from bull ${bull.nome || bull.naab})`);
+    console.log(`PTA ${ptaLabel}: ${value} (from bull ${bull.nome || bull.naab})`);
     return value;
   }
-  console.log(`PTA ${ptaKey}: — (Sem valor para ${ptaKey})`);
-  return 0;
+  console.log(`PTA ${ptaLabel}: — (Sem valor para ${ptaLabel})`);
+  return null; // Return null instead of 0 to show "—"
 };
