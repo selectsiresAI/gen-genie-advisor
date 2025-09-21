@@ -14,21 +14,54 @@ import { read, utils, writeFileXLSX } from 'xlsx';
 // Same STORAGE_KEY used in ToolSSApp (Busca Touros page)
 const STORAGE_KEY = "toolss_clients_v3_with_150_bulls";
 
+// Load clients function - same as ToolSSApp
+const loadClients = () => {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) {
+    console.log('❌ No data found in localStorage. Please go to "Busca Touros" page first.');
+    return null;
+  }
+  try {
+    const loaded = JSON.parse(raw);
+    // Check if data is valid (same validation as ToolSSApp)
+    const client1160 = loaded.find((c: any) => c.id === 1160);
+    if (!client1160 || !client1160.farms[0] || 
+        client1160.farms[0].females.length < 500 || 
+        client1160.farms[0].bulls.length < 150) {
+      console.log("🔄 Data incomplete. Please go to 'Busca Touros' to reload data...");
+      return null;
+    }
+    return loaded;
+  } catch {
+    console.log('❌ Error parsing data. Please clear localStorage and go to "Busca Touros".');
+    return null;
+  }
+};
+
+// Function to clear localStorage and force reload
+const clearAndReloadData = () => {
+  console.log('🧹 Clearing localStorage...');
+  // Clear all toolss related data
+  const keysToRemove = Object.keys(localStorage).filter(k => k.includes('toolss'));
+  keysToRemove.forEach(key => localStorage.removeItem(key));
+  console.log('✅ Cleared keys:', keysToRemove);
+  
+  // Show confirmation message
+  alert('localStorage limpo! Por favor, vá para a página "Busca Touros" para carregar o banco de dados atualizado.');
+};
+
 // Function to get bull from ToolSSApp database - uses same logic as Busca Touros
 const fetchBullFromDatabase = async (naab: string): Promise<Bull | null> => {
   const cleanNaab = naab.toUpperCase().trim();
   console.log(`🔍 Nexus 2: Buscando touro com NAAB: ${cleanNaab}`);
   
   try {
-    // Use same localStorage key as ToolSSApp/Busca Touros page
-    const toolssData = localStorage.getItem(STORAGE_KEY);
-    
-    if (!toolssData) {
-      console.log('❌ Nenhum dado do ToolSSApp encontrado no localStorage');
+    // Use same loadClients function as ToolSSApp
+    const clients = loadClients();
+    if (!clients) {
       return null;
     }
-    
-    const clients = JSON.parse(toolssData);
+
     console.log(`📊 Clientes encontrados: ${clients.length}`);
     
     // Count total bulls across all farms
@@ -201,15 +234,14 @@ const IndividualPrediction: React.FC = () => {
     const keys = Object.keys(localStorage);
     console.log('📋 LocalStorage keys:', keys.filter(k => k.includes('toolss')));
     
-    const currentData = localStorage.getItem(STORAGE_KEY);
-    console.log(`🔍 Current database (${STORAGE_KEY}) exists:`, !!currentData);
+    const currentData = loadClients();
+    console.log(`🔍 Current database (${STORAGE_KEY}) loaded:`, !!currentData);
     
-    if (currentData) {
-      const data = JSON.parse(currentData);
-      const bullsCount = data?.[0]?.farms?.[0]?.bulls?.length || 0;
+    if (currentData && currentData.length > 0) {
+      const bullsCount = currentData[0]?.farms?.[0]?.bulls?.length || 0;
       console.log('🐂 Bulls count in current database:', bullsCount);
       if (bullsCount > 0) {
-        const sampleBulls = data[0].farms[0].bulls.slice(0, 5).map((b: any) => ({ naab: b.naab, nome: b.nome }));
+        const sampleBulls = currentData[0].farms[0].bulls.slice(0, 5).map((b: any) => ({ naab: b.naab, nome: b.nome }));
         console.log('📋 Sample bulls from current database:', sampleBulls);
       }
     }
@@ -262,7 +294,7 @@ const IndividualPrediction: React.FC = () => {
       if (fetchErrors.length > 0) {
         toast({
           title: 'Erro ao buscar PTAs',
-          description: fetchErrors.join(', '),
+          description: `${fetchErrors.join(', ')}. Vá para a página "Busca Touros" primeiro para carregar o banco de dados.`,
           variant: 'destructive'
         });
         setIsCalculating(false);
@@ -398,7 +430,7 @@ const IndividualPrediction: React.FC = () => {
             </div>
           </div>
           
-           <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+          <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
             <Button 
               onClick={() => {
                 setPedigreeInput({ 
@@ -412,8 +444,16 @@ const IndividualPrediction: React.FC = () => {
             >
               📝 Usar NAABs de Exemplo
             </Button>
+            <Button 
+              onClick={clearAndReloadData}
+              variant="outline"
+              size="sm"
+              className="bg-red-100 hover:bg-red-200 text-red-700"
+            >
+              🧹 Limpar localStorage
+            </Button>
             <span className="text-sm text-blue-700">
-              Clique para preencher com NAABs de teste do banco de touros
+              Clique para preencher com NAABs de teste do banco de touros ou limpar dados
             </span>
           </div>
           
