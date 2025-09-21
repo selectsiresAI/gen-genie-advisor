@@ -201,9 +201,15 @@ function useAppState() {
   // Carrega dados do ToolSSApp do localStorage
   useEffect(() => {
     try {
-      const toolssData = localStorage.getItem("toolss_clients_v2_with_500_females");
+      // Try v3 first (150 bulls), fallback to v2
+      let toolssData = localStorage.getItem("toolss_clients_v3_with_150_bulls");
+      if (!toolssData) {
+        toolssData = localStorage.getItem("toolss_clients_v2_with_500_females");
+      }
+      
       if (toolssData) {
         const clients = JSON.parse(toolssData);
+        console.log(`📊 Loaded ${clients.length} clients for Plano Genético`);
         setState(prev => ({ ...prev, toolssClients: clients }));
       }
     } catch (e) {
@@ -465,7 +471,12 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
   
   useEffect(() => {
     try {
-      const toolssData = localStorage.getItem("toolss_clients_v2_with_500_females");
+      // Try v3 first (150 bulls), fallback to v2
+      let toolssData = localStorage.getItem("toolss_clients_v3_with_150_bulls");
+      if (!toolssData) {
+        toolssData = localStorage.getItem("toolss_clients_v2_with_500_females");
+      }
+      
       if (toolssData) {
         const clients = JSON.parse(toolssData);
         setToolssClients(clients);
@@ -941,12 +952,19 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
   
   useEffect(() => {
     try {
-      const toolssData = localStorage.getItem("toolss_clients_v2_with_500_females");
+      // Try v3 first (150 bulls), fallback to v2
+      let toolssData = localStorage.getItem("toolss_clients_v3_with_150_bulls");
+      if (!toolssData) {
+        toolssData = localStorage.getItem("toolss_clients_v2_with_500_females");
+      }
+      
       if (toolssData) {
         const clients = JSON.parse(toolssData);
         const allBulls = clients.flatMap((c: any) => 
           c.farms.flatMap((f: any) => f.bulls || [])
         );
+        console.log(`🐂 Loaded ${allBulls.length} bulls from ToolSSApp for selection`);
+        console.log('📋 Sample bulls:', allBulls.slice(0, 3).map((b: any) => ({ naab: b.naab, nome: b.nome, empresa: b.empresa })));
         setToolssBulls(allBulls);
       }
     } catch (e) {
@@ -1018,45 +1036,55 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
               <Select 
                 value={b.naab || ""} 
                 onChange={(naab) => {
+                  console.log(`🔄 Touro ${idx + 1}: selecionado NAAB = ${naab}`);
+                  
                   if (naab === "") {
                     // Limpa o touro
-                        setSt(s => ({ 
-                          ...s, 
-                          bulls: s.bulls.map((bull, i) => 
-                            i === idx ? {
-                              ...bull,
-                              name: "",
-                              naab: "",
-                              empresa: "",
-                              pta: Object.fromEntries(planStore.selectedPTAList.map(pta => [pta, 0]))
-                            } : bull
-                          )
-                        }));
+                    console.log(`🧹 Limpando dados do Touro ${idx + 1}`);
+                    setSt(s => ({ 
+                      ...s, 
+                      bulls: s.bulls.map((bull, i) => 
+                        i === idx ? {
+                          ...bull,
+                          name: "",
+                          naab: "",
+                          empresa: "",
+                          pta: Object.fromEntries(planStore.selectedPTAList.map(pta => [pta, 0]))
+                        } : bull
+                      )
+                    }));
                   } else {
                     const selectedBull = toolssBulls.find(bull => bull.naab === naab);
                     if (selectedBull) {
+                      console.log(`✅ Touro encontrado: ${selectedBull.nome} (${selectedBull.empresa})`);
+                      
                       const updatedPTA: Record<string, number | null> = {};
                       planStore.selectedPTAList.forEach(ptaLabel => {
-                        // Use label to get value via field mapping
+                        // Use getBullPTAValue function to get the value with proper mapping
                         const value = getBullPTAValue(selectedBull, ptaLabel);
                         updatedPTA[ptaLabel] = value;
                       });
                       
-                console.log('bullPTAs(keys order)=', planStore.selectedPTAList.map(k => `${k}:${updatedPTA[k] === null ? '—' : updatedPTA[k]}`));
-                
-                setSt(s => ({ 
-                  ...s, 
-                  bulls: s.bulls.map((bull, i) => 
-                    i === idx ? {
-                      ...bull,
-                      name: selectedBull.nome,
-                      naab: selectedBull.naab,
-                      empresa: selectedBull.empresa || "",
-                      pta: updatedPTA
-                    } : bull
-                  )
-                }));
-              }
+                      console.log('📊 PTAs carregadas:', planStore.selectedPTAList.map(k => `${k}:${updatedPTA[k] === null ? '—' : updatedPTA[k]}`));
+                      
+                      setSt(s => ({ 
+                        ...s, 
+                        bulls: s.bulls.map((bull, i) => 
+                          i === idx ? {
+                            ...bull,
+                            name: selectedBull.nome || "",
+                            naab: selectedBull.naab || "",
+                            empresa: selectedBull.empresa || "",
+                            pta: updatedPTA
+                          } : bull
+                        )
+                      }));
+                      
+                      // Show success toast
+                      console.log(`✅ Touro ${idx + 1} configurado: ${selectedBull.nome} - ${selectedBull.naab}`);
+                    } else {
+                      console.log(`❌ Touro com NAAB ${naab} não encontrado na lista`);
+                    }
                   }
                 }}
                  options={[
@@ -1120,7 +1148,12 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
             <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(planStore.selectedPTAList.length, 5)}, 1fr)`, gap: 8 }}>
               {planStore.selectedPTAList.map((ptaLabel) => (
                 <div key={ptaLabel}>
-                  <Label>{ptaLabel}</Label>
+                  <Label>
+                    {ptaLabel}
+                    {b.pta[ptaLabel] !== null && b.pta[ptaLabel] !== 0 && (
+                      <span style={{ fontSize: "10px", color: "#16a34a", marginLeft: "4px" }}>✓</span>
+                    )}
+                  </Label>
                   <Input
                     type="text"
                     value={b.pta[ptaLabel] === null ? "—" : (b.pta[ptaLabel] || 0)}
@@ -1141,6 +1174,11 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
                 </div>
               ))}
             </div>
+            {b.naab && Object.values(b.pta).some(v => v !== null && v !== 0) && (
+              <div style={{ marginTop: 6, fontSize: 11, color: "#16a34a" }}>
+                ✅ PTAs carregadas automaticamente do banco de touros
+              </div>
+            )}
           </div>
         </Section>
       ))}
