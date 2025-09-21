@@ -481,16 +481,19 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
     }
   }, [planStore.selectedFarmId]);
 
-  // Auto-calculate population when farm changes and mode is auto
+  // Auto-calculate population when farm changes (always automatic now)
   useEffect(() => {
-    if (selectedFarm && planStore.populationMode === 'auto') {
+    if (selectedFarm) {
       console.log('Calculating population structure for farm:', selectedFarm.nome);
       const counts = calculatePopulationStructure(selectedFarm);
       const total = counts.heifers + counts.primiparous + counts.secundiparous + counts.multiparous;
       console.log('Population counts calculated:', counts, 'Total:', total);
       planStore.setPopulationCounts(counts);
+    } else {
+      // Reset counts when no farm selected
+      planStore.setPopulationCounts({ heifers: 0, primiparous: 0, secundiparous: 0, multiparous: 0 });
     }
-  }, [selectedFarm, planStore.populationMode]);
+  }, [selectedFarm]);
 
   // Auto-calculate mother averages when farm or PTAs change
   useEffect(() => {
@@ -648,118 +651,109 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
           <div>
             <h3 style={{ fontWeight: 700, marginBottom: 8 }}>Estrutura Populacional</h3>
             
-            {/* Opção para cálculo automático */}
-            <div style={{ marginBottom: 12, padding: 8, background: "#f8f9fa", borderRadius: 6 }}>
-              <div style={{ display: "flex", gap: 16 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, cursor: "pointer" }}>
-                  <input 
-                    type="radio" 
-                    name="populationMode"
-                    checked={planStore.populationMode === 'auto'}
-                    onChange={() => planStore.setPopulationMode('auto')}
-                  />
-                  <strong>Automático</strong>
-                </label>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, cursor: "pointer" }}>
-                  <input 
-                    type="radio" 
-                    name="populationMode"
-                    checked={planStore.populationMode === 'manual'}
-                    onChange={() => planStore.setPopulationMode('manual')}
-                  />
-                  <strong>Manual</strong>
-                </label>
-              </div>
-              {planStore.populationMode === 'auto' && !selectedFarm && (
+            {/* Badge automático */}
+            <div style={{ marginBottom: 12 }}>
+              <span style={{ 
+                display: "inline-block", 
+                padding: "4px 8px", 
+                backgroundColor: "#16a34a", 
+                color: "white", 
+                borderRadius: "4px", 
+                fontSize: "11px", 
+                fontWeight: "bold" 
+              }}>
+                Modo automático (front-end)
+              </span>
+              {!selectedFarm && (
                 <div style={{ fontSize: 11, color: COLORS.red, marginTop: 4 }}>
-                  ⚠️ Selecione um rebanho para cálculo automático
+                  ⚠️ Carregue/selecione um rebanho com banco de fêmeas para calcular
                 </div>
+              )}
+              {selectedFarm && (
+                <button
+                  onClick={() => {
+                    const counts = calculatePopulationStructure(selectedFarm);
+                    planStore.setPopulationCounts(counts);
+                  }}
+                  style={{
+                    marginLeft: 8,
+                    padding: "2px 6px",
+                    fontSize: "10px",
+                    backgroundColor: "#f3f4f6",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "3px",
+                    cursor: "pointer"
+                  }}
+                >
+                  Recalcular
+                </button>
               )}
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {/* Total de fêmeas aptas */}
               <div>
                 <Label>Total de fêmeas aptas</Label>
-                <Input 
-                  type="number" 
-                  min={0} 
-                  value={total} 
-                  onChange={() => {}} // Read-only, calculated from categories
+                <Input
+                  type="number"
+                  value={total}
+                  onChange={() => {}}
                   disabled={true}
                 />
               </div>
+              
+              {/* Novilhas */}
               <div>
-                <Label>Novilhas</Label>
+                <Label>Novilhas (paridade = 0)</Label>
                 <Input
                   type="number"
-                  min={0}
                   value={planStore.populationCounts.heifers}
-                  onChange={(v) => {
-                    if (planStore.populationMode === 'manual') {
-                      planStore.setPopulationCounts({
-                        ...planStore.populationCounts,
-                        heifers: v === "" ? 0 : v
-                      });
-                    }
-                  }}
-                  disabled={planStore.populationMode === 'auto'}
+                  onChange={() => {}}
+                  disabled={true}
                 />
               </div>
+              
+              {/* Primíparas */}
               <div>
-                <Label>Primíparas</Label>
+                <Label>Primíparas (paridade = 1)</Label>
                 <Input
                   type="number"
-                  min={0}
                   value={planStore.populationCounts.primiparous}
-                  onChange={(v) => {
-                    if (planStore.populationMode === 'manual') {
-                      planStore.setPopulationCounts({
-                        ...planStore.populationCounts,
-                        primiparous: v === "" ? 0 : v
-                      });
-                    }
-                  }}
-                  disabled={planStore.populationMode === 'auto'}
+                  onChange={() => {}}
+                  disabled={true}
                 />
               </div>
+              
+              {/* Secundíparas */}
               <div>
-                <Label>Secundíparas</Label>
+                <Label>Secundíparas (paridade = 2)</Label>
                 <Input
                   type="number"
-                  min={0}
                   value={planStore.populationCounts.secundiparous}
-                  onChange={(v) => {
-                    if (planStore.populationMode === 'manual') {
-                      planStore.setPopulationCounts({
-                        ...planStore.populationCounts,
-                        secundiparous: v === "" ? 0 : v
-                      });
-                    }
-                  }}
-                  disabled={planStore.populationMode === 'auto'}
+                  onChange={() => {}}
+                  disabled={true}
                 />
               </div>
+              
+              {/* Multíparas */}
               <div>
-                <Label>Multíparas</Label>
+                <Label>Multíparas (paridade ≥ 3)</Label>
                 <Input
                   type="number"
-                  min={0}
                   value={planStore.populationCounts.multiparous}
-                  onChange={(v) => {
-                    if (planStore.populationMode === 'manual') {
-                      planStore.setPopulationCounts({
-                        ...planStore.populationCounts,
-                        multiparous: v === "" ? 0 : v
-                      });
-                    }
-                  }}
-                  disabled={planStore.populationMode === 'auto'}
+                  onChange={() => {}}
+                  disabled={true}
                 />
               </div>
             </div>
-            {planStore.populationMode === 'auto' && selectedFarm && (
+            {selectedFarm && total > 0 && (
               <div style={{ marginTop: 8, fontSize: 11, color: "#16a34a" }}>
                 ✅ Estrutura calculada automaticamente: {total} fêmeas
+              </div>
+            )}
+            {(!selectedFarm || total === 0) && (
+              <div style={{ marginTop: 8, fontSize: 11, color: "#ef4444" }} title="Carregue/selecione um rebanho com banco de fêmeas para calcular.">
+                ⚠️ Nenhuma fêmea encontrada para categorização
               </div>
             )}
           </div>

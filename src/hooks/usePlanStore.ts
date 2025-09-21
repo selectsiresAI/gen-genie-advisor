@@ -84,14 +84,12 @@ interface PlanState {
   // Core state
   selectedFarmId: string | null;
   selectedPTAList: string[]; // max 5, rótulos exibidos na ordem do usuário
-  populationMode: 'auto' | 'manual';
   populationCounts: PopulationCounts;
   motherAverages: Record<string, Record<string, number>>; // category -> pta -> value
   
   // Actions
   setSelectedFarmId: (farmId: string | null) => void;
   setSelectedPTAList: (labels: string[]) => void;
-  setPopulationMode: (mode: 'auto' | 'manual') => void;
   setPopulationCounts: (counts: PopulationCounts) => void;
   setMotherAverages: (averages: Record<string, Record<string, number>>) => void;
   
@@ -103,7 +101,6 @@ interface PlanState {
 const initialState = {
   selectedFarmId: null,
   selectedPTAList: ["HHP$®", "TPI", "NM$", "PL", "DPR"], // rótulos exibidos
-  populationMode: 'manual' as const,
   populationCounts: {
     heifers: 0,
     primiparous: 0, 
@@ -137,18 +134,11 @@ export const usePlanStore = create<PlanState>()(
         }
       },
       
-      setPopulationMode: (mode) => {
-        const current = get().populationMode;
-        if (current !== mode) {
-          console.log('populationMode=', mode, '(changed from', current, ')');
-          set({ populationMode: mode });
-        }
-      },
       
       setPopulationCounts: (counts) => {
         const current = get().populationCounts;
         if (JSON.stringify(current) !== JSON.stringify(counts)) {
-          console.log('populationCounts=', counts, get().populationMode === 'auto' ? '(auto-calculated)' : '(manual)');
+          console.log('populationCounts=', counts, '(auto-calculated)');
           set({ populationCounts: counts });
         }
       },
@@ -167,46 +157,122 @@ export const usePlanStore = create<PlanState>()(
       partialize: (state) => ({
         selectedFarmId: state.selectedFarmId,
         selectedPTAList: state.selectedPTAList,
-        populationMode: state.populationMode,
         populationCounts: state.populationCounts
       })
     }
   )
 );
 
-// Category definitions for automatic counting
+// Front-end data source functions
+function getFemalesByFarm(farmId: string): any[] {
+  // Try ToolSS cache first
+  const toolssCache = (window as any).ToolSS?.cache?.femalesByFarm?.[farmId];
+  if (Array.isArray(toolssCache)) return toolssCache;
+  
+  // Try localStorage
+  try {
+    const map = JSON.parse(localStorage.getItem("toolss.femalesByFarm") || "{}");
+    if (Array.isArray(map?.[farmId])) return map[farmId];
+  } catch (e) {
+    console.warn('Error parsing toolss.femalesByFarm from localStorage:', e);
+  }
+  
+  // Try AppCache fallback
+  const appCache = (window as any).AppCache?.females?.[farmId];
+  return Array.isArray(appCache) ? appCache : [];
+}
+
+function deriveParity(f: any): number {
+  // Handle complex paridade structure: { _type: "undefined", value: "undefined" }
+  let rawValue;
+  
+  if (f?.paridade && typeof f.paridade === 'object') {
+    rawValue = f.paridade.value;
+  } else {
+    rawValue = f?.paridade ?? f?.parity ?? f?.num_partos ?? f?.ordem_parto ?? 0;
+  }
+  
+  const parsed = Number(rawValue);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function countByParity(females: any[]) {
+  let n0 = 0, n1 = 0, n2 = 0, n3 = 0;
+  
+  for (const f of females) {
+    const p = deriveParity(f);
+    if (p <= 0) n0++;
+    else if (p === 1) n1++;
+    else if (p === 2) n2++;
+    else n3++;
+  }
+  
+  return { 
+    heifers: n0, 
+    primiparous: n1, 
+    secundiparous: n2, 
+    multiparous: n3, 
+    total: n0 + n1 + n2 + n3 
+  };
+}
+
+// Category definitions for automatic counting (improved)
 export const CATEGORY_DEFINITIONS = {
-  heifers: (female: any) => female.paridade === 0 || female.categoria === "Calf" || female.categoria === "Heifer",
-  primiparous: (female: any) => female.paridade === 1 || female.categoria === "Primiparous", 
-  secundiparous: (female: any) => female.paridade === 2 || female.categoria === "Secondiparous",
-  multiparous: (female: any) => (female.paridade && female.paridade >= 3) || female.categoria === "Multiparous"
+  heifers: (female: any) => {
+    const parity = deriveParity(female);
+    return parity === 0 || female.categoria === "Novilha" || female.categoria === "Calf" || female.categoria === "Heifer";
+  },
+  primiparous: (female: any) => {
+    const parity = deriveParity(female);
+    return parity === 1 || female.categoria === "Primípara" || female.categoria === "Primiparous";
+  }, 
+  secundiparous: (female: any) => {
+    const parity = deriveParity(female);
+    return parity === 2 || female.categoria === "Secundípara" || female.categoria === "Secondiparous";
+  },
+  multiparous: (female: any) => {
+    const parity = deriveParity(female);
+    return (parity >= 3) || female.categoria === "Multípara" || female.categoria === "Multiparous";
+  }
 };
 
-// Calculate population structure from farm data
+// Calculate population structure from farm data (improved with front-end sources)
 export const calculatePopulationStructure = (farm: any): PopulationCounts => {
   console.log('calculatePopulationStructure called for farm:', farm?.nome);
-  console.log('Farm females count:', farm?.females?.length);
   
-  if (!farm?.females) {
-    console.log('No females found in farm data');
+  // Try multiple data sources
+  let females = farm?.females;
+  if (!Array.isArray(females) && farm?.id) {
+    console.log('No females in farm object, trying front-end sources...');
+    females = getFemalesByFarm(farm.id.toString());
+    console.log('Found females from front-end sources:', females.length);
+  }
+  
+  if (!Array.isArray(females) || females.length === 0) {
+    console.log('No females found in any data source');
     return { heifers: 0, primiparous: 0, secundiparous: 0, multiparous: 0 };
   }
   
+  console.log('Total females found:', females.length);
+  
   // Log some sample females to check data format
-  console.log('Sample females (first 3):', farm.females.slice(0, 3).map((f: any) => ({
+  console.log('Sample females (first 3):', females.slice(0, 3).map((f: any) => ({
     nome: f.nome,
     paridade: f.paridade,
-    categoria: f.categoria
+    categoria: f.categoria,
+    derivedParity: deriveParity(f)
   })));
   
-  const heifers = farm.females.filter(CATEGORY_DEFINITIONS.heifers).length;
-  const primiparous = farm.females.filter(CATEGORY_DEFINITIONS.primiparous).length;
-  const secundiparous = farm.females.filter(CATEGORY_DEFINITIONS.secundiparous).length;
-  const multiparous = farm.females.filter(CATEGORY_DEFINITIONS.multiparous).length;
+  // Use pure counting function
+  const counts = countByParity(females);
+  console.log('Category counts:', counts);
   
-  console.log('Category counts:', { heifers, primiparous, secundiparous, multiparous });
-  
-  return { heifers, primiparous, secundiparous, multiparous };
+  return { 
+    heifers: counts.heifers, 
+    primiparous: counts.primiparous, 
+    secundiparous: counts.secundiparous, 
+    multiparous: counts.multiparous 
+  };
 };
 
 // Calculate mother averages from farm data
