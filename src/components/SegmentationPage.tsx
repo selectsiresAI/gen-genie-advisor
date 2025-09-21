@@ -314,6 +314,20 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
     setSelectedTraits(prev => ({ ...prev, [trait]: !prev[trait as keyof typeof prev] }));
   };
 
+  const selectAllTraits = () => {
+    setSelectedTraits({
+      HHP$: true, Milk: true, Fat: true, Protein: true,
+      SCS: true, PTAT: true, DPR: true
+    });
+  };
+
+  const deselectAllTraits = () => {
+    setSelectedTraits({
+      HHP$: false, Milk: false, Fat: false, Protein: false,
+      SCS: false, PTAT: false, DPR: false
+    });
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
       <div className="flex items-center gap-2 mb-4">
@@ -433,7 +447,27 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
 
             {/* Gates Sanitários */}
             <div className="space-y-4">
-              <h3 className="font-semibold text-lg">Gates sanitários e tipo</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-lg">Gates sanitários e tipo</h3>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setConfig({
+                        ...config,
+                        scsMaxDonor: 2.9,
+                        dprMinDonor: 1.0,
+                        critical_dpr_lt: -1.0,
+                        critical_scs_gt: 3.0,
+                      });
+                    }}
+                    className="text-xs"
+                  >
+                    Aplicar Valores Referência
+                  </Button>
+                </div>
+              </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <Label className="text-blue-600">SCS máx.</Label>
@@ -474,7 +508,29 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
           <div className="grid lg:grid-cols-2 gap-8 mt-8">
             {/* Selecionar PTAs - Desabilitado quando não é Custom */}
             <div className="space-y-4">
-              <h3 className="font-semibold text-lg">Selecionar PTAs (grupo)</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-lg">Selecionar PTAs (grupo)</h3>
+                {config.primaryIndex === "Custom" && (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={selectAllTraits}
+                      className="text-xs"
+                    >
+                      Selecionar Todas
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={deselectAllTraits}
+                      className="text-xs"
+                    >
+                      Desmarcar Todas
+                    </Button>
+                  </div>
+                )}
+              </div>
               {config.primaryIndex !== "Custom" && (
                 <div className="text-sm text-orange-600 bg-orange-50 p-2 rounded">
                   Para editar pesos/traços, selecione Custom.
