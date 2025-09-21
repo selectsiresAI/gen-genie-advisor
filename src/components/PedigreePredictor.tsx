@@ -13,13 +13,18 @@ import { read, utils, writeFileXLSX } from 'xlsx';
 
 // Function to get bull from ToolSSApp database
 const fetchBullFromDatabase = async (naab: string): Promise<Bull | null> => {
-  console.log(`Fetching bull with NAAB: ${naab}`);
+  console.log(`🔍 Fetching bull with NAAB: ${naab}`);
   
   try {
     // Get data from ToolSSApp localStorage
-    const toolssData = localStorage.getItem("toolss_clients_v3_with_150_bulls");
+    let toolssData = localStorage.getItem("toolss_clients_v3_with_150_bulls");
     if (!toolssData) {
-      console.log('No ToolSSApp data found');
+      console.log('❌ V3 data not found, trying V2...');
+      toolssData = localStorage.getItem("toolss_clients_v2_with_500_females");
+    }
+    
+    if (!toolssData) {
+      console.log('❌ No ToolSSApp data found in localStorage');
       return null;
     }
     
@@ -27,16 +32,23 @@ const fetchBullFromDatabase = async (naab: string): Promise<Bull | null> => {
     await new Promise(resolve => setTimeout(resolve, 300));
     
     const clients = JSON.parse(toolssData);
-    console.log(`Found ${clients.length} clients in ToolSSApp data`);
+    console.log(`📊 Found ${clients.length} clients in ToolSSApp data`);
     
     // Search through all farms and all bulls
     for (const client of clients) {
       if (client.farms) {
         for (const farm of client.farms) {
           if (farm.bulls && Array.isArray(farm.bulls)) {
+            console.log(`🔍 Searching in farm ${farm.id}, bulls count: ${farm.bulls.length}`);
+            
+            // Log first few bulls for debugging
+            if (farm.bulls.length > 0) {
+              console.log('📋 Sample bulls:', farm.bulls.slice(0, 3).map((b: any) => ({ naab: b.naab, nome: b.nome, empresa: b.empresa })));
+            }
+            
             const bull = farm.bulls.find((b: any) => b.naab === naab);
             if (bull) {
-              console.log(`Found bull ${naab}:`, bull.nome, bull.empresa);
+              console.log(`✅ Found bull ${naab}:`, bull.nome, bull.empresa);
               
               // Convert ToolSSApp bull format to PedigreePredictor Bull format
               const convertedBull: Bull = {
@@ -113,11 +125,11 @@ const fetchBullFromDatabase = async (naab: string): Promise<Bull | null> => {
       }
     }
     
-    console.log(`Bull with NAAB ${naab} not found in database`);
+    console.log(`❌ Bull with NAAB ${naab} not found in database`);
     return null;
     
   } catch (error) {
-    console.error('Error fetching bull from database:', error);
+    console.error('💥 Error fetching bull from database:', error);
     return null;
   }
 };
@@ -136,7 +148,43 @@ const IndividualPrediction: React.FC = () => {
     clearPrediction
   } = usePedigreeStore();
 
+  // Add debug function to check localStorage
+  const debugLocalStorage = () => {
+    console.log('🔧 DEBUG: Checking localStorage keys...');
+    const keys = Object.keys(localStorage);
+    console.log('📋 LocalStorage keys:', keys.filter(k => k.includes('toolss')));
+    
+    const v3Data = localStorage.getItem("toolss_clients_v3_with_150_bulls");
+    const v2Data = localStorage.getItem("toolss_clients_v2_with_500_females");
+    
+    console.log('🔍 V3 data exists:', !!v3Data);
+    console.log('🔍 V2 data exists:', !!v2Data);
+    
+    if (v3Data) {
+      const data = JSON.parse(v3Data);
+      const bullsCount = data?.[0]?.farms?.[0]?.bulls?.length || 0;
+      console.log('🐂 Bulls count in V3:', bullsCount);
+      if (bullsCount > 0) {
+        const sampleBulls = data[0].farms[0].bulls.slice(0, 5).map((b: any) => ({ naab: b.naab, nome: b.nome }));
+        console.log('📋 Sample V3 bulls:', sampleBulls);
+      }
+    }
+    
+    if (v2Data) {
+      const data = JSON.parse(v2Data);
+      const bullsCount = data?.[0]?.farms?.[0]?.bulls?.length || 0;
+      console.log('🐂 Bulls count in V2:', bullsCount);
+      if (bullsCount > 0) {
+        const sampleBulls = data[0].farms[0].bulls.slice(0, 5).map((b: any) => ({ naab: b.naab, nome: b.nome }));
+        console.log('📋 Sample V2 bulls:', sampleBulls);
+      }
+    }
+  };
+
   const fetchBullPTAs = async () => {
+    // First run debug
+    debugLocalStorage();
+    
     const errors = validateNaabs(pedigreeInput);
     if (errors.length > 0) {
       toast({
