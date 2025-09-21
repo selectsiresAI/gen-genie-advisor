@@ -1,77 +1,16 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-// PTA canonical mapping dictionary - fixes PL/DPR/HHP$ loading issues
-export const PTA_MAPPING: Record<string, string> = {
-  "NM$": "nm_dollar",
-  "TPI": "tpi", 
-  "PL": "pl",
-  "DPR": "dpr",
-  "ÍHHP$": "ihhp_dollar",
-  "HHP$": "ihhp_dollar", 
-  "ÍHHP$®": "ihhp_dollar",
-  "CM$": "cm_dollar",
-  "FM$": "fm_dollar", 
-  "GM$": "gm_dollar",
-  "F SAV": "f_sav",
-  "PTAM": "ptam",
-  "CFP": "cfp",
-  "PTAF": "ptaf",
-  "PTAF%": "ptaf_percent",
-  "PTAP": "ptap", 
-  "PTAP%": "ptap_percent",
-  "LIV": "liv",
-  "SCS": "scs",
-  "MAST": "mast",
-  "MET": "met",
-  "RP": "rp",
-  "DA": "da",
-  "KET": "ket",
-  "MF": "mf",
-  "PTAT": "ptat",
-  "UDC": "udc",
-  "FLC": "flc",
-  "SCE": "sce",
-  "DCE": "dce",
-  "SSB": "ssb",
-  "DSB": "dsb",
-  "H LIV": "h_liv",
-  "CCR": "ccr",
-  "HCR": "hcr",
-  "FI": "fi",
-  "GL": "gl",
-  "EFC": "efc",
-  "BWC": "bwc",
-  "STA": "sta",
-  "STR": "str",
-  "DFM": "dfm",
-  "RUA": "rua",
-  "RLS": "rls",
-  "RTP": "rtp",
-  "FTL": "ftl",
-  "RW": "rw",
-  "RLR": "rlr",
-  "FTA": "fta",
-  "FLS": "fls",
-  "FUA": "fua",
-  "RUH": "ruh",
-  "RUW": "ruw",
-  "UCL": "ucl",
-  "UDP": "udp",
-  "FTP": "ftp",
-  "RFI": "rfi"
-};
-
-// Normalize PTA label to canonical key
-export const normalizePTAKey = (label: string): string => {
-  return PTA_MAPPING[label] || label.toLowerCase().replace(/[^a-z0-9]/g, '_');
-};
-
-// Get display label from canonical key
-export const getPTADisplayLabel = (canonicalKey: string): string => {
-  const entry = Object.entries(PTA_MAPPING).find(([_, value]) => value === canonicalKey);
-  return entry ? entry[0] : canonicalKey;
-};
+// Lista completa de PTAs disponíveis (fonte de verdade única)
+// Exatamente como aparecem no banco de fêmeas, na ordem especificada
+export const AVAILABLE_PTAS = [
+  "HHP$®", "TPI", "NM$", "CM$", "FM$", "GM$", "F SAV", "PTAM", "CFP", "PTAF", 
+  "PTAF%", "PTAP", "PTAP%", "PL", "DPR", "LIV", "SCS", "MAST", "MET", "RP", 
+  "DA", "KET", "MF", "PTAT", "UDC", "FLC", "SCE", "DCE", "SSB", "DSB", 
+  "H LIV", "CCR", "HCR", "FI", "GL", "EFC", "BWC", "STA", "STR", "DFM", 
+  "RUA", "RLS", "RTP", "FTL", "RW", "RLR", "FTA", "FLS", "FUA", "RUH", 
+  "RUW", "UCL", "UDP", "FTP", "RFI"
+] as const;
 
 // Population structure interface
 interface PopulationCounts {
@@ -85,7 +24,7 @@ interface PopulationCounts {
 interface PlanState {
   // Core state
   selectedFarmId: string | null;
-  selectedPTAKeys: string[]; // max 5, canonical keys in user order
+  selectedPTAKeys: string[]; // max 5, exact database column names in user order
   populationMode: 'auto' | 'manual';
   populationCounts: PopulationCounts;
   motherAverages: Record<string, Record<string, number>>; // category -> pta -> value
@@ -104,7 +43,7 @@ interface PlanState {
 // Initial state
 const initialState = {
   selectedFarmId: null,
-  selectedPTAKeys: ["nm_dollar", "tpi", "pl", "dpr", "ihhp_dollar"], // canonical keys
+  selectedPTAKeys: ["HHP$®", "TPI", "NM$", "PL", "DPR"], // exact database column names
   populationMode: 'manual' as const,
   populationCounts: {
     heifers: 0,
@@ -134,11 +73,7 @@ export const usePlanStore = create<PlanState>()(
         const newKeys = keys.slice(0, 5); // max 5
         if (JSON.stringify(current) !== JSON.stringify(newKeys)) {
           console.log('selectedPTAKeys=', newKeys);
-          const ptaHeaders = newKeys.map(key => ({ 
-            label: getPTADisplayLabel(key), 
-            key 
-          }));
-          console.log('ptaHeaders=', ptaHeaders);
+          console.log('ptaHeaders=', newKeys.map(key => ({ label: key, key })));
           set({ selectedPTAKeys: newKeys });
         }
       },
@@ -220,12 +155,12 @@ export const calculateMotherAverages = (farm: any, ptaKeys: string[]): Record<st
   Object.entries(categories).forEach(([categoryKey, females]) => {
     result[categoryKey] = {};
     
-    ptaKeys.forEach(ptaKey => {
-      const values = females.map((f: any) => {
-        // Use canonical key to get value from database
-        const value = f[ptaKey] || 0;
-        return typeof value === 'number' ? value : 0;
-      }).filter(v => v !== 0);
+  ptaKeys.forEach(ptaKey => {
+    const values = females.map((f: any) => {
+      // Use exact database column name to get value
+      const value = f[ptaKey] || 0;
+      return typeof value === 'number' ? value : 0;
+    }).filter(v => v !== 0);
       
       const average = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
       result[categoryKey][ptaKey] = average;
@@ -235,13 +170,13 @@ export const calculateMotherAverages = (farm: any, ptaKeys: string[]): Record<st
   return result;
 };
 
-// Get bull PTA value with proper mapping
+// Get bull PTA value using exact database column names
 export const getBullPTAValue = (bull: any, ptaKey: string): number => {
   const value = bull[ptaKey];
   if (typeof value === 'number') {
-    console.log(`PTA ${getPTADisplayLabel(ptaKey)}: ${value} (from bull ${bull.nome || bull.naab})`);
+    console.log(`PTA ${ptaKey}: ${value} (from bull ${bull.nome || bull.naab})`);
     return value;
   }
-  console.log(`PTA ${getPTADisplayLabel(ptaKey)}: — (Sem valor para ${ptaKey})`);
+  console.log(`PTA ${ptaKey}: — (Sem valor para ${ptaKey})`);
   return 0;
 };
