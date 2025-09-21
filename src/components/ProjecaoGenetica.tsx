@@ -174,7 +174,33 @@ function calculateMothersPTAs(selectedFarm: any, selectedPTAs: PTAKey[]): Record
   Object.entries(categories).forEach(([categoryKey, females]) => {
     const key = categoryKey as CategoryKey;
     selectedPTAs.forEach(ptaKey => {
-      const values = females.map((f: any) => f[ptaKey] || 0).filter(v => v !== 0);
+      const values = females.map((f: any) => {
+        // Handle special field names with brackets and mapping
+        let value = 0;
+        if (ptaKey === "ÍHHP$®") {
+          value = f["HHP$"] || 0;
+        } else if (ptaKey === "NM$") {
+          value = f["NM$"] || 0;
+        } else if (ptaKey === "CM$") {
+          value = f["CM$"] || 0;
+        } else if (ptaKey === "FM$") {
+          value = f["FM$"] || 0;
+        } else if (ptaKey === "GM$") {
+          value = f["GM$"] || 0;
+        } else if (ptaKey === "F SAV") {
+          value = f["F SAV"] || 0;
+        } else if (ptaKey === "PTAF%") {
+          value = f["PTAF%"] || 0;
+        } else if (ptaKey === "PTAP%") {
+          value = f["PTAP%"] || 0;
+        } else if (ptaKey === "H LIV") {
+          value = f["H LIV"] || 0;
+        } else {
+          // Standard field names without brackets
+          value = f[ptaKey] || 0;
+        }
+        return value;
+      }).filter(v => v !== 0);
       const average = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
       result[key][ptaKey] = average;
     });
@@ -555,17 +581,21 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
         </div>
       </Section>
 
-      {/* Seleção de Cliente e Fazenda do ToolSSApp */}
+          {/* Seleção de Cliente e Fazenda do ToolSSApp */}
       {toolssClients.length > 0 && (
         <Section title="🎯 Dados do Rebanho (ToolSS)">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
               <Label>Cliente/Rebanho</Label>
               <Select 
-                value={st.selectedClient?.id || ""} 
+                value={st.selectedClient?.id ? st.selectedClient.id.toString() : ""} 
                 onChange={(v) => {
-                  const client = toolssClients.find(c => c.id === parseInt(v));
-                  setSt(s => ({ ...s, selectedClient: client, selectedFarm: null }));
+                  if (v === "") {
+                    setSt(s => ({ ...s, selectedClient: null, selectedFarm: null }));
+                  } else {
+                    const client = toolssClients.find(c => c.id === parseInt(v));
+                    setSt(s => ({ ...s, selectedClient: client, selectedFarm: null }));
+                  }
                 }}
                 options={[
                   { value: "", label: "Selecione um cliente" },
@@ -578,10 +608,12 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
               <Select 
                 value={st.selectedFarm?.id ? st.selectedFarm.id.toString() : ""} 
                 onChange={(v) => {
+                  console.log("Farm selection changed:", v, farms);
                   if (v === "") {
                     setSt(s => ({ ...s, selectedFarm: null }));
                   } else {
                     const farm = farms.find((f: any) => f.id === parseInt(v));
+                    console.log("Selected farm:", farm);
                     setSt(s => ({ ...s, selectedFarm: farm }));
                   }
                 }}
@@ -910,7 +942,32 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
                     if (selectedBull) {
                       const updatedPTA: Record<string, number> = {};
                       st.selectedPTAs.forEach(pta => {
-                        updatedPTA[pta] = selectedBull[pta] || 0;
+                        // Handle special field names with brackets and mapping
+                        let value = 0;
+                        if (pta === "ÍHHP$®") {
+                          value = selectedBull["HHP$"] || 0;
+                        } else if (pta === "NM$") {
+                          value = selectedBull["NM$"] || 0;
+                        } else if (pta === "CM$") {
+                          value = selectedBull["CM$"] || 0;
+                        } else if (pta === "FM$") {
+                          value = selectedBull["FM$"] || 0;
+                        } else if (pta === "GM$") {
+                          value = selectedBull["GM$"] || 0;
+                        } else if (pta === "F SAV") {
+                          value = selectedBull["F SAV"] || 0;
+                        } else if (pta === "PTAF%") {
+                          value = selectedBull["PTAF%"] || 0;
+                        } else if (pta === "PTAP%") {
+                          value = selectedBull["PTAP%"] || 0;
+                        } else if (pta === "H LIV") {
+                          value = selectedBull["H LIV"] || 0;
+                        } else {
+                          // Standard field names without brackets
+                          value = (selectedBull as any)[pta] || 0;
+                        }
+                        updatedPTA[pta] = value;
+                        console.log(`PTA ${pta}: ${value} (from bull ${selectedBull.nome})`);
                       });
                       
                       setSt(s => ({ 
@@ -930,7 +987,7 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
                 }}
                 options={[
                   { value: "", label: "Selecione um touro" },
-                  ...toolssBulls.map(bull => ({
+                  ...toolssBulls.map((bull, index) => ({
                     value: bull.naab,
                     label: `${bull.naab} - ${bull.nome} (${bull.empresa || "S/Empresa"})`
                   }))
