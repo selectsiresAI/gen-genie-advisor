@@ -11,69 +11,115 @@ import { usePedigreeStore, PTA_MAPPING, PTA_LABELS, formatPTAValue, predictFromP
 import { Calculator, Upload, Download, Search } from 'lucide-react';
 import { read, utils, writeFileXLSX } from 'xlsx';
 
-// Mock function to get bull from database
-// In real implementation, this would query the actual bulls database
+// Function to get bull from ToolSSApp database
 const fetchBullFromDatabase = async (naab: string): Promise<Bull | null> => {
   console.log(`Fetching bull with NAAB: ${naab}`);
   
-  // Mock data for demonstration
-  // In real implementation, replace with actual database query
-  const mockBulls: Record<string, Bull> = {
-    '200HO12345': {
-      naab: '200HO12345',
-      name: 'GENOMIC STAR',
-      company: 'SELECT SIRES',
-      ptas: {
-        ihhp_dollar: 850,
-        tpi: 2650,
-        nm_dollar: 1200,
-        pl: 6.2,
-        dpr: 1.8,
-        scs: 2.85,
-        ptat: 1.15,
-        cfp: 68,
-        // ... outros PTAs
-      }
-    },
-    '250HO67890': {
-      naab: '250HO67890', 
-      name: 'GENETIC ADVANCE',
-      company: 'ABS GLOBAL',
-      ptas: {
-        ihhp_dollar: 780,
-        tpi: 2420,
-        nm_dollar: 1050,
-        pl: 5.8,
-        dpr: 1.5,
-        scs: 2.92,
-        ptat: 0.98,
-        cfp: 62,
-        // ... outros PTAs
-      }
-    },
-    '300HO11111': {
-      naab: '300HO11111',
-      name: 'FUTURE PROOF',
-      company: 'GENEX',
-      ptas: {
-        ihhp_dollar: 720,
-        tpi: 2280,
-        nm_dollar: 980,
-        pl: 5.4,
-        dpr: 1.2,
-        scs: 3.05,
-        ptat: 0.85,
-        cfp: 58,
-        // ... outros PTAs
+  try {
+    // Get data from ToolSSApp localStorage
+    const toolssData = localStorage.getItem("toolss_clients_v3_with_150_bulls");
+    if (!toolssData) {
+      console.log('No ToolSSApp data found');
+      return null;
+    }
+    
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    const clients = JSON.parse(toolssData);
+    console.log(`Found ${clients.length} clients in ToolSSApp data`);
+    
+    // Search through all farms and all bulls
+    for (const client of clients) {
+      if (client.farms) {
+        for (const farm of client.farms) {
+          if (farm.bulls && Array.isArray(farm.bulls)) {
+            const bull = farm.bulls.find((b: any) => b.naab === naab);
+            if (bull) {
+              console.log(`Found bull ${naab}:`, bull.nome, bull.empresa);
+              
+              // Convert ToolSSApp bull format to PedigreePredictor Bull format
+              const convertedBull: Bull = {
+                naab: bull.naab,
+                name: bull.nome,
+                company: bull.empresa || 'Unknown',
+                ptas: {
+                  // Map ToolSSApp fields to PedigreePredictor PTA keys
+                  ihhp_dollar: bull["HHP$"] || bull["HHP$®"] || 0,
+                  tpi: bull.TPI || 0,
+                  nm_dollar: bull["NM$"] || 0,
+                  cm_dollar: bull["CM$"] || 0,
+                  fm_dollar: bull["FM$"] || 0,
+                  gm_dollar: bull["GM$"] || 0,
+                  f_sav: bull["F SAV"] || 0,
+                  ptam: bull.PTAM || 0,
+                  cfp: bull.CFP || 0,
+                  ptaf: bull.PTAF || 0,
+                  ptaf_percent: bull["PTAF%"] || 0,
+                  ptap: bull.PTAP || 0,
+                  ptap_percent: bull["PTAP%"] || 0,
+                  pl: bull.PL || 0,
+                  dpr: bull.DPR || 0,
+                  liv: bull.LIV || 0,
+                  scs: bull.SCS || 0,
+                  mast: bull.MAST || 0,
+                  met: bull.MET || 0,
+                  rp: bull.RP || 0,
+                  da: bull.DA || 0,
+                  ket: bull.KET || 0,
+                  mf: bull.MF || 0,
+                  ptat: bull.PTAT || 0,
+                  udc: bull.UDC || 0,
+                  flc: bull.FLC || 0,
+                  sce: bull.SCE || 0,
+                  dce: bull.DCE || 0,
+                  ssb: bull.SSB || 0,
+                  dsb: bull.DSB || 0,
+                  h_liv: bull["H LIV"] || 0,
+                  ccr: bull.CCR || 0,
+                  hcr: bull.HCR || 0,
+                  fi: bull.FI || 0,
+                  gl: bull.GL || 0,
+                  efc: bull.EFC || 0,
+                  bwc: bull.BWC || 0,
+                  sta: bull.STA || 0,
+                  str: bull.STR || 0,
+                  dfm: bull.DFM || 0,
+                  rua: bull.RUA || 0,
+                  rls: bull.RLS || 0,
+                  rtp: bull.RTP || 0,
+                  ftl: bull.FTL || 0,
+                  rw: bull.RW || 0,
+                  rlr: bull.RLR || 0,
+                  fta: bull.FTA || 0,
+                  fls: bull.FLS || 0,
+                  fua: bull.FUA || 0,
+                  ruh: bull.RUH || 0,
+                  ruw: bull.RUW || 0,
+                  ucl: bull.UCL || 0,
+                  udp: bull.UDP || 0,
+                  ftp: bull.FTP || 0,
+                  rfi: bull.RFI || 0,
+                  milk: bull.Milk || 0,
+                  fat: bull.Fat || 0,
+                  protein: bull.Protein || 0
+                }
+              };
+              
+              return convertedBull;
+            }
+          }
+        }
       }
     }
-  };
-  
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  const bull = mockBulls[naab.toUpperCase().trim()];
-  return bull || null;
+    
+    console.log(`Bull with NAAB ${naab} not found in database`);
+    return null;
+    
+  } catch (error) {
+    console.error('Error fetching bull from database:', error);
+    return null;
+  }
 };
 
 const IndividualPrediction: React.FC = () => {
