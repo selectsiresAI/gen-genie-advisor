@@ -13,123 +13,171 @@ import { read, utils, writeFileXLSX } from 'xlsx';
 
 // Function to get bull from ToolSSApp database
 const fetchBullFromDatabase = async (naab: string): Promise<Bull | null> => {
-  console.log(`🔍 Fetching bull with NAAB: ${naab}`);
+  const cleanNaab = naab.toUpperCase().trim();
+  console.log(`🔍 Nexus 2: Buscando touro com NAAB: ${cleanNaab}`);
   
   try {
-    // Get data from ToolSSApp localStorage
+    // Get data from ToolSSApp localStorage - try v3 first (150 bulls), then v2
     let toolssData = localStorage.getItem("toolss_clients_v3_with_150_bulls");
     if (!toolssData) {
-      console.log('❌ V3 data not found, trying V2...');
+      console.log('⚠️ V3 data not found, trying V2...');
       toolssData = localStorage.getItem("toolss_clients_v2_with_500_females");
     }
     
     if (!toolssData) {
-      console.log('❌ No ToolSSApp data found in localStorage');
+      console.log('❌ Nenhum dado do ToolSSApp encontrado no localStorage');
       return null;
     }
     
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
     const clients = JSON.parse(toolssData);
-    console.log(`📊 Found ${clients.length} clients in ToolSSApp data`);
+    console.log(`📊 Clientes encontrados: ${clients.length}`);
+    
+    // Count total bulls across all farms
+    let totalBulls = 0;
+    let foundBull = null;
     
     // Search through all farms and all bulls
     for (const client of clients) {
-      if (client.farms) {
+      if (client.farms && Array.isArray(client.farms)) {
         for (const farm of client.farms) {
           if (farm.bulls && Array.isArray(farm.bulls)) {
-            console.log(`🔍 Searching in farm ${farm.id}, bulls count: ${farm.bulls.length}`);
+            totalBulls += farm.bulls.length;
             
-            // Log first few bulls for debugging
-            if (farm.bulls.length > 0) {
-              console.log('📋 Sample bulls:', farm.bulls.slice(0, 3).map((b: any) => ({ naab: b.naab, nome: b.nome, empresa: b.empresa })));
-            }
+            // Search for the specific bull by NAAB
+            const bull = farm.bulls.find((b: any) => {
+              const bullNaab = String(b.naab || '').toUpperCase().trim();
+              return bullNaab === cleanNaab;
+            });
             
-            const bull = farm.bulls.find((b: any) => b.naab === naab);
             if (bull) {
-              console.log(`✅ Found bull ${naab}:`, bull.nome, bull.empresa);
-              
-              // Convert ToolSSApp bull format to PedigreePredictor Bull format
-              const convertedBull: Bull = {
-                naab: bull.naab,
-                name: bull.nome,
-                company: bull.empresa || 'Unknown',
-                ptas: {
-                  // Map ToolSSApp fields to PedigreePredictor PTA keys
-                  ihhp_dollar: bull["HHP$"] || bull["HHP$®"] || 0,
-                  tpi: bull.TPI || 0,
-                  nm_dollar: bull["NM$"] || 0,
-                  cm_dollar: bull["CM$"] || 0,
-                  fm_dollar: bull["FM$"] || 0,
-                  gm_dollar: bull["GM$"] || 0,
-                  f_sav: bull["F SAV"] || 0,
-                  ptam: bull.PTAM || 0,
-                  cfp: bull.CFP || 0,
-                  ptaf: bull.PTAF || 0,
-                  ptaf_percent: bull["PTAF%"] || 0,
-                  ptap: bull.PTAP || 0,
-                  ptap_percent: bull["PTAP%"] || 0,
-                  pl: bull.PL || 0,
-                  dpr: bull.DPR || 0,
-                  liv: bull.LIV || 0,
-                  scs: bull.SCS || 0,
-                  mast: bull.MAST || 0,
-                  met: bull.MET || 0,
-                  rp: bull.RP || 0,
-                  da: bull.DA || 0,
-                  ket: bull.KET || 0,
-                  mf: bull.MF || 0,
-                  ptat: bull.PTAT || 0,
-                  udc: bull.UDC || 0,
-                  flc: bull.FLC || 0,
-                  sce: bull.SCE || 0,
-                  dce: bull.DCE || 0,
-                  ssb: bull.SSB || 0,
-                  dsb: bull.DSB || 0,
-                  h_liv: bull["H LIV"] || 0,
-                  ccr: bull.CCR || 0,
-                  hcr: bull.HCR || 0,
-                  fi: bull.FI || 0,
-                  gl: bull.GL || 0,
-                  efc: bull.EFC || 0,
-                  bwc: bull.BWC || 0,
-                  sta: bull.STA || 0,
-                  str: bull.STR || 0,
-                  dfm: bull.DFM || 0,
-                  rua: bull.RUA || 0,
-                  rls: bull.RLS || 0,
-                  rtp: bull.RTP || 0,
-                  ftl: bull.FTL || 0,
-                  rw: bull.RW || 0,
-                  rlr: bull.RLR || 0,
-                  fta: bull.FTA || 0,
-                  fls: bull.FLS || 0,
-                  fua: bull.FUA || 0,
-                  ruh: bull.RUH || 0,
-                  ruw: bull.RUW || 0,
-                  ucl: bull.UCL || 0,
-                  udp: bull.UDP || 0,
-                  ftp: bull.FTP || 0,
-                  rfi: bull.RFI || 0,
-                  milk: bull.Milk || 0,
-                  fat: bull.Fat || 0,
-                  protein: bull.Protein || 0
-                }
-              };
-              
-              return convertedBull;
+              foundBull = bull;
+              console.log(`✅ Touro encontrado: ${bull.nome} (${bull.empresa}) - NAAB: ${bull.naab}`);
+              break;
             }
           }
         }
+        if (foundBull) break;
       }
     }
     
-    console.log(`❌ Bull with NAAB ${naab} not found in database`);
-    return null;
+    console.log(`🔍 Total de touros no banco: ${totalBulls}`);
+    
+    if (!foundBull) {
+      console.log(`❌ Touro com NAAB ${cleanNaab} não encontrado no banco de ${totalBulls} touros`);
+      
+      // Log some sample NAABs for debugging
+      if (totalBulls > 0) {
+        const sampleNaabs = [];
+        for (const client of clients) {
+          if (client.farms) {
+            for (const farm of client.farms) {
+              if (farm.bulls && Array.isArray(farm.bulls) && farm.bulls.length > 0) {
+                sampleNaabs.push(...farm.bulls.slice(0, 3).map((b: any) => b.naab));
+                break;
+              }
+            }
+          }
+          if (sampleNaabs.length > 0) break;
+        }
+        console.log('📋 Exemplos de NAABs no banco:', sampleNaabs);
+      }
+      
+      return null;
+    }
+    
+    // Convert ToolSSApp bull format to PedigreePredictor Bull format
+    const convertedBull: Bull = {
+      naab: foundBull.naab,
+      name: foundBull.nome || 'Nome não informado',
+      company: foundBull.empresa || 'Empresa não informada',
+      ptas: {
+        // Economic Indices
+        ihhp_dollar: foundBull["HHP$"] || foundBull["HHP$®"] || 0,
+        tpi: foundBull.TPI || 0,
+        nm_dollar: foundBull["NM$"] || 0,
+        cm_dollar: foundBull["CM$"] || 0,
+        fm_dollar: foundBull["FM$"] || 0,
+        gm_dollar: foundBull["GM$"] || 0,
+        f_sav: foundBull["F SAV"] || 0,
+        ptam: foundBull.PTAM || 0,
+        cfp: foundBull.CFP || 0,
+        
+        // Production
+        ptaf: foundBull.PTAF || 0,
+        ptaf_percent: foundBull["PTAF%"] || 0,
+        ptap: foundBull.PTAP || 0,
+        ptap_percent: foundBull["PTAP%"] || 0,
+        pl: foundBull.PL || 0,
+        milk: foundBull.Milk || 0,
+        fat: foundBull.Fat || 0,
+        protein: foundBull.Protein || 0,
+        
+        // Health & Fertility
+        dpr: foundBull.DPR || 0,
+        liv: foundBull.LIV || 0,
+        scs: foundBull.SCS || 0,
+        mast: foundBull.MAST || 0,
+        met: foundBull.MET || 0,
+        rp: foundBull.RP || 0,
+        da: foundBull.DA || 0,
+        ket: foundBull.KET || 0,
+        mf: foundBull.MF || 0,
+        
+        // Conformation
+        ptat: foundBull.PTAT || 0,
+        udc: foundBull.UDC || 0,
+        flc: foundBull.FLC || 0,
+        
+        // Calving Ease
+        sce: foundBull.SCE || 0,
+        dce: foundBull.DCE || 0,
+        ssb: foundBull.SSB || 0,
+        dsb: foundBull.DSB || 0,
+        h_liv: foundBull["H LIV"] || 0,
+        
+        // Multi-trait
+        ccr: foundBull.CCR || 0,
+        hcr: foundBull.HCR || 0,
+        fi: foundBull.FI || 0,
+        gl: foundBull.GL || 0,
+        efc: foundBull.EFC || 0,
+        bwc: foundBull.BWC || 0,
+        sta: foundBull.STA || 0,
+        str: foundBull.STR || 0,
+        
+        // Linear traits
+        dfm: foundBull.DFM || 0,
+        rua: foundBull.RUA || 0,
+        rls: foundBull.RLS || 0,
+        rtp: foundBull.RTP || 0,
+        ftl: foundBull.FTL || 0,
+        rw: foundBull.RW || 0,
+        rlr: foundBull.RLR || 0,
+        fta: foundBull.FTA || 0,
+        fls: foundBull.FLS || 0,
+        fua: foundBull.FUA || 0,
+        ruh: foundBull.RUH || 0,
+        ruw: foundBull.RUW || 0,
+        ucl: foundBull.UCL || 0,
+        udp: foundBull.UDP || 0,
+        ftp: foundBull.FTP || 0,
+        
+        // Feed Efficiency
+        rfi: foundBull.RFI || 0
+      }
+    };
+    
+    console.log(`📊 PTAs carregadas para ${convertedBull.name}:`, {
+      TPI: convertedBull.ptas.tpi,
+      NM$: convertedBull.ptas.nm_dollar,
+      DPR: convertedBull.ptas.dpr,
+      SCS: convertedBull.ptas.scs
+    });
+    
+    return convertedBull;
     
   } catch (error) {
-    console.error('💥 Error fetching bull from database:', error);
+    console.error('💥 Erro ao buscar touro no banco:', error);
     return null;
   }
 };
@@ -320,13 +368,13 @@ const IndividualPrediction: React.FC = () => {
               <Input
                 id="sire-naab"
                 value={pedigreeInput.sireNaab}
-                onChange={(e) => setPedigreeInput({ sireNaab: e.target.value })}
-                placeholder="Ex: 200HO12345"
+                onChange={(e) => setPedigreeInput({ sireNaab: e.target.value.toUpperCase() })}
+                placeholder="Ex: 001HO25295"
                 className="uppercase"
               />
               {getBullFromCache(pedigreeInput.sireNaab, bullsCache) && (
-                <Badge variant="secondary" className="text-xs">
-                  {getBullFromCache(pedigreeInput.sireNaab, bullsCache)?.name} - {getBullFromCache(pedigreeInput.sireNaab, bullsCache)?.company}
+                <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                  ✅ {getBullFromCache(pedigreeInput.sireNaab, bullsCache)?.name} - {getBullFromCache(pedigreeInput.sireNaab, bullsCache)?.company}
                 </Badge>
               )}
             </div>
@@ -336,13 +384,13 @@ const IndividualPrediction: React.FC = () => {
               <Input
                 id="mgs-naab"
                 value={pedigreeInput.mgsNaab}
-                onChange={(e) => setPedigreeInput({ mgsNaab: e.target.value })}
-                placeholder="Ex: 250HO67890"
+                onChange={(e) => setPedigreeInput({ mgsNaab: e.target.value.toUpperCase() })}
+                placeholder="Ex: 029HO22133"
                 className="uppercase"
               />
               {getBullFromCache(pedigreeInput.mgsNaab, bullsCache) && (
-                <Badge variant="secondary" className="text-xs">
-                  {getBullFromCache(pedigreeInput.mgsNaab, bullsCache)?.name} - {getBullFromCache(pedigreeInput.mgsNaab, bullsCache)?.company}
+                <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                  ✅ {getBullFromCache(pedigreeInput.mgsNaab, bullsCache)?.name} - {getBullFromCache(pedigreeInput.mgsNaab, bullsCache)?.company}
                 </Badge>
               )}
             </div>
@@ -352,16 +400,35 @@ const IndividualPrediction: React.FC = () => {
               <Input
                 id="mmgs-naab"
                 value={pedigreeInput.mmgsNaab}
-                onChange={(e) => setPedigreeInput({ mmgsNaab: e.target.value })}
-                placeholder="Ex: 300HO11111"
+                onChange={(e) => setPedigreeInput({ mmgsNaab: e.target.value.toUpperCase() })}
+                placeholder="Ex: 097HO17371"
                 className="uppercase"
               />
               {getBullFromCache(pedigreeInput.mmgsNaab, bullsCache) && (
-                <Badge variant="secondary" className="text-xs">
-                  {getBullFromCache(pedigreeInput.mmgsNaab, bullsCache)?.name} - {getBullFromCache(pedigreeInput.mmgsNaab, bullsCache)?.company}
+                <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                  ✅ {getBullFromCache(pedigreeInput.mmgsNaab, bullsCache)?.name} - {getBullFromCache(pedigreeInput.mmgsNaab, bullsCache)?.company}
                 </Badge>
               )}
             </div>
+          </div>
+          
+          <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+            <Button 
+              onClick={() => {
+                setPedigreeInput({ 
+                  sireNaab: '001HO25295', 
+                  mgsNaab: '029HO22133', 
+                  mmgsNaab: '097HO17371' 
+                });
+              }}
+              variant="outline"
+              size="sm"
+            >
+              📝 Usar NAABs de Exemplo
+            </Button>
+            <span className="text-sm text-blue-700">
+              Clique para preencher com NAABs de teste do banco de touros
+            </span>
           </div>
           
           <div className="flex gap-3">
