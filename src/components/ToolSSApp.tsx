@@ -483,91 +483,162 @@ const generateComprehensiveFemales = (): Female[] => {
 const seedFemales: Female[] = generateComprehensiveFemales();
 console.log(`🎯 Geradas ${seedFemales.length} fêmeas para teste com dados completos`);
 console.log(`📋 Exemplo da primeira fêmea:`, seedFemales[0]);
-const seedBulls: Bull[] = [{
-  naab: "7HO17191",
-  nome: "Mican",
-  pedigree: "Sheepster x Gameday x Legacy",
-  TPI: 3479,
-  NM$: 989,
-  Milk: 1329,
-  Fat: 100,
-  Protein: 67,
-  SCS: 2.70,
-  PTAT: 1.6,
-  disponibilidade: "Disponível"
-}, {
-  naab: "7HO17572",
-  nome: "Myboyblue",
-  pedigree: "Reaper x Parsly x Try Me",
-  TPI: 3479,
-  NM$: 1026,
-  Milk: 994,
-  Fat: 99,
-  Protein: 50,
-  SCS: 2.66,
-  PTAT: 1.7,
-  disponibilidade: "Disponível"
-}, {
-  naab: "14HO17486",
-  nome: "Cobot",
-  pedigree: "Rimbot x Monteverdi x Envoy",
-  TPI: 3459,
-  NM$: 1158,
-  Milk: 840,
-  Fat: 109,
-  Protein: 50,
-  SCS: 2.64,
-  PTAT: 1.8,
-  disponibilidade: "Disponível"
-}, {
-  naab: "7HO17200",
-  nome: "Golley",
-  pedigree: "Sheepster x Deluxe x Biggelo",
-  TPI: 3448,
-  NM$: 903,
-  Milk: 665,
-  Fat: 128,
-  Protein: 53,
-  SCS: 2.63,
-  PTAT: 1.5,
-  disponibilidade: "Disponível"
-}, {
-  naab: "7HO17478",
-  nome: "Sturgeon",
-  pedigree: "Sheepster x Upside x Legacy",
-  TPI: 3448,
-  NM$: 962,
-  Milk: 1463,
-  Fat: 111,
-  Protein: 69,
-  SCS: 2.68,
-  PTAT: 1.3,
-  disponibilidade: "Disponível"
-}, {
-  naab: "7HO17194",
-  nome: "Donald",
-  pedigree: "Sheepster x Engineer x Lionel",
-  TPI: 3444,
-  NM$: 1015,
-  Milk: 831,
-  Fat: 117,
-  Protein: 56,
-  SCS: 2.69,
-  PTAT: 1.4,
-  disponibilidade: "Disponível"
-}, {
-  naab: "14HO17393",
-  nome: "Ozark",
-  pedigree: "Sheepster x Gameday x Pursuit",
-  TPI: 3443,
-  NM$: 933,
-  Milk: 725,
-  Fat: 107,
-  Protein: 42,
-  SCS: 2.65,
-  PTAT: 1.5,
-  disponibilidade: "Disponível"
-}];
+// Função para gerar banco de touros simulado com 150 touros de 7 empresas
+const generateBullsDatabase = (): Bull[] => {
+  const companies = [
+    { name: "Select Sires", code: "007HO", count: 21 },
+    { name: "AG", code: "014HO", count: 21 },
+    { name: "Alta", code: "011HO", count: 21 },
+    { name: "Genex", code: "001HO", count: 22 },
+    { name: "ST", code: "551HO", count: 22 },
+    { name: "ABS", code: "029HO", count: 21 },
+    { name: "CRV", code: "097HO", count: 22 }
+  ];
+
+  const bullNames = [
+    "Atomic", "Blizzard", "Champion", "Dynasty", "Eclipse", "Falcon", "Genesis", "Hurricane", "Impact", "Jaguar",
+    "Kingdom", "Lightning", "Maverick", "Neptune", "Omega", "Phoenix", "Quantum", "Rocket", "Storm", "Tornado",
+    "Ultimate", "Victory", "Warrior", "Xavier", "Yankee", "Zenith", "Apollo", "Blade", "Chaos", "Dragon",
+    "Eagle", "Fire", "Ghost", "Hunter", "Icon", "Justice", "King", "Legend", "Monster", "Noble",
+    "Oracle", "Power", "Quest", "Rage", "Savage", "Thunder", "Unique", "Viper", "Wolf", "X-Ray",
+    "Yeti", "Zero", "Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel",
+    "India", "Juliet", "Kilo", "Lima", "Mike", "November", "Oscar", "Papa", "Quebec", "Romeo",
+    "Sierra", "Tango", "Uniform", "Victor", "Whiskey", "X-Factor", "Yankee", "Zulu", "Archer", "Bolt",
+    "Crusher", "Demon", "Elite", "Flash", "Gladiator", "Hawk", "Invader", "Jet", "Knight", "Lion",
+    "Magnum", "Ninja", "Outlaw", "Panther", "Quake", "Ranger", "Samurai", "Titan", "Unleash", "Vandal",
+    "Warhawk", "Xtreme", "Yukon", "Zephyr", "Blast", "Comet", "Dagger", "Enforcer", "Falcon", "Gunner",
+    "Havoc", "Impact", "Jolt", "Kamikaze", "Laser", "Mach", "Nitro", "Onyx", "Predator", "Quantum",
+    "Razor", "Sonic", "Tempest", "Venom", "Wolverine", "Xerxes", "Zorro", "Avalanche", "Bandit", "Cobra",
+    "Danger", "Enigma", "Firestorm", "Grizzly", "Hercules", "Inferno", "Jackal", "Kodiak", "Lynx", "Mustang",
+    "Nemesis", "Outback", "Patriot", "Quicksilver", "Rebel", "Sidewinder", "Tomahawk", "Uprising", "Vortex", "Wildfire"
+  ];
+
+  const sires = [
+    "Gameday", "Legacy", "Sheepster", "Reaper", "Parsly", "Try Me", "Rimbot", "Monteverdi", "Envoy", "Shottle",
+    "Durham", "Goldwyn", "Stormatic", "Stormy", "Aardema", "Buckeye", "Champion", "Dempsey", "Forbidden",
+    "Gillette", "Hershel", "Infinity", "Jedi", "King Doc", "Ladino", "McCutchen", "Numero Uno", "Outside",
+    "Planet", "Robust", "Sanchez", "Talent", "Unstpbl", "Vindication", "Windhammer", "Yoder", "Zedd"
+  ];
+
+  const bulls: Bull[] = [];
+  let totalBulls = 0;
+
+  for (const company of companies) {
+    for (let i = 0; i < company.count; i++) {
+      const bullId = String(17000 + totalBulls + Math.floor(Math.random() * 9000)).padStart(5, '0');
+      const naabCode = `${company.code}${bullId}`;
+      const nameIndex = (totalBulls + i) % bullNames.length;
+      const sire = sires[Math.floor(Math.random() * sires.length)];
+      const grandSire = sires[Math.floor(Math.random() * sires.length)];
+      const greatGrandSire = sires[Math.floor(Math.random() * sires.length)];
+
+      // Gera valores de PTA realísticos baseados em distribuições conhecidas
+      const tpi = Math.round(2800 + Math.random() * 1200); // 2800-4000
+      const nmDollar = Math.round(600 + Math.random() * 800); // 600-1400
+      const milk = Math.round(400 + Math.random() * 1600); // 400-2000
+      const fat = Math.round(20 + Math.random() * 160); // 20-180
+      const protein = Math.round(20 + Math.random() * 100); // 20-120
+      const scs = Number((2.4 + Math.random() * 0.8).toFixed(2)); // 2.4-3.2
+      const ptat = Number((0.5 + Math.random() * 2.5).toFixed(2)); // 0.5-3.0
+
+      bulls.push({
+        naab: naabCode,
+        nome: bullNames[nameIndex],
+        pedigree: `${sire} x ${grandSire} x ${greatGrandSire}`,
+        TPI: tpi,
+        ["NM$"]: nmDollar,
+        Milk: milk,
+        Fat: fat,
+        Protein: protein,
+        SCS: scs,
+        PTAT: ptat,
+        disponibilidade: Math.random() > 0.1 ? "Disponível" : "Sem estoque",
+        empresa: company.name,
+        
+        // Índices Econômicos
+        ["HHP$"]: Math.round(200 + Math.random() * 400),
+        ["CM$"]: Math.round(200 + Math.random() * 500),
+        ["FM$"]: Math.round(150 + Math.random() * 400),
+        ["GM$"]: Math.round(100 + Math.random() * 300),
+        ["F SAV"]: Number((0.5 + Math.random() * 2).toFixed(1)),
+        PTAM: Math.round(10 + Math.random() * 30),
+        CFP: Number((0.2 + Math.random() * 1.6).toFixed(1)),
+        
+        // Produção
+        PTAF: Math.round(-50 + Math.random() * 100),
+        ["PTAF%"]: Math.round(-30 + Math.random() * 60),
+        PTAP: Math.round(-20 + Math.random() * 40),
+        ["PTAP%"]: Math.round(-25 + Math.random() * 50),
+        PL: Math.round(-5 + Math.random() * 30),
+        
+        // Fertilidade e Saúde
+        DPR: Number((-3 + Math.random() * 6).toFixed(1)),
+        LIV: Math.round(-2 + Math.random() * 4),
+        MAST: Number((1.5 + Math.random() * 2).toFixed(1)),
+        MET: Number((0.5 + Math.random() * 3).toFixed(1)),
+        RP: Number((-1 + Math.random() * 2).toFixed(1)),
+        DA: Math.round(-3 + Math.random() * 6),
+        KET: Number((0.2 + Math.random() * 1.6).toFixed(1)),
+        MF: Number((0.8 + Math.random() * 1.4).toFixed(1)),
+        
+        // Conformação
+        UDC: Number((-1.5 + Math.random() * 3).toFixed(1)),
+        FLC: Math.round(-4 + Math.random() * 8),
+        
+        // Facilidade de Parto
+        SCE: Number((-8 + Math.random() * 6).toFixed(1)),
+        DCE: Number((-2 + Math.random() * 6).toFixed(1)),
+        SSB: Number((2 + Math.random() * 6).toFixed(1)),
+        DSB: Number((-2 + Math.random() * 4).toFixed(1)),
+        ["H LIV"]: Number((-2 + Math.random() * 4).toFixed(1)),
+        
+        // Características Múltiplas
+        CCR: Number((-3 + Math.random() * 6).toFixed(1)),
+        HCR: Number((-1.5 + Math.random() * 3).toFixed(1)),
+        FI: Number((-1 + Math.random() * 2).toFixed(1)),
+        GL: Number((-5 + Math.random() * 10).toFixed(1)),
+        EFC: Number((0.5 + Math.random() * 4).toFixed(1)),
+        BWC: Number((1 + Math.random() * 5).toFixed(1)),
+        STA: Number((-0.5 + Math.random()).toFixed(2)),
+        STR: Number((0.5 + Math.random() * 2).toFixed(2)),
+        
+        // Características Lineares
+        DFM: Number((0.5 + Math.random() * 2).toFixed(2)),
+        RUA: Number((-2 + Math.random() * 4).toFixed(1)),
+        RLS: Number((-0.5 + Math.random()).toFixed(2)),
+        RTP: Number((-2 + Math.random() * 4).toFixed(2)),
+        FTL: Number((-0.5 + Math.random()).toFixed(2)),
+        RW: Number((0.2 + Math.random() * 1.6).toFixed(2)),
+        RLR: Number((-0.5 + Math.random()).toFixed(2)),
+        FTA: Number((-0.5 + Math.random()).toFixed(2)),
+        FLS: Number((-1 + Math.random() * 2).toFixed(2)),
+        FUA: Number((-2 + Math.random() * 4).toFixed(2)),
+        RUH: Number((0.2 + Math.random() * 2.6).toFixed(2)),
+        RUW: Number((-2 + Math.random() * 4).toFixed(2)),
+        UCL: Number((-0.5 + Math.random()).toFixed(2)),
+        UDP: Number((-0.5 + Math.random()).toFixed(2)),
+        FTP: Number((0.2 + Math.random() * 1.6).toFixed(2)),
+        
+        // Eficiência Alimentar
+        RFI: Math.round(80 + Math.random() * 160),
+        
+        // Genética das Proteínas
+        ["Beta-Caseina"]: Math.random() > 0.5 ? "A2A2" : Math.random() > 0.5 ? "A1A2" : "A1A1",
+        ["Kappa-Caseina"]: Math.random() > 0.3 ? "AB" : Math.random() > 0.5 ? "AA" : "BB"
+      });
+      
+      totalBulls++;
+    }
+  }
+
+  console.log(`🐂 Gerados ${bulls.length} touros de ${companies.length} empresas`);
+  console.log(`📊 Distribuição por empresa:`, companies.map(c => `${c.name}: ${c.count}`).join(', '));
+  console.log(`📋 Exemplo do primeiro touro:`, bulls[0]);
+  
+  return bulls;
+};
+
+const seedBulls: Bull[] = generateBullsDatabase();
 const seedClients: Client[] = [{
   id: 1160,
   nome: "ANTONIO BRAZ TINOCO",
