@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Plus, ArrowLeft, FileSpreadsheet, TrendingUp, Trash2, Download } from "lucide-react";
+import PedigreePredictor from './PedigreePredictor';
+import NexusPredictor from './NexusPredictor';
 
 /* =======================================================================================
    1) PADRÃO STRICT: cabeçalho oficial + formatação + normalização + export XLSX
@@ -822,9 +824,10 @@ function PaginaFazenda({ fazenda, onBack, onUpdateFazenda }: { fazenda: Fazenda;
 
         {/* Abas */}
         <Tabs defaultValue="femeas">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="femeas">Banco de Fêmeas</TabsTrigger>
             <TabsTrigger value="touros">Banco de Touros</TabsTrigger>
+            <TabsTrigger value="nexus">Nexus</TabsTrigger>
             <TabsTrigger value="top">Top Touros Acasalados</TabsTrigger>
             <TabsTrigger value="predicoes">Predições por doadora</TabsTrigger>
             <TabsTrigger value="consolida">Listagem Consolidada</TabsTrigger>
@@ -844,6 +847,10 @@ function PaginaFazenda({ fazenda, onBack, onUpdateFazenda }: { fazenda: Fazenda;
 
           <TabsContent value="touros">
             <BancoTouros data={touros} onDownload={exportTou} />
+          </TabsContent>
+
+          <TabsContent value="nexus">
+            <NexusPredictor />
           </TabsContent>
 
           <TabsContent value="top">
