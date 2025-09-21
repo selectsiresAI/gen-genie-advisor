@@ -332,13 +332,39 @@ function normalize(value: number, mean: number, sd: number) {
 }
 
 // ------------------------ Seed Data ------------------------
-// Generate 500 females for testing automatic categorization
-const generateTestFemales = (): Female[] => {
+// Generate 500 comprehensive females for Rebanho #1160
+const generateComprehensiveFemales = (): Female[] => {
   const females: Female[] = [];  
   const years = [2021, 2022, 2023, 2024, 2025];
   const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-  const sireNames = ["Haven", "Cason", "Luche", "Stormy", "Legacy", "Gameday", "Bolton", "Epic", "Robust", "Champion"];
-  const naabCodes = ["029HO19791", "208HO00355", "011HO15225", "029HO19829", "007HO14195", "250HO12961", "014HO17486", "007HO17200", "029HO19800", "208HO00400"];
+  
+  // Comprehensive sire names and lineages
+  const sireData = [
+    { naab: "029HO19791", nome: "Haven", avô: "Gameday", bisavo: "Legacy" },
+    { naab: "208HO00355", nome: "Cason", avô: "Bolton", bisavo: "Epic" },
+    { naab: "011HO15225", nome: "Luche", avô: "Robust", bisavo: "Champion" },
+    { naab: "029HO19829", nome: "Stormy", avô: "Thunder", bisavo: "Lightning" },
+    { naab: "007HO14195", nome: "Legacy", avô: "Heritage", bisavo: "Classic" },
+    { naab: "250HO12961", nome: "Gameday", avô: "Victory", bisavo: "Winner" },
+    { naab: "014HO17486", nome: "Bolton", avô: "Strike", bisavo: "Power" },
+    { naab: "007HO17200", nome: "Epic", avô: "Legend", bisavo: "Myth" },
+    { naab: "029HO19800", nome: "Robust", avô: "Strong", bisavo: "Mighty" },
+    { naab: "208HO00400", nome: "Champion", avô: "Glory", bisavo: "Fame" },
+    { naab: "011HO15300", nome: "Thunder", avô: "Storm", bisavo: "Rain" },
+    { naab: "029HO19900", nome: "Lightning", avô: "Flash", bisavo: "Spark" },
+    { naab: "208HO00500", nome: "Heritage", avô: "Tradition", bisavo: "History" },
+    { naab: "007HO14300", nome: "Classic", avô: "Vintage", bisavo: "Antique" },
+    { naab: "250HO13000", nome: "Victory", avô: "Triumph", bisavo: "Success" }
+  ];
+
+  // Female names variety
+  const femaleNames = [
+    "Bella", "Luna", "Estrela", "Princesa", "Rainha", "Diamante", "Pérola", "Safira", "Esmeralda", "Rubi",
+    "Aurora", "Vitória", "Esperança", "Alegria", "Bonita", "Formosa", "Linda", "Graciosa", "Elegante", "Majestosa",
+    "Fênix", "Serena", "Harmonia", "Melodia", "Sinfonia", "Poesia", "Arte", "Beleza", "Doçura", "Ternura",
+    "Brisa", "Cristal", "Opala", "Ametista", "Turquesa", "Coral", "Marfim", "Ouro", "Prata", "Bronze",
+    "Flor", "Rosa", "Lírio", "Violeta", "Jasmin", "Orquídea", "Tulipa", "Margarida", "Girassol", "Azaléa"
+  ];
   
   let counter = 1;
   
@@ -348,32 +374,43 @@ const generateTestFemales = (): Female[] => {
     // 100 females per year
     for (let i = 0; i < 100; i++) {
       const month = months[Math.floor(Math.random() * months.length)];
-      const day = Math.floor(Math.random() * 28) + 1; // 1-28 to avoid date issues
+      const day = Math.floor(Math.random() * 28) + 1;
       const nascimento = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
       
       const ordemParto = Math.floor(Math.random() * 6); // 0-5 partos
-      const sireIdx = Math.floor(Math.random() * sireNames.length);
+      const sireIdx = Math.floor(Math.random() * sireData.length);
+      const sire = sireData[sireIdx];
+      const femaleName = femaleNames[Math.floor(Math.random() * femaleNames.length)];
       
-      // Generate realistic PTA values
-      const baseTPI = 2000 + Math.floor(Math.random() * 800); // 2000-2800
-      const baseNM = 300 + Math.floor(Math.random() * 700); // 300-1000
-      const milk = 800 + Math.floor(Math.random() * 1500); // 800-2300
-      const fat = 40 + Math.floor(Math.random() * 80); // 40-120
-      const protein = 30 + Math.floor(Math.random() * 50); // 30-80
-      const dpr = -2 + Math.random() * 4; // -2 to 2
-      const scs = 2.5 + Math.random() * 1; // 2.5-3.5
-      const ptat = -0.5 + Math.random() * 2; // -0.5 to 1.5
+      // Generate HOBRA + 11 numbers for ID CDCB
+      const cdcbNumbers = Math.floor(Math.random() * 99999999999).toString().padStart(11, '0');
+      const idCDCB = `HOBRA${cdcbNumbers}`;
+      
+      // Generate realistic PTA values with more variation
+      const baseTPI = 1800 + Math.floor(Math.random() * 1200); // 1800-3000
+      const baseNM = 200 + Math.floor(Math.random() * 900); // 200-1100
+      const baseHHP = baseNM + Math.floor(Math.random() * 300) - 150; // HHP$ variation
+      const milk = 600 + Math.floor(Math.random() * 2000); // 600-2600
+      const fat = 30 + Math.floor(Math.random() * 120); // 30-150
+      const protein = 20 + Math.floor(Math.random() * 80); // 20-100
+      const dpr = -3 + Math.random() * 6; // -3 to 3
+      const scs = 2.3 + Math.random() * 1.5; // 2.3-3.8
+      const ptat = -1 + Math.random() * 3; // -1 to 2
       
       females.push({
         id: `F${counter.toString().padStart(4, '0')}`,
-        brinco: counter.toString(),
+        brinco: (3000 + counter).toString(),
+        nome: `${femaleName} ${counter}`,
+        idCDCB: idCDCB,
+        pedigree: `${sire.nome} x ${sire.avô} x ${sire.bisavo}`,
         nascimento,
         ordemParto,
         categoria: categorizeAnimal(nascimento, ordemParto),
-        naabPai: naabCodes[sireIdx],
-        nomePai: sireNames[sireIdx],
+        naabPai: sire.naab,
+        nomePai: sire.nome,
         TPI: baseTPI,
         ["NM$"]: baseNM,
+        ["HHP$"]: baseHHP,
         Milk: milk,
         Fat: fat,
         Protein: protein,
@@ -382,62 +419,58 @@ const generateTestFemales = (): Female[] => {
         PTAT: Number(ptat.toFixed(2)),
         year: year,
         
-        // Optional fields with some realistic values
-        nome: `Vaca ${counter}`,
-        idCDCB: `CDCB${counter}`,
-        pedigree: `${sireNames[sireIdx]} x Dam${counter}`,
-        ["HHP$"]: baseNM + Math.floor(Math.random() * 200) - 100,
-        ["CM$"]: baseNM - 100 + Math.floor(Math.random() * 150),
-        ["FM$"]: baseNM - 50 + Math.floor(Math.random() * 100),
-        ["GM$"]: baseNM - 80 + Math.floor(Math.random() * 120),
-        ["F SAV"]: Number((Math.random() * 2 - 1).toFixed(1)),
-        PTAM: Math.floor(Math.random() * 100) - 50,
-        CFP: Number((Math.random() * 4 - 2).toFixed(1)),
-        PTAF: Math.floor(Math.random() * 80) - 40,
-        ["PTAF%"]: Math.floor(Math.random() * 40) - 20,
-        PTAP: Math.floor(Math.random() * 40) - 20,
-        ["PTAP%"]: Math.floor(Math.random() * 30) - 15,
-        PL: Math.floor(Math.random() * 100) - 50,
-        LIV: Number((Math.random() * 6 - 3).toFixed(1)),
-        MAST: Number((Math.random() * 4 - 2).toFixed(1)),
-        MET: Number((Math.random() * 3 - 1.5).toFixed(1)),
-        RP: Number((Math.random() * 4 - 2).toFixed(1)),
-        DA: Number((Math.random() * 3 - 1.5).toFixed(1)),
-        KET: Number((Math.random() * 2 - 1).toFixed(1)),
-        MF: Number((Math.random() * 3 - 1.5).toFixed(1)),
-        UDC: Number((Math.random() * 4 - 2).toFixed(1)),
-        FLC: Number((Math.random() * 3 - 1.5).toFixed(1)),
-        SCE: Number((Math.random() * 8 - 4).toFixed(1)),
-        DCE: Number((Math.random() * 6 - 3).toFixed(1)),
-        SSB: Number((Math.random() * 8 - 4).toFixed(1)),
-        DSB: Number((Math.random() * 6 - 3).toFixed(1)),
-        ["H LIV"]: Number((Math.random() * 4 - 2).toFixed(1)),
-        CCR: Number((Math.random() * 6 - 3).toFixed(1)),
-        HCR: Number((Math.random() * 4 - 2).toFixed(1)),
-        FI: Number((Math.random() * 10 - 5).toFixed(1)),
-        GL: Number((Math.random() * 8 - 4).toFixed(1)),
-        EFC: Number((Math.random() * 12 - 6).toFixed(1)),
-        BWC: Number((Math.random() * 20 - 10).toFixed(1)),
-        STA: Number((Math.random() * 3 - 1.5).toFixed(2)),
-        STR: Number((Math.random() * 3 - 1.5).toFixed(2)),
-        DFM: Number((Math.random() * 2 - 1).toFixed(2)),
-        RUA: Number((Math.random() * 2 - 1).toFixed(2)),
-        RLS: Number((Math.random() * 2 - 1).toFixed(2)),
-        RTP: Number((Math.random() * 2 - 1).toFixed(2)),
-        FTL: Number((Math.random() * 2 - 1).toFixed(2)),
-        RW: Number((Math.random() * 2 - 1).toFixed(2)),
-        RLR: Number((Math.random() * 2 - 1).toFixed(2)),
-        FTA: Number((Math.random() * 2 - 1).toFixed(2)),
-        FLS: Number((Math.random() * 2 - 1).toFixed(2)),
-        FUA: Number((Math.random() * 2 - 1).toFixed(2)),
-        RUH: Number((Math.random() * 2 - 1).toFixed(2)),
-        RUW: Number((Math.random() * 2 - 1).toFixed(2)),
-        UCL: Number((Math.random() * 2 - 1).toFixed(2)),
-        UDP: Number((Math.random() * 2 - 1).toFixed(2)),
-        FTP: Number((Math.random() * 2 - 1).toFixed(2)),
-        RFI: Number((Math.random() * 200 - 100).toFixed(0)),
-        ["Beta-Casein"]: Math.random() > 0.5 ? "A2A2" : "A1A2",
-        ["Kappa-Caseina"]: Math.random() > 0.5 ? "BB" : "AB"
+        // Complete PTA suite with realistic values
+        ["CM$"]: baseNM - 50 + Math.floor(Math.random() * 200),
+        ["FM$"]: baseNM - 30 + Math.floor(Math.random() * 150),
+        ["GM$"]: baseNM - 80 + Math.floor(Math.random() * 180),
+        ["F SAV"]: Number((Math.random() * 3 - 1.5).toFixed(1)),
+        PTAM: Math.floor(Math.random() * 150) - 75,
+        CFP: Number((Math.random() * 5 - 2.5).toFixed(1)),
+        PTAF: Math.floor(Math.random() * 120) - 60,
+        ["PTAF%"]: Math.floor(Math.random() * 50) - 25,
+        PTAP: Math.floor(Math.random() * 60) - 30,
+        ["PTAP%"]: Math.floor(Math.random() * 40) - 20,
+        PL: Math.floor(Math.random() * 140) - 70,
+        LIV: Number((Math.random() * 8 - 4).toFixed(1)),
+        MAST: Number((Math.random() * 5 - 2.5).toFixed(1)),
+        MET: Number((Math.random() * 4 - 2).toFixed(1)),
+        RP: Number((Math.random() * 5 - 2.5).toFixed(1)),
+        DA: Number((Math.random() * 4 - 2).toFixed(1)),
+        KET: Number((Math.random() * 3 - 1.5).toFixed(1)),
+        MF: Number((Math.random() * 4 - 2).toFixed(1)),
+        UDC: Number((Math.random() * 5 - 2.5).toFixed(1)),
+        FLC: Number((Math.random() * 4 - 2).toFixed(1)),
+        SCE: Number((Math.random() * 10 - 5).toFixed(1)),
+        DCE: Number((Math.random() * 8 - 4).toFixed(1)),
+        SSB: Number((Math.random() * 10 - 5).toFixed(1)),
+        DSB: Number((Math.random() * 8 - 4).toFixed(1)),
+        ["H LIV"]: Number((Math.random() * 5 - 2.5).toFixed(1)),
+        CCR: Number((Math.random() * 8 - 4).toFixed(1)),
+        HCR: Number((Math.random() * 5 - 2.5).toFixed(1)),
+        FI: Number((Math.random() * 12 - 6).toFixed(1)),
+        GL: Number((Math.random() * 10 - 5).toFixed(1)),
+        EFC: Number((Math.random() * 15 - 7.5).toFixed(1)),
+        BWC: Number((Math.random() * 25 - 12.5).toFixed(1)),
+        STA: Number((Math.random() * 4 - 2).toFixed(2)),
+        STR: Number((Math.random() * 4 - 2).toFixed(2)),
+        DFM: Number((Math.random() * 3 - 1.5).toFixed(2)),
+        RUA: Number((Math.random() * 3 - 1.5).toFixed(2)),
+        RLS: Number((Math.random() * 3 - 1.5).toFixed(2)),
+        RTP: Number((Math.random() * 3 - 1.5).toFixed(2)),
+        FTL: Number((Math.random() * 3 - 1.5).toFixed(2)),
+        RW: Number((Math.random() * 3 - 1.5).toFixed(2)),
+        RLR: Number((Math.random() * 3 - 1.5).toFixed(2)),
+        FTA: Number((Math.random() * 3 - 1.5).toFixed(2)),
+        FLS: Number((Math.random() * 3 - 1.5).toFixed(2)),
+        FUA: Number((Math.random() * 3 - 1.5).toFixed(2)),
+        RUH: Number((Math.random() * 3 - 1.5).toFixed(2)),
+        RUW: Number((Math.random() * 3 - 1.5).toFixed(2)),
+        UCL: Number((Math.random() * 3 - 1.5).toFixed(2)),
+        UDP: Number((Math.random() * 3 - 1.5).toFixed(2)),
+        FTP: Number((Math.random() * 3 - 1.5).toFixed(2)),
+        RFI: Number((Math.random() * 300 - 150).toFixed(0)),
+        ["Beta-Casein"]: Math.random() > 0.6 ? "A2A2" : Math.random() > 0.3 ? "A1A2" : "A1A1",
+        ["Kappa-Caseina"]: Math.random() > 0.5 ? "BB" : Math.random() > 0.25 ? "AB" : "AA"
       });
       
       counter++;
@@ -447,7 +480,7 @@ const generateTestFemales = (): Female[] => {
   return females;
 };
 
-const seedFemales: Female[] = generateTestFemales();
+const seedFemales: Female[] = generateComprehensiveFemales();
 const seedBulls: Bull[] = [{
   naab: "7HO17191",
   nome: "Mican",
