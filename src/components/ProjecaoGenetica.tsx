@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { usePlanStore, AVAILABLE_PTAS, getFemalesByFarm, countFromFemales, getBullPTAValue } from "../hooks/usePlanStore";
+import { usePlanStore, AVAILABLE_PTAS, getFemalesByFarm, countFromFemales, calculateMotherAverages, getBullPTAValue } from "../hooks/usePlanStore";
 import { toast } from "sonner";
 
 /**
@@ -530,6 +530,14 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
   const selectedClientData = toolssClients.find(c => 
     selectedFarm && c.farms.some((f: any) => f.id === selectedFarm.id)
   );
+  
+  // Auto-calculate mother averages when farm or PTAs change
+  useEffect(() => {
+    if (selectedFarm && planStore.selectedPTAList.length > 0) {
+      const averages = calculateMotherAverages(selectedFarm, planStore.selectedPTAList);
+      planStore.setMotherAverages(averages);
+    }
+  }, [selectedFarm, planStore.selectedPTAList]);
   const farms = selectedClientData?.farms || [];
   
   // Backwards compatibility - sync with old state
