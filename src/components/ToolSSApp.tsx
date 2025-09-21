@@ -1350,20 +1350,6 @@ function HerdPage({
             <ArrowLeftRight className="mr-2" size={16} /> Voltar
           </Button>
           <h1 className="text-2xl font-bold">{farm.nome}</h1>
-          {/* Contador de Animais - Mais Visível */}
-          <div className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-lg font-bold shadow-md">
-            📊 {farm.females.length} Fêmeas
-          </div>
-          {filteredFemales.length !== farm.females.length && (
-            <div className="bg-accent text-accent-foreground px-3 py-2 rounded-lg font-semibold">
-              Filtradas: {filteredFemales.length}
-            </div>
-          )}
-          {selectedFemales.size > 0 && (
-            <div className="bg-destructive text-destructive-foreground px-3 py-2 rounded-lg font-semibold animate-pulse">
-              ✓ {selectedFemales.size} Selecionadas
-            </div>
-          )}
         </div>
         <div className="flex items-center gap-2">
           <label className="cursor-pointer">
@@ -1379,6 +1365,194 @@ function HerdPage({
           </Button>
         </div>
       </div>
+
+      {/* Contadores de Estatísticas do Rebanho */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart className="h-5 w-5" />
+            Estatísticas do Rebanho
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="text-center p-4 bg-primary/5 rounded-lg border">
+              <div className="text-2xl font-bold text-primary">{farm.females.length}</div>
+              <div className="text-sm text-muted-foreground">Total de Fêmeas</div>
+            </div>
+            <div className="text-center p-4 bg-blue-50 rounded-lg border">
+              <div className="text-2xl font-bold text-blue-600">
+                {(() => {
+                  // Utility function for automatic categorization
+                  function categorizeAnimal(nascimento: string, ordemParto?: number): string {
+                    const birthDate = new Date(nascimento);
+                    const now = new Date();
+                    const ageInDays = Math.floor((now.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24));
+                    
+                    // Se não tem ordem de parto definida, assumir 0
+                    const parity = ordemParto || 0;
+                    
+                    // Bezerra: do nascimento até 90 dias
+                    if (ageInDays <= 90) {
+                      return "Bezerra";
+                    }
+                    
+                    // Baseado na ordem de parto
+                    if (parity === 0) {
+                      return "Novilha"; // Após 90 dias e nunca pariu
+                    } else if (parity === 1) {
+                      return "Primípara"; // Pariu uma vez
+                    } else if (parity === 2) {
+                      return "Secundípara"; // Pariu duas vezes
+                    } else if (parity >= 3) {
+                      return "Multípara"; // Pariu 3 ou mais vezes
+                    }
+                    
+                    return "Novilha"; // Default
+                  }
+
+                  return farm.females.filter((f: any) => {
+                    const category = f.categoria || categorizeAnimal(f.nascimento, f.ordemParto);
+                    return category === "Novilha";
+                  }).length;
+                })()}
+              </div>
+              <div className="text-sm text-muted-foreground">Novilhas</div>
+            </div>
+            <div className="text-center p-4 bg-green-50 rounded-lg border">
+              <div className="text-2xl font-bold text-green-600">
+                {(() => {
+                  // Utility function for automatic categorization
+                  function categorizeAnimal(nascimento: string, ordemParto?: number): string {
+                    const birthDate = new Date(nascimento);
+                    const now = new Date();
+                    const ageInDays = Math.floor((now.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24));
+                    
+                    // Se não tem ordem de parto definida, assumir 0
+                    const parity = ordemParto || 0;
+                    
+                    // Bezerra: do nascimento até 90 dias
+                    if (ageInDays <= 90) {
+                      return "Bezerra";
+                    }
+                    
+                    // Baseado na ordem de parto
+                    if (parity === 0) {
+                      return "Novilha"; // Após 90 dias e nunca pariu
+                    } else if (parity === 1) {
+                      return "Primípara"; // Pariu uma vez
+                    } else if (parity === 2) {
+                      return "Secundípara"; // Pariu duas vezes
+                    } else if (parity >= 3) {
+                      return "Multípara"; // Pariu 3 ou mais vezes
+                    }
+                    
+                    return "Novilha"; // Default
+                  }
+
+                  return farm.females.filter((f: any) => {
+                    const category = f.categoria || categorizeAnimal(f.nascimento, f.ordemParto);
+                    return category === "Primípara";
+                  }).length;
+                })()}
+              </div>
+              <div className="text-sm text-muted-foreground">Primíparas</div>
+            </div>
+            <div className="text-center p-4 bg-orange-50 rounded-lg border">
+              <div className="text-2xl font-bold text-orange-600">
+                {(() => {
+                  // Utility function for automatic categorization
+                  function categorizeAnimal(nascimento: string, ordemParto?: number): string {
+                    const birthDate = new Date(nascimento);
+                    const now = new Date();
+                    const ageInDays = Math.floor((now.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24));
+                    
+                    // Se não tem ordem de parto definida, assumir 0
+                    const parity = ordemParto || 0;
+                    
+                    // Bezerra: do nascimento até 90 dias
+                    if (ageInDays <= 90) {
+                      return "Bezerra";
+                    }
+                    
+                    // Baseado na ordem de parto
+                    if (parity === 0) {
+                      return "Novilha"; // Após 90 dias e nunca pariu
+                    } else if (parity === 1) {
+                      return "Primípara"; // Pariu uma vez
+                    } else if (parity === 2) {
+                      return "Secundípara"; // Pariu duas vezes
+                    } else if (parity >= 3) {
+                      return "Multípara"; // Pariu 3 ou mais vezes
+                    }
+                    
+                    return "Novilha"; // Default
+                  }
+
+                  return farm.females.filter((f: any) => {
+                    const category = f.categoria || categorizeAnimal(f.nascimento, f.ordemParto);
+                    return category === "Secundípara";
+                  }).length;
+                })()}
+              </div>
+              <div className="text-sm text-muted-foreground">Secundíparas</div>
+            </div>
+            <div className="text-center p-4 bg-purple-50 rounded-lg border">
+              <div className="text-2xl font-bold text-purple-600">
+                {(() => {
+                  // Utility function for automatic categorization
+                  function categorizeAnimal(nascimento: string, ordemParto?: number): string {
+                    const birthDate = new Date(nascimento);
+                    const now = new Date();
+                    const ageInDays = Math.floor((now.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24));
+                    
+                    // Se não tem ordem de parto definida, assumir 0
+                    const parity = ordemParto || 0;
+                    
+                    // Bezerra: do nascimento até 90 dias
+                    if (ageInDays <= 90) {
+                      return "Bezerra";
+                    }
+                    
+                    // Baseado na ordem de parto
+                    if (parity === 0) {
+                      return "Novilha"; // Após 90 dias e nunca pariu
+                    } else if (parity === 1) {
+                      return "Primípara"; // Pariu uma vez
+                    } else if (parity === 2) {
+                      return "Secundípara"; // Pariu duas vezes
+                    } else if (parity >= 3) {
+                      return "Multípara"; // Pariu 3 ou mais vezes
+                    }
+                    
+                    return "Novilha"; // Default
+                  }
+
+                  return farm.females.filter((f: any) => {
+                    const category = f.categoria || categorizeAnimal(f.nascimento, f.ordemParto);
+                    return category === "Multípara";
+                  }).length;
+                })()}
+              </div>
+              <div className="text-sm text-muted-foreground">Multíparas</div>
+            </div>
+          </div>
+          {filteredFemales.length !== farm.females.length && (
+            <div className="mt-4 p-3 bg-accent/20 rounded-lg">
+              <div className="text-sm font-medium text-accent-foreground">
+                📋 Filtros aplicados: exibindo {filteredFemales.length} de {farm.females.length} fêmeas
+              </div>
+            </div>
+          )}
+          {selectedFemales.size > 0 && (
+            <div className="mt-4 p-3 bg-destructive/20 rounded-lg">
+              <div className="text-sm font-medium text-destructive-foreground">
+                ✓ {selectedFemales.size} fêmeas selecionadas
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Controles de Seleção em Grupo - Melhorados */}
       <Card className="mb-6 border-2 border-primary/20">
