@@ -1224,28 +1224,78 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse border border-gray-300">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="border border-gray-300 px-3 py-2 text-left">Grupo</th>
-                  <th className="border border-gray-300 px-3 py-2 text-left">Brinco</th>
-                  <th className="border border-gray-300 px-3 py-2 text-left">Nascimento</th>
-                  <th className="border border-gray-300 px-3 py-2 text-left">Ordem de Parto</th>
-                  <th className="border border-gray-300 px-3 py-2 text-left">Categoria</th>
-                  <th className="border border-gray-300 px-3 py-2 text-left">NAAB Pai</th>
-                  <th className="border border-gray-300 px-3 py-2 text-left">Nome Pai</th>
-                  <th className="border border-gray-300 px-3 py-2 text-left">{config.primaryIndex}</th>
-                  <th className="border border-gray-300 px-3 py-2 text-left">TPI</th>
-                  <th className="border border-gray-300 px-3 py-2 text-left">NM$</th>
-                  <th className="border border-gray-300 px-3 py-2 text-left">Milk</th>
-                  <th className="border border-gray-300 px-3 py-2 text-left">Fat</th>
-                  <th className="border border-gray-300 px-3 py-2 text-left">Protein</th>
-                  <th className="border border-gray-300 px-3 py-2 text-left">DPR</th>
-                  <th className="border border-gray-300 px-3 py-2 text-left">SCS</th>
-                  <th className="border border-gray-300 px-3 py-2 text-left">PTAT</th>
-                  <th className="border border-gray-300 px-3 py-2 text-left">Percentil</th>
-                  <th className="border border-gray-300 px-3 py-2 text-left">Motivo</th>
-                </tr>
-              </thead>
+               <thead>
+                 <tr className="bg-gray-100">
+                   <th className="border border-gray-300 px-3 py-2 text-left">Grupo</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">Brinco</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">Nascimento</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">Ordem de Parto</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">Categoria</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">NAAB Pai</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">Nome Pai</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">{config.primaryIndex}</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">Motivo</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">HHP$®</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">TPI</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">NM$</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">CM$</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">FM$</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">GM$</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">F SAV</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">PTAM</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">CFP</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">PTAF</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">PTAF%</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">PTAP</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">PTAP%</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">PL</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">DPR</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">LIV</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">SCS</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">MAST</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">MET</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">RP</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">DA</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">KET</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">MF</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">PTAT</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">UDC</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">FLC</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">SCE</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">DCE</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">SSB</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">DSB</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">H LIV</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">CCR</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">HCR</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">FI</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">GL</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">EFC</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">BWC</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">STA</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">STR</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">DFM</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">RUA</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">RLS</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">RTP</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">FTL</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">RW</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">RLR</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">FTA</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">FLS</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">FUA</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">RUH</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">RUW</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">UCL</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">UDP</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">FTP</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">RFI</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">Milk</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">Fat</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">Protein</th>
+                   <th className="border border-gray-300 px-3 py-2 text-left">Percentil</th>
+                 </tr>
+               </thead>
               <tbody>
                 {segmentedFemales
                   .sort((a, b) => {
@@ -1290,30 +1340,80 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
                         <td className="px-3 py-2">{f.categoria || categorizeAnimal(f.nascimento, f.ordemParto)}</td>
                         <td className="px-3 py-2">{f.naabPai}</td>
                         <td className="px-3 py-2 text-red-600 font-medium">{f.nomePai}</td>
-                        <td className="px-3 py-2">
-                          {(() => {
-                            const primary = config.primaryIndex;
-                            const nmCandidate = (f as any)["HHP$"] ?? (f as any)["NM$"] ?? (f as any).NM ?? null;
-                            if (primary === "TPI")  return isFinite(Number(f.TPI)) ? Number(f.TPI).toFixed(0) : "—";
-                            if (primary === "NM$" || primary === "HHP$")
-                              return isFinite(Number(nmCandidate)) ? Number(nmCandidate).toFixed(0) : "—";
-                            if (primary === "Custom") {
-                              const val = getPrimaryValue(f, "Custom", statsForCustom, customWeights, selectedTraits);
-                              return val !== null && isFinite(Number(val)) ? Number(val).toFixed(2) : "—";
-                            }
-                            return "—";
-                          })()}
-                        </td>
-                        <td className="px-3 py-2 font-semibold">{f.TPI}</td>
-                        <td className="px-3 py-2 font-semibold">{f["NM$"]}</td>
-                        <td className="px-3 py-2">{f.Milk}</td>
-                        <td className="px-3 py-2">{f.Fat}</td>
-                        <td className="px-3 py-2">{f.Protein}</td>
-                        <td className="px-3 py-2">{f.DPR?.toFixed(1)}</td>
-                        <td className="px-3 py-2">{f.SCS?.toFixed(2)}</td>
-                        <td className="px-3 py-2">{f.PTAT?.toFixed(2)}</td>
-                        <td className="px-3 py-2">{f._percentil}%</td>
-                        <td className="px-3 py-2 text-sm text-gray-600">{f._motivo}</td>
+                         <td className="px-3 py-2">
+                           {(() => {
+                             const primary = config.primaryIndex;
+                             const nmCandidate = (f as any)["HHP$"] ?? (f as any)["NM$"] ?? (f as any).NM ?? null;
+                             if (primary === "TPI")  return isFinite(Number(f.TPI)) ? Number(f.TPI).toFixed(0) : "—";
+                             if (primary === "NM$" || primary === "HHP$")
+                               return isFinite(Number(nmCandidate)) ? Number(nmCandidate).toFixed(0) : "—";
+                             if (primary === "Custom") {
+                               const val = getPrimaryValue(f, "Custom", statsForCustom, customWeights, selectedTraits);
+                               return val !== null && isFinite(Number(val)) ? Number(val).toFixed(2) : "—";
+                             }
+                             return "—";
+                           })()}
+                         </td>
+                         <td className="px-3 py-2 text-sm text-gray-600">{f._motivo}</td>
+                         <td className="px-3 py-2">{(f as any)["HHP$"] ? Number((f as any)["HHP$"]).toFixed(0) : "—"}</td>
+                         <td className="px-3 py-2 font-semibold">{f.TPI}</td>
+                         <td className="px-3 py-2 font-semibold">{f["NM$"]}</td>
+                         <td className="px-3 py-2">{(f as any)["CM$"] ? Number((f as any)["CM$"]).toFixed(0) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any)["FM$"] ? Number((f as any)["FM$"]).toFixed(0) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any)["GM$"] ? Number((f as any)["GM$"]).toFixed(0) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any)["F SAV"] ? Number((f as any)["F SAV"]).toFixed(1) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).PTAM ? Number((f as any).PTAM).toFixed(0) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).CFP ? Number((f as any).CFP).toFixed(1) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).PTAF ? Number((f as any).PTAF).toFixed(0) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any)["PTAF%"] ? Number((f as any)["PTAF%"]).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).PTAP ? Number((f as any).PTAP).toFixed(0) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any)["PTAP%"] ? Number((f as any)["PTAP%"]).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).PL ? Number((f as any).PL).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{f.DPR?.toFixed(1)}</td>
+                         <td className="px-3 py-2">{(f as any).LIV ? Number((f as any).LIV).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{f.SCS?.toFixed(2)}</td>
+                         <td className="px-3 py-2">{(f as any).MAST ? Number((f as any).MAST).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).MET ? Number((f as any).MET).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).RP ? Number((f as any).RP).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).DA ? Number((f as any).DA).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).KET ? Number((f as any).KET).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).MF ? Number((f as any).MF).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{f.PTAT?.toFixed(2)}</td>
+                         <td className="px-3 py-2">{(f as any).UDC ? Number((f as any).UDC).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).FLC ? Number((f as any).FLC).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).SCE ? Number((f as any).SCE).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).DCE ? Number((f as any).DCE).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).SSB ? Number((f as any).SSB).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).DSB ? Number((f as any).DSB).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any)["H LIV"] ? Number((f as any)["H LIV"]).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).CCR ? Number((f as any).CCR).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).HCR ? Number((f as any).HCR).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).FI ? Number((f as any).FI).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).GL ? Number((f as any).GL).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).EFC ? Number((f as any).EFC).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).BWC ? Number((f as any).BWC).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).STA ? Number((f as any).STA).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).STR ? Number((f as any).STR).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).DFM ? Number((f as any).DFM).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).RUA ? Number((f as any).RUA).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).RLS ? Number((f as any).RLS).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).RTP ? Number((f as any).RTP).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).FTL ? Number((f as any).FTL).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).RW ? Number((f as any).RW).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).RLR ? Number((f as any).RLR).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).FTA ? Number((f as any).FTA).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).FLS ? Number((f as any).FLS).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).FUA ? Number((f as any).FUA).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).RUH ? Number((f as any).RUH).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).RUW ? Number((f as any).RUW).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).UCL ? Number((f as any).UCL).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).UDP ? Number((f as any).UDP).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).FTP ? Number((f as any).FTP).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{(f as any).RFI ? Number((f as any).RFI).toFixed(2) : "—"}</td>
+                         <td className="px-3 py-2">{f.Milk}</td>
+                         <td className="px-3 py-2">{f.Fat}</td>
+                         <td className="px-3 py-2">{f.Protein}</td>
+                         <td className="px-3 py-2">{f._percentil}%</td>
                       </tr>
                     );
                   })}
