@@ -178,15 +178,15 @@ export const usePlanStore = create<PlanState>()(
 
 // Front-end data source functions (ordered by priority)
 function getFemalesByFarm(farmId: string): any[] {
-  // Priority 1: Rebanho cache
+  // Priority 1: window.Rebanho?.femalesByFarm?.[selectedFarmId]
   const rebanhoCache = (window as any).Rebanho?.femalesByFarm?.[farmId];
   if (Array.isArray(rebanhoCache)) return rebanhoCache;
   
-  // Priority 2: ToolSS cache
+  // Priority 2: window.ToolSS?.cache?.femalesByFarm?.[selectedFarmId]
   const toolssCache = (window as any).ToolSS?.cache?.femalesByFarm?.[farmId];
   if (Array.isArray(toolssCache)) return toolssCache;
   
-  // Priority 3: localStorage
+  // Priority 3: JSON.parse(localStorage.getItem("toolss.femalesByFarm")||"{}")[selectedFarmId]
   try {
     const map = JSON.parse(localStorage.getItem("toolss.femalesByFarm") || "{}");
     if (Array.isArray(map?.[farmId])) return map[farmId];
@@ -194,9 +194,27 @@ function getFemalesByFarm(farmId: string): any[] {
     console.warn('Error parsing toolss.femalesByFarm from localStorage:', e);
   }
   
-  // Priority 4: AppCache fallback
-  const appCache = (window as any).AppCache?.females?.[farmId];
-  return Array.isArray(appCache) ? appCache : [];
+  return [];
+}
+
+// Normalização robusta para mojibake (Item 2)
+function normalizeCategoria(raw: any): string | null {
+  if (!raw) return null;
+  
+  // Converte para string, normaliza NFD e remove diacríticos
+  const s = String(raw)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacríticos
+    .replace(/[^\p{L}]/gu, '') // Remove separadores/dígitos/sinais
+    .toUpperCase();
+  
+  // Classificação por padrões inclusivos (singular/plural e mojibake)
+  if (s.includes('NOVILH')) return 'NOVILHA';
+  if (s.includes('SECUND') && s.includes('PARA')) return 'SECUNDIPARA';
+  if (s.includes('MULT') && s.includes('PARA')) return 'MULTIPARA';
+  if (s.includes('PRIM') && s.includes('PARA') && !s.includes('SECUND') && !s.includes('MULT')) return 'PRIMIPARA';
+  
+  return null;
 }
 
 function deriveParity(f: any): number | null {
@@ -213,61 +231,50 @@ function deriveParity(f: any): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function normCategoria(raw: any): string | null {
-  if (!raw) return null;
-  const s = String(raw)
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .trim().toUpperCase().replace(/\s+/g, '');
+// Contagem por categoria (coluna H) - Item 3
+function countFromCategoria(list: any[]): PopulationCounts {
+  let heifers = 0, primiparous = 0, secundiparous = 0, multiparous = 0;
+  let missingCategoriaCount = 0;
   
-  // Variações normais
-  if (s === 'NOVILHA' || s === 'NOVILHAS') return 'NOVILHA';
-  if (s === 'PRIMIPARA' || s === 'PRIMIPARAS') return 'PRIMIPARA';
-  if (s === 'SECUNDIPARA' || s === 'SECUNDIPARAS') return 'SECUNDIPARA';
-  if (s === 'MULTIPARA' || s === 'MULTIPARAS') return 'MULTIPARA';
-  
-  // Variações com encoding quebrado (UTF-8 mal interpretado)
-  if (s.includes('PRIMA') || s.includes('PRIMÃ')) return 'PRIMIPARA';
-  if (s.includes('SECUNDA') || s.includes('SECUNDÃ')) return 'SECUNDIPARA';
-  if (s.includes('MULTA') || s.includes('MULTÃ')) return 'MULTIPARA';
-  
-  return null;
-}
-
-function parityFallback(f: any): number | null {
-  const v = Number(f?.parity ?? f?.num_partos ?? f?.ordem_parto);
-  return Number.isFinite(v) ? v : null;
-}
-
-function countFromFemales(list: any[]) {
-  let n0 = 0, n1 = 0, n2 = 0, n3 = 0;
-  
-  for (const f of list) {
-    // First try categoria field
-    const c = normCategoria(f?.categoria);
-    if (c) {
-      if (c === 'NOVILHA') n0++;
-      else if (c === 'PRIMIPARA') n1++;
-      else if (c === 'SECUNDIPARA') n2++;
-      else if (c === 'MULTIPARA') n3++;
+  for (const row of list) {
+    // Item 1: obter rawCat (objeto com chave "Categoria" ou array onde índice 7 é coluna H)
+    const rawCat = row?.Categoria ?? row?.categoria ?? row?.[7] ?? null;
+    
+    if (!rawCat) {
+      missingCategoriaCount++;
       continue;
     }
     
-    // Fallback to parity only if categoria is empty
-    const p = parityFallback(f);
-    if (p === null) continue;
-    if (p <= 0) n0++;
-    else if (p === 1) n1++;
-    else if (p === 2) n2++;
-    else n3++;
+    // Item 2: normalizar
+    const normalizedCat = normalizeCategoria(rawCat);
+    
+    // Item 3: incrementar contadores
+    switch (normalizedCat) {
+      case 'NOVILHA':
+        heifers++;
+        break;
+      case 'PRIMIPARA':
+        primiparous++;
+        break;
+      case 'SECUNDIPARA':
+        secundiparous++;
+        break;
+      case 'MULTIPARA':
+        multiparous++;
+        break;
+      default:
+        // Categoria não reconhecida, ignorar na contagem
+        break;
+    }
   }
   
-  return { 
-    heifers: n0, 
-    primiparous: n1, 
-    secundiparous: n2, 
-    multiparous: n3, 
-    total: n0 + n1 + n2 + n3 
-  };
+  // Aviso se >90% das linhas não tem categoria (opcional)
+  if (list.length > 0 && missingCategoriaCount / list.length > 0.9) {
+    console.warn(`⚠️ Mais de 90% das fêmeas (${missingCategoriaCount}/${list.length}) não possuem categoria definida`);
+  }
+  
+  const total = heifers + primiparous + secundiparous + multiparous;
+  return { heifers, primiparous, secundiparous, multiparous, total };
 }
 
 // Category definitions for automatic counting (improved)
@@ -290,44 +297,32 @@ export const CATEGORY_DEFINITIONS = {
   }
 };
 
-// Calculate population structure from farm data (improved with front-end sources)
-export const calculatePopulationStructure = (farm: any): PopulationCounts => {
-  console.log('calculatePopulationStructure called for farm:', farm?.nome);
+// Calculate population structure from farm data using categoria (coluna H)
+export const calculatePopulationStructure = (farmId: string): PopulationCounts => {
+  console.log('calculatePopulationStructure called for farmId:', farmId);
   
-  // Try multiple data sources
-  let females = farm?.females;
-  if (!Array.isArray(females) && farm?.id) {
-    console.log('No females in farm object, trying front-end sources...');
-    females = getFemalesByFarm(farm.id.toString());
-    console.log('Found females from front-end sources:', females.length);
-  }
+  // Item 1: obter lista de fêmeas das fontes front-end
+  const females = getFemalesByFarm(farmId);
   
   if (!Array.isArray(females) || females.length === 0) {
-    console.log('No females found in any data source');
+    console.log('No females found in any data source for farm:', farmId);
     return { heifers: 0, primiparous: 0, secundiparous: 0, multiparous: 0, total: 0 };
   }
   
   console.log('Total females found:', females.length);
   
-  // Log some sample females to check data format
+  // Log sample data to verify category format
   console.log('Sample females (first 3):', females.slice(0, 3).map((f: any) => ({
-    nome: f.nome,
-    paridade: f.paridade,
-    categoria: f.categoria,
-    derivedParity: deriveParity(f)
+    nome: f.nome || f[0] || 'N/A',
+    categoria: f?.Categoria ?? f?.categoria ?? f?.[7] ?? 'N/A',
+    rawRow: Array.isArray(f) ? `Array[${f.length}]` : 'Object'
   })));
   
-  // Use pure counting function
-  const counts = countFromFemales(females);
-  console.log('Category counts:', counts);
+  // Item 3: usar contagem por categoria (coluna H)
+  const counts = countFromCategoria(females);
+  console.log('Category counts from coluna H:', counts);
   
-  return { 
-    heifers: counts.heifers, 
-    primiparous: counts.primiparous, 
-    secundiparous: counts.secundiparous, 
-    multiparous: counts.multiparous,
-    total: counts.total
-  };
+  return counts;
 };
 
 // Calculate mother averages from farm data
@@ -365,7 +360,7 @@ const calculateMotherAverages = (farm: any, ptaLabels: string[]): Record<string,
 };
 
 // Export utility functions
-export { getFemalesByFarm, normCategoria, parityFallback, countFromFemales, calculateMotherAverages };
+export { getFemalesByFarm, normalizeCategoria, countFromCategoria, calculateMotherAverages };
 export const getBullPTAValue = (bull: any, ptaLabel: string): number | null => {
   const fieldName = LABEL_TO_FIELD[ptaLabel] || ptaLabel;
   const value = bull[fieldName];

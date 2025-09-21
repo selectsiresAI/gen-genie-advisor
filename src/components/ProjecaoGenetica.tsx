@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { usePlanStore, AVAILABLE_PTAS, getFemalesByFarm, countFromFemales, calculateMotherAverages, getBullPTAValue } from "../hooks/usePlanStore";
+import { usePlanStore, AVAILABLE_PTAS, getFemalesByFarm, countFromCategoria, calculateMotherAverages, getBullPTAValue, calculatePopulationStructure } from "../hooks/usePlanStore";
 import { toast } from "sonner";
-import "../utils/categoryCounter"; // Import to run the category counter
 
 /**
  * Projeção Genética MVP – Select Sires (Frontend Only, Single File)
@@ -484,19 +483,22 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
     }
   }, [planStore.selectedFarmId]);
   
-  // ÚNICO efeito anti-loop para população
+  // ÚNICO efeito anti-loop para população (Item 4)
   useEffect(() => {
+    // Só recalcula em modo auto e com fazenda selecionada
     if (planStore.populationMode !== 'auto' || !planStore.selectedFarmId) return;
 
+    // Ler a lista (Item 1) e calcular next = countFromCategoria(list)
     const females = getFemalesByFarm(planStore.selectedFarmId);
-    // hash de estabilidade: muda só quando muda a fonte
+    
+    // Hash de estabilidade: muda só quando muda a fonte
     const srcHash = planStore.selectedFarmId + '|' + (Array.isArray(females) ? females.length : 0);
-    if (prevHashRef.current === srcHash) return; // evita recálculo redundante
+    if (prevHashRef.current === srcHash) return; // Evita recálculo redundante
 
-    const next = countFromFemales(females || []);
+    const next = countFromCategoria(females || []);
     prevHashRef.current = srcHash;
 
-    // só aplica se mudou (sem setState em cascata)
+    // Só aplica setPopulationCounts(next) se houver mudança real (comparação dos 5 números)
     const curr = planStore.populationCounts;
     const changed = !curr || curr.heifers !== next.heifers || curr.primiparous !== next.primiparous ||
                     curr.secundiparous !== next.secundiparous || curr.multiparous !== next.multiparous || curr.total !== next.total;
@@ -509,7 +511,7 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
   const handleRecalculate = () => {
     if (planStore.selectedFarmId) {
       const females = getFemalesByFarm(planStore.selectedFarmId);
-      const next = countFromFemales(females || []);
+      const next = countFromCategoria(females || []);
       // Force recalculation by updating hash
       prevHashRef.current = planStore.selectedFarmId + '|' + Date.now();
       planStore.setPopulationCounts(next);
