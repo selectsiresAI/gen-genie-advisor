@@ -178,22 +178,56 @@ export const usePlanStore = create<PlanState>()(
 
 // Front-end data source functions (ordered by priority)
 function getFemalesByFarm(farmId: string): any[] {
+  console.log('🔍 getFemalesByFarm called with farmId:', farmId);
+  
   // Priority 1: window.Rebanho?.femalesByFarm?.[selectedFarmId]
   const rebanhoCache = (window as any).Rebanho?.femalesByFarm?.[farmId];
-  if (Array.isArray(rebanhoCache)) return rebanhoCache;
+  if (Array.isArray(rebanhoCache)) {
+    console.log('✅ Found data in window.Rebanho, count:', rebanhoCache.length);
+    return rebanhoCache;
+  }
   
   // Priority 2: window.ToolSS?.cache?.femalesByFarm?.[selectedFarmId]
   const toolssCache = (window as any).ToolSS?.cache?.femalesByFarm?.[farmId];
-  if (Array.isArray(toolssCache)) return toolssCache;
+  if (Array.isArray(toolssCache)) {
+    console.log('✅ Found data in window.ToolSS, count:', toolssCache.length);
+    return toolssCache;
+  }
   
   // Priority 3: JSON.parse(localStorage.getItem("toolss.femalesByFarm")||"{}")[selectedFarmId]
   try {
     const map = JSON.parse(localStorage.getItem("toolss.femalesByFarm") || "{}");
-    if (Array.isArray(map?.[farmId])) return map[farmId];
+    if (Array.isArray(map?.[farmId])) {
+      console.log('✅ Found data in localStorage toolss.femalesByFarm, count:', map[farmId].length);
+      return map[farmId];
+    }
   } catch (e) {
     console.warn('Error parsing toolss.femalesByFarm from localStorage:', e);
   }
   
+  // Priority 4: Check ToolSSApp data format (toolss_clients_v2_with_500_females)
+  try {
+    const toolssData = localStorage.getItem("toolss_clients_v2_with_500_females");
+    if (toolssData) {
+      const clients = JSON.parse(toolssData);
+      console.log('🔍 Found ToolSSApp data, clients count:', clients.length);
+      
+      for (const client of clients) {
+        if (client.farms) {
+          const farm = client.farms.find((f: any) => f.id === farmId);
+          if (farm && Array.isArray(farm.females)) {
+            console.log('✅ Found farm data in ToolSSApp, females count:', farm.females.length);
+            console.log('📋 Sample female:', farm.females[0]);
+            return farm.females;
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Error parsing ToolSSApp data from localStorage:', e);
+  }
+  
+  console.log('❌ No females found for farmId:', farmId);
   return [];
 }
 
