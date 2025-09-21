@@ -59,26 +59,31 @@ const fetchBullFromDatabase = async (naab: string): Promise<Bull | null> => {
     // Use same loadClients function as ToolSSApp
     const clients = loadClients();
     if (!clients) {
+      console.log('❌ No clients data available');
       return null;
     }
 
-    console.log(`📊 Clientes encontrados: ${clients.length}`);
+    console.log(`📊 Clientes carregados: ${clients.length}`);
     
-    // Count total bulls across all farms
+    // Count total bulls across all farms and search
     let totalBulls = 0;
     let foundBull = null;
     
-    // Search through all farms and all bulls
+    // Search through all clients and farms
     for (const client of clients) {
       if (client.farms && Array.isArray(client.farms)) {
         for (const farm of client.farms) {
           if (farm.bulls && Array.isArray(farm.bulls)) {
             totalBulls += farm.bulls.length;
             
-            // Search for the specific bull by NAAB
+            // Search for the specific bull by NAAB (exact match)
             const bull = farm.bulls.find((b: any) => {
               const bullNaab = String(b.naab || '').toUpperCase().trim();
-              return bullNaab === cleanNaab;
+              const match = bullNaab === cleanNaab;
+              if (match) {
+                console.log(`🎯 Match found! Looking for: "${cleanNaab}" Found: "${bullNaab}"`);
+              }
+              return match;
             });
             
             if (bull) {
@@ -247,8 +252,29 @@ const IndividualPrediction: React.FC = () => {
     }
   };
 
+  // Auto-fetch bull data when NAAB is typed (like VLOOKUP)
+  const handleNaabChange = async (field: 'sireNaab' | 'mgsNaab' | 'mmgsNaab', value: string) => {
+    const upperValue = value.toUpperCase();
+    setPedigreeInput({ [field]: upperValue });
+    
+    // If NAAB is complete (typically 9-11 characters), try to fetch bull data automatically
+    if (upperValue.length >= 9) {
+      try {
+        const bull = await fetchBullFromDatabase(upperValue);
+        if (bull) {
+          setBullCache(upperValue, bull);
+          toast({
+            title: 'Touro encontrado!',
+            description: `${bull.name} (${bull.company}) - PTAs carregadas automaticamente`,
+          });
+        }
+      } catch (error) {
+        console.log(`Auto-fetch failed for ${upperValue}:`, error);
+      }
+    }
+  };
+
   const fetchBullPTAs = async () => {
-    // First run debug
     debugLocalStorage();
     
     const errors = validateNaabs(pedigreeInput);
@@ -386,7 +412,7 @@ const IndividualPrediction: React.FC = () => {
               <Input
                 id="sire-naab"
                 value={pedigreeInput.sireNaab}
-                onChange={(e) => setPedigreeInput({ sireNaab: e.target.value.toUpperCase() })}
+                onChange={(e) => handleNaabChange('sireNaab', e.target.value)}
                 placeholder="Ex: 001HO25295"
                 className="uppercase"
               />
@@ -402,7 +428,7 @@ const IndividualPrediction: React.FC = () => {
               <Input
                 id="mgs-naab"
                 value={pedigreeInput.mgsNaab}
-                onChange={(e) => setPedigreeInput({ mgsNaab: e.target.value.toUpperCase() })}
+                onChange={(e) => handleNaabChange('mgsNaab', e.target.value)}
                 placeholder="Ex: 029HO22133"
                 className="uppercase"
               />
@@ -418,7 +444,7 @@ const IndividualPrediction: React.FC = () => {
               <Input
                 id="mmgs-naab"
                 value={pedigreeInput.mmgsNaab}
-                onChange={(e) => setPedigreeInput({ mmgsNaab: e.target.value.toUpperCase() })}
+                onChange={(e) => handleNaabChange('mmgsNaab', e.target.value)}
                 placeholder="Ex: 097HO17371"
                 className="uppercase"
               />
