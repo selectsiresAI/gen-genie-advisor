@@ -99,6 +99,7 @@ interface AppState {
   toolssBulls: any[]; // bulls do ToolSSApp
   selectedClient: any; // cliente selecionado do ToolSSApp
   selectedFarm: any; // fazenda selecionada do ToolSSApp
+  autoCalculatePopulation: boolean; // se deve calcular automaticamente a população
 }
 
 // ---------- Helpers ----------
@@ -182,6 +183,21 @@ function calculateMothersPTAs(selectedFarm: any, selectedPTAs: PTAKey[]): Record
   return result;
 }
 
+// Função para calcular estrutura populacional baseada no rebanho
+function calculatePopulationStructure(selectedFarm: any): StructurePopulation {
+  if (!selectedFarm || !selectedFarm.females) {
+    return { total: 0, novilhas: 0, primiparas: 0, secundiparas: 0, multiparas: 0 };
+  }
+
+  const novilhas = selectedFarm.females.filter((f: any) => f.categoria === "Calf" || f.categoria === "Heifer").length;
+  const primiparas = selectedFarm.females.filter((f: any) => f.categoria === "Primiparous").length;  
+  const secundiparas = selectedFarm.females.filter((f: any) => f.categoria === "Secondiparous").length;
+  const multiparas = selectedFarm.females.filter((f: any) => f.categoria === "Multiparous").length;
+  const total = novilhas + primiparas + secundiparas + multiparas;
+
+  return { total, novilhas, primiparas, secundiparas, multiparas };
+}
+
 // ---------- Estado & Persistência ----------
 const LS_KEY = "projGen_MVP_state_v2";
 
@@ -222,6 +238,7 @@ function useAppState() {
       toolssBulls: [],
       selectedClient: null,
       selectedFarm: null,
+      autoCalculatePopulation: false,
     } as AppState;
   });
 
@@ -302,6 +319,7 @@ function useAppState() {
       toolssBulls: [],
       selectedClient: null,
       selectedFarm: null,
+      autoCalculatePopulation: false,
     };
     setState(test);
   };
@@ -419,7 +437,7 @@ function Label({ children }: { children: React.ReactNode }) {
   return <label style={{ fontSize: 12, color: COLORS.black, fontWeight: 600 }}>{children}</label>;
 }
 
-function Input({ value, onChange, type = "text", placeholder, min }: { value: any; onChange: (v: any) => void; type?: string; placeholder?: string; min?: number }) {
+function Input({ value, onChange, type = "text", placeholder, min, disabled }: { value: any; onChange: (v: any) => void; type?: string; placeholder?: string; min?: number; disabled?: boolean }) {
   return (
     <input
       value={value ?? ""}
@@ -427,13 +445,16 @@ function Input({ value, onChange, type = "text", placeholder, min }: { value: an
       type={type}
       placeholder={placeholder}
       min={min}
+      disabled={disabled}
       style={{
         width: "100%",
         padding: "10px 12px",
         border: `1px solid ${COLORS.gray}`,
         borderRadius: 10,
         outline: "none",
-        background: "#fff",
+        background: disabled ? "#f5f5f5" : "#fff",
+        color: disabled ? "#666" : "inherit",
+        cursor: disabled ? "not-allowed" : "inherit",
       }}
     />
   );
@@ -500,6 +521,14 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
     }
   }, [st.selectedFarm, st.selectedPTAs, setSt]);
 
+  // Atualiza estrutura populacional quando rebanho muda e auto-cálculo está ativado
+  useEffect(() => {
+    if (st.selectedFarm && st.autoCalculatePopulation) {
+      const calculatedStructure = calculatePopulationStructure(st.selectedFarm);
+      setSt(prev => ({ ...prev, structure: calculatedStructure }));
+    }
+  }, [st.selectedFarm, st.autoCalculatePopulation, setSt]);
+
   const selectedClientData = toolssClients.find(c => c.id === st.selectedClient?.id);
   const farms = selectedClientData?.farms || [];
 
@@ -547,10 +576,14 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
             <div>
               <Label>Fazenda</Label>
               <Select 
-                value={st.selectedFarm?.id || ""} 
+                value={st.selectedFarm?.id ? st.selectedFarm.id.toString() : ""} 
                 onChange={(v) => {
-                  const farm = farms.find((f: any) => f.id === parseInt(v));
-                  setSt(s => ({ ...s, selectedFarm: farm }));
+                  if (v === "") {
+                    setSt(s => ({ ...s, selectedFarm: null }));
+                  } else {
+                    const farm = farms.find((f: any) => f.id === parseInt(v));
+                    setSt(s => ({ ...s, selectedFarm: farm }));
+                  }
                 }}
                 options={[
                   { value: "", label: "Selecione uma fazenda" },
@@ -609,10 +642,34 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
           {/* Estrutura populacional */}
           <div>
             <h3 style={{ fontWeight: 700, marginBottom: 8 }}>Estrutura Populacional</h3>
+            
+            {/* Opção para cálculo automático */}
+            <div style={{ marginBottom: 12, padding: 8, background: "#f8f9fa", borderRadius: 6 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, cursor: "pointer" }}>
+                <input 
+                  type="checkbox" 
+                  checked={st.autoCalculatePopulation}
+                  onChange={(e) => setSt(s => ({ ...s, autoCalculatePopulation: e.target.checked }))}
+                />
+                <strong>Calcular automaticamente com base no rebanho selecionado</strong>
+              </label>
+              {st.autoCalculatePopulation && !st.selectedFarm && (
+                <div style={{ fontSize: 11, color: COLORS.red, marginTop: 4 }}>
+                  ⚠️ Selecione um rebanho para cálculo automático
+                </div>
+              )}
+            </div>
+
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               <div>
                 <Label>Total de fêmeas aptas</Label>
-                <Input type="number" min={0} value={st.structure.total} onChange={(v) => setSt((s) => ({ ...s, structure: { ...s.structure, total: v === "" ? 0 : v } }))} />
+                <Input 
+                  type="number" 
+                  min={0} 
+                  value={st.structure.total} 
+                  onChange={(v) => setSt((s) => ({ ...s, structure: { ...s.structure, total: v === "" ? 0 : v } }))}
+                  disabled={st.autoCalculatePopulation}
+                />
               </div>
               {CATEGORIES.map(({ key, label }) => (
                 <div key={key}>
@@ -622,12 +679,18 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
                     min={0}
                     value={(st.structure as any)[key]}
                     onChange={(v) => setSt((s) => ({ ...s, structure: { ...s.structure, [key]: v === "" ? 0 : v } }))}
+                    disabled={st.autoCalculatePopulation}
                   />
                 </div>
               ))}
             </div>
             {overflow && (
               <div style={{ marginTop: 8, color: COLORS.red, fontWeight: 700 }}>Somatório das categorias excede o Total de fêmeas.</div>
+            )}
+            {st.autoCalculatePopulation && st.selectedFarm && (
+              <div style={{ marginTop: 8, fontSize: 11, color: "#16a34a" }}>
+                ✅ Estrutura calculada automaticamente: {st.structure.total} fêmeas
+              </div>
             )}
           </div>
 
@@ -828,25 +891,41 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
               <Select 
                 value={b.naab || ""} 
                 onChange={(naab) => {
-                  const selectedBull = toolssBulls.find(bull => bull.naab === naab);
-                  if (selectedBull) {
-                    const updatedPTA: Record<string, number> = {};
-                    st.selectedPTAs.forEach(pta => {
-                      updatedPTA[pta] = selectedBull[pta] || 0;
-                    });
-                    
+                  if (naab === "") {
+                    // Limpa o touro
                     setSt(s => ({ 
                       ...s, 
                       bulls: s.bulls.map((bull, i) => 
                         i === idx ? {
                           ...bull,
-                          name: selectedBull.nome,
-                          naab: selectedBull.naab,
-                          empresa: selectedBull.empresa || "",
-                          pta: updatedPTA
+                          name: "",
+                          naab: "",
+                          empresa: "",
+                          pta: Object.fromEntries(st.selectedPTAs.map(pta => [pta, 0]))
                         } : bull
                       )
                     }));
+                  } else {
+                    const selectedBull = toolssBulls.find(bull => bull.naab === naab);
+                    if (selectedBull) {
+                      const updatedPTA: Record<string, number> = {};
+                      st.selectedPTAs.forEach(pta => {
+                        updatedPTA[pta] = selectedBull[pta] || 0;
+                      });
+                      
+                      setSt(s => ({ 
+                        ...s, 
+                        bulls: s.bulls.map((bull, i) => 
+                          i === idx ? {
+                            ...bull,
+                            name: selectedBull.nome,
+                            naab: selectedBull.naab,
+                            empresa: selectedBull.empresa || "",
+                            pta: updatedPTA
+                          } : bull
+                        )
+                      }));
+                    }
                   }
                 }}
                 options={[
@@ -857,6 +936,11 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
                   }))
                 ]}
               />
+              {b.naab && (
+                <div style={{ marginTop: 4, fontSize: 11, color: "#16a34a" }}>
+                  ✅ PTAs carregadas automaticamente para as {st.selectedPTAs.length} características selecionadas
+                </div>
+              )}
             </div>
           )}
 
