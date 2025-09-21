@@ -88,6 +88,13 @@ export function countCategoriesInDatabase() {
   })));
 
   // Count each category
+  const uniqueCategories = new Set();
+  for (const female of allFemales) {
+    const categoria = female.categoria;
+    if (categoria) uniqueCategories.add(String(categoria).trim());
+  }
+  console.log('🏷️ Categorias únicas encontradas:', Array.from(uniqueCategories));
+
   for (const female of allFemales) {
     const categoria = female.categoria;
     
@@ -96,15 +103,16 @@ export function countCategoriesInDatabase() {
       continue;
     }
     
-    const cat = String(categoria).trim().toLowerCase();
+    // Normalização mais robusta para encoding quebrado
+    const cat = String(categoria).trim().toUpperCase();
     
-    if (cat.includes('novilha')) {
+    if (cat.includes('NOVILHA')) {
       categoryCounts.novilhas++;
-    } else if (cat.includes('primípara') || cat.includes('primipara')) {
+    } else if (cat.includes('PRIMÃ') || cat.includes('PRIMA') || cat.includes('PRIMÍPARA') || cat.includes('PRIMIPARA')) {
       categoryCounts.primiparas++;
-    } else if (cat.includes('secundípara') || cat.includes('secundipara')) {
+    } else if (cat.includes('SECUNDÃ') || cat.includes('SECUNDA') || cat.includes('SECUNDÍPARA') || cat.includes('SECUNDIPARA')) {
       categoryCounts.secundiparas++;  
-    } else if (cat.includes('multípara') || cat.includes('multipara')) {
+    } else if (cat.includes('MULTÃ') || cat.includes('MULTA') || cat.includes('MULTÍPARA') || cat.includes('MULTIPARA')) {
       categoryCounts.multiparas++;
     } else {
       categoryCounts.outros++;

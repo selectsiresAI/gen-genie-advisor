@@ -218,10 +218,18 @@ function normCategoria(raw: any): string | null {
   const s = String(raw)
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .trim().toUpperCase().replace(/\s+/g, '');
+  
+  // Variações normais
   if (s === 'NOVILHA' || s === 'NOVILHAS') return 'NOVILHA';
   if (s === 'PRIMIPARA' || s === 'PRIMIPARAS') return 'PRIMIPARA';
   if (s === 'SECUNDIPARA' || s === 'SECUNDIPARAS') return 'SECUNDIPARA';
   if (s === 'MULTIPARA' || s === 'MULTIPARAS') return 'MULTIPARA';
+  
+  // Variações com encoding quebrado (UTF-8 mal interpretado)
+  if (s.includes('PRIMA') || s.includes('PRIMÃ')) return 'PRIMIPARA';
+  if (s.includes('SECUNDA') || s.includes('SECUNDÃ')) return 'SECUNDIPARA';
+  if (s.includes('MULTA') || s.includes('MULTÃ')) return 'MULTIPARA';
+  
   return null;
 }
 
