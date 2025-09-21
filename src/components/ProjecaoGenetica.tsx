@@ -285,6 +285,22 @@ function useAppState() {
     }
   }, []);
 
+  // Auto-update population structure and mothers PTA when farm is selected
+  useEffect(() => {
+    if (state.selectedFarm && state.autoCalculatePopulation) {
+      const newStructure = calculatePopulationStructure(state.selectedFarm);
+      setState(prev => ({ ...prev, structure: newStructure }));
+    }
+  }, [state.selectedFarm, state.autoCalculatePopulation]);
+
+  // Auto-update mothers PTA when farm or selected PTAs change
+  useEffect(() => {
+    if (state.selectedFarm && state.selectedPTAs.length > 0) {
+      const mothersPTAs = calculateMothersPTAs(state.selectedFarm, state.selectedPTAs);
+      setState(prev => ({ ...prev, mothers: { values: mothersPTAs } }));
+    }
+  }, [state.selectedFarm, state.selectedPTAs]);
+
   const loadTestData = () => {
     const today = new Date().toISOString().slice(0, 10);
     const test: AppState = {
@@ -599,7 +615,7 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
                 }}
                 options={[
                   { value: "", label: "Selecione um cliente" },
-                  ...toolssClients.map(c => ({ value: c.id.toString(), label: `#${c.id} - ${c.nome}` }))
+                  ...toolssClients.map((c, index) => ({ value: c.id.toString(), label: `#${c.id} - ${c.nome}`, key: `client-${c.id}-${index}` }))
                 ]}
               />
             </div>
@@ -619,7 +635,7 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
                 }}
                 options={[
                   { value: "", label: "Selecione uma fazenda" },
-                  ...farms.map((f: any) => ({ value: f.id.toString(), label: `${f.nome} (${f.females?.length || 0} fêmeas)` }))
+                  ...farms.map((f: any, index) => ({ value: f.id.toString(), label: `${f.nome} (${f.females?.length || 0} fêmeas)`, key: `farm-${f.id}-${index}` }))
                 ]}
               />
             </div>
@@ -886,6 +902,20 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
     }
   }, [st.numberOfBulls, st.bulls.length, st.selectedPTAs, setSt]);
 
+  // Update existing bulls PTAs when selectedPTAs changes
+  useEffect(() => {
+    setSt(s => ({
+      ...s,
+      bulls: s.bulls.map(bull => {
+        const updatedPTA: Record<string, number> = {};
+        s.selectedPTAs.forEach(pta => {
+          updatedPTA[pta] = bull.pta[pta] || 0;
+        });
+        return { ...bull, pta: updatedPTA };
+      })
+    }));
+  }, [st.selectedPTAs, setSt]);
+
   return (
     <div>
       {/* Seleção do número de touros */}
@@ -985,13 +1015,14 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
                     }
                   }
                 }}
-                options={[
-                  { value: "", label: "Selecione um touro" },
-                  ...toolssBulls.map((bull, index) => ({
-                    value: bull.naab,
-                    label: `${bull.naab} - ${bull.nome} (${bull.empresa || "S/Empresa"})`
-                  }))
-                ]}
+                 options={[
+                   { value: "", label: "Selecione um touro" },
+                   ...toolssBulls.map((bull, index) => ({
+                     value: bull.naab,
+                     label: `${bull.naab} - ${bull.nome} (${bull.empresa || "S/Empresa"})`,
+                     key: `${bull.naab}-${index}` // Add unique key to prevent warnings
+                   }))
+                 ]}
               />
               {b.naab && (
                 <div style={{ marginTop: 4, fontSize: 11, color: "#16a34a" }}>
