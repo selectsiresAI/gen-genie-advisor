@@ -541,6 +541,22 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
     }));
   }, [segmentedFemales]);
 
+  const categoryStats = useMemo(() => {
+    const stats = { Novilhas: 0, Primíparas: 0, Secundíparas: 0, Multíparas: 0 };
+    
+    segmentedFemales.forEach(f => {
+      // Use existing category or calculate from birth date and parity
+      const category = f.categoria || categorizeAnimal(f.nascimento, f.ordemParto);
+      
+      if (category === "Novilha") stats.Novilhas++;
+      else if (category === "Primípara") stats.Primíparas++;
+      else if (category === "Secundípara") stats.Secundíparas++;
+      else if (category === "Multípara") stats.Multíparas++;
+    });
+    
+    return stats;
+  }, [segmentedFemales]);
+
   const handleExport = () => {
     const exportData = segmentedFemales.map(f => ({
       brinco: f.brinco,
@@ -627,6 +643,40 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
                 <li>• Ajustar gates sanitários (SCS ≤ 2.9)</li>
                 <li>• Verificar cortes percentuais</li>
               </ul>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Contadores de Animais */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Estatísticas do Rebanho
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="text-center p-4 bg-primary/5 rounded-lg border">
+              <div className="text-2xl font-bold text-primary">{segmentedFemales.length}</div>
+              <div className="text-sm text-muted-foreground">Total de Animais</div>
+            </div>
+            <div className="text-center p-4 bg-blue-50 rounded-lg border">
+              <div className="text-2xl font-bold text-blue-600">{categoryStats.Novilhas}</div>
+              <div className="text-sm text-muted-foreground">Novilhas</div>
+            </div>
+            <div className="text-center p-4 bg-green-50 rounded-lg border">
+              <div className="text-2xl font-bold text-green-600">{categoryStats.Primíparas}</div>
+              <div className="text-sm text-muted-foreground">Primíparas</div>
+            </div>
+            <div className="text-center p-4 bg-orange-50 rounded-lg border">
+              <div className="text-2xl font-bold text-orange-600">{categoryStats.Secundíparas}</div>
+              <div className="text-sm text-muted-foreground">Secundíparas</div>
+            </div>
+            <div className="text-center p-4 bg-purple-50 rounded-lg border">
+              <div className="text-2xl font-bold text-purple-600">{categoryStats.Multíparas}</div>
+              <div className="text-sm text-muted-foreground">Multíparas</div>
             </div>
           </div>
         </CardContent>
