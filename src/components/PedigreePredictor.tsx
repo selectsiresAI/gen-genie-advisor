@@ -412,13 +412,13 @@ const IndividualPrediction: React.FC = () => {
             </div>
           </div>
           
-          <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+           <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
             <Button 
               onClick={() => {
                 setPedigreeInput({ 
-                  sireNaab: '001HO25295', 
-                  mgsNaab: '029HO22133', 
-                  mmgsNaab: '097HO17371' 
+                  sireNaab: '007HO17628', 
+                  mgsNaab: '007HO25583', 
+                  mmgsNaab: '007HO22300' 
                 });
               }}
               variant="outline"
