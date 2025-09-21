@@ -46,6 +46,34 @@ type SegmentConfig = {
   critical_scs_gt: number;
 };
 
+// Utility function for automatic categorization
+function categorizeAnimal(nascimento: string, ordemParto?: number): string {
+  const birthDate = new Date(nascimento);
+  const now = new Date();
+  const ageInDays = Math.floor((now.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24));
+  
+  // Se não tem ordem de parto definida, assumir 0
+  const parity = ordemParto || 0;
+  
+  // Bezerra: do nascimento até 90 dias
+  if (ageInDays <= 90) {
+    return "Bezerra";
+  }
+  
+  // Baseado na ordem de parto
+  if (parity === 0) {
+    return "Novilha"; // Após 90 dias e nunca pariu
+  } else if (parity === 1) {
+    return "Primípara"; // Pariu uma vez
+  } else if (parity === 2) {
+    return "Secundípara"; // Pariu duas vezes
+  } else if (parity >= 3) {
+    return "Multípara"; // Pariu 3 ou mais vezes
+  }
+  
+  return "Novilha"; // Default
+}
+
 // Color scheme matching Select Sires branding
 const COLORS = {
   Doadoras: "hsl(var(--primary))", // Red
@@ -670,7 +698,7 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
                         <td className="px-3 py-2 font-medium">{f.brinco}</td>
                         <td className="px-3 py-2">{new Date(f.nascimento).toLocaleDateString()}</td>
                         <td className="px-3 py-2">{f.ordemParto || "-"}</td>
-                        <td className="px-3 py-2">{f.categoria || "-"}</td>
+                        <td className="px-3 py-2">{f.categoria || categorizeAnimal(f.nascimento, f.ordemParto)}</td>
                         <td className="px-3 py-2">{f.naabPai}</td>
                         <td className="px-3 py-2 text-red-600 font-medium">{f.nomePai}</td>
                         <td className="px-3 py-2">

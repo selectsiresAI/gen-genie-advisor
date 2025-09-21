@@ -268,6 +268,33 @@ type SegmentConfig = {
 };
 
 // ------------------------ Utilities ------------------------
+function categorizeAnimal(nascimento: string, ordemParto?: number): string {
+  const birthDate = new Date(nascimento);
+  const now = new Date();
+  const ageInDays = Math.floor((now.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24));
+  
+  // Se não tem ordem de parto definida, assumir 0
+  const parity = ordemParto || 0;
+  
+  // Bezerra: do nascimento até 90 dias
+  if (ageInDays <= 90) {
+    return "Bezerra";
+  }
+  
+  // Baseado na ordem de parto
+  if (parity === 0) {
+    return "Novilha"; // Após 90 dias e nunca pariu
+  } else if (parity === 1) {
+    return "Primípara"; // Pariu uma vez
+  } else if (parity === 2) {
+    return "Secundípara"; // Pariu duas vezes
+  } else if (parity >= 3) {
+    return "Multípara"; // Pariu 3 ou mais vezes
+  }
+  
+  return "Novilha"; // Default
+}
+
 function toCSV(rows: any[], filename = "export.csv") {
   if (!rows?.length) return;
   const headers = Object.keys(rows[0]);
@@ -310,7 +337,7 @@ const seedFemales: Female[] = [{
   brinco: "3382",
   nascimento: "2023-06-01",
   ordemParto: 1,
-  categoria: "Novilha",
+  categoria: categorizeAnimal("2023-06-01", 1),
   naabPai: "029HO19791",
   nomePai: "Haven",
   TPI: 2526,
@@ -327,7 +354,7 @@ const seedFemales: Female[] = [{
   brinco: "3407",
   nascimento: "2023-06-01",
   ordemParto: 1,
-  categoria: "Novilha",
+  categoria: categorizeAnimal("2023-06-01", 1),
   naabPai: "208HO00355",
   nomePai: "Cason",
   TPI: 2507,
@@ -344,7 +371,7 @@ const seedFemales: Female[] = [{
   brinco: "3151",
   nascimento: "2022-06-01",
   ordemParto: 2,
-  categoria: "Primípara",
+  categoria: categorizeAnimal("2022-06-01", 2),
   naabPai: "011HO15225",
   nomePai: "Luche",
   TPI: 2500,
@@ -360,8 +387,8 @@ const seedFemales: Female[] = [{
   id: "F3370",
   brinco: "3370",
   nascimento: "2023-06-01",
-  ordemParto: 1,
-  categoria: "Novilha",
+  ordemParto: 0,
+  categoria: categorizeAnimal("2023-06-01", 0),
   naabPai: "029HO19829",
   nomePai: "Stormy",
   TPI: 2496,
@@ -377,8 +404,8 @@ const seedFemales: Female[] = [{
   id: "F3280",
   brinco: "3280",
   nascimento: "2023-06-01",
-  ordemParto: 1,
-  categoria: "Novilha",
+  ordemParto: 0,
+  categoria: categorizeAnimal("2023-06-01", 0),
   naabPai: "029HO19829",
   nomePai: "Stormy",
   TPI: 2496,
@@ -394,8 +421,8 @@ const seedFemales: Female[] = [{
   id: "F3185",
   brinco: "3185",
   nascimento: "2023-06-01",
-  ordemParto: 1,
-  categoria: "Novilha",
+  ordemParto: 0,
+  categoria: categorizeAnimal("2023-06-01", 0),
   naabPai: "011HO15225",
   nomePai: "Luche",
   TPI: 2476,
@@ -410,9 +437,9 @@ const seedFemales: Female[] = [{
 }, {
   id: "F3430",
   brinco: "3430",
-  nascimento: "2023-06-01",
-  ordemParto: 1,
-  categoria: "Novilha",
+  nascimento: "2024-10-01", // Bezerra (< 90 dias)
+  ordemParto: 0,
+  categoria: categorizeAnimal("2024-10-01", 0),
   naabPai: "208HO00355",
   nomePai: "Cason",
   TPI: 2472,
@@ -423,7 +450,7 @@ const seedFemales: Female[] = [{
   DPR: 0.9,
   SCS: 3.0,
   PTAT: 0.66,
-  year: 2023
+  year: 2024
 },
 // anos anteriores para gráficos
 {
@@ -431,7 +458,7 @@ const seedFemales: Female[] = [{
   brinco: "2890",
   nascimento: "2019-05-20",
   ordemParto: 4,
-  categoria: "Multípara",
+  categoria: categorizeAnimal("2019-05-20", 4),
   naabPai: "007HO14195",
   nomePai: "Legacy",
   TPI: 1818,
@@ -448,7 +475,7 @@ const seedFemales: Female[] = [{
   brinco: "3001",
   nascimento: "2021-03-15",
   ordemParto: 3,
-  categoria: "Secundípara",
+  categoria: categorizeAnimal("2021-03-15", 3),
   naabPai: "250HO12961",
   nomePai: "Gameday",
   TPI: 2016,
@@ -921,22 +948,29 @@ export default function ToolSSApp() {
       });
       setClients(newClients);
     } else {
-      const females: Female[] = rows.map((r: any, i: number) => ({
-        id: r.id || `CSVF${Date.now()}${i}`,
-        brinco: r.Brinco || r.brinco || r.Tag || "",
-        nascimento: r.Nascimento || r.Birth || "2023-01-01",
-        naabPai: r.NaabPai || r.naabPai || r.SireNaab || "",
-        nomePai: r.NomePai || r.nomePai || r.Sire || "",
-        TPI: Number(r.TPI || 0),
-        ["NM$"]: Number(r["NM$"] || r.NM || 0),
-        Milk: Number(r.Milk || r.Leite || 0),
-        Fat: Number(r.Fat || r.Gordura || 0),
-        Protein: Number(r.Protein || r.Proteina || r.Proteína || 0),
-        DPR: Number(r.DPR || 0),
-        SCS: Number(r.SCS || r.CCS || 2.9),
-        PTAT: Number(r.PTAT || 0.4),
-        year: Number(r.Ano || r.Year || new Date(r.Nascimento || "2023-01-01").getFullYear())
-      }));
+      const females: Female[] = rows.map((r: any, i: number) => {
+        const nascimento = r.Nascimento || r.Birth || "2023-01-01";
+        const ordemParto = Number(r["Ordem de Parto"] || r["Ordem Parto"] || r.OrdemParto || 0);
+        
+        return {
+          id: r.id || `CSVF${Date.now()}${i}`,
+          brinco: r.Brinco || r.brinco || r.Tag || "",
+          nascimento,
+          ordemParto,
+          categoria: categorizeAnimal(nascimento, ordemParto),
+          naabPai: r.NaabPai || r.naabPai || r.SireNaab || "",
+          nomePai: r.NomePai || r.nomePai || r.Sire || "",
+          TPI: Number(r.TPI || 0),
+          ["NM$"]: Number(r["NM$"] || r.NM || 0),
+          Milk: Number(r.Milk || r.Leite || 0),
+          Fat: Number(r.Fat || r.Gordura || 0),
+          Protein: Number(r.Protein || r.Proteina || r.Proteína || 0),
+          DPR: Number(r.DPR || 0),
+          SCS: Number(r.SCS || r.CCS || 2.9),
+          PTAT: Number(r.PTAT || 0.4),
+          year: Number(r.Ano || r.Year || new Date(nascimento).getFullYear())
+        };
+      });
       const newClients = clients.map(c => c.id !== selectedClient.id ? c : {
         ...c,
         farms: c.farms.map(f => f.id === farm.id ? {
@@ -1529,7 +1563,7 @@ function HerdPage({
                   <td className="px-3 py-2">{f.pedigree || "-"}</td>
                   <td className="px-3 py-2">{new Date(f.nascimento).toLocaleDateString()}</td>
                   <td className="px-3 py-2">{f.ordemParto || "-"}</td>
-                  <td className="px-3 py-2">{f.categoria || "-"}</td>
+                  <td className="px-3 py-2">{f.categoria || categorizeAnimal(f.nascimento, f.ordemParto)}</td>
                   <td className="px-3 py-2 font-semibold">{f["HHP$"] || "-"}</td>
                   <td className="px-3 py-2 font-semibold">{f.TPI}</td>
                   <td className="px-3 py-2 font-semibold">{f["NM$"]}</td>
