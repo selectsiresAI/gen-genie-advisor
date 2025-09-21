@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { usePlanStore, AVAILABLE_PTAS, getFemalesByFarm, countFromFemales, calculateMotherAverages, getBullPTAValue } from "../hooks/usePlanStore";
 import { toast } from "sonner";
+import "../utils/categoryCounter"; // Import to run the category counter
 
 /**
  * Projeção Genética MVP – Select Sires (Frontend Only, Single File)
