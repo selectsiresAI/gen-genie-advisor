@@ -332,162 +332,122 @@ function normalize(value: number, mean: number, sd: number) {
 }
 
 // ------------------------ Seed Data ------------------------
-const seedFemales: Female[] = [{
-  id: "F3382",
-  brinco: "3382",
-  nascimento: "2023-06-01",
-  ordemParto: 1,
-  categoria: categorizeAnimal("2023-06-01", 1),
-  naabPai: "029HO19791",
-  nomePai: "Haven",
-  TPI: 2526,
-  NM$: 853,
-  Milk: 1811,
-  Fat: 70,
-  Protein: 53,
-  DPR: 1,
-  SCS: 2.9,
-  PTAT: 0.42,
-  year: 2023
-}, {
-  id: "F3407",
-  brinco: "3407",
-  nascimento: "2023-06-01",
-  ordemParto: 1,
-  categoria: categorizeAnimal("2023-06-01", 1),
-  naabPai: "208HO00355",
-  nomePai: "Cason",
-  TPI: 2507,
-  NM$: 797,
-  Milk: 1854,
-  Fat: 63,
-  Protein: 57,
-  DPR: 1.2,
-  SCS: 2.98,
-  PTAT: 0.50,
-  year: 2023
-}, {
-  id: "F3151",
-  brinco: "3151",
-  nascimento: "2022-06-01",
-  ordemParto: 2,
-  categoria: categorizeAnimal("2022-06-01", 2),
-  naabPai: "011HO15225",
-  nomePai: "Luche",
-  TPI: 2500,
-  NM$: 835,
-  Milk: 2180,
-  Fat: 66,
-  Protein: 67,
-  DPR: -1.1,
-  SCS: 2.8,
-  PTAT: 0.38,
-  year: 2022
-}, {
-  id: "F3370",
-  brinco: "3370",
-  nascimento: "2023-06-01",
-  ordemParto: 0,
-  categoria: categorizeAnimal("2023-06-01", 0),
-  naabPai: "029HO19829",
-  nomePai: "Stormy",
-  TPI: 2496,
-  NM$: 826,
-  Milk: 1632,
-  Fat: 64,
-  Protein: 48,
-  DPR: 0.6,
-  SCS: 2.87,
-  PTAT: 0.39,
-  year: 2023
-}, {
-  id: "F3280",
-  brinco: "3280",
-  nascimento: "2023-06-01",
-  ordemParto: 0,
-  categoria: categorizeAnimal("2023-06-01", 0),
-  naabPai: "029HO19829",
-  nomePai: "Stormy",
-  TPI: 2496,
-  NM$: 840,
-  Milk: 1716,
-  Fat: 64,
-  Protein: 52,
-  DPR: 0.4,
-  SCS: 2.9,
-  PTAT: 0.43,
-  year: 2023
-}, {
-  id: "F3185",
-  brinco: "3185",
-  nascimento: "2023-06-01",
-  ordemParto: 0,
-  categoria: categorizeAnimal("2023-06-01", 0),
-  naabPai: "011HO15225",
-  nomePai: "Luche",
-  TPI: 2476,
-  NM$: 731,
-  Milk: 2084,
-  Fat: 61,
-  Protein: 64,
-  DPR: -1.0,
-  SCS: 2.87,
-  PTAT: 0.70,
-  year: 2023
-}, {
-  id: "F3430",
-  brinco: "3430",
-  nascimento: "2024-10-01", // Bezerra (< 90 dias)
-  ordemParto: 0,
-  categoria: categorizeAnimal("2024-10-01", 0),
-  naabPai: "208HO00355",
-  nomePai: "Cason",
-  TPI: 2472,
-  NM$: 723,
-  Milk: 1780,
-  Fat: 57,
-  Protein: 54,
-  DPR: 0.9,
-  SCS: 3.0,
-  PTAT: 0.66,
-  year: 2024
-},
-// anos anteriores para gráficos
-{
-  id: "F2019A",
-  brinco: "2890",
-  nascimento: "2019-05-20",
-  ordemParto: 4,
-  categoria: categorizeAnimal("2019-05-20", 4),
-  naabPai: "007HO14195",
-  nomePai: "Legacy",
-  TPI: 1818,
-  NM$: 243,
-  Milk: 1050,
-  Fat: 50,
-  Protein: 38,
-  DPR: 0.2,
-  SCS: 2.95,
-  PTAT: 0.1,
-  year: 2019
-}, {
-  id: "F2021A",
-  brinco: "3001",
-  nascimento: "2021-03-15",
-  ordemParto: 3,
-  categoria: categorizeAnimal("2021-03-15", 3),
-  naabPai: "250HO12961",
-  nomePai: "Gameday",
-  TPI: 2016,
-  NM$: 326,
-  Milk: 1200,
-  Fat: 58,
-  Protein: 45,
-  DPR: -0.3,
-  SCS: 2.85,
-  PTAT: 0.2,
-  year: 2021
-}];
+// Generate 500 females for testing automatic categorization
+const generateTestFemales = (): Female[] => {
+  const females: Female[] = [];  
+  const years = [2021, 2022, 2023, 2024, 2025];
+  const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  const sireNames = ["Haven", "Cason", "Luche", "Stormy", "Legacy", "Gameday", "Bolton", "Epic", "Robust", "Champion"];
+  const naabCodes = ["029HO19791", "208HO00355", "011HO15225", "029HO19829", "007HO14195", "250HO12961", "014HO17486", "007HO17200", "029HO19800", "208HO00400"];
+  
+  let counter = 1;
+  
+  for (let yearIdx = 0; yearIdx < years.length; yearIdx++) {
+    const year = years[yearIdx];
+    
+    // 100 females per year
+    for (let i = 0; i < 100; i++) {
+      const month = months[Math.floor(Math.random() * months.length)];
+      const day = Math.floor(Math.random() * 28) + 1; // 1-28 to avoid date issues
+      const nascimento = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+      
+      const ordemParto = Math.floor(Math.random() * 6); // 0-5 partos
+      const sireIdx = Math.floor(Math.random() * sireNames.length);
+      
+      // Generate realistic PTA values
+      const baseTPI = 2000 + Math.floor(Math.random() * 800); // 2000-2800
+      const baseNM = 300 + Math.floor(Math.random() * 700); // 300-1000
+      const milk = 800 + Math.floor(Math.random() * 1500); // 800-2300
+      const fat = 40 + Math.floor(Math.random() * 80); // 40-120
+      const protein = 30 + Math.floor(Math.random() * 50); // 30-80
+      const dpr = -2 + Math.random() * 4; // -2 to 2
+      const scs = 2.5 + Math.random() * 1; // 2.5-3.5
+      const ptat = -0.5 + Math.random() * 2; // -0.5 to 1.5
+      
+      females.push({
+        id: `F${counter.toString().padStart(4, '0')}`,
+        brinco: counter.toString(),
+        nascimento,
+        ordemParto,
+        categoria: categorizeAnimal(nascimento, ordemParto),
+        naabPai: naabCodes[sireIdx],
+        nomePai: sireNames[sireIdx],
+        TPI: baseTPI,
+        ["NM$"]: baseNM,
+        Milk: milk,
+        Fat: fat,
+        Protein: protein,
+        DPR: Number(dpr.toFixed(1)),
+        SCS: Number(scs.toFixed(2)),
+        PTAT: Number(ptat.toFixed(2)),
+        year: year,
+        
+        // Optional fields with some realistic values
+        nome: `Vaca ${counter}`,
+        idCDCB: `CDCB${counter}`,
+        pedigree: `${sireNames[sireIdx]} x Dam${counter}`,
+        ["HHP$"]: baseNM + Math.floor(Math.random() * 200) - 100,
+        ["CM$"]: baseNM - 100 + Math.floor(Math.random() * 150),
+        ["FM$"]: baseNM - 50 + Math.floor(Math.random() * 100),
+        ["GM$"]: baseNM - 80 + Math.floor(Math.random() * 120),
+        ["F SAV"]: Number((Math.random() * 2 - 1).toFixed(1)),
+        PTAM: Math.floor(Math.random() * 100) - 50,
+        CFP: Number((Math.random() * 4 - 2).toFixed(1)),
+        PTAF: Math.floor(Math.random() * 80) - 40,
+        ["PTAF%"]: Math.floor(Math.random() * 40) - 20,
+        PTAP: Math.floor(Math.random() * 40) - 20,
+        ["PTAP%"]: Math.floor(Math.random() * 30) - 15,
+        PL: Math.floor(Math.random() * 100) - 50,
+        LIV: Number((Math.random() * 6 - 3).toFixed(1)),
+        MAST: Number((Math.random() * 4 - 2).toFixed(1)),
+        MET: Number((Math.random() * 3 - 1.5).toFixed(1)),
+        RP: Number((Math.random() * 4 - 2).toFixed(1)),
+        DA: Number((Math.random() * 3 - 1.5).toFixed(1)),
+        KET: Number((Math.random() * 2 - 1).toFixed(1)),
+        MF: Number((Math.random() * 3 - 1.5).toFixed(1)),
+        UDC: Number((Math.random() * 4 - 2).toFixed(1)),
+        FLC: Number((Math.random() * 3 - 1.5).toFixed(1)),
+        SCE: Number((Math.random() * 8 - 4).toFixed(1)),
+        DCE: Number((Math.random() * 6 - 3).toFixed(1)),
+        SSB: Number((Math.random() * 8 - 4).toFixed(1)),
+        DSB: Number((Math.random() * 6 - 3).toFixed(1)),
+        ["H LIV"]: Number((Math.random() * 4 - 2).toFixed(1)),
+        CCR: Number((Math.random() * 6 - 3).toFixed(1)),
+        HCR: Number((Math.random() * 4 - 2).toFixed(1)),
+        FI: Number((Math.random() * 10 - 5).toFixed(1)),
+        GL: Number((Math.random() * 8 - 4).toFixed(1)),
+        EFC: Number((Math.random() * 12 - 6).toFixed(1)),
+        BWC: Number((Math.random() * 20 - 10).toFixed(1)),
+        STA: Number((Math.random() * 3 - 1.5).toFixed(2)),
+        STR: Number((Math.random() * 3 - 1.5).toFixed(2)),
+        DFM: Number((Math.random() * 2 - 1).toFixed(2)),
+        RUA: Number((Math.random() * 2 - 1).toFixed(2)),
+        RLS: Number((Math.random() * 2 - 1).toFixed(2)),
+        RTP: Number((Math.random() * 2 - 1).toFixed(2)),
+        FTL: Number((Math.random() * 2 - 1).toFixed(2)),
+        RW: Number((Math.random() * 2 - 1).toFixed(2)),
+        RLR: Number((Math.random() * 2 - 1).toFixed(2)),
+        FTA: Number((Math.random() * 2 - 1).toFixed(2)),
+        FLS: Number((Math.random() * 2 - 1).toFixed(2)),
+        FUA: Number((Math.random() * 2 - 1).toFixed(2)),
+        RUH: Number((Math.random() * 2 - 1).toFixed(2)),
+        RUW: Number((Math.random() * 2 - 1).toFixed(2)),
+        UCL: Number((Math.random() * 2 - 1).toFixed(2)),
+        UDP: Number((Math.random() * 2 - 1).toFixed(2)),
+        FTP: Number((Math.random() * 2 - 1).toFixed(2)),
+        RFI: Number((Math.random() * 200 - 100).toFixed(0)),
+        ["Beta-Casein"]: Math.random() > 0.5 ? "A2A2" : "A1A2",
+        ["Kappa-Caseina"]: Math.random() > 0.5 ? "BB" : "AB"
+      });
+      
+      counter++;
+    }
+  }
+  
+  return females;
+};
+
+const seedFemales: Female[] = generateTestFemales();
 const seedBulls: Bull[] = [{
   naab: "7HO17191",
   nome: "Mican",
