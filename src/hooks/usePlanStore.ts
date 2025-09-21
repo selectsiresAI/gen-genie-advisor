@@ -77,6 +77,7 @@ interface PopulationCounts {
   primiparous: number;
   secundiparous: number;
   multiparous: number;
+  total: number;
 }
 
 // Store interface
@@ -108,7 +109,8 @@ const initialState = {
     heifers: 0,
     primiparous: 0, 
     secundiparous: 0,
-    multiparous: 0
+    multiparous: 0,
+    total: 0
   },
   motherAverages: {}
 };
@@ -174,13 +176,17 @@ export const usePlanStore = create<PlanState>()(
   )
 );
 
-// Front-end data source functions
+// Front-end data source functions (ordered by priority)
 function getFemalesByFarm(farmId: string): any[] {
-  // Try ToolSS cache first
+  // Priority 1: Rebanho cache
+  const rebanhoCache = (window as any).Rebanho?.femalesByFarm?.[farmId];
+  if (Array.isArray(rebanhoCache)) return rebanhoCache;
+  
+  // Priority 2: ToolSS cache
   const toolssCache = (window as any).ToolSS?.cache?.femalesByFarm?.[farmId];
   if (Array.isArray(toolssCache)) return toolssCache;
   
-  // Try localStorage
+  // Priority 3: localStorage
   try {
     const map = JSON.parse(localStorage.getItem("toolss.femalesByFarm") || "{}");
     if (Array.isArray(map?.[farmId])) return map[farmId];
@@ -188,7 +194,7 @@ function getFemalesByFarm(farmId: string): any[] {
     console.warn('Error parsing toolss.femalesByFarm from localStorage:', e);
   }
   
-  // Try AppCache fallback
+  // Priority 4: AppCache fallback
   const appCache = (window as any).AppCache?.females?.[farmId];
   return Array.isArray(appCache) ? appCache : [];
 }
@@ -207,7 +213,7 @@ function deriveParity(f: any): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function normalizeCategoria(raw: any): string | null {
+function normCategoria(raw: any): string | null {
   if (!raw) return null;
   const s = String(raw)
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -219,22 +225,27 @@ function normalizeCategoria(raw: any): string | null {
   return null;
 }
 
-function countByCategoria(females: any[]) {
+function parityFallback(f: any): number | null {
+  const v = Number(f?.parity ?? f?.num_partos ?? f?.ordem_parto);
+  return Number.isFinite(v) ? v : null;
+}
+
+function countFromFemales(list: any[]) {
   let n0 = 0, n1 = 0, n2 = 0, n3 = 0;
   
-  for (const f of females) {
+  for (const f of list) {
     // First try categoria field
-    const cat = normalizeCategoria(f?.categoria);
-    if (cat) {
-      if (cat === 'NOVILHA') n0++;
-      else if (cat === 'PRIMIPARA') n1++;
-      else if (cat === 'SECUNDIPARA') n2++;
-      else if (cat === 'MULTIPARA') n3++;
+    const c = normCategoria(f?.categoria);
+    if (c) {
+      if (c === 'NOVILHA') n0++;
+      else if (c === 'PRIMIPARA') n1++;
+      else if (c === 'SECUNDIPARA') n2++;
+      else if (c === 'MULTIPARA') n3++;
       continue;
     }
     
     // Fallback to parity only if categoria is empty
-    const p = deriveParity(f);
+    const p = parityFallback(f);
     if (p === null) continue;
     if (p <= 0) n0++;
     else if (p === 1) n1++;
@@ -285,7 +296,7 @@ export const calculatePopulationStructure = (farm: any): PopulationCounts => {
   
   if (!Array.isArray(females) || females.length === 0) {
     console.log('No females found in any data source');
-    return { heifers: 0, primiparous: 0, secundiparous: 0, multiparous: 0 };
+    return { heifers: 0, primiparous: 0, secundiparous: 0, multiparous: 0, total: 0 };
   }
   
   console.log('Total females found:', females.length);
@@ -299,14 +310,15 @@ export const calculatePopulationStructure = (farm: any): PopulationCounts => {
   })));
   
   // Use pure counting function
-  const counts = countByCategoria(females);
+  const counts = countFromFemales(females);
   console.log('Category counts:', counts);
   
   return { 
     heifers: counts.heifers, 
     primiparous: counts.primiparous, 
     secundiparous: counts.secundiparous, 
-    multiparous: counts.multiparous 
+    multiparous: counts.multiparous,
+    total: counts.total
   };
 };
 
@@ -344,7 +356,8 @@ export const calculateMotherAverages = (farm: any, ptaLabels: string[]): Record<
   return result;
 };
 
-// Get bull PTA value using label to field mapping
+// Export utility functions
+export { getFemalesByFarm, normCategoria, parityFallback, countFromFemales };
 export const getBullPTAValue = (bull: any, ptaLabel: string): number | null => {
   const fieldName = LABEL_TO_FIELD[ptaLabel] || ptaLabel;
   const value = bull[fieldName];

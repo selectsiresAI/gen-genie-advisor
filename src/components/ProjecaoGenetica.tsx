@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { usePlanStore, AVAILABLE_PTAS, calculatePopulationStructure, calculateMotherAverages, getBullPTAValue } from "../hooks/usePlanStore";
+import { usePlanStore, AVAILABLE_PTAS, getFemalesByFarm, countFromFemales, getBullPTAValue } from "../hooks/usePlanStore";
 import { toast } from "sonner";
 
 /**
@@ -460,6 +460,9 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
   const [toolssClients, setToolssClients] = useState<any[]>([]);
   const [selectedFarm, setSelectedFarm] = useState<any>(null);
   
+  // Anti-loop hash ref for population calculation
+  const prevHashRef = useRef<string>('');
+  
   useEffect(() => {
     try {
       const toolssData = localStorage.getItem("toolss_clients_v2_with_500_females");
@@ -480,19 +483,35 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
     }
   }, [planStore.selectedFarmId]);
   
-  // Auto-recalculate population when selectedFarmId or populationMode changes  
+  // ÚNICO efeito anti-loop para população
   useEffect(() => {
-    if (planStore.populationMode === 'auto' && planStore.selectedFarmId) {
-      console.log('Auto-calculating population for farm:', planStore.selectedFarmId);
-      const counts = calculatePopulationStructure({ id: planStore.selectedFarmId });
-      planStore.setPopulationCounts(counts);
+    if (planStore.populationMode !== 'auto' || !planStore.selectedFarmId) return;
+
+    const females = getFemalesByFarm(planStore.selectedFarmId);
+    // hash de estabilidade: muda só quando muda a fonte
+    const srcHash = planStore.selectedFarmId + '|' + (Array.isArray(females) ? females.length : 0);
+    if (prevHashRef.current === srcHash) return; // evita recálculo redundante
+
+    const next = countFromFemales(females || []);
+    prevHashRef.current = srcHash;
+
+    // só aplica se mudou (sem setState em cascata)
+    const curr = planStore.populationCounts;
+    const changed = !curr || curr.heifers !== next.heifers || curr.primiparous !== next.primiparous ||
+                    curr.secundiparous !== next.secundiparous || curr.multiparous !== next.multiparous || curr.total !== next.total;
+    if (changed) {
+      console.log('Population structure updated:', next);
+      planStore.setPopulationCounts(next);
     }
-  }, [planStore.selectedFarmId, planStore.populationMode]);
+  }, [planStore.populationMode, planStore.selectedFarmId]);
 
   const handleRecalculate = () => {
     if (planStore.selectedFarmId) {
-      const counts = calculatePopulationStructure({ id: planStore.selectedFarmId });
-      planStore.setPopulationCounts(counts);
+      const females = getFemalesByFarm(planStore.selectedFarmId);
+      const next = countFromFemales(females || []);
+      // Force recalculation by updating hash
+      prevHashRef.current = planStore.selectedFarmId + '|' + Date.now();
+      planStore.setPopulationCounts(next);
     }
   };
 
@@ -500,17 +519,13 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
   const updatePopulationCount = (field: keyof typeof planStore.populationCounts, value: number) => {
     if (planStore.populationMode === 'manual') {
       const newCounts = { ...planStore.populationCounts, [field]: value };
+      // Update total when individual counts change
+      if (field !== 'total') {
+        newCounts.total = newCounts.heifers + newCounts.primiparous + newCounts.secundiparous + newCounts.multiparous;
+      }
       planStore.setPopulationCounts(newCounts);
     }
   };
-
-  // Auto-calculate mother averages when farm or PTAs change
-  useEffect(() => {
-    if (selectedFarm && planStore.selectedPTAList.length > 0) {
-      const averages = calculateMotherAverages(selectedFarm, planStore.selectedPTAList);
-      planStore.setMotherAverages(averages);
-    }
-  }, [selectedFarm, planStore.selectedPTAList]);
 
   const selectedClientData = toolssClients.find(c => 
     selectedFarm && c.farms.some((f: any) => f.id === selectedFarm.id)
@@ -518,9 +533,7 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
   const farms = selectedClientData?.farms || [];
   
   // Backwards compatibility - sync with old state
-  const sumCats = planStore.populationCounts.heifers + planStore.populationCounts.primiparous + 
-                  planStore.populationCounts.secundiparous + planStore.populationCounts.multiparous;
-  const total = sumCats;
+  const total = planStore.populationCounts.total;
   const overflow = false; // Auto-calculated, no overflow possible
 
   return (
@@ -721,9 +734,9 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
               )}
             </div>
             
-            {planStore.populationMode === 'auto' && (
+            {planStore.populationMode === 'auto' && planStore.populationCounts.total > 0 && (
               <div style={{ fontSize: 11, color: "#16a34a", marginBottom: 8 }}>
-                Estrutura calculada automaticamente: {total} fêmeas
+                Estrutura calculada automaticamente: {planStore.populationCounts.total} fêmeas
               </div>
             )}
 
