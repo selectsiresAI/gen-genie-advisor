@@ -323,7 +323,7 @@ export const calculatePopulationStructure = (farm: any): PopulationCounts => {
 };
 
 // Calculate mother averages from farm data
-export const calculateMotherAverages = (farm: any, ptaLabels: string[]): Record<string, Record<string, number>> => {
+const calculateMotherAverages = (farm: any, ptaLabels: string[]): Record<string, Record<string, number>> => {
   if (!farm?.females || ptaLabels.length === 0) {
     return {};
   }
@@ -357,7 +357,7 @@ export const calculateMotherAverages = (farm: any, ptaLabels: string[]): Record<
 };
 
 // Export utility functions
-export { getFemalesByFarm, normCategoria, parityFallback, countFromFemales };
+export { getFemalesByFarm, normCategoria, parityFallback, countFromFemales, calculateMotherAverages };
 export const getBullPTAValue = (bull: any, ptaLabel: string): number | null => {
   const fieldName = LABEL_TO_FIELD[ptaLabel] || ptaLabel;
   const value = bull[fieldName];
