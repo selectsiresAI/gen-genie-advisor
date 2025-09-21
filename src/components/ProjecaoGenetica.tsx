@@ -746,8 +746,21 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
             </div>
             
             {planStore.populationMode === 'auto' && planStore.populationCounts.total > 0 && (
-              <div style={{ fontSize: 11, color: "#16a34a", marginBottom: 8 }}>
-                Estrutura calculada automaticamente: {planStore.populationCounts.total} fêmeas
+              <div style={{ fontSize: 11, color: "#16a34a", marginBottom: 8, padding: "8px", backgroundColor: "#f0f9ff", borderRadius: "4px", border: "1px solid #16a34a" }}>
+                ✅ Estrutura calculada automaticamente: {planStore.populationCounts.total} fêmeas<br/>
+                📊 Novilhas: {planStore.populationCounts.heifers} | Primíparas: {planStore.populationCounts.primiparous} | Secundíparas: {planStore.populationCounts.secundiparous} | Multíparas: {planStore.populationCounts.multiparous}
+              </div>
+            )}
+            
+            {planStore.populationMode === 'auto' && planStore.populationCounts.total === 0 && planStore.selectedFarmId && (
+              <div style={{ fontSize: 11, color: "#d97706", marginBottom: 8, padding: "8px", backgroundColor: "#fef3c7", borderRadius: "4px", border: "1px solid #d97706" }}>
+                ⚠️ Nenhuma fêmea encontrada no rebanho selecionado. Verifique se os dados estão carregados na página Rebanho.
+              </div>
+            )}
+            
+            {planStore.populationMode === 'auto' && !planStore.selectedFarmId && (
+              <div style={{ fontSize: 11, color: "#dc2626", marginBottom: 8, padding: "8px", backgroundColor: "#fef2f2", borderRadius: "4px", border: "1px solid #dc2626" }}>
+                ❌ Selecione um rebanho acima para calcular automaticamente a estrutura populacional
               </div>
             )}
 

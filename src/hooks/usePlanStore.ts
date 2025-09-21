@@ -236,19 +236,49 @@ function countFromCategoria(list: any[]): PopulationCounts {
   let heifers = 0, primiparous = 0, secundiparous = 0, multiparous = 0;
   let missingCategoriaCount = 0;
   
-  for (const row of list) {
-    // Item 1: obter rawCat (objeto com chave "Categoria" ou array onde índice 7 é coluna H)
-    const rawCat = row?.Categoria ?? row?.categoria ?? row?.[7] ?? null;
+  // Utility function for automatic categorization (same as in ToolSSApp)
+  function categorizeAnimal(nascimento: string, ordemParto?: number): string {
+    if (!nascimento) return "Novilha"; // Default if no birth date
     
-    if (!rawCat) {
-      missingCategoriaCount++;
-      continue;
+    const birthDate = new Date(nascimento);
+    const now = new Date();
+    const ageInDays = Math.floor((now.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Se não tem ordem de parto definida, assumir 0
+    const parity = ordemParto || 0;
+    
+    // Bezerra: do nascimento até 90 dias
+    if (ageInDays <= 90) {
+      return "Bezerra";
     }
     
-    // Item 2: normalizar
-    const normalizedCat = normalizeCategoria(rawCat);
+    // Baseado na ordem de parto
+    if (parity === 0) {
+      return "Novilha"; // Após 90 dias e nunca pariu
+    } else if (parity === 1) {
+      return "Primípara"; // Pariu uma vez
+    } else if (parity === 2) {
+      return "Secundípara"; // Pariu duas vezes
+    } else if (parity >= 3) {
+      return "Multípara"; // Pariu 3 ou mais vezes
+    }
     
-    // Item 3: incrementar contadores
+    return "Novilha"; // Default
+  }
+  
+  for (const row of list) {
+    // Use existing category or calculate from birth date and parity
+    let category = row?.categoria || row?.Categoria || row?.[7];
+    
+    // If no category, calculate it from birth date and parity
+    if (!category) {
+      category = categorizeAnimal(row?.nascimento, row?.ordemParto);
+      missingCategoriaCount++;
+    }
+    
+    // Normalize and count
+    const normalizedCat = normalizeCategoria(category);
+    
     switch (normalizedCat) {
       case 'NOVILHA':
         heifers++;
@@ -263,15 +293,25 @@ function countFromCategoria(list: any[]): PopulationCounts {
         multiparous++;
         break;
       default:
-        // Categoria não reconhecida, ignorar na contagem
+        // Try direct matching for calculated categories
+        const directCat = String(category).toLowerCase();
+        if (directCat.includes('novilha')) heifers++;
+        else if (directCat.includes('primípara')) primiparous++;
+        else if (directCat.includes('secundípara')) secundiparous++;
+        else if (directCat.includes('multípara')) multiparous++;
         break;
     }
   }
   
-  // Aviso se >90% das linhas não tem categoria (opcional)
-  if (list.length > 0 && missingCategoriaCount / list.length > 0.9) {
-    console.warn(`⚠️ Mais de 90% das fêmeas (${missingCategoriaCount}/${list.length}) não possuem categoria definida`);
-  }
+  // Log for debugging
+  console.log('🔍 Population count details:', {
+    total: list.length,
+    heifers,
+    primiparous,
+    secundiparous,
+    multiparous,
+    missingCategoriaCount
+  });
   
   const total = heifers + primiparous + secundiparous + multiparous;
   return { heifers, primiparous, secundiparous, multiparous, total };
