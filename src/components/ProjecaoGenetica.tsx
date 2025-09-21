@@ -484,7 +484,10 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
   // Auto-calculate population when farm changes and mode is auto
   useEffect(() => {
     if (selectedFarm && planStore.populationMode === 'auto') {
+      console.log('Calculating population structure for farm:', selectedFarm.nome);
       const counts = calculatePopulationStructure(selectedFarm);
+      const total = counts.heifers + counts.primiparous + counts.secundiparous + counts.multiparous;
+      console.log('Population counts calculated:', counts, 'Total:', total);
       planStore.setPopulationCounts(counts);
     }
   }, [selectedFarm, planStore.populationMode]);

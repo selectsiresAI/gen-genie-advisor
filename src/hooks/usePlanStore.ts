@@ -140,7 +140,7 @@ export const usePlanStore = create<PlanState>()(
       setPopulationMode: (mode) => {
         const current = get().populationMode;
         if (current !== mode) {
-          console.log('populationMode=', mode);
+          console.log('populationMode=', mode, '(changed from', current, ')');
           set({ populationMode: mode });
         }
       },
@@ -148,7 +148,7 @@ export const usePlanStore = create<PlanState>()(
       setPopulationCounts: (counts) => {
         const current = get().populationCounts;
         if (JSON.stringify(current) !== JSON.stringify(counts)) {
-          console.log('populationCounts=', counts, get().populationMode === 'auto' ? '(auto)' : '(manual)');
+          console.log('populationCounts=', counts, get().populationMode === 'auto' ? '(auto-calculated)' : '(manual)');
           set({ populationCounts: counts });
         }
       },
@@ -184,14 +184,27 @@ export const CATEGORY_DEFINITIONS = {
 
 // Calculate population structure from farm data
 export const calculatePopulationStructure = (farm: any): PopulationCounts => {
+  console.log('calculatePopulationStructure called for farm:', farm?.nome);
+  console.log('Farm females count:', farm?.females?.length);
+  
   if (!farm?.females) {
+    console.log('No females found in farm data');
     return { heifers: 0, primiparous: 0, secundiparous: 0, multiparous: 0 };
   }
+  
+  // Log some sample females to check data format
+  console.log('Sample females (first 3):', farm.females.slice(0, 3).map((f: any) => ({
+    nome: f.nome,
+    paridade: f.paridade,
+    categoria: f.categoria
+  })));
   
   const heifers = farm.females.filter(CATEGORY_DEFINITIONS.heifers).length;
   const primiparous = farm.females.filter(CATEGORY_DEFINITIONS.primiparous).length;
   const secundiparous = farm.females.filter(CATEGORY_DEFINITIONS.secundiparous).length;
   const multiparous = farm.females.filter(CATEGORY_DEFINITIONS.multiparous).length;
+  
+  console.log('Category counts:', { heifers, primiparous, secundiparous, multiparous });
   
   return { heifers, primiparous, secundiparous, multiparous };
 };
