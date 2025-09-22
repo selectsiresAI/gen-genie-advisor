@@ -1,24 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { 
-  LogOut, 
-  Plus, 
-  Settings, 
-  Building2, 
-  Users, 
-  BarChart3, 
-  Calculator,
-  Beef,
-  TestTube,
-  FileText
-} from 'lucide-react';
+import { User } from '@supabase/supabase-js';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Building2, Users, Beef, BarChart3, Plus, LogOut, Zap, ArrowLeft } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { User } from '@supabase/supabase-js';
 import CreateFarmModal from './CreateFarmModal';
 
 interface MainDashboardProps {
@@ -40,8 +28,10 @@ interface Farm {
 const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
   const [farms, setFarms] = useState<Farm[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [profile, setProfile] = useState<any>(null);
-  const [showCreateFarm, setShowCreateFarm] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
+  const [currentView, setCurrentView] = useState<'dashboard' | 'farm' | 'herd' | 'segmentation' | 'bulls' | 'nexus'>('dashboard');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -50,31 +40,39 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
 
   const loadUserData = async () => {
     try {
-      // Carregar perfil do usuário
-      const { data: profileData } = await supabase
+      setIsLoading(true);
+      
+      // Load user profile
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
       
-      if (profileData) {
-        setProfile(profileData);
+      if (profileError) {
+        console.error('Error loading profile:', profileError);
+      } else {
+        setUserProfile(profile);
       }
 
-      // Carregar fazendas do usuário
-      const { data: farmsData, error } = await supabase
-        .rpc('my_farms');
-
-      if (error) {
-        throw error;
+      // Load farms
+      const { data: farmsData, error: farmsError } = await supabase.rpc('my_farms');
+      
+      if (farmsError) {
+        console.error('Error loading farms:', farmsError);
+        toast({
+          title: "Erro ao carregar fazendas",
+          description: farmsError.message,
+          variant: "destructive",
+        });
+      } else {
+        setFarms(farmsData || []);
       }
-
-      setFarms(farmsData || []);
     } catch (error: any) {
-      console.error('Erro ao carregar dados:', error);
+      console.error('Error loading data:', error);
       toast({
         title: "Erro ao carregar dados",
-        description: error.message || 'Tente recarregar a página',
+        description: error.message || 'Erro inesperado',
         variant: "destructive",
       });
     } finally {
@@ -83,40 +81,43 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
   };
 
   const handleLogout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      
-      onLogout();
-      toast({
-        title: "Logout realizado",
-        description: "Até logo!",
-      });
-    } catch (error: any) {
-      console.error('Erro no logout:', error);
-      toast({
-        title: "Erro no logout",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
+    await supabase.auth.signOut();
+    onLogout();
   };
 
   const handleCreateFarm = () => {
-    setShowCreateFarm(true);
+    setShowCreateModal(true);
   };
 
   const handleCreateFarmSuccess = () => {
-    loadUserData(); // Recarregar dados após criar fazenda
+    loadUserData();
+  };
+
+  const handleFarmSelect = (farm: Farm) => {
+    setSelectedFarm(farm);
+    setCurrentView('farm');
+  };
+
+  const handleBackToDashboard = () => {
+    setCurrentView('dashboard');
+    setSelectedFarm(null);
+  };
+
+  const handleQuickAction = (action: string) => {
+    if (farms.length > 0) {
+      const defaultFarm = farms.find(f => f.is_default) || farms[0];
+      setSelectedFarm(defaultFarm);
+      setCurrentView(action as any);
+    }
   };
 
   const getUserInitials = (name: string) => {
     return name
       .split(' ')
-      .map(word => word[0])
+      .map(word => word.charAt(0))
       .join('')
       .toUpperCase()
-      .substring(0, 2);
+      .slice(0, 2);
   };
 
   const getRoleBadgeVariant = (role: string) => {
@@ -150,91 +151,183 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="text-muted-foreground">Carregando seus dados...</p>
+          <p className="text-muted-foreground">Carregando dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Render farm view
+  if (currentView === 'farm' && selectedFarm) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="border-b">
+          <div className="flex h-16 items-center px-4">
+            <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Voltar
+            </Button>
+            <h1 className="text-xl font-semibold">{selectedFarm.farm_name}</h1>
+          </div>
+        </div>
+        <div className="container mx-auto px-4 py-8">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('herd')}>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Users className="w-5 h-5 text-primary" />
+                  Rebanho
+                </CardTitle>
+                <CardDescription>
+                  {selectedFarm.total_females} fêmeas cadastradas
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('segmentation')}>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <BarChart3 className="w-5 h-5 text-primary" />
+                  Segmentação
+                </CardTitle>
+                <CardDescription>
+                  Classificar animais por performance
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('bulls')}>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Beef className="w-5 h-5 text-primary" />
+                  Catálogo de Touros
+                </CardTitle>
+                <CardDescription>
+                  {selectedFarm.selected_bulls} touros selecionados
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('nexus')}>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Zap className="w-5 h-5 text-primary" />
+                  Nexus
+                </CardTitle>
+                <CardDescription>
+                  Predições genéticas e acasalamentos
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Render specific views
+  if (currentView !== 'dashboard') {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="border-b">
+          <div className="flex h-16 items-center px-4">
+            <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Dashboard
+            </Button>
+            <h1 className="text-xl font-semibold">
+              {selectedFarm?.farm_name} - {
+                currentView === 'herd' ? 'Rebanho' :
+                currentView === 'segmentation' ? 'Segmentação' :
+                currentView === 'bulls' ? 'Catálogo de Touros' :
+                currentView === 'nexus' ? 'Nexus' : 'Módulo'
+              }
+            </h1>
+          </div>
+        </div>
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto">
+              {currentView === 'herd' && <Users className="w-8 h-8 text-muted-foreground" />}
+              {currentView === 'segmentation' && <BarChart3 className="w-8 h-8 text-muted-foreground" />}
+              {currentView === 'bulls' && <Beef className="w-8 h-8 text-muted-foreground" />}
+              {currentView === 'nexus' && <Zap className="w-8 h-8 text-muted-foreground" />}
+            </div>
+            <h2 className="text-2xl font-bold">Módulo em Desenvolvimento</h2>
+            <p className="text-muted-foreground max-w-md mx-auto">
+              Este módulo estará disponível em breve. Você poderá {
+                currentView === 'herd' ? 'gerenciar seu rebanho e cadastrar fêmeas' :
+                currentView === 'segmentation' ? 'segmentar animais por performance genética' :
+                currentView === 'bulls' ? 'explorar o catálogo de touros e fazer seleções' :
+                currentView === 'nexus' ? 'gerar predições genéticas e sugerir acasalamentos' : 'usar esta funcionalidade'
+              }.
+            </p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold text-primary">ToolSS</h1>
-            <Separator orientation="vertical" className="h-6" />
-            <span className="text-sm text-muted-foreground">Sistema de Seleção e Segmentação</span>
+      <div className="border-b">
+        <div className="flex h-16 items-center px-4">
+          <div className="flex items-center space-x-4">
+            <Building2 className="w-8 h-8 text-primary" />
+            <h1 className="text-2xl font-bold">ToolSS</h1>
           </div>
           
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3">
+          <div className="ml-auto flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
               <Avatar>
                 <AvatarFallback>
-                  {profile?.full_name ? getUserInitials(profile.full_name) : 'U'}
+                  {getUserInitials(userProfile?.full_name || user.email || 'U')}
                 </AvatarFallback>
               </Avatar>
               <div className="text-sm">
-                <p className="font-medium">{profile?.full_name || user.email}</p>
+                <p className="font-medium">{userProfile?.full_name || user.email}</p>
                 <p className="text-muted-foreground">{user.email}</p>
               </div>
-              {profile?.is_admin && (
-                <Badge variant="secondary">Admin</Badge>
-              )}
             </div>
-            
-            <Separator orientation="vertical" className="h-6" />
-            
-            <Button variant="ghost" size="sm">
-              <Settings className="w-4 h-4" />
-            </Button>
-            
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              <LogOut className="w-4 h-4" />
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Sair
             </Button>
           </div>
         </div>
-      </header>
+      </div>
 
-      {/* Main Content */}
-      <main className="container py-8">
+      <div className="container mx-auto px-4 py-8">
         <div className="space-y-8">
-          {/* Welcome Section */}
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight">
-              Bem-vindo, {profile?.full_name?.split(' ')[0] || 'Técnico'}!
+          {/* Welcome */}
+          <div className="space-y-2">
+            <h2 className="text-3xl font-bold">
+              Bem-vindo, {userProfile?.full_name?.split(' ')[0] || 'Usuário'}!
             </h2>
             <p className="text-muted-foreground">
-              Gerencie suas fazendas, fêmeas, touros e análises genéticas
+              Gerencie suas fazendas, rebanhos e análises genéticas em um só lugar.
             </p>
           </div>
 
-          {/* Fazendas Section */}
+          {/* Farms Section */}
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-semibold">Suas Fazendas</h3>
-                <p className="text-sm text-muted-foreground">
-                  {farms.length === 0 ? 'Nenhuma fazenda encontrada' : `${farms.length} fazenda(s) disponível(is)`}
-                </p>
-              </div>
-              
+              <h3 className="text-xl font-semibold">Suas Fazendas</h3>
               <Button onClick={handleCreateFarm}>
                 <Plus className="w-4 h-4 mr-2" />
-                Nova Fazenda
+                Criar Fazenda
               </Button>
             </div>
-
+            
             {farms.length === 0 ? (
-              <Card className="p-8 text-center">
-                <CardContent className="space-y-4">
-                  <Building2 className="w-12 h-12 mx-auto text-muted-foreground" />
-                  <div>
-                    <h4 className="text-lg font-medium">Nenhuma fazenda cadastrada</h4>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Crie sua primeira fazenda para começar a usar o ToolSS
-                    </p>
-                  </div>
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-8">
+                  <Building2 className="w-12 h-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Nenhuma fazenda encontrada</h3>
+                  <p className="text-muted-foreground text-center mb-4">
+                    Comece criando sua primeira fazenda para gerenciar seu rebanho.
+                  </p>
                   <Button onClick={handleCreateFarm}>
                     <Plus className="w-4 h-4 mr-2" />
                     Criar Primeira Fazenda
@@ -244,9 +337,13 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {farms.map((farm) => (
-                  <Card key={farm.farm_id} className={`cursor-pointer hover:shadow-lg transition-shadow ${farm.is_default ? 'ring-2 ring-primary' : ''}`}>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
+                  <Card 
+                    key={farm.farm_id} 
+                    className="hover:shadow-lg transition-shadow cursor-pointer"
+                    onClick={() => handleFarmSelect(farm)}
+                  >
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
                         <div className="space-y-1">
                           <CardTitle className="text-lg">{farm.farm_name}</CardTitle>
                           <CardDescription>
@@ -286,7 +383,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
             <h3 className="text-xl font-semibold">Acesso Rápido</h3>
             
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleQuickAction('herd')}>
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Users className="w-5 h-5 text-primary" />
@@ -298,7 +395,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
                 </CardHeader>
               </Card>
 
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleQuickAction('segmentation')}>
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <BarChart3 className="w-5 h-5 text-primary" />
@@ -310,7 +407,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
                 </CardHeader>
               </Card>
 
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleQuickAction('bulls')}>
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Beef className="w-5 h-5 text-primary" />
@@ -322,34 +419,33 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
                 </CardHeader>
               </Card>
 
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleQuickAction('nexus')}>
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <Calculator className="w-5 h-5 text-primary" />
+                    <Zap className="w-5 h-5 text-primary" />
                     Nexus
                   </CardTitle>
                   <CardDescription>
-                    Predições genéticas
+                    Predições genéticas e acasalamentos
                   </CardDescription>
                 </CardHeader>
               </Card>
             </div>
           </div>
 
-          {/* Footer Info */}
+          {/* Footer */}
           <div className="pt-8 border-t">
             <div className="text-center text-sm text-muted-foreground">
-              <p>ToolSS - Sistema desenvolvido para técnicos em melhoramento genético bovino</p>
-              <p className="mt-1">Versão 1.0 - Powered by Supabase</p>
+              <p>ToolSS - Sistema de Seleção de Touros</p>
+              <p>Desenvolvido para otimizar a genética do seu rebanho</p>
             </div>
           </div>
         </div>
-      </main>
+      </div>
 
-      {/* Create Farm Modal */}
       <CreateFarmModal
-        isOpen={showCreateFarm}
-        onClose={() => setShowCreateFarm(false)}
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
         onSuccess={handleCreateFarmSuccess}
       />
     </div>
