@@ -66,25 +66,77 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
   };
 
   const downloadTemplate = () => {
-    // Create a sample CSV template
+    // Create a comprehensive CSV template based on females_denorm table
     const headers = [
-      'Identificacao',
-      'Nome',
-      'Data_Nascimento',
-      'Pai_NAAB',
-      'Avo_Materno_NAAB',
-      'Bisavo_Materno_NAAB',
-      'TPI',
-      'NM_Dollar',
-      'Leite',
-      'Gordura',
-      'Proteina',
-      'DPR',
-      'SCS'
+      'identifier',
+      'name',
+      'birth_date',
+      'cdcb_id',
+      'sire_naab',
+      'mgs_naab',
+      'mmgs_naab',
+      'hhp_dollar',
+      'tpi',
+      'nm_dollar',
+      'cm_dollar',
+      'fm_dollar',
+      'gm_dollar',
+      'f_sav',
+      'ptam',
+      'cfp',
+      'ptaf',
+      'ptaf_pct',
+      'ptap',
+      'ptap_pct',
+      'pl',
+      'dpr',
+      'liv',
+      'scs',
+      'mast',
+      'met',
+      'rp',
+      'da',
+      'ket',
+      'mf',
+      'ptat',
+      'udc',
+      'flc',
+      'sce',
+      'dce',
+      'ssb',
+      'dsb',
+      'h_liv',
+      'ccr',
+      'hcr',
+      'fi',
+      'gl',
+      'efc',
+      'bwc',
+      'sta',
+      'str',
+      'dfm',
+      'rua',
+      'rls',
+      'rtp',
+      'ftl',
+      'rw',
+      'rlr',
+      'fta',
+      'fls',
+      'fua',
+      'ruh',
+      'ruw',
+      'ucl',
+      'udp',
+      'ftp',
+      'rfi',
+      'beta_casein',
+      'kappa_casein',
+      'gfi'
     ];
     
     const sampleData = [
-      'BR001,VACA EXEMPLO,2020-01-15,200HO12345,200HO67890,200HO11111,2650,820,1450,58,45,1.2,2.85'
+      'BR001,VACA EXEMPLO,2020-01-15,1234567890,200HO12345,200HO67890,200HO11111,820,2650,750,680,590,420,1.2,2.1,3.5,2.8,105,2.5,110,1.2,1.5,2.85,4.2,1.8,1.1,0.2,0.1,2.4,1.8,0.4,0.3,1.2,0.8,2.1,1.9,2.2,1.4,0.9,1.7,1.3,0.6,1.5,2.0,1.8,0.7,0.2,0.5,1.1,0.9,1.3,0.8,0.4,1.2,0.6,0.7,1.0,0.3,0.5,A2A2,AA,1.6'
     ];
 
     const csvContent = [headers.join(','), ...sampleData].join('\n');
@@ -92,7 +144,7 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'template_femeas.csv';
+    a.download = `template_femeas_${farmName.replace(/\s+/g, '_')}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -118,8 +170,7 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              O arquivo deve conter as colunas: Identificacao, Nome, Data_Nascimento, 
-              Pai_NAAB, TPI, NM_Dollar, etc.
+              O arquivo deve conter as colunas conforme o template. Baixe o template para ver todas as colunas disponíveis da tabela females_denorm.
             </AlertDescription>
           </Alert>
 

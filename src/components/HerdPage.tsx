@@ -150,6 +150,191 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack }) => {
     return `${months >= 0 ? months : 12 + months}m`;
   };
 
+  const handleExport = () => {
+    if (filteredFemales.length === 0) {
+      toast({
+        title: "Nenhum dado para exportar",
+        description: "Não há fêmeas para exportar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Create CSV with all columns from females_denorm
+    const headers = [
+      'ID Fazenda',
+      'Nome',
+      'ID CDCB',
+      'Identificador',
+      'Data Nascimento',
+      'Pai NAAB',
+      'Avô Materno NAAB',
+      'BisAvô Materno NAAB',
+      'HHP$',
+      'TPI',
+      'NM$',
+      'CM$',
+      'FM$',
+      'GM$',
+      'F SAV',
+      'PTAM',
+      'CFP',
+      'PTAF',
+      'PTAF%',
+      'PTAP',
+      'PTAP%',
+      'PL',
+      'DPR',
+      'LIV',
+      'SCS',
+      'MAST',
+      'MET',
+      'RP',
+      'DA',
+      'KET',
+      'MF',
+      'PTAT',
+      'UDC',
+      'FLC',
+      'SCE',
+      'DCE',
+      'SSB',
+      'DSB',
+      'H LIV',
+      'CCR',
+      'HCR',
+      'FI',
+      'GL',
+      'EFC',
+      'BWC',
+      'STA',
+      'STR',
+      'DFM',
+      'RUA',
+      'RLS',
+      'RTP',
+      'FTL',
+      'RW',
+      'RLR',
+      'FTA',
+      'FLS',
+      'FUA',
+      'RUH',
+      'RUW',
+      'UCL',
+      'UDP',
+      'FTP',
+      'RFI',
+      'Beta-Casein',
+      'Kappa-Casein',
+      'GFI',
+      'Criado Em',
+      'Atualizado Em'
+    ];
+
+    const csvData = filteredFemales.map(female => [
+      farm.farm_id,
+      female.name,
+      female.cdcb_id || '',
+      female.identifier || '',
+      female.birth_date ? formatDate(female.birth_date) : '',
+      female.sire_naab || '',
+      female.mgs_naab || '',
+      female.mmgs_naab || '',
+      female.hhp_dollar || '',
+      female.tpi || '',
+      female.nm_dollar || '',
+      female.cm_dollar || '',
+      female.fm_dollar || '',
+      female.gm_dollar || '',
+      female.f_sav || '',
+      female.ptam || '',
+      female.cfp || '',
+      female.ptaf || '',
+      female.ptaf_pct || '',
+      female.ptap || '',
+      female.ptap_pct || '',
+      female.pl || '',
+      female.dpr || '',
+      female.liv || '',
+      female.scs || '',
+      female.mast || '',
+      female.met || '',
+      female.rp || '',
+      female.da || '',
+      female.ket || '',
+      female.mf || '',
+      female.ptat || '',
+      female.udc || '',
+      female.flc || '',
+      female.sce || '',
+      female.dce || '',
+      female.ssb || '',
+      female.dsb || '',
+      female.h_liv || '',
+      female.ccr || '',
+      female.hcr || '',
+      female.fi || '',
+      female.gl || '',
+      female.efc || '',
+      female.bwc || '',
+      female.sta || '',
+      female.str || '',
+      female.dfm || '',
+      female.rua || '',
+      female.rls || '',
+      female.rtp || '',
+      female.ftl || '',
+      female.rw || '',
+      female.rlr || '',
+      female.fta || '',
+      female.fls || '',
+      female.fua || '',
+      female.ruh || '',
+      female.ruw || '',
+      female.ucl || '',
+      female.udp || '',
+      female.ftp || '',
+      female.rfi || '',
+      female.beta_casein || '',
+      female.kappa_casein || '',
+      female.gfi || '',
+      formatDate(female.created_at),
+      female.updated_at ? formatDate(female.updated_at) : ''
+    ]);
+
+    // Convert to CSV format
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map(row => 
+        row.map(cell => {
+          // Escape commas and quotes in cell content
+          const cellStr = String(cell);
+          if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+            return `"${cellStr.replace(/"/g, '""')}"`;
+          }
+          return cellStr;
+        }).join(',')
+      )
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `rebanho_${farm.farm_name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Exportação concluída",
+      description: `${filteredFemales.length} fêmeas exportadas com sucesso!`,
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="border-b">
@@ -234,7 +419,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack }) => {
               <Upload className="w-4 h-4 mr-2" />
               Importar
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleExport}>
               <Download className="w-4 h-4 mr-2" />
               Exportar
             </Button>
