@@ -267,56 +267,146 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack }) => {
           {/* Bulls Table */}
           <Card>
             <div className="overflow-auto rounded-lg" style={{ maxHeight: '70vh' }}>
-              <table className="min-w-[1800px] w-full">
+              <table className="min-w-[2000px] w-full">
                 <thead className="sticky top-0 z-10">
                   <tr>
-                    <th className="px-3 py-2 bg-foreground text-background">✓</th>
-                    <th className="px-3 py-2 bg-foreground text-background">Score</th>
-                    <th className="px-3 py-2 bg-foreground text-background">NAAB</th>
-                    <th className="px-3 py-2 bg-foreground text-background">Nome</th>
-                    <th className="px-3 py-2 bg-foreground text-background">Empresa</th>
-                    <th className="px-3 py-2 bg-foreground text-background">Registro</th>
-                    <th className="px-3 py-2 bg-foreground text-background">Pedigree</th>
-                    <th className="px-3 py-2 bg-foreground text-background">Nascimento</th>
-                    <th className="px-3 py-2 bg-foreground text-background">HHP$®</th>
-                    <th className="px-3 py-2 bg-foreground text-background">TPI</th>
-                    <th className="px-3 py-2 bg-foreground text-background">NM$</th>
-                    <th className="px-3 py-2 bg-foreground text-background">CM$</th>
-                    <th className="px-3 py-2 bg-foreground text-background">FM$</th>
-                    <th className="px-3 py-2 bg-foreground text-background">GM$</th>
-                    <th className="px-3 py-2 bg-foreground text-background">F SAV</th>
-                    <th className="px-3 py-2 bg-foreground text-background">PTAM</th>
-                    <th className="px-3 py-2 bg-foreground text-background">CFP</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">✓</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">NAAB</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">Nome</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">Registro</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">Pedigre Pai/Avô Materno/BisaAvô Materno</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">Data de Nascimento</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">HHP$®</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">TPI</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">NM$</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">CM$</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">FM$</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">GM$</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">F SAV</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">PTAM</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">CFP</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">PTAF</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">PTAF%</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">PTAP</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">PTAP%</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">PL</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">DPR</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">LIV</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">SCS</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">MAST</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">MET</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">RP</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">DA</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">KET</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">MF</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">PTAT</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">UDC</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">FLC</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">SCE</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">DCE</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">SSB</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">DSB</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">H LIV</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">CCR</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">HCR</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">FI</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">GL</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">EFC</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">BWC</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">STA</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">STR</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">DFM</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">RUA</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">RLS</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">RTP</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">FTL</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">RW</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">RLR</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">FTA</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">FLS</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">FUA</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">RUH</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">RUW</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">UCL</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">UDP</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">FTP</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">RFI</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">Beta-Caseina</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">Kappa-Caseina</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">GFI</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rankedBulls.map((bull, index) => (
                     <tr key={bull.naab} className={index % 2 === 0 ? "bg-muted/50" : ""}>
-                      <td className="px-3 py-2 text-center">
+                      <td className="px-2 py-1 text-center">
                         <input
                           type="checkbox"
                           checked={selectedBulls.includes(bull.naab)}
                           onChange={() => handleBullToggle(bull.naab)}
                         />
                       </td>
-                      <td className="px-3 py-2 font-bold text-primary">
-                        {bull.score?.toFixed(0)}
-                      </td>
-                      <td className="px-3 py-2 font-mono text-sm">{bull.naab}</td>
-                      <td className="px-3 py-2 font-medium">{bull.nome}</td>
-                      <td className="px-3 py-2 text-sm">{bull.empresa}</td>
-                      <td className="px-3 py-2 font-mono text-sm">{bull.registro}</td>
-                      <td className="px-3 py-2 text-sm">{bull.pedigree}</td>
-                      <td className="px-3 py-2 text-sm">{bull.nascimento}</td>
-                      <td className="px-3 py-2 text-center">{bull.HHP_dollar}</td>
-                      <td className="px-3 py-2 text-center">{bull.TPI}</td>
-                      <td className="px-3 py-2 text-center">{bull.NM_dollar}</td>
-                      <td className="px-3 py-2 text-center">{bull.CM_dollar}</td>
-                      <td className="px-3 py-2 text-center">{bull.FM_dollar}</td>
-                      <td className="px-3 py-2 text-center">{bull.GM_dollar}</td>
-                      <td className="px-3 py-2 text-center">{bull.F_SAV}</td>
-                      <td className="px-3 py-2 text-center">{bull.PTAM}</td>
-                      <td className="px-3 py-2 text-center">{bull.CFP}</td>
+                      <td className="px-2 py-1 font-mono text-xs">{bull.naab}</td>
+                      <td className="px-2 py-1 font-medium text-xs">{bull.nome}</td>
+                      <td className="px-2 py-1 font-mono text-xs">{bull.registro}</td>
+                      <td className="px-2 py-1 text-xs">{bull.pedigree}</td>
+                      <td className="px-2 py-1 text-xs">{bull.nascimento}</td>
+                      <td className="px-2 py-1 text-center text-xs">{bull.HHP_dollar}</td>
+                      <td className="px-2 py-1 text-center text-xs">{bull.TPI}</td>
+                      <td className="px-2 py-1 text-center text-xs">{bull.NM_dollar}</td>
+                      <td className="px-2 py-1 text-center text-xs">{bull.CM_dollar}</td>
+                      <td className="px-2 py-1 text-center text-xs">{bull.FM_dollar}</td>
+                      <td className="px-2 py-1 text-center text-xs">{bull.GM_dollar}</td>
+                      <td className="px-2 py-1 text-center text-xs">{bull.F_SAV}</td>
+                      <td className="px-2 py-1 text-center text-xs">{bull.PTAM}</td>
+                      <td className="px-2 py-1 text-center text-xs">{bull.CFP}</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
+                      <td className="px-2 py-1 text-center text-xs">-</td>
                     </tr>
                   ))}
                 </tbody>
