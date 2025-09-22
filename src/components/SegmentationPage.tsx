@@ -1,18 +1,18 @@
-import React, { useState, useMemo, useEffect } from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
-import { ArrowLeftRight, Download, PieChart as PieIcon, Settings, Filter, Layers3, TrendingUp } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Download, Settings, Filter, Check, X, RefreshCw, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from '@/integrations/supabase/client';
 
 interface Farm {
   id: string;
   farm_id: string;
   name: string;
   owner_name: string;
+}
+
+interface SegmentationPageProps {
+  farm: Farm;
+  onBack: () => void;
 }
 
 type Female = {
@@ -79,922 +79,651 @@ type Female = {
   ftp?: number;
   rfi?: number;
   gfi?: number;
-  _percentil?: number | null;
-  _grupo?: "Doadoras" | "Inter" | "Receptoras";
-  _motivo?: string;
+  CustomScore?: number;
+  __idKey?: string;
+  __nameKey?: string;
 };
 
-type Weights = { 
-  ["HHP$"]: number;
-  TPI: number; 
-  ["NM$"]: number; 
-  ["CM$"]: number;
-  ["FM$"]: number;
-  ["GM$"]: number;
-  ["F SAV"]: number;
-  PTAM: number;
-  CFP: number;
-  PTAF: number;
-  ["PTAF%"]: number;
-  PTAP: number;
-  ["PTAP%"]: number;
-  PL: number;
-  DPR: number;
-  LIV: number;
-  SCS: number;
-  MAST: number;
-  MET: number;
-  RP: number;
-  DA: number;
-  KET: number;
-  MF: number;
-  PTAT: number;
-  UDC: number;
-  FLC: number;
-  SCE: number;
-  DCE: number;
-  SSB: number;
-  DSB: number;
-  ["H LIV"]: number;
-  CCR: number;
-  HCR: number;
-  FI: number;
-  GL: number;
-  EFC: number;
-  BWC: number;
-  STA: number;
-  STR: number;
-  DFM: number;
-  RUA: number;
-  RLS: number;
-  RTP: number;
-  FTL: number;
-  RW: number;
-  RLR: number;
-  FTA: number;
-  FLS: number;
-  FUA: number;
-  RUH: number;
-  RUW: number;
-  UCL: number;
-  UDP: number;
-  FTP: number;
-  RFI: number;
-  Milk: number; 
-  Fat: number; 
-  Protein: number; 
+// ────────────────────────────────────────────────────────────────────
+// Configurações de cor (Select Sires)
+// ────────────────────────────────────────────────────────────────────
+const SS = {
+  red: "#ED1C24",
+  black: "#1C1C1C",
+  gray: "#D9D9D9",
+  white: "#F2F2F2",
+  green: "#8DC63F",
 };
 
-type PrimaryIndex = "HHP$" | "NM$" | "TPI" | "Custom";
+// ────────────────────────────────────────────────────────────────────
+// Lista completa de PTAs (rótulos)
+// ────────────────────────────────────────────────────────────────────
+const ALL_PTAS = [
+  "HHP$®","TPI","NM$","CM$","FM$","GM$","F SAV","PTAM","CFP","PTAF","PTAF%","PTAP","PTAP%","PL","DPR","LIV","SCS","MAST","MET","RP","DA","KET","MF","PTAT","UDC","FLC","SCE","DCE","SSB","DSB","H LIV","CCR","HCR","FI","GL","EFC","BWC","STA","STR","DFM","RUA","RLS","RTP","FTL","RW","RLR","FTA","FLS","FUA","RUH","RUW","UCL","UDP","FTP","RFI","Beta-Casein","Kappa-Casein","GFI"
+];
 
-type SegmentConfig = {
-  primaryIndex: PrimaryIndex;
-  donorCutoffPercent: number;
-  goodCutoffUpper: number;
-  scsMaxDonor: number;
-  dprMinDonor: number;
-  critical_dpr_lt: number;
-  critical_scs_gt: number;
-  gates: {
-    ["HHP$"]: { enabled: boolean; min?: number; max?: number };
-    TPI: { enabled: boolean; min?: number; max?: number };
-    ["NM$"]: { enabled: boolean; min?: number; max?: number };
-    ["CM$"]: { enabled: boolean; min?: number; max?: number };
-    ["FM$"]: { enabled: boolean; min?: number; max?: number };
-    ["GM$"]: { enabled: boolean; min?: number; max?: number };
-    ["F SAV"]: { enabled: boolean; min?: number; max?: number };
-    PTAM: { enabled: boolean; min?: number; max?: number };
-    CFP: { enabled: boolean; min?: number; max?: number };
-    PTAF: { enabled: boolean; min?: number; max?: number };
-    ["PTAF%"]: { enabled: boolean; min?: number; max?: number };
-    PTAP: { enabled: boolean; min?: number; max?: number };
-    ["PTAP%"]: { enabled: boolean; min?: number; max?: number };
-    PL: { enabled: boolean; min?: number; max?: number };
-    DPR: { enabled: boolean; min?: number; max?: number };
-    LIV: { enabled: boolean; min?: number; max?: number };
-    SCS: { enabled: boolean; min?: number; max?: number };
-    MAST: { enabled: boolean; min?: number; max?: number };
-    MET: { enabled: boolean; min?: number; max?: number };
-    RP: { enabled: boolean; min?: number; max?: number };
-    DA: { enabled: boolean; min?: number; max?: number };
-    KET: { enabled: boolean; min?: number; max?: number };
-    MF: { enabled: boolean; min?: number; max?: number };
-    PTAT: { enabled: boolean; min?: number; max?: number };
-    UDC: { enabled: boolean; min?: number; max?: number };
-    FLC: { enabled: boolean; min?: number; max?: number };
-    SCE: { enabled: boolean; min?: number; max?: number };
-    DCE: { enabled: boolean; min?: number; max?: number };
-    SSB: { enabled: boolean; min?: number; max?: number };
-    DSB: { enabled: boolean; min?: number; max?: number };
-    ["H LIV"]: { enabled: boolean; min?: number; max?: number };
-    CCR: { enabled: boolean; min?: number; max?: number };
-    HCR: { enabled: boolean; min?: number; max?: number };
-    FI: { enabled: boolean; min?: number; max?: number };
-    GL: { enabled: boolean; min?: number; max?: number };
-    EFC: { enabled: boolean; min?: number; max?: number };
-    BWC: { enabled: boolean; min?: number; max?: number };
-    STA: { enabled: boolean; min?: number; max?: number };
-    STR: { enabled: boolean; min?: number; max?: number };
-    DFM: { enabled: boolean; min?: number; max?: number };
-    RUA: { enabled: boolean; min?: number; max?: number };
-    RLS: { enabled: boolean; min?: number; max?: number };
-    RTP: { enabled: boolean; min?: number; max?: number };
-    FTL: { enabled: boolean; min?: number; max?: number };
-    RW: { enabled: boolean; min?: number; max?: number };
-    RLR: { enabled: boolean; min?: number; max?: number };
-    FTA: { enabled: boolean; min?: number; max?: number };
-    FLS: { enabled: boolean; min?: number; max?: number };
-    FUA: { enabled: boolean; min?: number; max?: number };
-    RUH: { enabled: boolean; min?: number; max?: number };
-    RUW: { enabled: boolean; min?: number; max?: number };
-    UCL: { enabled: boolean; min?: number; max?: number };
-    UDP: { enabled: boolean; min?: number; max?: number };
-    FTP: { enabled: boolean; min?: number; max?: number };
-    RFI: { enabled: boolean; min?: number; max?: number };
-    Milk: { enabled: boolean; min?: number; max?: number };
-    Fat: { enabled: boolean; min?: number; max?: number };
-    Protein: { enabled: boolean; min?: number; max?: number };
-  };
+// Alias para chaves (mapeia colunas que vêm com símbolo)
+const ALIAS: Record<string, string> = {
+  "HHP$®": "hhp_dollar",
+  "HHP$": "hhp_dollar",
+  "F SAV": "f_sav",
+  "H LIV": "h_liv",
+  "NM$": "nm_dollar",
+  "CM$": "cm_dollar",
+  "FM$": "fm_dollar",
+  "GM$": "gm_dollar",
+  "TPI": "tpi",
+  "PTAF%": "ptaf_pct",
+  "PTAP%": "ptap_pct",
+  "Beta-Casein": "beta_casein",
+  "Kappa-Casein": "kappa_casein",
 };
 
-// Color scheme matching Select Sires branding
-const COLORS = {
-  Doadoras: "hsl(var(--primary))", // Red
-  Inter: "hsl(var(--accent))", // Green  
-  Receptoras: "hsl(var(--muted))", // Gray
-};
+// Colunas candidatas a nome/identificação
+const NAME_COLS = ["name", "nome", "animal_name", "cow_name", "animal", "ident", "id_animal"];
+const ID_COLS = ["id", "animal_id", "brinco", "ear_tag", "cdcb_id", "uuid"];
 
-function toCSV(rows: any[], filename = "export.csv") {
-  if (!rows?.length) return;
+// Dataset demo (fallback se não houver dados)
+const DEMO_ANIMALS: Female[] = [
+  { id: "A001", name: "Vaca 001", hhp_dollar: 620, tpi: 2350, nm_dollar: 415, ptam: 1200, ptaf: 50, scs: 2.6, dpr: 1.2 },
+  { id: "A002", name: "Vaca 002", hhp_dollar: 590, tpi: 2280, nm_dollar: 380, ptam: 1080, ptaf: 44, scs: 2.9, dpr: -0.1 },
+  { id: "A003", name: "Vaca 003", hhp_dollar: 655, tpi: 2425, nm_dollar: 430, ptam: 1305, ptaf: 56, scs: 2.4, dpr: 0.4 },
+  { id: "A004", name: "Vaca 004", hhp_dollar: 540, tpi: 2205, nm_dollar: 350, ptam: 980,  ptaf: 40, scs: 3.1, dpr: -0.6 },
+  { id: "A005", name: "Vaca 005", hhp_dollar: 605, tpi: 2360, nm_dollar: 405, ptam: 1190, ptaf: 48, scs: 2.7, dpr: 0.8 },
+];
+
+// ────────────────────────────────────────────────────────────────────
+// Utilitários
+// ────────────────────────────────────────────────────────────────────
+const getKey = (trait: string): string => ALIAS[trait] ?? trait.toLowerCase().replace(/[^\w]/g, '_');
+
+function toCSV(rows: any[]): string {
+  if (!rows || !rows.length) return "";
   const headers = Object.keys(rows[0]);
-  const csv =
-    [headers.join(",")]
-      .concat(rows.map((r) => headers.map((h) => String(r[h] ?? "")).join(",")))
-      .join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const lines = [headers.join(",")];
+  for (const r of rows) {
+    const line = headers.map(h => {
+      const v = r[h];
+      if (v === null || v === undefined) return "";
+      const s = String(v).replace(/"/g, '""');
+      return (s.includes(',') || s.includes('"') || s.includes('\n')) ? `"${s}"` : s;
+    }).join(",");
+    lines.push(line);
+  }
+  return lines.join("\n");
+}
+
+function downloadText(filename: string, text: string) {
+  const blob = new Blob([text], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
+  link.href = url;
   link.setAttribute("download", filename);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
-// Segmentation functions
-function normalize(value: number, mean: number, sd: number) {
-  return (value - mean) / (sd || 1);
-}
-
-function scoreAnimal(
-  a: { tpi: number; nm_dollar: number; scs: number; ptat: number; },
-  stats: any,
-  w: Weights
-) {
-  const zTPI  = normalize(a.tpi,      stats.tpi?.mean,   stats.tpi?.sd);
-  const zNM   = normalize(a.nm_dollar,   stats.nm_dollar?.mean, stats.nm_dollar?.sd);
-  const zSCS  = normalize(a.scs,      stats.scs?.mean,   stats.scs?.sd);
-  const zPTAT = normalize(a.ptat,     stats.ptat?.mean,  stats.ptat?.sd);
-
-  return (
-    w.TPI    * zTPI +
-    w["NM$"] * zNM  +
-    w.PTAT   * zPTAT -
-    w.SCS    * zSCS        // SCS penaliza
-  );
-}
-
-function getPrimaryValue(
-  f: Female,
-  primary: PrimaryIndex,
-  statsForCustom: any,
-  weights: Weights,
-  selectedTraits?: any
-): number | null {
-  // Leitores robustos para NM$/NM
-  const nmCandidate = f.hhp_dollar ?? f.nm_dollar ?? null;
-
-  if (primary === "TPI")  return isFinite(Number(f.tpi)) ? Number(f.tpi) : null;
-  if (primary === "NM$" || primary === "HHP$") {
-    return isFinite(Number(nmCandidate)) ? Number(nmCandidate) : null;
+function computeZMeta(list: Female[], traits: string[]) {
+  const meta: Record<string, { mu: number; sigma: number }> = {};
+  for (const t of traits) {
+    const k = getKey(t);
+    const vals = list.map(a => Number((a as any)[k])).filter(v => Number.isFinite(v));
+    const mu = vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : 0;
+    const variance = vals.length ? vals.reduce((s, v) => s + Math.pow(v - mu, 2), 0) / vals.length : 0;
+    const sigma = Math.sqrt(variance) || 0;
+    meta[t] = { mu, sigma };
   }
-  if (primary === "Custom") {
-    try {
-      // Se nenhum traço for marcado em Custom, usar todos os traços por padrão
-      const hasAnySelected = selectedTraits ? Object.values(selectedTraits).some(Boolean) : false;
-      const effectiveWeights = hasAnySelected ? weights : {
-        ["HHP$"]: 0, TPI: 1, ["NM$"]: 1, ["CM$"]: 0, ["FM$"]: 0, ["GM$"]: 0, ["F SAV"]: 0, PTAM: 0, CFP: 0,
-        PTAF: 0, ["PTAF%"]: 0, PTAP: 0, ["PTAP%"]: 0, PL: 0, DPR: 0, LIV: 0, SCS: 1, MAST: 0, MET: 0, RP: 0, DA: 0, KET: 0, MF: 0,
-        PTAT: 1, UDC: 0, FLC: 0, SCE: 0, DCE: 0, SSB: 0, DSB: 0, ["H LIV"]: 0, CCR: 0, HCR: 0, FI: 0, GL: 0, EFC: 0, BWC: 0, STA: 0,
-        STR: 0, DFM: 0, RUA: 0, RLS: 0, RTP: 0, FTL: 0, RW: 0, RLR: 0, FTA: 0, FLS: 0, FUA: 0, RUH: 0, RUW: 0, UCL: 0, UDP: 0, FTP: 0, RFI: 0,
-        Milk: 1, Fat: 1, Protein: 1
-      };
-      
-      const base = {
-        tpi: f.tpi || 0,
-        nm_dollar: Number(nmCandidate || 0),
-        scs: f.scs || 0, 
-        ptat: f.ptat || 0,
-      };
-      return scoreAnimal(base, statsForCustom || {}, effectiveWeights);
-    } catch {
-      return null;
-    }
-  }
-  return null;
+  return meta;
 }
 
-function computePercentiles(values: Array<{ id: string; v: number }>): Map<string, number> {
-  const sorted = [...values].sort((a, b) => b.v - a.v);
-  const n = sorted.length;
-  const map = new Map<string, number>();
-  sorted.forEach((item, i) => {
-    const p = Math.round(((i + 1) / n) * 100);
-    map.set(item.id, p);
-  });
-  return map;
+function normalizeWeights(weights: Record<string, number>) {
+  const sum = Object.values(weights).reduce((s, v) => s + (Number(v) || 0), 0);
+  if (sum === 0) return { ...weights };
+  const out: Record<string, number> = {};
+  for (const k of Object.keys(weights)) out[k] = (Number(weights[k]) || 0) / sum;
+  return out;
 }
 
-function segmentAnimals(
-  females: Female[],
-  cfg: SegmentConfig,
-  statsForCustom: any,
-  weights: Weights,
-  selectedTraits?: any
-): Female[] {
-  // 1) Tenta com índice escolhido
-  const base: Array<{ id: string; v: number }> = [];
-  females.forEach((f) => {
-    const v = getPrimaryValue(f, cfg.primaryIndex, statsForCustom, weights, selectedTraits);
-    if (v !== null && !Number.isNaN(v)) base.push({ id: f.id, v: Number(v) });
-  });
-
-  // 2) Se ficou vazio (ex.: dataset sem NM$/NM e usuário marcou HHP$),
-  //    faz fallback automático para TPI (evita todo mundo cair em Receptoras)
-  let pct: Map<string, number>;
-  if (base.length === 0) {
-    const fallbackBase: Array<{ id: string; v: number }> = [];
-    females.forEach((f) => {
-      if (isFinite(Number(f.tpi))) fallbackBase.push({ id: f.id, v: Number(f.tpi) });
-    });
-    console.warn("⚠️ Índice primário sem valores válidos. Usando fallback TPI para segmentação.");
-    pct = computePercentiles(fallbackBase);
-  } else {
-    pct = computePercentiles(base);
-  }
-
-  return females.map((f) => {
-    const p = pct.get(f.id) ?? null;
-    const crit = (f.dpr || 0) < cfg.critical_dpr_lt || (f.scs || 0) > cfg.critical_scs_gt;
-    if (crit) {
-      return { ...f, _percentil: p, _grupo: "Receptoras", _motivo: "Crítico: DPR/SCS" };
-    }
-
-    if (p !== null && p <= cfg.donorCutoffPercent) {
-      const okSCS = (f.scs || 99) <= cfg.scsMaxDonor;
-      const okDPR = (f.dpr || -99) >= cfg.dprMinDonor;
-      if (okSCS && okDPR) {
-        return { ...f, _percentil: p, _grupo: "Doadoras", _motivo: "Top + saúde OK" };
-      }
-      return { ...f, _percentil: p, _grupo: "Inter", _motivo: "Top, saúde insuficiente" };
-    }
-
-    if (p !== null && p <= cfg.goodCutoffUpper) {
-      return { ...f, _percentil: p, _grupo: "Inter", _motivo: "Faixa intermediária" };
-    }
-
-    return { ...f, _percentil: p, _grupo: "Receptoras", _motivo: "Abaixo do limiar" };
-  });
+function pickFirst(obj: any, candidates: string[], fallback: string): string {
+  for (const c of candidates) if (c in obj) return c;
+  return fallback;
 }
 
-const defaultSegConfig: SegmentConfig = {
-  primaryIndex: "HHP$",
-  donorCutoffPercent: 20,
-  goodCutoffUpper: 70,
-  scsMaxDonor: 2.9,
-  dprMinDonor: 1.0,
-  critical_dpr_lt: -1.0,
-  critical_scs_gt: 3.0,
-  gates: {
-    ["HHP$"]: { enabled: false },
-    TPI: { enabled: false },
-    ["NM$"]: { enabled: false },
-    ["CM$"]: { enabled: false },
-    ["FM$"]: { enabled: false },
-    ["GM$"]: { enabled: false },
-    ["F SAV"]: { enabled: false },
-    PTAM: { enabled: false },
-    CFP: { enabled: false },
-    PTAF: { enabled: false },
-    ["PTAF%"]: { enabled: false },
-    PTAP: { enabled: false },
-    ["PTAP%"]: { enabled: false },
-    PL: { enabled: false },
-    DPR: { enabled: false },
-    LIV: { enabled: false },
-    SCS: { enabled: false },
-    MAST: { enabled: false },
-    MET: { enabled: false },
-    RP: { enabled: false },
-    DA: { enabled: false },
-    KET: { enabled: false },
-    MF: { enabled: false },
-    PTAT: { enabled: false },
-    UDC: { enabled: false },
-    FLC: { enabled: false },
-    SCE: { enabled: false },
-    DCE: { enabled: false },
-    SSB: { enabled: false },
-    DSB: { enabled: false },
-    ["H LIV"]: { enabled: false },
-    CCR: { enabled: false },
-    HCR: { enabled: false },
-    FI: { enabled: false },
-    GL: { enabled: false },
-    EFC: { enabled: false },
-    BWC: { enabled: false },
-    STA: { enabled: false },
-    STR: { enabled: false },
-    DFM: { enabled: false },
-    RUA: { enabled: false },
-    RLS: { enabled: false },
-    RTP: { enabled: false },
-    FTL: { enabled: false },
-    RW: { enabled: false },
-    RLR: { enabled: false },
-    FTA: { enabled: false },
-    FLS: { enabled: false },
-    FUA: { enabled: false },
-    RUH: { enabled: false },
-    RUW: { enabled: false },
-    UCL: { enabled: false },
-    UDP: { enabled: false },
-    FTP: { enabled: false },
-    RFI: { enabled: false },
-    Milk: { enabled: false },
-    Fat: { enabled: false },
-    Protein: { enabled: false },
-  },
+type Gate = {
+  trait: string;
+  op: string;
+  value?: number;
+  min?: number;
+  max?: number;
+  enabled: boolean;
 };
 
-interface SegmentationPageProps {
-  farm: Farm;
-  onBack: () => void;
-}
-
+// ────────────────────────────────────────────────────────────────────
+// Componente principal
+// ────────────────────────────────────────────────────────────────────
 export default function SegmentationPage({ farm, onBack }: SegmentationPageProps) {
-  const [females, setFemales] = useState<Female[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [segConfig, setSegConfig] = useState<SegmentConfig>(defaultSegConfig);
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [selectedTraits, setSelectedTraits] = useState<Record<string, boolean>>({});
-  const [weights, setWeights] = useState<Weights>({
-    ["HHP$"]: 0, TPI: 1, ["NM$"]: 1, ["CM$"]: 0, ["FM$"]: 0, ["GM$"]: 0, ["F SAV"]: 0, PTAM: 0, CFP: 0,
-    PTAF: 0, ["PTAF%"]: 0, PTAP: 0, ["PTAP%"]: 0, PL: 0, DPR: 0, LIV: 0, SCS: 1, MAST: 0, MET: 0, RP: 0, DA: 0, KET: 0, MF: 0,
-    PTAT: 1, UDC: 0, FLC: 0, SCE: 0, DCE: 0, SSB: 0, DSB: 0, ["H LIV"]: 0, CCR: 0, HCR: 0, FI: 0, GL: 0, EFC: 0, BWC: 0, STA: 0,
-    STR: 0, DFM: 0, RUA: 0, RLS: 0, RTP: 0, FTL: 0, RW: 0, RLR: 0, FTA: 0, FLS: 0, FUA: 0, RUH: 0, RUW: 0, UCL: 0, UDP: 0, FTP: 0, RFI: 0,
-    Milk: 1, Fat: 1, Protein: 1
-  });
-  
-  // State for custom PTA panel visibility
-  const [showCustomPanel, setShowCustomPanel] = useState(false);
-  
-  // Available PTAs from the database
-  const availablePTAs = useMemo(() => {
-    if (!females.length) return [];
-    
-    const sample = females[0];
-    return Object.keys(sample)
-      .filter(key => key !== 'id' && key !== 'name' && key !== 'identifier' && key !== 'birth_date' && key !== 'sire_naab' && !key.startsWith('_'))
-      .map(key => {
-        const value = sample[key as keyof Female];
-        return {
-          key,
-          label: key.toUpperCase().replace(/_/g, ' ').replace('DOLLAR', '$').replace('PCT', '%'),
-          hasValue: value !== null && value !== undefined,
-          sampleValue: typeof value === 'number' ? value.toFixed(2) : String(value || '-')
-        };
-      })
-      .filter(pta => pta.hasValue);
-  }, [females]);
+  const [indexSelection, setIndexSelection] = useState<"HHP$" | "TPI" | "NM$" | "Custom">("Custom");
 
-  // Load females from database
-  const loadFemales = async () => {
+  // Custom state
+  const [search, setSearch] = useState("");
+  const [selectedTraits, setSelectedTraits] = useState(["PTAM", "PTAF", "SCS"]);
+  const [weights, setWeights] = useState<Record<string, number>>({ PTAM: 0.4, PTAF: 0.4, SCS: -0.2 });
+  const [standardize, setStandardize] = useState(true);
+
+  const [gates, setGates] = useState<Gate[]>([
+    { trait: "SCS", op: "<=", value: 2.75, enabled: true },
+    { trait: "PTAF", op: ">=", value: 40, enabled: true },
+  ]);
+  const [gatesPhase, setGatesPhase] = useState<"pre" | "post">("pre");
+  const [postGateAction, setPostGateAction] = useState<"zero" | "penalize">("zero");
+  const [penalty, setPenalty] = useState(-1000);
+
+  // Dados do rebanho (Supabase → females_denorm)
+  const [animals, setAnimals] = useState<Female[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // Presets (localStorage)
+  const [presets, setPresets] = useState<any[]>([]);
+  const [presetName, setPresetName] = useState("");
+
+  // Carrega presets
+  useEffect(() => {
     try {
-      setLoading(true);
-      const { data, error } = await supabase
+      const raw = typeof window !== 'undefined' ? window.localStorage.getItem("toolss_custom_index_presets_segment") : null;
+      if (raw) setPresets(JSON.parse(raw));
+    } catch (_) {}
+  }, []);
+  
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') window.localStorage.setItem("toolss_custom_index_presets_segment", JSON.stringify(presets));
+    } catch (_) {}
+  }, [presets]);
+
+  // Carrega dados do Supabase
+  async function fetchAnimals() {
+    setLoading(true); 
+    setError("");
+    try {
+      const { data, error: err } = await supabase
         .from('females_denorm')
         .select('*')
         .eq('farm_id', farm.farm_id)
-        .order('created_at', { ascending: false });
+        .limit(1000);
 
-      if (error) {
-        console.error('Error loading females:', error);
-        return;
+      if (err) throw err;
+      if (!data || !data.length) { 
+        setAnimals([]); 
+        return; 
       }
 
-      // Convert database data to Female type
-      const convertedFemales: Female[] = (data || []).map(dbFemale => ({
-        id: dbFemale.id,
-        name: dbFemale.name || '',
-        identifier: dbFemale.identifier,
-        birth_date: dbFemale.birth_date,
-        parity_order: dbFemale.parity_order,
-        category: dbFemale.category,
-        sire_naab: dbFemale.sire_naab,
-        hhp_dollar: dbFemale.hhp_dollar,
-        nm_dollar: dbFemale.nm_dollar,
-        tpi: dbFemale.tpi,
-        cm_dollar: dbFemale.cm_dollar,
-        fm_dollar: dbFemale.fm_dollar,
-        gm_dollar: dbFemale.gm_dollar,
-        f_sav: dbFemale.f_sav,
-        ptam: dbFemale.ptam,
-        cfp: dbFemale.cfp,
-        ptaf: dbFemale.ptaf,
-        ptaf_pct: dbFemale.ptaf_pct,
-        ptap: dbFemale.ptap,
-        ptap_pct: dbFemale.ptap_pct,
-        pl: dbFemale.pl,
-        dpr: dbFemale.dpr,
-        liv: dbFemale.liv,
-        scs: dbFemale.scs,
-        mast: dbFemale.mast,
-        met: dbFemale.met,
-        rp: dbFemale.rp,
-        da: dbFemale.da,
-        ket: dbFemale.ket,
-        mf: dbFemale.mf,
-        ptat: dbFemale.ptat,
-        udc: dbFemale.udc,
-        flc: dbFemale.flc,
-        sce: dbFemale.sce,
-        dce: dbFemale.dce,
-        ssb: dbFemale.ssb,
-        dsb: dbFemale.dsb,
-        h_liv: dbFemale.h_liv,
-        ccr: dbFemale.ccr,
-        hcr: dbFemale.hcr,
-        fi: dbFemale.fi,
-        gl: dbFemale.gl,
-        efc: dbFemale.efc,
-        bwc: dbFemale.bwc,
-        sta: dbFemale.sta,
-        str: dbFemale.str,
-        dfm: dbFemale.dfm,
-        rua: dbFemale.rua,
-        rls: dbFemale.rls,
-        rtp: dbFemale.rtp,
-        ftl: dbFemale.ftl,
-        rw: dbFemale.rw,
-        rlr: dbFemale.rlr,
-        fta: dbFemale.fta,
-        fls: dbFemale.fls,
-        fua: dbFemale.fua,
-        ruh: dbFemale.ruh,
-        ruw: dbFemale.ruw,
-        ucl: dbFemale.ucl,
-        udp: dbFemale.udp,
-        ftp: dbFemale.ftp,
-        rfi: dbFemale.rfi,
-        gfi: dbFemale.gfi
-      }));
-
-      setFemales(convertedFemales);
-    } catch (error) {
-      console.error('Error loading females:', error);
+      // Mapeia campos id/nome dinâmicos
+      const mapped = data.map(row => {
+        const idKey = pickFirst(row, ID_COLS, Object.keys(row)[0]);
+        const nameKey = pickFirst(row, NAME_COLS, idKey);
+        return { __idKey: idKey, __nameKey: nameKey, ...row };
+      });
+      setAnimals(mapped);
+    } catch (e: any) {
+      console.error(e);
+      setError(e.message || 'Erro ao carregar females_denorm');
+      setAnimals(DEMO_ANIMALS);
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    if (farm.farm_id) {
-      loadFemales();
-    }
-  }, [farm.farm_id]);
-
-  // Compute stats for custom scoring
-  const statsForCustom = useMemo(() => {
-    if (!females.length) return {};
-    
-    const tpiValues = females.map(f => f.tpi).filter(v => v != null && isFinite(v)) as number[];
-    const nmValues = females.map(f => f.nm_dollar).filter(v => v != null && isFinite(v)) as number[];
-    const scsValues = females.map(f => f.scs).filter(v => v != null && isFinite(v)) as number[];
-    const ptatValues = females.map(f => f.ptat).filter(v => v != null && isFinite(v)) as number[];
-
-    const mean = (arr: number[]) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
-    const sd = (arr: number[]) => {
-      const m = mean(arr);
-      const variance = arr.length ? arr.reduce((acc, val) => acc + Math.pow(val - m, 2), 0) / arr.length : 0;
-      return Math.sqrt(variance);
-    };
-
-    return {
-      tpi: { mean: mean(tpiValues), sd: sd(tpiValues) },
-      nm_dollar: { mean: mean(nmValues), sd: sd(nmValues) },
-      scs: { mean: mean(scsValues), sd: sd(scsValues) },
-      ptat: { mean: mean(ptatValues), sd: sd(ptatValues) }
-    };
-  }, [females]);
-
-  // Apply segmentation
-  const segmentedFemales = useMemo(() => {
-    if (!females.length) return [];
-    return segmentAnimals(females, segConfig, statsForCustom, weights, selectedTraits);
-  }, [females, segConfig, statsForCustom, weights, selectedTraits]);
-
-  // Calculate statistics
-  const segmentStats = useMemo(() => {
-    const doadoras = segmentedFemales.filter(f => f._grupo === "Doadoras");
-    const inter = segmentedFemales.filter(f => f._grupo === "Inter");  
-    const receptoras = segmentedFemales.filter(f => f._grupo === "Receptoras");
-    
-    return {
-      doadoras: { count: doadoras.length, percent: segmentedFemales.length ? (doadoras.length / segmentedFemales.length) * 100 : 0 },
-      inter: { count: inter.length, percent: segmentedFemales.length ? (inter.length / segmentedFemales.length) * 100 : 0 },
-      receptoras: { count: receptoras.length, percent: segmentedFemales.length ? (receptoras.length / segmentedFemales.length) * 100 : 0 }
-    };
-  }, [segmentedFemales]);
-
-  const pieData = [
-    { name: "Doadoras", value: segmentStats.doadoras.count, color: COLORS.Doadoras },
-    { name: "Inter", value: segmentStats.inter.count, color: COLORS.Inter },
-    { name: "Receptoras", value: segmentStats.receptoras.count, color: COLORS.Receptoras }
-  ];
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Carregando fêmeas...</p>
-        </div>
-      </div>
-    );
   }
 
+  useEffect(() => { 
+    fetchAnimals(); 
+  }, [farm.farm_id]);
+
+  // Gates helpers
+  function passGate(animal: Female, g: Gate): boolean {
+    if (!g.enabled) return true;
+    const k = getKey(g.trait);
+    const raw = (animal as any)[k];
+    if (raw === undefined || raw === null) return false;
+    const v = Number(raw);
+    if (!Number.isFinite(v)) return false;
+    switch (g.op) {
+      case ">=": return v >= (g.value ?? Number.NEGATIVE_INFINITY);
+      case "<=": return v <= (g.value ?? Number.POSITIVE_INFINITY);
+      case "=": return v === (g.value ?? v);
+      case "between": return v >= (g.min ?? Number.NEGATIVE_INFINITY) && v <= (g.max ?? Number.POSITIVE_INFINITY);
+      default: return true;
+    }
+  }
+
+  function applyGatesPre(list: Female[], _gates: Gate[]): Female[] {
+    return list.filter(a => _gates.every(g => passGate(a, g)));
+  }
+
+  // Cálculo principal
+  const calc = useMemo(() => {
+    const base = animals && animals.length ? animals : DEMO_ANIMALS;
+    let baseList = base;
+    if (indexSelection === "Custom" && gatesPhase === "pre") baseList = applyGatesPre(base, gates);
+
+    let zMeta: Record<string, { mu: number; sigma: number }> = {};
+    if (indexSelection === "Custom" && standardize) zMeta = computeZMeta(baseList, selectedTraits);
+
+    const rows = baseList.map(a => {
+      let score = 0;
+      if (indexSelection === "HHP$") score = Number(a.hhp_dollar) || 0;
+      else if (indexSelection === "TPI") score = Number(a.tpi) || 0;
+      else if (indexSelection === "NM$") score = Number(a.nm_dollar) || 0;
+      else {
+        for (const t of selectedTraits) {
+          const k = getKey(t);
+          const w = Number(weights[t]) || 0;
+          const raw = Number((a as any)[k]);
+          if (!Number.isFinite(raw)) continue;
+          const val = standardize ? (zMeta[t] && zMeta[t].sigma ? (raw - zMeta[t].mu) / zMeta[t].sigma : 0) : raw;
+          score += w * val;
+        }
+      }
+      return { ...a, CustomScore: score };
+    });
+
+    if (indexSelection === "Custom" && gatesPhase === "post") {
+      let approved = 0, rejected = 0;
+      const list = rows.map(r => {
+        const ok = gates.every(g => passGate(r, g));
+        if (!ok) {
+          if (postGateAction === "zero") r.CustomScore = 0;
+          else r.CustomScore = (r.CustomScore || 0) + penalty;
+          rejected++;
+        } else approved++;
+        return r;
+      });
+      return { list, approved, rejected };
+    }
+
+    const approved = rows.length;
+    const rejected = (indexSelection === "Custom" && gatesPhase === "pre") ? ((animals && animals.length ? animals : base).length - rows.length) : 0;
+    return { list: rows, approved, rejected };
+  }, [animals, selectedTraits, weights, standardize, indexSelection, gates, gatesPhase, postGateAction, penalty]);
+
+  const sorted = useMemo(() => {
+    const copy = [...(calc.list || [])];
+    return copy.sort((a, b) => (Number(b.CustomScore) || 0) - (Number(a.CustomScore) || 0));
+  }, [calc]);
+
+  const approvedCountDisplay = calc.approved || 0;
+  const rejectedCountDisplay = calc.rejected || 0;
+
+  function toggleTrait(t: string) {
+    setSelectedTraits(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
+  }
+  
+  function updateWeight(t: string, val: string) { 
+    setWeights(prev => ({ ...prev, [t]: Number(val) })); 
+  }
+  
+  function normalizeAll() { 
+    setWeights(prev => normalizeWeights(prev)); 
+  }
+  
+  function resetWeights() { 
+    const out: Record<string, number> = {}; 
+    for (const t of selectedTraits) out[t] = 1; 
+    setWeights(out); 
+  }
+  
+  function addEmptyGate() { 
+    setGates(prev => [...prev, { trait: "PTAM", op: ">=", value: 0, enabled: true }]); 
+  }
+  
+  function updateGate(i: number, key: string, value: any) { 
+    setGates(prev => prev.map((g, idx) => idx === i ? { ...g, [key]: value } : g)); 
+  }
+  
+  function removeGate(i: number) { 
+    setGates(prev => prev.filter((_, idx) => idx !== i)); 
+  }
+
+  function exportCSV() {
+    const rows = sorted.map(a => ({
+      id: a.__idKey ? (a as any)[a.__idKey] : (a.id ?? ""),
+      nome: a.__nameKey ? (a as any)[a.__nameKey] : (a.name ?? ""),
+      "HHP$": a.hhp_dollar ?? "",
+      TPI: a.tpi ?? "",
+      "NM$": a.nm_dollar ?? "",
+      PTAM: a.ptam ?? "",
+      PTAF: a.ptaf ?? "",
+      SCS: a.scs ?? "",
+      DPR: a.dpr ?? "",
+      CustomScore: a.CustomScore,
+    }));
+    const csv = toCSV(rows);
+    downloadText("segmentacao_custom_index.csv", csv);
+  }
+
+  function savePreset() {
+    if (!presetName.trim()) { 
+      alert("Dê um nome ao preset."); 
+      return; 
+    }
+    const payload = { 
+      name: presetName.trim(), 
+      selectedTraits, 
+      weights, 
+      standardize, 
+      gates, 
+      gatesPhase, 
+      postGateAction, 
+      penalty 
+    };
+    setPresets(prev => [payload, ...prev.filter(p => p.name !== payload.name)]);
+    setPresetName("");
+  }
+  
+  function loadPreset(name: string) {
+    const p = presets.find(pp => pp.name === name); 
+    if (!p) return;
+    setSelectedTraits(p.selectedTraits); 
+    setWeights(p.weights); 
+    setStandardize(p.standardize);
+    setGates(p.gates); 
+    setGatesPhase(p.gatesPhase); 
+    setPostGateAction(p.postGateAction); 
+    setPenalty(p.penalty);
+  }
+  
+  function deletePreset(name: string) { 
+    setPresets(prev => prev.filter(p => p.name !== name)); 
+  }
+
+  const weightSum = useMemo(() => Object.values(weights).reduce((s, v) => s + (Number(v) || 0), 0), [weights]);
+  const filteredPTAs = useMemo(() => { 
+    const s = search.trim().toLowerCase(); 
+    if (!s) return ALL_PTAS; 
+    return ALL_PTAS.filter(p => p.toLowerCase().includes(s)); 
+  }, [search]);
+
+  // ────────────────────────────────────────────────────────────────────
+  // UI
+  // ────────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="sticky top-0 z-40 border-b bg-card shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
-          <Button variant="outline" size="sm" onClick={onBack}>
-            <ArrowLeftRight className="h-4 w-4 mr-2" />
-            Voltar
+      <div className="border-b">
+        <div className="flex h-16 items-center px-4">
+          <Button variant="ghost" onClick={onBack} className="mr-4">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Dashboard
           </Button>
-          <div className="flex items-center gap-2">
-            <Layers3 className="h-5 w-5 text-primary" />
-            <h1 className="text-xl font-bold">Segmentação</h1>
-            <span className="text-muted-foreground">• {farm.name}</span>
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => toCSV(segmentedFemales, `segmentacao-${farm.name}.csv`)}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Exportar CSV
-            </Button>
-          </div>
+          <h1 className="text-xl font-semibold">{farm.name} - Segmentação</h1>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Total de Fêmeas</span>
-              </div>
-              <p className="text-2xl font-bold mt-1">{segmentedFemales.length}</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: COLORS.Doadoras }}></div>
-                <span className="text-sm font-medium">Doadoras</span>
-              </div>
-              <p className="text-2xl font-bold mt-1">
-                {segmentStats.doadoras.count} <span className="text-sm text-muted-foreground">({segmentStats.doadoras.percent.toFixed(1)}%)</span>
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: COLORS.Inter }}></div>
-                <span className="text-sm font-medium">Inter</span>
-              </div>
-              <p className="text-2xl font-bold mt-1">
-                {segmentStats.inter.count} <span className="text-sm text-muted-foreground">({segmentStats.inter.percent.toFixed(1)}%)</span>
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: COLORS.Receptoras }}></div>
-                <span className="text-sm font-medium">Receptoras</span>
-              </div>
-              <p className="text-2xl font-bold mt-1">
-                {segmentStats.receptoras.count} <span className="text-sm text-muted-foreground">({segmentStats.receptoras.percent.toFixed(1)}%)</span>
-              </p>
-            </CardContent>
-          </Card>
+      <div className="w-full max-w-7xl mx-auto p-4 space-y-4">
+        {/* Header / Index selector */}
+        <div className="rounded-2xl shadow p-4" style={{ background: SS.white }}>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <h2 className="text-xl font-semibold" style={{ color: SS.black }}>Segmentação — Índice</h2>
+            <div className="flex items-center gap-2">
+              {(["HHP$", "TPI", "NM$", "Custom"] as const).map(opt => (
+                <button
+                  key={opt}
+                  onClick={() => setIndexSelection(opt)}
+                  className="px-3 py-2 rounded-xl border text-sm"
+                  style={{
+                    borderColor: indexSelection === opt ? SS.black : SS.gray,
+                    background: indexSelection === opt ? SS.black : SS.white,
+                    color: indexSelection === opt ? SS.white : SS.black,
+                  }}
+                >{opt}</button>
+              ))}
+            </div>
+          </div>
+          {indexSelection !== "Custom" && (
+            <div className="mt-3 text-sm inline-flex items-center gap-2 px-2 py-1 rounded-lg" style={{ background: SS.gray, color: SS.black }}>
+              <Settings size={16}/> Índice padrão – somente leitura
+            </div>
+          )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Configuration Panel */}
-          <div className="lg:col-span-1 space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-4 w-4" />
-                  Configuração
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="primaryIndex">Índice Primário</Label>
-                  <Select
-                    value={segConfig.primaryIndex}
-                    onValueChange={(value: PrimaryIndex) => {
-                      setSegConfig(prev => ({ ...prev, primaryIndex: value }));
-                      if (value === 'Custom') {
-                        setShowCustomPanel(true);
-                      } else {
-                        setShowCustomPanel(false);
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="HHP$">HHP$</SelectItem>
-                      <SelectItem value="NM$">NM$</SelectItem>
-                      <SelectItem value="TPI">TPI</SelectItem>
-                      <SelectItem value="Custom">Customizado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="donorCutoff">% Corte Doadoras</Label>
-                  <Input
-                    id="donorCutoff"
-                    type="number"
-                    value={segConfig.donorCutoffPercent}
-                    onChange={e => setSegConfig(prev => ({ 
-                      ...prev, 
-                      donorCutoffPercent: Number(e.target.value) 
-                    }))}
-                    min={1}
-                    max={100}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="goodCutoff">% Corte Inter</Label>
-                  <Input
-                    id="goodCutoff"
-                    type="number"
-                    value={segConfig.goodCutoffUpper}
-                    onChange={e => setSegConfig(prev => ({ 
-                      ...prev, 
-                      goodCutoffUpper: Number(e.target.value) 
-                    }))}
-                    min={1}
-                    max={100}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="scsMaxDonor">SCS Máx Doadoras</Label>
-                  <Input
-                    id="scsMaxDonor"
-                    type="number"
-                    step="0.1"
-                    value={segConfig.scsMaxDonor}
-                    onChange={e => setSegConfig(prev => ({ 
-                      ...prev, 
-                      scsMaxDonor: Number(e.target.value) 
-                    }))}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="dprMinDonor">DPR Mín Doadoras</Label>
-                  <Input
-                    id="dprMinDonor"
-                    type="number"
-                    step="0.1"
-                    value={segConfig.dprMinDonor}
-                    onChange={e => setSegConfig(prev => ({ 
-                      ...prev, 
-                      dprMinDonor: Number(e.target.value) 
-                    }))}
-                  />
-                </div>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowAdvanced(!showAdvanced)}
-                  className="w-full"
-                >
-                  <Filter className="h-4 w-4 mr-2" />
-                  {showAdvanced ? "Ocultar" : "Mostrar"} Avançado
-                </Button>
-
-                {showAdvanced && (
-                  <div className="space-y-4 border-t pt-4">
-                    <div>
-                      <Label htmlFor="criticalDpr">DPR Crítico (&lt; vira receptora)</Label>
-                      <Input
-                        id="criticalDpr"
-                        type="number"
-                        step="0.1"
-                        value={segConfig.critical_dpr_lt}
-                        onChange={e => setSegConfig(prev => ({ 
-                          ...prev, 
-                          critical_dpr_lt: Number(e.target.value) 
-                        }))}
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="criticalScs">SCS Crítico (&gt; vira receptora)</Label>
-                      <Input
-                        id="criticalScs"
-                        type="number"
-                        step="0.1"
-                        value={segConfig.critical_scs_gt}
-                        onChange={e => setSegConfig(prev => ({ 
-                          ...prev, 
-                          critical_scs_gt: Number(e.target.value) 
-                        }))}
-                      />
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Custom PTA Panel */}
-            {showCustomPanel && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>PTAs Disponíveis</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3 max-h-64 overflow-y-auto">
-                    {availablePTAs.slice(0, 15).map((pta) => (
-                      <div key={pta.key} className="flex items-center justify-between text-sm">
-                        <span>{pta.label}</span>
-                        <span className="text-muted-foreground">{pta.sampleValue}</span>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  <div className="mt-4 pt-4 border-t space-y-3">
-                    <Label>Configurar Pesos para Índice Customizado</Label>
-                    {availablePTAs.slice(0, 8).map((pta) => (
-                      <div key={pta.key} className="flex items-center justify-between">
-                        <Label className="text-xs">{pta.label}</Label>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          value={weights[pta.label as keyof Weights] || 0}
-                          onChange={e => setWeights(prev => ({
-                            ...prev,
-                            [pta.label]: Number(e.target.value)
-                          }))}
-                          className="w-16 h-8"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  
-                  <Button 
-                    className="w-full mt-4" 
-                    onClick={() => {
-                      // Apply custom segmentation
-                      console.log("Aplicando segmentação customizada");
-                    }}
-                  >
-                    Aplicar Setup Customizado
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Pie Chart */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <PieIcon className="h-4 w-4" />
-                  Distribuição
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={pieData}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={60}
-                        label={({ name, percent }) => 
-                          `${name} ${(Number(percent || 0) * 100).toFixed(0)}%`
-                        }
-                      >
-                        {pieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+        {/* Status de dados */}
+        <div className="rounded-2xl shadow p-4 flex items-center justify-between" style={{ background: SS.white }}>
+          <div className="text-sm" style={{ color: SS.black }}>
+            Fonte: <span className="font-semibold">females_denorm</span> {animals && animals.length ? `— ${animals.length} registros` : ""}
+            {error && <span className="ml-2 text-red-600">(erro: {error})</span>}
           </div>
+          <button onClick={fetchAnimals} className="px-3 py-2 rounded-xl border text-sm flex items-center gap-2" style={{ borderColor: SS.gray, color: SS.black }}>
+            <RefreshCw size={16}/> Recarregar
+          </button>
+        </div>
 
-          {/* Main Content */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Fêmeas Segmentadas ({segmentedFemales.length})</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left p-2">Nome</th>
-                        <th className="text-left p-2">ID</th>
-                        <th className="text-left p-2">Nasc.</th>
-                        <th className="text-left p-2">Ordem</th>
-                        <th className="text-left p-2">Categ.</th>
-                        <th className="text-center p-2">HHP$</th>
-                        <th className="text-center p-2">TPI</th>
-                        <th className="text-center p-2">NM$</th>
-                        <th className="text-center p-2">SCS</th>
-                        <th className="text-center p-2">DPR</th>
-                        <th className="text-center p-2">%ile</th>
-                        <th className="text-left p-2">Grupo</th>
-                        <th className="text-left p-2">Motivo</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {segmentedFemales.slice(0, 100).map((female) => (
-                        <tr key={female.id} className="border-b hover:bg-muted/50">
-                          <td className="p-2 font-medium">{female.name}</td>
-                          <td className="p-2 text-muted-foreground">{female.identifier || "-"}</td>
-                          <td className="p-2 text-muted-foreground">
-                            {female.birth_date ? new Date(female.birth_date).toLocaleDateString() : "-"}
-                          </td>
-                          <td className="p-2 text-muted-foreground">{female.parity_order || "-"}</td>
-                          <td className="p-2 text-muted-foreground">{female.category || "-"}</td>
-                          <td className="p-2 text-center">{female.hhp_dollar?.toFixed(0) || "-"}</td>
-                          <td className="p-2 text-center">{female.tpi?.toFixed(0) || "-"}</td>
-                          <td className="p-2 text-center">{female.nm_dollar?.toFixed(0) || "-"}</td>
-                          <td className="p-2 text-center">{female.scs?.toFixed(2) || "-"}</td>
-                          <td className="p-2 text-center">{female.dpr?.toFixed(1) || "-"}</td>
-                          <td className="p-2 text-center">{female._percentil || "-"}</td>
-                          <td className="p-2">
-                            <span 
-                              className="px-2 py-1 rounded-full text-xs font-medium text-white"
-                              style={{ backgroundColor: COLORS[female._grupo!] }}
-                            >
-                              {female._grupo}
-                            </span>
-                          </td>
-                          <td className="p-2 text-xs text-muted-foreground">{female._motivo}</td>
-                        </tr>
+        {indexSelection === "Custom" && (
+          <>
+            {/* Quadro A – Escolha PTAs */}
+            <div className="rounded-2xl shadow p-4" style={{ background: SS.white }}>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold" style={{ color: SS.black }}>Quadro A — Selecione as PTAs</h3>
+                <input
+                  className="border rounded-lg px-3 py-2 text-sm w-64"
+                  placeholder="Buscar PTA…"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  style={{ borderColor: SS.gray, color: SS.black, background: SS.white }}
+                />
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-64 overflow-auto pr-2">
+                {filteredPTAs.map((p) => {
+                  const checked = selectedTraits.includes(p);
+                  return (
+                    <label key={p} className="flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer" style={{ borderColor: checked ? SS.green : SS.gray, background: checked ? "#ECFDF5" : SS.white, color: SS.black }}>
+                      <input type="checkbox" className="accent-black" checked={checked} onChange={() => toggleTrait(p)} />
+                      <span className="text-sm">{p}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              <div className="mt-3 text-sm" style={{ color: SS.black }}>✔ {selectedTraits.length} PTAs selecionadas</div>
+            </div>
+
+            {/* Quadro B – Pesos */}
+            <div className="rounded-2xl shadow p-4" style={{ background: SS.white }}>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold" style={{ color: SS.black }}>Quadro B — Pesos por PTA</h3>
+                <div className="flex items-center gap-2">
+                  <button onClick={normalizeAll} className="px-3 py-2 rounded-xl border text-sm" style={{ borderColor: SS.gray, color: SS.black }}>Normalizar</button>
+                  <button onClick={resetWeights} className="px-3 py-2 rounded-xl border text-sm" style={{ borderColor: SS.gray, color: SS.black }}>Resetar</button>
+                  <div className="flex items-center gap-2">
+                    <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Nome do preset" value={presetName} onChange={e => setPresetName(e.target.value)} style={{ borderColor: SS.gray, color: SS.black, background: SS.white }} />
+                    <button onClick={savePreset} className="px-3 py-2 rounded-xl border text-sm" style={{ borderColor: SS.gray, color: SS.black }}>Salvar preset</button>
+                    <select className="border rounded-lg px-3 py-2 text-sm" onChange={e => e.target.value && loadPreset(e.target.value)} defaultValue="" style={{ borderColor: SS.gray, color: SS.black, background: SS.white }}>
+                      <option value="" disabled>Carregar preset…</option>
+                      {presets.map(p => (
+                        <option key={p.name} value={p.name}>{p.name}</option>
                       ))}
-                    </tbody>
-                  </table>
-                  {segmentedFemales.length > 100 && (
-                    <p className="text-center text-muted-foreground mt-4 text-sm">
-                      Mostrando primeiras 100 de {segmentedFemales.length} fêmeas. Exporte CSV para ver todas.
-                    </p>
-                  )}
+                    </select>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {selectedTraits.map(t => (
+                  <div key={t} className="flex items-center justify-between gap-3 p-3 rounded-xl border" style={{ borderColor: SS.gray }}>
+                    <div className="text-sm font-medium" style={{ color: SS.black }}>{t}</div>
+                    <input type="number" step="0.01" className="border rounded-lg px-3 py-2 text-sm w-28 text-right" value={Number.isFinite(Number(weights[t])) ? weights[t] : 0} onChange={e => updateWeight(t, e.target.value)} style={{ borderColor: SS.gray, color: SS.black, background: SS.white }} />
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-3 flex items-center justify-between text-sm">
+                <label className="flex items-center gap-2" style={{ color: SS.black }}>
+                  <input type="checkbox" className="accent-black" checked={standardize} onChange={e => setStandardize(e.target.checked)} />
+                  Padronizar variáveis (Z-score intra-rebanho)
+                </label>
+                <div style={{ color: SS.black }}>
+                  Soma dos pesos: <span className="font-semibold" style={{ color: Math.abs(weightSum - 1) < 1e-6 ? SS.green : SS.red }}>{weightSum.toFixed(3)}</span>
+                  {Math.abs(weightSum - 1) >= 1e-6 && <span className="ml-2 text-xs" style={{ color: SS.black }}>(clique em Normalizar)</span>}
+                </div>
+              </div>
+            </div>
+
+            {/* Quadro C – Gates */}
+            <div className="rounded-2xl shadow p-4" style={{ background: SS.white }}>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold" style={{ color: SS.black }}>Quadro C — Gates de Corte / Restrição</h3>
+                <div className="flex items-center gap-3 text-sm" style={{ color: SS.black }}>
+                  <span className="flex items-center gap-2">
+                    <input type="radio" name="phase" checked={gatesPhase === "pre"} onChange={() => setGatesPhase("pre")} /> Pré-cálculo
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <input type="radio" name="phase" checked={gatesPhase === "post"} onChange={() => setGatesPhase("post")} /> Pós-cálculo
+                  </span>
+                  {gatesPhase === "post" && (
+                    <div className="flex items-center gap-2">
+                      <select className="border rounded-lg px-2 py-1" value={postGateAction} onChange={e => setPostGateAction(e.target.value as "zero" | "penalize")} style={{ borderColor: SS.gray, color: SS.black, background: SS.white }}>
+                        <option value="zero">zerar score</option>
+                        <option value="penalize">penalizar</option>
+                      </select>
+                      {postGateAction === "penalize" && (
+                        <input type="number" className="border rounded-lg px-2 py-1 w-24 text-right" value={penalty} onChange={e => setPenalty(Number(e.target.value))} style={{ borderColor: SS.gray, color: SS.black, background: SS.white }} />
+                      )}
+                    </div>
+                  )}
+                  <button onClick={addEmptyGate} className="px-3 py-2 rounded-xl border text-sm flex items-center gap-2" style={{ borderColor: SS.gray, color: SS.black }}>
+                    <Filter size={16}/> Adicionar gate
+                  </button>
+                </div>
+              </div>
+
+              <div className="overflow-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="text-left" style={{ color: SS.black }}>
+                      <th className="py-2 pr-4">PTA</th>
+                      <th className="py-2 pr-4">Operador</th>
+                      <th className="py-2 pr-4">Valor</th>
+                      <th className="py-2 pr-4">Min</th>
+                      <th className="py-2 pr-4">Max</th>
+                      <th className="py-2 pr-4">Ativo</th>
+                      <th className="py-2 pr-4"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {gates.map((g, i) => (
+                      <tr key={i} className="border-t" style={{ color: SS.black, borderColor: SS.gray }}>
+                        <td className="py-2 pr-4">
+                          <select className="border rounded-lg px-2 py-1" value={g.trait} onChange={e => updateGate(i, "trait", e.target.value)} style={{ borderColor: SS.gray, color: SS.black, background: SS.white }}>
+                            {ALL_PTAS.map(p => <option key={p} value={p}>{p}</option>)}
+                          </select>
+                        </td>
+                        <td className="py-2 pr-4">
+                          <select className="border rounded-lg px-2 py-1" value={g.op} onChange={e => updateGate(i, "op", e.target.value)} style={{ borderColor: SS.gray, color: SS.black, background: SS.white }}>
+                            <option value=">=">≥</option>
+                            <option value="<=">≤</option>
+                            <option value="=">=</option>
+                            <option value="between">entre</option>
+                          </select>
+                        </td>
+                        <td className="py-2 pr-4">
+                          <input type="number" className="border rounded-lg px-2 py-1 w-28 text-right" value={g.value ?? ""} onChange={e => updateGate(i, "value", e.target.value === "" ? undefined : Number(e.target.value))} style={{ borderColor: SS.gray, color: SS.black, background: SS.white }} />
+                        </td>
+                        <td className="py-2 pr-4">
+                          <input type="number" className="border rounded-lg px-2 py-1 w-28 text-right" value={g.min ?? ""} onChange={e => updateGate(i, "min", e.target.value === "" ? undefined : Number(e.target.value))} style={{ borderColor: SS.gray, color: SS.black, background: SS.white }} />
+                        </td>
+                        <td className="py-2 pr-4">
+                          <input type="number" className="border rounded-lg px-2 py-1 w-28 text-right" value={g.max ?? ""} onChange={e => updateGate(i, "max", e.target.value === "" ? undefined : Number(e.target.value))} style={{ borderColor: SS.gray, color: SS.black, background: SS.white }} />
+                        </td>
+                        <td className="py-2 pr-4">
+                          <input type="checkbox" className="accent-black" checked={g.enabled} onChange={e => updateGate(i, "enabled", e.target.checked)} />
+                        </td>
+                        <td className="py-2 pr-4">
+                          <button onClick={() => removeGate(i)} className="text-gray-400 hover:text-red-600"><X size={16}/></button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Ações + Resumo */}
+        <div className="rounded-2xl shadow p-4" style={{ background: SS.white }}>
+          <div className="flex flex-wrap items-center gap-3">
+            <button className="px-4 py-2 rounded-xl text-sm flex items-center gap-2" style={{ background: SS.red, color: SS.white }}> 
+              <Check size={18}/> Aplicar Índice 
+            </button>
+            <button onClick={exportCSV} className="px-4 py-2 rounded-xl border text-sm flex items-center gap-2" style={{ borderColor: SS.gray, color: SS.black }}>
+              <Download size={18}/> Exportar CSV
+            </button>
+            <div className="ml-auto text-sm" style={{ color: SS.black }}>
+              <div className="font-semibold">Resumo</div>
+              {indexSelection === "Custom" ? (
+                <div>
+                  PTAs: {selectedTraits.map(t => `${t} (${Number(weights[t] ?? 0).toFixed(2)})`).join(", ")} — Padronização: {standardize ? "ON" : "OFF"}
+                  <br/>
+                  Gates ({gatesPhase}): {gates.map(g => `${g.trait} ${g.op === ">=" ? "≥" : g.op === "<=" ? "≤" : g.op === "=" ? "=" : "entre"} ${g.op === "between" ? `${g.min ?? "-∞"}–${g.max ?? "+∞"}` : (g.value ?? "—")}`).join("; ")}
+                  <br/>
+                  Aprovadas: {approvedCountDisplay} | Reprovadas: {rejectedCountDisplay}
+                </div>
+              ) : (
+                <div>Índice padrão: {indexSelection}</div>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Grade de fêmeas */}
+        <div className="rounded-2xl shadow p-4" style={{ background: SS.white }}>
+          <h3 className="text-lg font-semibold mb-3" style={{ color: SS.black }}>📊 Grade de Fêmeas</h3>
+          {loading ? (
+            <div className="text-sm" style={{ color: SS.black }}>Carregando…</div>
+          ) : (
+            <div className="overflow-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b" style={{ color: SS.black, borderColor: SS.gray }}>
+                    <th className="py-2 pr-4">ID</th>
+                    <th className="py-2 pr-4">Nome</th>
+                    <th className="py-2 pr-4">Data Nasc.</th>
+                    <th className="py-2 pr-4">Ordem</th>
+                    <th className="py-2 pr-4">Categ.</th>
+                    <th className="py-2 pr-4">HHP$</th>
+                    <th className="py-2 pr-4">TPI</th>
+                    <th className="py-2 pr-4">NM$</th>
+                    <th className="py-2 pr-4">PTAM</th>
+                    <th className="py-2 pr-4">PTAF</th>
+                    <th className="py-2 pr-4">SCS</th>
+                    <th className="py-2 pr-4">DPR</th>
+                    <th className="py-2 pr-4">CustomScore</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sorted.map((a, idx) => (
+                    <tr key={(a.__idKey ? (a as any)[a.__idKey] : (a.id ?? idx))} className="border-b hover:opacity-90" style={{ borderColor: SS.gray, color: SS.black }}>
+                      <td className="py-2 pr-4">{a.__idKey ? (a as any)[a.__idKey] : (a.id ?? "")}</td>
+                      <td className="py-2 pr-4">{a.__nameKey ? (a as any)[a.__nameKey] : (a.name ?? "")}</td>
+                      <td className="py-2 pr-4">{a.birth_date ? new Date(a.birth_date).toLocaleDateString() : "-"}</td>
+                      <td className="py-2 pr-4">{a.parity_order ?? "-"}</td>
+                      <td className="py-2 pr-4">{a.category ?? "-"}</td>
+                      <td className="py-2 pr-4">{a.hhp_dollar ?? ""}</td>
+                      <td className="py-2 pr-4">{a.tpi ?? ""}</td>
+                      <td className="py-2 pr-4">{a.nm_dollar ?? ""}</td>
+                      <td className="py-2 pr-4">{a.ptam ?? ""}</td>
+                      <td className="py-2 pr-4">{a.ptaf ?? ""}</td>
+                      <td className="py-2 pr-4">{a.scs ?? ""}</td>
+                      <td className="py-2 pr-4">{a.dpr ?? ""}</td>
+                      <td className="py-2 pr-4 font-semibold">{Number(a.CustomScore).toFixed(3)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div className="text-xs text-center pb-8" style={{ color: SS.black }}>MVP demonstrativo — conectado a females_denorm via Supabase.</div>
       </div>
     </div>
   );
