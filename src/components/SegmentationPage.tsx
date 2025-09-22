@@ -20,6 +20,8 @@ type Female = {
   name: string;
   identifier?: string;
   birth_date?: string;
+  parity_order?: number;
+  category?: string;
   sire_naab?: string;
   hhp_dollar?: number;
   nm_dollar?: number;
@@ -496,6 +498,8 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
         name: dbFemale.name || '',
         identifier: dbFemale.identifier,
         birth_date: dbFemale.birth_date,
+        parity_order: dbFemale.parity_order,
+        category: dbFemale.category,
         sire_naab: dbFemale.sire_naab,
         hhp_dollar: dbFemale.hhp_dollar,
         nm_dollar: dbFemale.nm_dollar,
@@ -940,6 +944,8 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
                         <th className="text-left p-2">Nome</th>
                         <th className="text-left p-2">ID</th>
                         <th className="text-left p-2">Nasc.</th>
+                        <th className="text-left p-2">Ordem</th>
+                        <th className="text-left p-2">Categ.</th>
                         <th className="text-center p-2">HHP$</th>
                         <th className="text-center p-2">TPI</th>
                         <th className="text-center p-2">NM$</th>
@@ -958,6 +964,8 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
                           <td className="p-2 text-muted-foreground">
                             {female.birth_date ? new Date(female.birth_date).toLocaleDateString() : "-"}
                           </td>
+                          <td className="p-2 text-muted-foreground">{female.parity_order || "-"}</td>
+                          <td className="p-2 text-muted-foreground">{female.category || "-"}</td>
                           <td className="p-2 text-center">{female.hhp_dollar?.toFixed(0) || "-"}</td>
                           <td className="p-2 text-center">{female.tpi?.toFixed(0) || "-"}</td>
                           <td className="p-2 text-center">{female.nm_dollar?.toFixed(0) || "-"}</td>

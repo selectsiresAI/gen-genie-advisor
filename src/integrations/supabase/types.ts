@@ -332,6 +332,7 @@ export type Database = {
           beta_casein: string | null
           birth_date: string | null
           bwc: number | null
+          category: string | null
           ccr: number | null
           cdcb_id: string | null
           cfp: number | null
@@ -371,6 +372,7 @@ export type Database = {
           mmgs_naab: string | null
           name: string
           nm_dollar: number | null
+          parity_order: number | null
           pl: number | null
           ptaf: number | null
           ptaf_pct: number | null
@@ -404,6 +406,7 @@ export type Database = {
           beta_casein?: string | null
           birth_date?: string | null
           bwc?: number | null
+          category?: string | null
           ccr?: number | null
           cdcb_id?: string | null
           cfp?: number | null
@@ -443,6 +446,7 @@ export type Database = {
           mmgs_naab?: string | null
           name: string
           nm_dollar?: number | null
+          parity_order?: number | null
           pl?: number | null
           ptaf?: number | null
           ptaf_pct?: number | null
@@ -476,6 +480,7 @@ export type Database = {
           beta_casein?: string | null
           birth_date?: string | null
           bwc?: number | null
+          category?: string | null
           ccr?: number | null
           cdcb_id?: string | null
           cfp?: number | null
@@ -515,6 +520,7 @@ export type Database = {
           mmgs_naab?: string | null
           name?: string
           nm_dollar?: number | null
+          parity_order?: number | null
           pl?: number | null
           ptaf?: number | null
           ptaf_pct?: number | null
@@ -1097,6 +1103,7 @@ export type Database = {
           beta_casein: string | null
           birth_date: string | null
           bwc: number | null
+          category: string | null
           ccr: number | null
           cdcb_id: string | null
           cfp: number | null
@@ -1142,6 +1149,7 @@ export type Database = {
           mmgs_naab: string | null
           name: string | null
           nm_dollar: number | null
+          parity_order: number | null
           pl: number | null
           ptaf: number | null
           ptaf_pct: number | null

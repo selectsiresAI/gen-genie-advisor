@@ -26,6 +26,8 @@ interface Female {
   name: string;
   identifier?: string;
   birth_date?: string;
+  parity_order?: number;
+  category?: string;
   sire_naab?: string;
   mgs_naab?: string;
   farm_id: string;
@@ -167,6 +169,8 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack }) => {
       'ID CDCB',
       'Identificador',
       'Data Nascimento',
+      'Ordem de Parto',
+      'Categoria',
       'Pai NAAB',
       'Avô Materno NAAB',
       'BisAvô Materno NAAB',
@@ -238,6 +242,8 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack }) => {
       female.cdcb_id || '',
       female.identifier || '',
       female.birth_date ? formatDate(female.birth_date) : '',
+      female.parity_order || '',
+      female.category || '',
       female.sire_naab || '',
       female.mgs_naab || '',
       female.mmgs_naab || '',
@@ -465,6 +471,8 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack }) => {
                         <th className="border px-2 py-1 text-left text-xs">ID CDCB</th>
                         <th className="border px-2 py-1 text-left text-xs">Pedigre Pai/Avô Materno/BisaAvô Materno</th>
                         <th className="border px-2 py-1 text-left text-xs">Data de Nascimento</th>
+                        <th className="border px-2 py-1 text-left text-xs">Ordem de Parto</th>
+                        <th className="border px-2 py-1 text-left text-xs">Categoria</th>
                         <th className="border px-2 py-1 text-left text-xs">HHP$®</th>
                         <th className="border px-2 py-1 text-left text-xs">TPI</th>
                         <th className="border px-2 py-1 text-left text-xs">NM$</th>
@@ -532,7 +540,16 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack }) => {
                           <td className="border px-2 py-1 text-xs font-medium">{female.name}</td>
                           <td className="border px-2 py-1 text-xs">{female.cdcb_id || female.identifier || '-'}</td>
                           <td className="border px-2 py-1 text-xs">{[female.sire_naab, female.mgs_naab, female.mmgs_naab].filter(Boolean).join('/') || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.birth_date ? formatDate(female.birth_date) : '-'}</td>
+                          <td className="border px-2 py-1 text-xs">
+                            {female.birth_date ? formatDate(female.birth_date) : '-'} 
+                            {female.birth_date && (
+                              <span className="text-muted-foreground ml-1">
+                                ({getAge(female.birth_date)})
+                              </span>
+                            )}
+                          </td>
+                          <td className="border px-2 py-1 text-xs">{female.parity_order || '-'}</td>
+                          <td className="border px-2 py-1 text-xs">{female.category || '-'}</td>
                           <td className="border px-2 py-1 text-xs">{female.hhp_dollar || '-'}</td>
                           <td className="border px-2 py-1 text-xs">{female.tpi || '-'}</td>
                           <td className="border px-2 py-1 text-xs">{female.nm_dollar || '-'}</td>
