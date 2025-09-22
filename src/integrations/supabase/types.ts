@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           birth_date: string | null
           code: string
+          company: string | null
           created_at: string | null
           id: string
           mgs_naab: string | null
@@ -31,6 +32,7 @@ export type Database = {
         Insert: {
           birth_date?: string | null
           code: string
+          company?: string | null
           created_at?: string | null
           id?: string
           mgs_naab?: string | null
@@ -44,6 +46,7 @@ export type Database = {
         Update: {
           birth_date?: string | null
           code?: string
+          company?: string | null
           created_at?: string | null
           id?: string
           mgs_naab?: string | null
@@ -866,6 +869,7 @@ export type Database = {
           cfp: number | null
           cm_dollar: number | null
           code: string | null
+          company: string | null
           created_at: string | null
           da: number | null
           dce: number | null
@@ -936,6 +940,7 @@ export type Database = {
           cfp?: never
           cm_dollar?: never
           code?: string | null
+          company?: string | null
           created_at?: string | null
           da?: never
           dce?: never
@@ -1006,6 +1011,7 @@ export type Database = {
           cfp?: never
           cm_dollar?: never
           code?: string | null
+          company?: string | null
           created_at?: string | null
           da?: never
           dce?: never
