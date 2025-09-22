@@ -77,20 +77,39 @@ const clearAndReloadData = () => {
 const fetchBullFromDatabase = async (naab: string): Promise<Bull | null> => {
   const cleanNaab = naab.toUpperCase().trim();
   
+  console.log(`🔍 Procurando touro com NAAB: "${cleanNaab}"`);
+  
   // Se não há dados carregados, tenta carregar
   if (toolssClients.length === 0) {
+    console.log('📦 Carregando dados do banco...');
     loadToolSSData();
   }
   
   if (toolssClients.length === 0) {
+    console.log('❌ Nenhum cliente carregado');
     return null;
   }
 
+  console.log(`🏢 Procurando em ${toolssClients.length} clientes...`);
+
   // Busca direta em todos os touros de todas as fazendas
   for (const client of toolssClients) {
+    console.log(`🏢 Cliente: ${client.nome || client.id}, Fazendas: ${client.farms?.length || 0}`);
     for (const farm of client.farms) {
       if (farm.bulls && Array.isArray(farm.bulls)) {
-        const bull = farm.bulls.find((b: ToolSSBull) => String(b.naab || '').toUpperCase().trim() === cleanNaab);
+        console.log(`🚜 Fazenda: ${farm.nome}, Touros: ${farm.bulls.length}`);
+        
+        // Log some example NABs to see the format
+        if (farm.bulls.length > 0) {
+          console.log(`🐂 Exemplo de NABs: ${farm.bulls.slice(0, 3).map(b => `"${b.naab}"`).join(', ')}`);
+        }
+        
+        const bull = farm.bulls.find((b: ToolSSBull) => {
+          const bullNaab = String(b.naab || '').toUpperCase().trim();
+          console.log(`🔍 Comparando "${bullNaab}" === "${cleanNaab}"`);
+          return bullNaab === cleanNaab;
+        });
+        
         if (bull) {
           console.log(`✅ Touro encontrado: ${bull.nome} (${bull.empresa})`);
           
