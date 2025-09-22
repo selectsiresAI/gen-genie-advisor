@@ -29,7 +29,6 @@ type ToolSSBull = {
   DPR?: number;
   [key: string]: any; // Para suportar todos os outros PTAs
 };
-
 type ToolSSClient = {
   id: number;
   nome: string;
@@ -51,8 +50,7 @@ const loadClients = (): ToolSSClient[] => {
   try {
     const loaded = JSON.parse(raw) as ToolSSClient[];
     const client1160 = loaded.find(c => c.id === 1160);
-    if (!client1160 || !client1160.farms[0] || 
-        client1160.farms[0].bulls.length < 150) {
+    if (!client1160 || !client1160.farms[0] || client1160.farms[0].bulls.length < 150) {
       console.log('🔄 Nexus 2: Dados incompletos. Vá para "Busca Touros" para recarregar.');
       return [];
     }
@@ -70,7 +68,7 @@ const clearAndReloadData = () => {
   const keysToRemove = Object.keys(localStorage).filter(k => k.includes('toolss'));
   keysToRemove.forEach(key => localStorage.removeItem(key));
   console.log('✅ Cleared keys:', keysToRemove);
-  
+
   // Show confirmation message
   alert('localStorage limpo! Por favor, vá para a página "Busca Touros" para carregar o banco de dados atualizado.');
 };
@@ -78,7 +76,6 @@ const clearAndReloadData = () => {
 // Função de busca de touro como PROCV - busca direta no banco do ToolSSApp
 const fetchBullFromDatabase = async (naab: string): Promise<Bull | null> => {
   const cleanNaab = naab.toUpperCase().trim();
-  
   const clients = loadClients();
   if (clients.length === 0) {
     return null;
@@ -88,10 +85,7 @@ const fetchBullFromDatabase = async (naab: string): Promise<Bull | null> => {
   for (const client of clients) {
     for (const farm of client.farms) {
       if (farm.bulls && Array.isArray(farm.bulls)) {
-        const bull = farm.bulls.find((b: ToolSSBull) => 
-          String(b.naab || '').toUpperCase().trim() === cleanNaab
-        );
-        
+        const bull = farm.bulls.find((b: ToolSSBull) => String(b.naab || '').toUpperCase().trim() === cleanNaab);
         if (bull) {
           // Converter ToolSSBull para Bull (formato do PedigreePredictor)
           const convertedBull: Bull = {
@@ -109,7 +103,6 @@ const fetchBullFromDatabase = async (naab: string): Promise<Bull | null> => {
               f_sav: bull["F SAV"] || 0,
               ptam: bull.PTAM || 0,
               cfp: bull.CFP || 0,
-              
               // Produção
               ptaf: bull.PTAF || 0,
               ptaf_percent: bull["PTAF%"] || 0,
@@ -119,7 +112,6 @@ const fetchBullFromDatabase = async (naab: string): Promise<Bull | null> => {
               milk: bull.Milk || 0,
               fat: bull.Fat || 0,
               protein: bull.Protein || 0,
-              
               // Saúde e Fertilidade
               dpr: bull.DPR || 0,
               liv: bull.LIV || 0,
@@ -130,19 +122,16 @@ const fetchBullFromDatabase = async (naab: string): Promise<Bull | null> => {
               da: bull.DA || 0,
               ket: bull.KET || 0,
               mf: bull.MF || 0,
-              
               // Conformação
               ptat: bull.PTAT || 0,
               udc: bull.UDC || 0,
               flc: bull.FLC || 0,
-              
               // Facilidade de Parto
               sce: bull.SCE || 0,
               dce: bull.DCE || 0,
               ssb: bull.SSB || 0,
               dsb: bull.DSB || 0,
               h_liv: bull["H LIV"] || 0,
-              
               // Multi-trait
               ccr: bull.CCR || 0,
               hcr: bull.HCR || 0,
@@ -152,7 +141,6 @@ const fetchBullFromDatabase = async (naab: string): Promise<Bull | null> => {
               bwc: bull.BWC || 0,
               sta: bull.STA || 0,
               str: bull.STR || 0,
-              
               // Características lineares
               dfm: bull.DFM || 0,
               rua: bull.RUA || 0,
@@ -169,23 +157,21 @@ const fetchBullFromDatabase = async (naab: string): Promise<Bull | null> => {
               ucl: bull.UCL || 0,
               udp: bull.UDP || 0,
               ftp: bull.FTP || 0,
-              
               // Eficiência Alimentar
               rfi: bull.RFI || 0
             }
           };
-          
           return convertedBull;
         }
       }
     }
   }
-  
   return null;
 };
-
 const IndividualPrediction: React.FC = () => {
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const {
     pedigreeInput,
     bullsCache,
@@ -203,15 +189,16 @@ const IndividualPrediction: React.FC = () => {
     console.log('🔧 DEBUG: Checking localStorage keys...');
     const keys = Object.keys(localStorage);
     console.log('📋 LocalStorage keys:', keys.filter(k => k.includes('toolss')));
-    
     const currentData = loadClients();
     console.log(`🔍 Current database (${STORAGE_KEY}) loaded:`, !!currentData);
-    
     if (currentData && currentData.length > 0) {
       const bullsCount = currentData[0]?.farms?.[0]?.bulls?.length || 0;
       console.log('🐂 Bulls count in current database:', bullsCount);
       if (bullsCount > 0) {
-        const sampleBulls = currentData[0].farms[0].bulls.slice(0, 5).map((b: any) => ({ naab: b.naab, nome: b.nome }));
+        const sampleBulls = currentData[0].farms[0].bulls.slice(0, 5).map((b: any) => ({
+          naab: b.naab,
+          nome: b.nome
+        }));
         console.log('📋 Sample bulls from current database:', sampleBulls);
       }
     }
@@ -220,8 +207,10 @@ const IndividualPrediction: React.FC = () => {
   // Auto-fetch bull data when NAAB is typed (like VLOOKUP)
   const handleNaabChange = async (field: 'sireNaab' | 'mgsNaab' | 'mmgsNaab', value: string) => {
     const upperValue = value.toUpperCase();
-    setPedigreeInput({ [field]: upperValue });
-    
+    setPedigreeInput({
+      [field]: upperValue
+    });
+
     // If NAAB is complete (typically 9-11 characters), try to fetch bull data automatically
     if (upperValue.length >= 9) {
       try {
@@ -230,7 +219,7 @@ const IndividualPrediction: React.FC = () => {
           setBullCache(upperValue, bull);
           toast({
             title: 'Touro encontrado!',
-            description: `${bull.name} (${bull.company}) - PTAs carregadas automaticamente`,
+            description: `${bull.name} (${bull.company}) - PTAs carregadas automaticamente`
           });
         }
       } catch (error) {
@@ -238,10 +227,8 @@ const IndividualPrediction: React.FC = () => {
       }
     }
   };
-
   const fetchBullPTAs = async () => {
     debugLocalStorage();
-    
     const errors = validateNaabs(pedigreeInput);
     if (errors.length > 0) {
       toast({
@@ -251,9 +238,7 @@ const IndividualPrediction: React.FC = () => {
       });
       return;
     }
-
     setIsCalculating(true);
-    
     try {
       const naabs = [pedigreeInput.sireNaab, pedigreeInput.mgsNaab, pedigreeInput.mmgsNaab];
       const bulls: (Bull | null)[] = [];
@@ -266,7 +251,6 @@ const IndividualPrediction: React.FC = () => {
           bulls.push(cached);
           continue;
         }
-
         try {
           const bull = await fetchBullFromDatabase(naab);
           if (bull) {
@@ -281,7 +265,6 @@ const IndividualPrediction: React.FC = () => {
           fetchErrors.push(`Erro ao buscar NAAB ${naab}`);
         }
       }
-
       if (fetchErrors.length > 0) {
         toast({
           title: 'Erro ao buscar PTAs',
@@ -291,14 +274,11 @@ const IndividualPrediction: React.FC = () => {
         setIsCalculating(false);
         return;
       }
-
       const [sire, mgs, mmgs] = bulls;
-      
       toast({
         title: 'PTAs carregadas',
         description: 'Todos os touros foram encontrados com sucesso!'
       });
-
     } catch (error) {
       toast({
         title: 'Erro',
@@ -309,12 +289,10 @@ const IndividualPrediction: React.FC = () => {
       setIsCalculating(false);
     }
   };
-
   const calculatePrediction = () => {
     const sire = getBullFromCache(pedigreeInput.sireNaab, bullsCache);
     const mgs = getBullFromCache(pedigreeInput.mgsNaab, bullsCache);
     const mmgs = getBullFromCache(pedigreeInput.mmgsNaab, bullsCache);
-
     if (!sire || !mgs || !mmgs) {
       toast({
         title: 'Erro',
@@ -323,45 +301,37 @@ const IndividualPrediction: React.FC = () => {
       });
       return;
     }
-
     const predictedPTAs = predictFromPedigree(sire, mgs, mmgs);
-    
     setPredictionResult({
       predictedPTAs,
       sire,
       mgs,
       mmgs
     });
-
     toast({
       title: 'Predição calculada',
       description: 'A predição genética foi calculada com sucesso!'
     });
   };
-
   const exportToCsv = () => {
     if (!predictionResult) return;
-
     const data = PTA_LABELS.map(label => {
       const key = PTA_MAPPING[label];
       return {
         'Label': label,
         'Key': key,
         'Sire': predictionResult.sire ? formatPTAValue(key, predictionResult.sire.ptas[key]) : '—',
-        'MGS': predictionResult.mgs ? formatPTAValue(key, predictionResult.mgs.ptas[key]) : '—', 
+        'MGS': predictionResult.mgs ? formatPTAValue(key, predictionResult.mgs.ptas[key]) : '—',
         'MMGS': predictionResult.mmgs ? formatPTAValue(key, predictionResult.mmgs.ptas[key]) : '—',
         'Predição': formatPTAValue(key, predictionResult.predictedPTAs[key])
       };
     });
-
     const ws = utils.json_to_sheet(data);
     const wb = utils.book_new();
     utils.book_append_sheet(wb, ws, 'Predição Individual');
     writeFileXLSX(wb, 'Predicao_Individual.xlsx');
   };
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       {/* Input Fields */}
       <Card>
         <CardHeader>
@@ -373,74 +343,43 @@ const IndividualPrediction: React.FC = () => {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="sire-naab">NAAB do Pai *</Label>
-              <Input
-                id="sire-naab"
-                value={pedigreeInput.sireNaab}
-                onChange={(e) => handleNaabChange('sireNaab', e.target.value)}
-                placeholder="Ex: 001HO25295"
-                className="uppercase"
-              />
-              {getBullFromCache(pedigreeInput.sireNaab, bullsCache) && (
-                <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+              <Label htmlFor="sire-naab">NAAB 
+Pai)
+            </Label>
+              <Input id="sire-naab" value={pedigreeInput.sireNaab} onChange={e => handleNaabChange('sireNaab', e.target.value)} placeholder="Ex: 001HO25295" className="uppercase" />
+              {getBullFromCache(pedigreeInput.sireNaab, bullsCache) && <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
                   ✅ {getBullFromCache(pedigreeInput.sireNaab, bullsCache)?.name} - {getBullFromCache(pedigreeInput.sireNaab, bullsCache)?.company}
-                </Badge>
-              )}
+                </Badge>}
             </div>
             
             <div className="space-y-2">
               <Label htmlFor="mgs-naab">NAAB do Avô Materno *</Label>
-              <Input
-                id="mgs-naab"
-                value={pedigreeInput.mgsNaab}
-                onChange={(e) => handleNaabChange('mgsNaab', e.target.value)}
-                placeholder="Ex: 029HO22133"
-                className="uppercase"
-              />
-              {getBullFromCache(pedigreeInput.mgsNaab, bullsCache) && (
-                <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+              <Input id="mgs-naab" value={pedigreeInput.mgsNaab} onChange={e => handleNaabChange('mgsNaab', e.target.value)} placeholder="Ex: 029HO22133" className="uppercase" />
+              {getBullFromCache(pedigreeInput.mgsNaab, bullsCache) && <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
                   ✅ {getBullFromCache(pedigreeInput.mgsNaab, bullsCache)?.name} - {getBullFromCache(pedigreeInput.mgsNaab, bullsCache)?.company}
-                </Badge>
-              )}
+                </Badge>}
             </div>
             
             <div className="space-y-2">
               <Label htmlFor="mmgs-naab">NAAB do Bisavô Materno *</Label>
-              <Input
-                id="mmgs-naab"
-                value={pedigreeInput.mmgsNaab}
-                onChange={(e) => handleNaabChange('mmgsNaab', e.target.value)}
-                placeholder="Ex: 097HO17371"
-                className="uppercase"
-              />
-              {getBullFromCache(pedigreeInput.mmgsNaab, bullsCache) && (
-                <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+              <Input id="mmgs-naab" value={pedigreeInput.mmgsNaab} onChange={e => handleNaabChange('mmgsNaab', e.target.value)} placeholder="Ex: 097HO17371" className="uppercase" />
+              {getBullFromCache(pedigreeInput.mmgsNaab, bullsCache) && <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
                   ✅ {getBullFromCache(pedigreeInput.mmgsNaab, bullsCache)?.name} - {getBullFromCache(pedigreeInput.mmgsNaab, bullsCache)?.company}
-                </Badge>
-              )}
+                </Badge>}
             </div>
           </div>
           
           <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
-            <Button 
-              onClick={() => {
-                setPedigreeInput({ 
-                  sireNaab: '007HO17628', 
-                  mgsNaab: '007HO25583', 
-                  mmgsNaab: '007HO22300' 
-                });
-              }}
-              variant="outline"
-              size="sm"
-            >
+            <Button onClick={() => {
+            setPedigreeInput({
+              sireNaab: '007HO17628',
+              mgsNaab: '007HO25583',
+              mmgsNaab: '007HO22300'
+            });
+          }} variant="outline" size="sm">
               📝 Usar NAABs de Exemplo
             </Button>
-            <Button 
-              onClick={clearAndReloadData}
-              variant="outline"
-              size="sm"
-              className="bg-red-100 hover:bg-red-200 text-red-700"
-            >
+            <Button onClick={clearAndReloadData} variant="outline" size="sm" className="bg-red-100 hover:bg-red-200 text-red-700">
               🧹 Limpar localStorage
             </Button>
             <span className="text-sm text-blue-700">
@@ -449,26 +388,16 @@ const IndividualPrediction: React.FC = () => {
           </div>
           
           <div className="flex gap-3">
-            <Button 
-              onClick={fetchBullPTAs} 
-              disabled={isCalculating}
-              variant="outline"
-            >
+            <Button onClick={fetchBullPTAs} disabled={isCalculating} variant="outline">
               {isCalculating ? 'Buscando...' : 'Buscar PTAs'}
             </Button>
             
-            <Button 
-              onClick={calculatePrediction}
-              disabled={isCalculating || !getBullFromCache(pedigreeInput.sireNaab, bullsCache)}
-            >
+            <Button onClick={calculatePrediction} disabled={isCalculating || !getBullFromCache(pedigreeInput.sireNaab, bullsCache)}>
               <Calculator className="w-4 h-4 mr-2" />
               Calcular Predição
             </Button>
             
-            <Button 
-              onClick={clearPrediction}
-              variant="outline"
-            >
+            <Button onClick={clearPrediction} variant="outline">
               Limpar
             </Button>
           </div>
@@ -476,8 +405,7 @@ const IndividualPrediction: React.FC = () => {
       </Card>
 
       {/* Results Table */}
-      {predictionResult && (
-        <Card>
+      {predictionResult && <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Resultado da Predição</CardTitle>
@@ -501,9 +429,8 @@ const IndividualPrediction: React.FC = () => {
                 </TableHeader>
                 <TableBody>
                   {PTA_LABELS.map(label => {
-                    const key = PTA_MAPPING[label];
-                    return (
-                      <TableRow key={label}>
+                const key = PTA_MAPPING[label];
+                return <TableRow key={label}>
                         <TableCell className="font-medium">{label}</TableCell>
                         <TableCell>
                           {predictionResult.sire ? formatPTAValue(key, predictionResult.sire.ptas[key]) : '—'}
@@ -517,21 +444,19 @@ const IndividualPrediction: React.FC = () => {
                         <TableCell className="font-bold">
                           {formatPTAValue(key, predictionResult.predictedPTAs[key])}
                         </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                      </TableRow>;
+              })}
                 </TableBody>
               </Table>
             </div>
           </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+        </Card>}
+    </div>;
 };
-
 const BatchPrediction: React.FC = () => {
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const {
     batchFile,
     batchData,
@@ -543,19 +468,15 @@ const BatchPrediction: React.FC = () => {
     setIsBatchProcessing,
     clearBatch
   } = usePedigreeStore();
-
   const [showPreview, setShowPreview] = useState(false);
-
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     try {
       const data = await parseFile(file);
       setBatchFile(file);
       setBatchData(data);
       setShowPreview(true);
-      
       toast({
         title: 'Arquivo carregado',
         description: `${data.length} registros detectados`
@@ -567,20 +488,18 @@ const BatchPrediction: React.FC = () => {
         variant: 'destructive'
       });
     }
-    
     e.target.value = '';
   };
-
   const parseFile = async (file: File): Promise<BatchInput[]> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      
-      reader.onload = (e) => {
+      reader.onload = e => {
         try {
           let data: any[];
-          
           if (file.name.toLowerCase().endsWith('.xlsx')) {
-            const wb = read(new Uint8Array(e.target?.result as ArrayBuffer), { type: 'array' });
+            const wb = read(new Uint8Array(e.target?.result as ArrayBuffer), {
+              type: 'array'
+            });
             const ws = wb.Sheets[wb.SheetNames[0]];
             data = utils.sheet_to_json(ws);
           } else if (file.name.toLowerCase().endsWith('.csv')) {
@@ -597,7 +516,6 @@ const BatchPrediction: React.FC = () => {
             reject(new Error('Formato não suportado. Use .xlsx ou .csv'));
             return;
           }
-
           const mapped = data.map((row, index) => {
             const mapped: BatchInput = {
               idFazenda: row['ID Fazenda'] || row['id_fazenda'] || '',
@@ -607,16 +525,13 @@ const BatchPrediction: React.FC = () => {
               naabAvoMaterno: row['NAAB_Avo_Materno'] || row['naab_avo_materno'] || '',
               naabBisavoMaterno: row['NAAB_Bisavo_Materno'] || row['naab_bisavo_materno'] || ''
             };
-
             return mapped;
           });
-
           resolve(mapped);
         } catch (error) {
           reject(new Error('Erro ao processar arquivo'));
         }
       };
-      
       if (file.name.toLowerCase().endsWith('.xlsx')) {
         reader.readAsArrayBuffer(file);
       } else {
@@ -624,23 +539,18 @@ const BatchPrediction: React.FC = () => {
       }
     });
   };
-
   const processBatch = async () => {
     if (batchData.length === 0) return;
-
     setIsBatchProcessing(true);
-    
     try {
       const results: BatchResult[] = [];
-      
       for (const input of batchData) {
         const errors: string[] = [];
-        
+
         // Validate NAABs
         if (!input.naabPai.trim()) errors.push('NAAB Pai ausente');
         if (!input.naabAvoMaterno.trim()) errors.push('NAAB Avô Materno ausente');
         if (!input.naabBisavoMaterno.trim()) errors.push('NAAB Bisavô Materno ausente');
-        
         if (errors.length > 0) {
           results.push({
             ...input,
@@ -649,21 +559,14 @@ const BatchPrediction: React.FC = () => {
           });
           continue;
         }
-
         try {
           // Fetch bulls (in real implementation, batch this for efficiency)
-          const [sire, mgs, mmgs] = await Promise.all([
-            fetchBullFromDatabase(input.naabPai),
-            fetchBullFromDatabase(input.naabAvoMaterno),
-            fetchBullFromDatabase(input.naabBisavoMaterno)
-          ]);
-
+          const [sire, mgs, mmgs] = await Promise.all([fetchBullFromDatabase(input.naabPai), fetchBullFromDatabase(input.naabAvoMaterno), fetchBullFromDatabase(input.naabBisavoMaterno)]);
           if (!sire || !mgs || !mmgs) {
             const missingBulls: string[] = [];
             if (!sire) missingBulls.push('Pai');
             if (!mgs) missingBulls.push('Avô Materno');
             if (!mmgs) missingBulls.push('Bisavô Materno');
-            
             results.push({
               ...input,
               status: 'error',
@@ -671,15 +574,12 @@ const BatchPrediction: React.FC = () => {
             });
             continue;
           }
-
           const predictedPTAs = predictFromPedigree(sire, mgs, mmgs);
-          
           results.push({
             ...input,
             status: 'success',
             predictedPTAs
           });
-          
         } catch (error) {
           results.push({
             ...input,
@@ -688,17 +588,13 @@ const BatchPrediction: React.FC = () => {
           });
         }
       }
-      
       setBatchResults(results);
-      
       const successCount = results.filter(r => r.status === 'success').length;
       const errorCount = results.filter(r => r.status === 'error').length;
-      
       toast({
         title: 'Processamento concluído',
         description: `${successCount} sucessos, ${errorCount} erros`
       });
-      
     } catch (error) {
       toast({
         title: 'Erro no processamento',
@@ -709,10 +605,8 @@ const BatchPrediction: React.FC = () => {
       setIsBatchProcessing(false);
     }
   };
-
   const exportBatchResults = () => {
     if (batchResults.length === 0) return;
-
     const data = batchResults.map(result => {
       const row: any = {
         'ID Fazenda': result.idFazenda,
@@ -732,18 +626,14 @@ const BatchPrediction: React.FC = () => {
           row[label] = formatPTAValue(key, result.predictedPTAs[key]);
         });
       }
-
       return row;
     });
-
     const ws = utils.json_to_sheet(data);
     const wb = utils.book_new();
     utils.book_append_sheet(wb, ws, 'Predições em Lote');
     writeFileXLSX(wb, 'Predicoes_Lote.xlsx');
   };
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       {/* File Upload */}
       <Card>
         <CardHeader>
@@ -759,32 +649,21 @@ const BatchPrediction: React.FC = () => {
               <p>ID Fazenda, Nome, Data de Nascimento, NAAB_Pai, NAAB_Avo_Materno, NAAB_Bisavo_Materno</p>
             </div>
             
-            <Input
-              type="file"
-              accept=".xlsx,.csv"
-              onChange={handleFileUpload}
-              className="w-full"
-            />
+            <Input type="file" accept=".xlsx,.csv" onChange={handleFileUpload} className="w-full" />
             
-            {batchData.length > 0 && (
-              <div className="flex items-center gap-4">
+            {batchData.length > 0 && <div className="flex items-center gap-4">
                 <Badge variant="secondary">{batchData.length} registros</Badge>
-                <Button 
-                  onClick={processBatch}
-                  disabled={isBatchProcessing}
-                >
+                <Button onClick={processBatch} disabled={isBatchProcessing}>
                   {isBatchProcessing ? 'Processando...' : 'Processar'}
                 </Button>
                 <Button onClick={clearBatch} variant="outline">Limpar</Button>
-              </div>
-            )}
+              </div>}
           </div>
         </CardContent>
       </Card>
 
       {/* Preview */}
-      {showPreview && batchData.length > 0 && (
-        <Card>
+      {showPreview && batchData.length > 0 && <Card>
           <CardHeader>
             <CardTitle>Prévia (primeiros 5 registros)</CardTitle>
           </CardHeader>
@@ -802,26 +681,22 @@ const BatchPrediction: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {batchData.slice(0, 5).map((item, index) => (
-                    <TableRow key={index}>
+                  {batchData.slice(0, 5).map((item, index) => <TableRow key={index}>
                       <TableCell>{item.idFazenda}</TableCell>
                       <TableCell>{item.nome}</TableCell>
                       <TableCell>{item.dataNascimento}</TableCell>
                       <TableCell>{item.naabPai}</TableCell>
                       <TableCell>{item.naabAvoMaterno}</TableCell>
                       <TableCell>{item.naabBisavoMaterno}</TableCell>
-                    </TableRow>
-                  ))}
+                    </TableRow>)}
                 </TableBody>
               </Table>
             </div>
           </CardContent>
-        </Card>
-      )}
+        </Card>}
 
       {/* Results */}
-      {batchResults.length > 0 && (
-        <Card>
+      {batchResults.length > 0 && <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Resultados do Processamento</CardTitle>
@@ -847,8 +722,7 @@ const BatchPrediction: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {batchResults.map((result, index) => (
-                    <TableRow key={index}>
+                  {batchResults.map((result, index) => <TableRow key={index}>
                       <TableCell>{result.nome}</TableCell>
                       <TableCell>
                         <Badge variant={result.status === 'success' ? 'default' : 'destructive'}>
@@ -873,21 +747,16 @@ const BatchPrediction: React.FC = () => {
                       <TableCell>
                         {result.predictedPTAs ? formatPTAValue('dpr', result.predictedPTAs.dpr) : '—'}
                       </TableCell>
-                    </TableRow>
-                  ))}
+                    </TableRow>)}
                 </TableBody>
               </Table>
             </div>
           </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+        </Card>}
+    </div>;
 };
-
 const PedigreePredictor: React.FC = () => {
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-bold">Nexus - Predição por Pedigrê</h2>
         <p className="text-muted-foreground">
@@ -909,8 +778,6 @@ const PedigreePredictor: React.FC = () => {
           <BatchPrediction />
         </TabsContent>
       </Tabs>
-    </div>
-  );
+    </div>;
 };
-
 export default PedigreePredictor;
