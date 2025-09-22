@@ -1080,12 +1080,24 @@ export type Database = {
           success: boolean
         }[]
       }
+      daitch_mokotoff: {
+        Args: { "": string }
+        Returns: string[]
+      }
       delete_farm: {
         Args: { farm_uuid: string }
         Returns: {
           message: string
           success: boolean
         }[]
+      }
+      dmetaphone: {
+        Args: { "": string }
+        Returns: string
+      }
+      dmetaphone_alt: {
+        Args: { "": string }
+        Returns: string
       }
       get_bull_by_naab: {
         Args: { naab: string }
@@ -1179,6 +1191,14 @@ export type Database = {
           message: string
           success: boolean
         }[]
+      }
+      soundex: {
+        Args: { "": string }
+        Returns: string
+      }
+      text_soundex: {
+        Args: { "": string }
+        Returns: string
       }
       validate_naab: {
         Args: { naab: string }
