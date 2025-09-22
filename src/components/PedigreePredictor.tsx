@@ -11,30 +11,55 @@ import { usePedigreeStore, PTA_MAPPING, PTA_LABELS, formatPTAValue, predictFromP
 import { Calculator, Upload, Download, Search } from 'lucide-react';
 import { read, utils, writeFileXLSX } from 'xlsx';
 
-// Same STORAGE_KEY used in ToolSSApp (Busca Touros page)
+// Exatamente a mesma STORAGE_KEY do ToolSSApp (Busca Touros)
 const STORAGE_KEY = "toolss_clients_v3_with_150_bulls";
 
-// Load clients function - same as ToolSSApp
-const loadClients = () => {
+// Tipos idênticos aos do ToolSSApp
+type ToolSSBull = {
+  naab: string;
+  nome: string;
+  empresa?: string;
+  TPI: number;
+  ["NM$"]: number;
+  Milk: number;
+  Fat: number;
+  Protein: number;
+  SCS: number;
+  PTAT: number;
+  DPR?: number;
+  [key: string]: any; // Para suportar todos os outros PTAs
+};
+
+type ToolSSClient = {
+  id: number;
+  nome: string;
+  farms: Array<{
+    id: string;
+    nome: string;
+    bulls: ToolSSBull[];
+    females: any[];
+  }>;
+};
+
+// Função loadClients idêntica ao ToolSSApp
+const loadClients = (): ToolSSClient[] => {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) {
-    console.log('❌ No data found in localStorage. Please go to "Busca Touros" page first.');
-    return null;
+    console.log('🚫 Nexus 2: Banco de touros não encontrado. Acesse "Busca Touros" primeiro.');
+    return [];
   }
   try {
-    const loaded = JSON.parse(raw);
-    // Check if data is valid (same validation as ToolSSApp)
-    const client1160 = loaded.find((c: any) => c.id === 1160);
+    const loaded = JSON.parse(raw) as ToolSSClient[];
+    const client1160 = loaded.find(c => c.id === 1160);
     if (!client1160 || !client1160.farms[0] || 
-        client1160.farms[0].females.length < 500 || 
         client1160.farms[0].bulls.length < 150) {
-      console.log("🔄 Data incomplete. Please go to 'Busca Touros' to reload data...");
-      return null;
+      console.log('🔄 Nexus 2: Dados incompletos. Vá para "Busca Touros" para recarregar.');
+      return [];
     }
     return loaded;
   } catch {
-    console.log('❌ Error parsing data. Please clear localStorage and go to "Busca Touros".');
-    return null;
+    console.log('❌ Nexus 2: Erro ao ler dados. Limpe o localStorage e vá para "Busca Touros".');
+    return [];
   }
 };
 
@@ -50,173 +75,113 @@ const clearAndReloadData = () => {
   alert('localStorage limpo! Por favor, vá para a página "Busca Touros" para carregar o banco de dados atualizado.');
 };
 
-// Function to get bull from ToolSSApp database - uses same logic as Busca Touros
+// Função de busca de touro como PROCV - busca direta no banco do ToolSSApp
 const fetchBullFromDatabase = async (naab: string): Promise<Bull | null> => {
   const cleanNaab = naab.toUpperCase().trim();
-  console.log(`🔍 Nexus 2: Buscando touro com NAAB: ${cleanNaab}`);
   
-  try {
-    // Use same loadClients function as ToolSSApp
-    const clients = loadClients();
-    if (!clients) {
-      console.log('❌ No clients data available');
-      return null;
-    }
-
-    console.log(`📊 Clientes carregados: ${clients.length}`);
-    
-    // Count total bulls across all farms and search
-    let totalBulls = 0;
-    let foundBull = null;
-    
-    // Search through all clients and farms
-    for (const client of clients) {
-      if (client.farms && Array.isArray(client.farms)) {
-        for (const farm of client.farms) {
-          if (farm.bulls && Array.isArray(farm.bulls)) {
-            totalBulls += farm.bulls.length;
-            
-            // Search for the specific bull by NAAB (exact match)
-            const bull = farm.bulls.find((b: any) => {
-              const bullNaab = String(b.naab || '').toUpperCase().trim();
-              const match = bullNaab === cleanNaab;
-              if (match) {
-                console.log(`🎯 Match found! Looking for: "${cleanNaab}" Found: "${bullNaab}"`);
-              }
-              return match;
-            });
-            
-            if (bull) {
-              foundBull = bull;
-              console.log(`✅ Touro encontrado: ${bull.nome} (${bull.empresa}) - NAAB: ${bull.naab}`);
-              break;
-            }
-          }
-        }
-        if (foundBull) break;
-      }
-    }
-    
-    console.log(`🔍 Total de touros no banco: ${totalBulls}`);
-    
-    if (!foundBull) {
-      console.log(`❌ Touro com NAAB ${cleanNaab} não encontrado no banco de ${totalBulls} touros`);
-      
-      // Log some sample NAABs for debugging
-      if (totalBulls > 0) {
-        const sampleNaabs = [];
-        for (const client of clients) {
-          if (client.farms) {
-            for (const farm of client.farms) {
-              if (farm.bulls && Array.isArray(farm.bulls) && farm.bulls.length > 0) {
-                sampleNaabs.push(...farm.bulls.slice(0, 3).map((b: any) => b.naab));
-                break;
-              }
-            }
-          }
-          if (sampleNaabs.length > 0) break;
-        }
-        console.log('📋 Exemplos de NAABs no banco:', sampleNaabs);
-      }
-      
-      return null;
-    }
-    
-    // Convert ToolSSApp bull format to PedigreePredictor Bull format
-    const convertedBull: Bull = {
-      naab: foundBull.naab,
-      name: foundBull.nome || 'Nome não informado',
-      company: foundBull.empresa || 'Empresa não informada',
-      ptas: {
-        // Economic Indices
-        ihhp_dollar: foundBull["HHP$"] || foundBull["HHP$®"] || 0,
-        tpi: foundBull.TPI || 0,
-        nm_dollar: foundBull["NM$"] || 0,
-        cm_dollar: foundBull["CM$"] || 0,
-        fm_dollar: foundBull["FM$"] || 0,
-        gm_dollar: foundBull["GM$"] || 0,
-        f_sav: foundBull["F SAV"] || 0,
-        ptam: foundBull.PTAM || 0,
-        cfp: foundBull.CFP || 0,
-        
-        // Production
-        ptaf: foundBull.PTAF || 0,
-        ptaf_percent: foundBull["PTAF%"] || 0,
-        ptap: foundBull.PTAP || 0,
-        ptap_percent: foundBull["PTAP%"] || 0,
-        pl: foundBull.PL || 0,
-        milk: foundBull.Milk || 0,
-        fat: foundBull.Fat || 0,
-        protein: foundBull.Protein || 0,
-        
-        // Health & Fertility
-        dpr: foundBull.DPR || 0,
-        liv: foundBull.LIV || 0,
-        scs: foundBull.SCS || 0,
-        mast: foundBull.MAST || 0,
-        met: foundBull.MET || 0,
-        rp: foundBull.RP || 0,
-        da: foundBull.DA || 0,
-        ket: foundBull.KET || 0,
-        mf: foundBull.MF || 0,
-        
-        // Conformation
-        ptat: foundBull.PTAT || 0,
-        udc: foundBull.UDC || 0,
-        flc: foundBull.FLC || 0,
-        
-        // Calving Ease
-        sce: foundBull.SCE || 0,
-        dce: foundBull.DCE || 0,
-        ssb: foundBull.SSB || 0,
-        dsb: foundBull.DSB || 0,
-        h_liv: foundBull["H LIV"] || 0,
-        
-        // Multi-trait
-        ccr: foundBull.CCR || 0,
-        hcr: foundBull.HCR || 0,
-        fi: foundBull.FI || 0,
-        gl: foundBull.GL || 0,
-        efc: foundBull.EFC || 0,
-        bwc: foundBull.BWC || 0,
-        sta: foundBull.STA || 0,
-        str: foundBull.STR || 0,
-        
-        // Linear traits
-        dfm: foundBull.DFM || 0,
-        rua: foundBull.RUA || 0,
-        rls: foundBull.RLS || 0,
-        rtp: foundBull.RTP || 0,
-        ftl: foundBull.FTL || 0,
-        rw: foundBull.RW || 0,
-        rlr: foundBull.RLR || 0,
-        fta: foundBull.FTA || 0,
-        fls: foundBull.FLS || 0,
-        fua: foundBull.FUA || 0,
-        ruh: foundBull.RUH || 0,
-        ruw: foundBull.RUW || 0,
-        ucl: foundBull.UCL || 0,
-        udp: foundBull.UDP || 0,
-        ftp: foundBull.FTP || 0,
-        
-        // Feed Efficiency
-        rfi: foundBull.RFI || 0
-      }
-    };
-    
-    console.log(`📊 PTAs carregadas para ${convertedBull.name}:`, {
-      TPI: convertedBull.ptas.tpi,
-      NM$: convertedBull.ptas.nm_dollar,
-      DPR: convertedBull.ptas.dpr,
-      SCS: convertedBull.ptas.scs
-    });
-    
-    return convertedBull;
-    
-  } catch (error) {
-    console.error('💥 Erro ao buscar touro no banco:', error);
+  const clients = loadClients();
+  if (clients.length === 0) {
     return null;
   }
+
+  // Busca direta em todos os touros de todas as fazendas
+  for (const client of clients) {
+    for (const farm of client.farms) {
+      if (farm.bulls && Array.isArray(farm.bulls)) {
+        const bull = farm.bulls.find((b: ToolSSBull) => 
+          String(b.naab || '').toUpperCase().trim() === cleanNaab
+        );
+        
+        if (bull) {
+          // Converter ToolSSBull para Bull (formato do PedigreePredictor)
+          const convertedBull: Bull = {
+            naab: bull.naab,
+            name: bull.nome || 'Nome não informado',
+            company: bull.empresa || 'Empresa não informada',
+            ptas: {
+              // Índices Econômicos
+              ihhp_dollar: bull["HHP$"] || 0,
+              tpi: bull.TPI || 0,
+              nm_dollar: bull["NM$"] || 0,
+              cm_dollar: bull["CM$"] || 0,
+              fm_dollar: bull["FM$"] || 0,
+              gm_dollar: bull["GM$"] || 0,
+              f_sav: bull["F SAV"] || 0,
+              ptam: bull.PTAM || 0,
+              cfp: bull.CFP || 0,
+              
+              // Produção
+              ptaf: bull.PTAF || 0,
+              ptaf_percent: bull["PTAF%"] || 0,
+              ptap: bull.PTAP || 0,
+              ptap_percent: bull["PTAP%"] || 0,
+              pl: bull.PL || 0,
+              milk: bull.Milk || 0,
+              fat: bull.Fat || 0,
+              protein: bull.Protein || 0,
+              
+              // Saúde e Fertilidade
+              dpr: bull.DPR || 0,
+              liv: bull.LIV || 0,
+              scs: bull.SCS || 0,
+              mast: bull.MAST || 0,
+              met: bull.MET || 0,
+              rp: bull.RP || 0,
+              da: bull.DA || 0,
+              ket: bull.KET || 0,
+              mf: bull.MF || 0,
+              
+              // Conformação
+              ptat: bull.PTAT || 0,
+              udc: bull.UDC || 0,
+              flc: bull.FLC || 0,
+              
+              // Facilidade de Parto
+              sce: bull.SCE || 0,
+              dce: bull.DCE || 0,
+              ssb: bull.SSB || 0,
+              dsb: bull.DSB || 0,
+              h_liv: bull["H LIV"] || 0,
+              
+              // Multi-trait
+              ccr: bull.CCR || 0,
+              hcr: bull.HCR || 0,
+              fi: bull.FI || 0,
+              gl: bull.GL || 0,
+              efc: bull.EFC || 0,
+              bwc: bull.BWC || 0,
+              sta: bull.STA || 0,
+              str: bull.STR || 0,
+              
+              // Características lineares
+              dfm: bull.DFM || 0,
+              rua: bull.RUA || 0,
+              rls: bull.RLS || 0,
+              rtp: bull.RTP || 0,
+              ftl: bull.FTL || 0,
+              rw: bull.RW || 0,
+              rlr: bull.RLR || 0,
+              fta: bull.FTA || 0,
+              fls: bull.FLS || 0,
+              fua: bull.FUA || 0,
+              ruh: bull.RUH || 0,
+              ruw: bull.RUW || 0,
+              ucl: bull.UCL || 0,
+              udp: bull.UDP || 0,
+              ftp: bull.FTP || 0,
+              
+              // Eficiência Alimentar
+              rfi: bull.RFI || 0
+            }
+          };
+          
+          return convertedBull;
+        }
+      }
+    }
+  }
+  
+  return null;
 };
 
 const IndividualPrediction: React.FC = () => {
