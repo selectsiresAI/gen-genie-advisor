@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { ArrowLeftRight, Download, PieChart as PieIcon, Settings, Filter, Layers3, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,75 +6,77 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+
+interface Farm {
+  id: string;
+  farm_id: string;
+  name: string;
+  owner_name: string;
+}
 
 type Female = {
   id: string;
-  brinco: string;
-  nascimento: string;
-  ordemParto?: number; // Ordem de parto
-  categoria?: string; // Categoria do animal
-  naabPai: string;
-  nomePai: string;
-  TPI: number;
-  ["HHP$"]?: number;
-  ["NM$"]?: number;
-  ["CM$"]?: number;
-  ["FM$"]?: number;
-  ["GM$"]?: number;
-  ["F SAV"]?: number;
-  PTAM?: number;
-  CFP?: number;
-  PTAF?: number;
-  ["PTAF%"]?: number;
-  PTAP?: number;
-  ["PTAP%"]?: number;
-  PL?: number;
-  DPR: number;
-  LIV?: number;
-  SCS: number;
-  MAST?: number;
-  MET?: number;
-  RP?: number;
-  DA?: number;
-  KET?: number;
-  MF?: number;
-  PTAT: number;
-  UDC?: number;
-  FLC?: number;
-  SCE?: number;
-  DCE?: number;
-  SSB?: number;
-  DSB?: number;
-  ["H LIV"]?: number;
-  CCR?: number;
-  HCR?: number;
-  FI?: number;
-  GL?: number;
-  EFC?: number;
-  BWC?: number;
-  STA?: number;
-  STR?: number;
-  DFM?: number;
-  RUA?: number;
-  RLS?: number;
-  RTP?: number;
-  FTL?: number;
-  RW?: number;
-  RLR?: number;
-  FTA?: number;
-  FLS?: number;
-  FUA?: number;
-  RUH?: number;
-  RUW?: number;
-  UCL?: number;
-  UDP?: number;
-  FTP?: number;
-  RFI?: number;
-  NM?: number;
-  Milk: number;
-  Fat: number;
-  Protein: number;
-  year: number;
+  name: string;
+  identifier?: string;
+  birth_date?: string;
+  sire_naab?: string;
+  hhp_dollar?: number;
+  nm_dollar?: number;
+  tpi?: number;
+  cm_dollar?: number;
+  fm_dollar?: number;
+  gm_dollar?: number;
+  f_sav?: number;
+  ptam?: number;
+  cfp?: number;
+  ptaf?: number;
+  ptaf_pct?: number;
+  ptap?: number;
+  ptap_pct?: number;
+  pl?: number;
+  dpr?: number;
+  liv?: number;
+  scs?: number;
+  mast?: number;
+  met?: number;
+  rp?: number;
+  da?: number;
+  ket?: number;
+  mf?: number;
+  ptat?: number;
+  udc?: number;
+  flc?: number;
+  sce?: number;
+  dce?: number;
+  ssb?: number;
+  dsb?: number;
+  h_liv?: number;
+  ccr?: number;
+  hcr?: number;
+  fi?: number;
+  gl?: number;
+  efc?: number;
+  bwc?: number;
+  sta?: number;
+  str?: number;
+  dfm?: number;
+  rua?: number;
+  rls?: number;
+  rtp?: number;
+  ftl?: number;
+  rw?: number;
+  rlr?: number;
+  fta?: number;
+  fls?: number;
+  fua?: number;
+  ruh?: number;
+  ruw?: number;
+  ucl?: number;
+  udp?: number;
+  ftp?: number;
+  rfi?: number;
+  gfi?: number;
   _percentil?: number | null;
   _grupo?: "Doadoras" | "Inter" | "Receptoras";
   _motivo?: string;
@@ -270,24 +272,18 @@ function normalize(value: number, mean: number, sd: number) {
 }
 
 function scoreAnimal(
-  a: { TPI: number; ["NM$"]: number; Milk: number; Fat: number; Protein: number; SCS: number; PTAT: number; },
+  a: { tpi: number; nm_dollar: number; scs: number; ptat: number; },
   stats: any,
   w: Weights
 ) {
-  const zTPI  = normalize(a.TPI,      stats.TPI?.mean,   stats.TPI?.sd);
-  const zNM   = normalize(a["NM$"],   (stats["NM$"]?.mean ?? stats.NM?.mean), (stats["NM$"]?.sd ?? stats.NM?.sd));
-  const zMilk = normalize(a.Milk,     stats.Milk?.mean,  stats.Milk?.sd);
-  const zFat  = normalize(a.Fat,      stats.Fat?.mean,   stats.Fat?.sd);
-  const zProt = normalize(a.Protein,  stats.Protein?.mean, stats.Protein?.sd);
-  const zSCS  = normalize(a.SCS,      stats.SCS?.mean,   stats.SCS?.sd);
-  const zPTAT = normalize(a.PTAT,     stats.PTAT?.mean,  stats.PTAT?.sd);
+  const zTPI  = normalize(a.tpi,      stats.tpi?.mean,   stats.tpi?.sd);
+  const zNM   = normalize(a.nm_dollar,   stats.nm_dollar?.mean, stats.nm_dollar?.sd);
+  const zSCS  = normalize(a.scs,      stats.scs?.mean,   stats.scs?.sd);
+  const zPTAT = normalize(a.ptat,     stats.ptat?.mean,  stats.ptat?.sd);
 
   return (
     w.TPI    * zTPI +
     w["NM$"] * zNM  +
-    w.Milk   * zMilk +
-    w.Fat    * zFat +
-    w.Protein* zProt +
     w.PTAT   * zPTAT -
     w.SCS    * zSCS        // SCS penaliza
   );
@@ -301,12 +297,9 @@ function getPrimaryValue(
   selectedTraits?: any
 ): number | null {
   // Leitores robustos para NM$/NM
-  const nmCandidate =
-    (f as any)["HHP$"] ??            // se já existir HHP$ de verdade
-    (f as any)["NM$"]  ??            // padrão com $
-    (f as any).NM       ?? null;     // fallback sem $
+  const nmCandidate = f.hhp_dollar ?? f.nm_dollar ?? null;
 
-  if (primary === "TPI")  return isFinite(Number(f.TPI)) ? Number(f.TPI) : null;
+  if (primary === "TPI")  return isFinite(Number(f.tpi)) ? Number(f.tpi) : null;
   if (primary === "NM$" || primary === "HHP$") {
     return isFinite(Number(nmCandidate)) ? Number(nmCandidate) : null;
   }
@@ -323,9 +316,10 @@ function getPrimaryValue(
       };
       
       const base = {
-        TPI: f.TPI,
-        ["NM$"]: Number(nmCandidate ?? 0),
-        Milk: f.Milk, Fat: f.Fat, Protein: f.Protein, SCS: f.SCS, PTAT: f.PTAT,
+        tpi: f.tpi || 0,
+        nm_dollar: Number(nmCandidate ?? 0),
+        scs: f.scs || 0, 
+        ptat: f.ptat || 0,
       };
       return scoreAnimal(base, statsForCustom || {}, effectiveWeights);
     } catch {
@@ -366,7 +360,7 @@ function segmentAnimals(
   if (base.length === 0) {
     const fallbackBase: Array<{ id: string; v: number }> = [];
     females.forEach((f) => {
-      if (isFinite(Number(f.TPI))) fallbackBase.push({ id: f.id, v: Number(f.TPI) });
+      if (isFinite(Number(f.tpi))) fallbackBase.push({ id: f.id, v: Number(f.tpi) });
     });
     console.warn("⚠️ Índice primário sem valores válidos. Usando fallback TPI para segmentação.");
     pct = computePercentiles(fallbackBase);
@@ -376,14 +370,14 @@ function segmentAnimals(
 
   return females.map((f) => {
     const p = pct.get(f.id) ?? null;
-    const crit = (f.DPR ?? 0) < cfg.critical_dpr_lt || (f.SCS ?? 0) > cfg.critical_scs_gt;
+    const crit = (f.dpr ?? 0) < cfg.critical_dpr_lt || (f.scs ?? 0) > cfg.critical_scs_gt;
     if (crit) {
       return { ...f, _percentil: p, _grupo: "Receptoras", _motivo: "Crítico: DPR/SCS" };
     }
 
     if (p !== null && p <= cfg.donorCutoffPercent) {
-      const okSCS = (f.SCS ?? 99) <= cfg.scsMaxDonor;
-      const okDPR = (f.DPR ?? -99) >= cfg.dprMinDonor;
+      const okSCS = (f.scs ?? 99) <= cfg.scsMaxDonor;
+      const okDPR = (f.dpr ?? -99) >= cfg.dprMinDonor;
       if (okSCS && okDPR) {
         return { ...f, _percentil: p, _grupo: "Doadoras", _motivo: "Top + saúde OK" };
       }
@@ -469,26 +463,56 @@ const defaultSegConfig: SegmentConfig = {
 };
 
 interface SegmentationPageProps {
-  farm: { id: string; nome: string; females: Female[]; bulls: any[]; };
-  weights: { TPI: number; ["NM$"]: number; Milk: number; Fat: number; Protein: number; SCS: number; PTAT: number; };
-  statsForCustom: any;
+  farm: Farm;
   onBack: () => void;
 }
 
-export default function SegmentationPage({ farm, weights, statsForCustom, onBack }: SegmentationPageProps) {
+export default function SegmentationPage({ farm, onBack }: SegmentationPageProps) {
+  const [females, setFemales] = useState<Female[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load females from database
+  const loadFemales = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('females_denorm')
+        .select('*')
+        .eq('farm_id', farm.farm_id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading females:', error);
+        return;
+      }
+
+      setFemales(data || []);
+    } catch (error) {
+      console.error('Error loading females:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (farm.farm_id) {
+      loadFemales();
+    }
+  }, [farm.farm_id]);
+
   const [config, setConfig] = useState<SegmentConfig>(defaultSegConfig);
   const [customWeights, setCustomWeights] = useState<Weights>({
     ["HHP$"]: 0,
-    TPI: weights.TPI || 1,
-    ["NM$"]: weights["NM$"] || 1,
+    TPI: 1,
+    ["NM$"]: 1,
     ["CM$"]: 0, ["FM$"]: 0, ["GM$"]: 0, ["F SAV"]: 0, PTAM: 0, CFP: 0,
     PTAF: 0, ["PTAF%"]: 0, PTAP: 0, ["PTAP%"]: 0, PL: 0, DPR: 0, LIV: 0,
-    SCS: weights.SCS || 1, MAST: 0, MET: 0, RP: 0, DA: 0, KET: 0, MF: 0,
-    PTAT: weights.PTAT || 1, UDC: 0, FLC: 0, SCE: 0, DCE: 0, SSB: 0, DSB: 0,
+    SCS: 1, MAST: 0, MET: 0, RP: 0, DA: 0, KET: 0, MF: 0,
+    PTAT: 1, UDC: 0, FLC: 0, SCE: 0, DCE: 0, SSB: 0, DSB: 0,
     ["H LIV"]: 0, CCR: 0, HCR: 0, FI: 0, GL: 0, EFC: 0, BWC: 0, STA: 0,
     STR: 0, DFM: 0, RUA: 0, RLS: 0, RTP: 0, FTL: 0, RW: 0, RLR: 0,
     FTA: 0, FLS: 0, FUA: 0, RUH: 0, RUW: 0, UCL: 0, UDP: 0, FTP: 0, RFI: 0,
-    Milk: weights.Milk || 1, Fat: weights.Fat || 1, Protein: weights.Protein || 1
+    Milk: 1, Fat: 1, Protein: 1
   });
   const [selectedTraits, setSelectedTraits] = useState({
     ["HHP$"]: true, TPI: true, ["NM$"]: true, ["CM$"]: false, ["FM$"]: false, ["GM$"]: false,
@@ -498,968 +522,381 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
     ["H LIV"]: false, CCR: false, HCR: false, FI: false, GL: false, EFC: false, BWC: false, STA: false,
     STR: false, DFM: false, RUA: false, RLS: false, RTP: false, FTL: false, RW: false, RLR: false,
     FTA: false, FLS: false, FUA: false, RUH: false, RUW: false, UCL: false, UDP: false, FTP: false,
-    RFI: false, Milk: true, Fat: true, Protein: true
+    RFI: false, Milk: false, Fat: false, Protein: false
   });
-  const [applyBump, setApplyBump] = useState(0);
 
-  const segmentedFemales = useMemo(() => {
-    console.log("🔍 Debugging segmentation:", {
-      femalesCount: farm.females?.length || 0,
-      config,
-      weightsKeys: Object.keys(customWeights),
-      statsKeys: Object.keys(statsForCustom || {})
-    });
+  // Calculate statistics for custom scoring
+  const statsForCustom = useMemo(() => {
+    if (!females.length) return {};
     
-    if (!farm.females || farm.females.length === 0) {
-      console.log("❌ No females data available");
-      return [];
-    }
+    const stats: any = {};
+    const keys = ['tpi', 'nm_dollar', 'scs', 'ptat'];
     
-    const result = segmentAnimals(farm.females, config, statsForCustom, customWeights, selectedTraits);
-    console.log("📊 Segmentation result:", {
-      totalAnimals: result.length,
-      groups: result.reduce((acc, f) => {
-        acc[f._grupo || 'undefined'] = (acc[f._grupo || 'undefined'] || 0) + 1;
-        return acc;
-      }, {} as any)
-    });
-    
-    return result;
-  }, [farm.females, config, statsForCustom, customWeights, selectedTraits, applyBump]);
-
-  const groupStats = useMemo(() => {
-    const stats = { Doadoras: 0, Inter: 0, Receptoras: 0 };
-    segmentedFemales.forEach(f => {
-      if (f._grupo) stats[f._grupo]++;
-    });
-    
-    const total = segmentedFemales.length;
-    return Object.entries(stats).map(([name, value]) => ({
-      name,
-      value,
-      percentage: total > 0 ? Math.round((value / total) * 100) : 0
-    }));
-  }, [segmentedFemales]);
-
-  const categoryStats = useMemo(() => {
-    const stats = { Novilhas: 0, Primíparas: 0, Secundíparas: 0, Multíparas: 0 };
-    
-    segmentedFemales.forEach(f => {
-      // Use existing category or calculate from birth date and parity
-      const category = f.categoria || categorizeAnimal(f.nascimento, f.ordemParto);
-      
-      if (category === "Novilha") stats.Novilhas++;
-      else if (category === "Primípara") stats.Primíparas++;
-      else if (category === "Secundípara") stats.Secundíparas++;
-      else if (category === "Multípara") stats.Multíparas++;
+    keys.forEach(key => {
+      const values = females.map(f => (f as any)[key]).filter(v => v != null && !isNaN(v));
+      if (values.length > 0) {
+        const mean = values.reduce((a, b) => a + b, 0) / values.length;
+        const variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length;
+        const sd = Math.sqrt(variance);
+        stats[key] = { mean, sd };
+      }
     });
     
     return stats;
-  }, [segmentedFemales]);
+  }, [females]);
+
+  // Processo de segmentação baseado no rebanho
+  const segmentedAnimals = useMemo(() => {
+    if (!females.length) return [];
+    
+    return segmentAnimals(
+      females,
+      config,
+      statsForCustom,
+      customWeights,
+      selectedTraits
+    );
+  }, [females, config, statsForCustom, customWeights, selectedTraits]);
+
+  const counts = useMemo(() => {
+    const cats = { Doadoras: 0, Inter: 0, Receptoras: 0 };
+    segmentedAnimals.forEach((f) => cats[f._grupo!]++);
+    return cats;
+  }, [segmentedAnimals]);
+
+  // Função para determinação automatica de categoria com base na idade e parto
+  const handleAutoCategory = () => {
+    // Essa função pode ser implementada se necessário
+  };
 
   const handleExport = () => {
-    const exportData = segmentedFemales.map(f => ({
-      brinco: f.brinco,
-      TPI: f.TPI,
-      "NM$": f["NM$"],
-      Milk: f.Milk,
-      Fat: f.Fat,
-      Protein: f.Protein,
-      DPR: f.DPR,
-      SCS: f.SCS,
-      PTAT: f.PTAT,
-      percentil: f._percentil,
-      grupo: f._grupo,
-      motivo: f._motivo
-    }));
-    toCSV(exportData, `segmentacao_${farm.id}.csv`);
+    toCSV(segmentedAnimals, `segmentacao-${farm.name}.csv`);
   };
 
-  const toggleTrait = (trait: string) => {
-    setSelectedTraits(prev => ({ ...prev, [trait]: !prev[trait as keyof typeof prev] }));
-  };
-
-  const selectAllTraits = () => {
-    setSelectedTraits({
-      ["HHP$"]: true, TPI: true, ["NM$"]: true, ["CM$"]: true, ["FM$"]: true, ["GM$"]: true,
-      ["F SAV"]: true, PTAM: true, CFP: true, PTAF: true, ["PTAF%"]: true, PTAP: true, ["PTAP%"]: true,
-      PL: true, DPR: true, LIV: true, SCS: true, MAST: true, MET: true, RP: true, DA: true, KET: true,
-      MF: true, PTAT: true, UDC: true, FLC: true, SCE: true, DCE: true, SSB: true, DSB: true,
-      ["H LIV"]: true, CCR: true, HCR: true, FI: true, GL: true, EFC: true, BWC: true, STA: true,
-      STR: true, DFM: true, RUA: true, RLS: true, RTP: true, FTL: true, RW: true, RLR: true,
-      FTA: true, FLS: true, FUA: true, RUH: true, RUW: true, UCL: true, UDP: true, FTP: true,
-      RFI: true, Milk: true, Fat: true, Protein: true
-    });
-  };
-
-  const deselectAllTraits = () => {
-    setSelectedTraits({
-      ["HHP$"]: false, TPI: false, ["NM$"]: false, ["CM$"]: false, ["FM$"]: false, ["GM$"]: false,
-      ["F SAV"]: false, PTAM: false, CFP: false, PTAF: false, ["PTAF%"]: false, PTAP: false, ["PTAP%"]: false,
-      PL: false, DPR: false, LIV: false, SCS: false, MAST: false, MET: false, RP: false, DA: false, KET: false,
-      MF: false, PTAT: false, UDC: false, FLC: false, SCE: false, DCE: false, SSB: false, DSB: false,
-      ["H LIV"]: false, CCR: false, HCR: false, FI: false, GL: false, EFC: false, BWC: false, STA: false,
-      STR: false, DFM: false, RUA: false, RLS: false, RTP: false, FTL: false, RW: false, RLR: false,
-      FTA: false, FLS: false, FUA: false, RUH: false, RUW: false, UCL: false, UDP: false, FTP: false,
-      RFI: false, Milk: false, Fat: false, Protein: false
-    });
-  };
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <Button onClick={onBack} variant="outline" size="sm">
+              <ArrowLeftRight className="w-4 h-4 mr-2" />
+              Voltar
+            </Button>
+            <h1 className="text-2xl font-bold">Segmentação - {farm.name}</h1>
+          </div>
+        </div>
+        <div className="flex items-center justify-center py-20">
+          <div className="text-lg">Carregando dados...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Button variant="outline" onClick={onBack}>
-          <ArrowLeftRight className="mr-2 h-4 w-4" /> Voltar
-        </Button>
-        <div className="ml-auto flex items-center gap-2">
-          <Button onClick={handleExport} className="bg-primary hover:bg-primary/90">
-            <Download className="mr-2 h-4 w-4" /> Exportar Segmentação
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Button onClick={onBack} variant="outline" size="sm">
+            <ArrowLeftRight className="w-4 h-4 mr-2" />
+            Voltar
+          </Button>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Layers3 className="w-7 h-7" />
+            Segmentação - {farm.name}
+          </h1>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={handleExport} variant="outline" size="sm">
+            <Download className="w-4 h-4 mr-2" />
+            Exportar
           </Button>
         </div>
       </div>
 
-      {/* Processo para o Técnico */}
-      <Card className="border-primary/20 bg-primary/5">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-primary">
-            <Settings className="h-5 w-5" />
-            Processo para o Técnico - Checklist Pré-Segmentação
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-2 gap-4 text-sm">
-            <div>
-              <h4 className="font-semibold mb-2">1. Validação dos Dados</h4>
-              <ul className="space-y-1 text-muted-foreground">
-                <li>• Verificar se dados PTA estão atualizados</li>
-                <li>• Confirmar presença de HHP$/NM$ nas fêmeas</li>
-                <li>• Validar campos DPR e SCS preenchidos</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-2">2. Configuração</h4>
-              <ul className="space-y-1 text-muted-foreground">
-                <li>• Definir % de doadoras conforme objetivo</li>
-                <li>• Ajustar gates sanitários (SCS ≤ 2.9)</li>
-                <li>• Verificar cortes percentuais</li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Contadores de Animais */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Estatísticas do Rebanho
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div className="text-center p-4 bg-primary/5 rounded-lg border">
-              <div className="text-2xl font-bold text-primary">{segmentedFemales.length}</div>
-              <div className="text-sm text-muted-foreground">Total de Animais</div>
-            </div>
-            <div className="text-center p-4 bg-blue-50 rounded-lg border">
-              <div className="text-2xl font-bold text-blue-600">{categoryStats.Novilhas}</div>
-              <div className="text-sm text-muted-foreground">Novilhas</div>
-            </div>
-            <div className="text-center p-4 bg-green-50 rounded-lg border">
-              <div className="text-2xl font-bold text-green-600">{categoryStats.Primíparas}</div>
-              <div className="text-sm text-muted-foreground">Primíparas</div>
-            </div>
-            <div className="text-center p-4 bg-orange-50 rounded-lg border">
-              <div className="text-2xl font-bold text-orange-600">{categoryStats.Secundíparas}</div>
-              <div className="text-sm text-muted-foreground">Secundíparas</div>
-            </div>
-            <div className="text-center p-4 bg-purple-50 rounded-lg border">
-              <div className="text-2xl font-bold text-purple-600">{categoryStats.Multíparas}</div>
-              <div className="text-sm text-muted-foreground">Multíparas</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Layers3 className="h-5 w-5" />
-            Segmentação por literatura (Doadoras / Inter / Receptoras)
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Índice Base */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg">Índice base</h3>
-              <div className="space-y-3">
-                {[
-                  { value: "HHP$", label: "HHP$", disabled: false },
-                  { value: "NM$", label: "NM$" }, 
-                  { value: "TPI", label: "TPI" },
-                  { value: "Custom", label: "Custom" }
-                ].map((option) => (
-                  <div key={option.value} className="flex items-center space-x-2">
-                    <input
-                      type="radio"
-                      id={option.value}
-                      name="primaryIndex"
-                      value={option.value}
-                      checked={config.primaryIndex === option.value}
-                      disabled={option.disabled}
-                      onChange={(e) => setConfig({...config, primaryIndex: e.target.value as PrimaryIndex})}
-                      className="w-4 h-4"
-                    />
-                    <Label 
-                      htmlFor={option.value} 
-                      className={`${option.disabled ? 'text-muted-foreground' : ''} ${option.value === 'Custom' ? 'text-primary font-semibold' : ''}`}
-                    >
-                      {option.label}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-              
-              <div className="text-sm text-blue-600 mt-2">
-                Recomendado: HHP$ (Health & Productivity Profit) - índice holístico.
-              </div>
-            </div>
-
-            {/* Cortes Percentuais */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg">Cortes percentuais</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-blue-600">Top % (Doadoras)</Label>
-                  <Input
-                    type="number"
-                    value={config.donorCutoffPercent}
-                    onChange={(e) => setConfig({...config, donorCutoffPercent: Number(e.target.value)})}
-                    min="1" max="100"
-                  />
-                </div>
-                <div>
-                  <Label className="text-blue-600">Bottom % (Receptoras)</Label>
-                  <Input
-                    type="number"
-                    value={100 - config.goodCutoffUpper}
-                    onChange={(e) => setConfig({...config, goodCutoffUpper: 100 - Number(e.target.value)})}
-                    min="1" max="100"
-                  />
-                </div>
-              </div>
-              
-              <div className="text-sm text-gray-600 mt-2">
-                Padrão: {config.donorCutoffPercent}% doadoras / {100 - config.goodCutoffUpper}% receptoras (restante = Inter).
-              </div>
-            </div>
-
-            {/* Gates Sanitários */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-lg">Gates sanitários e tipo</h3>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setConfig({
-                        ...config,
-                        scsMaxDonor: 2.9,
-                        dprMinDonor: 1.0,
-                        critical_dpr_lt: -1.0,
-                        critical_scs_gt: 3.0,
-                      });
-                    }}
-                    className="text-xs"
-                  >
-                    Aplicar Valores Referência
-                  </Button>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <Label className="text-blue-600">SCS máx.</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    value={config.scsMaxDonor}
-                    onChange={(e) => setConfig({...config, scsMaxDonor: Number(e.target.value)})}
-                  />
-                </div>
-                <div>
-                  <Label className="text-blue-600">DPR mín.</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    value={config.dprMinDonor}
-                    onChange={(e) => setConfig({...config, dprMinDonor: Number(e.target.value)})}
-                  />
-                </div>
-                <div>
-                  <Label className="text-blue-600">PTAT mín.</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    value={0}
-                    disabled
-                  />
-                </div>
-              </div>
-              
-              <div className="text-sm text-gray-600 mt-2">
-                Valores padrão alinhados à boa saúde do úbere (SCS≤3,0) e fertilidade não negativa (DPR≥0).
-              </div>
-            </div>
-          </div>
-
-          {/* Grid inferior com 2 colunas */}
-          <div className="grid lg:grid-cols-2 gap-8 mt-8">
-            {/* Selecionar PTAs - Desabilitado quando não é Custom */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-lg">Selecionar PTAs (grupo)</h3>
-                {config.primaryIndex === "Custom" && (
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={selectAllTraits}
-                      className="text-xs"
-                    >
-                      Selecionar Todas
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={deselectAllTraits}
-                      className="text-xs"
-                    >
-                      Desmarcar Todas
-                    </Button>
-                  </div>
-                )}
-              </div>
-              {config.primaryIndex !== "Custom" && (
-                <div className="text-sm text-orange-600 bg-orange-50 p-2 rounded">
-                  Para editar pesos/traços, selecione Custom.
-                </div>
-              )}
-              <div className="grid grid-cols-4 gap-4">
-                {[
-                  { key: 'HHP$', label: 'HHP$®', color: 'text-primary' },
-                  { key: 'TPI', label: 'TPI', color: 'text-primary' },
-                  { key: 'NM$', label: 'NM$', color: 'text-primary' },
-                  { key: 'CM$', label: 'CM$', color: 'text-blue-600' },
-                  { key: 'FM$', label: 'FM$', color: 'text-blue-600' },
-                  { key: 'GM$', label: 'GM$', color: 'text-blue-600' },
-                  { key: 'F SAV', label: 'F SAV', color: 'text-green-600' },
-                  { key: 'PTAM', label: 'PTAM', color: 'text-black' },
-                  { key: 'CFP', label: 'CFP', color: 'text-purple-600' },
-                  { key: 'PTAF', label: 'PTAF', color: 'text-purple-600' },
-                  { key: 'PTAF%', label: 'PTAF%', color: 'text-purple-600' },
-                  { key: 'PTAP', label: 'PTAP', color: 'text-purple-600' },
-                  { key: 'PTAP%', label: 'PTAP%', color: 'text-purple-600' },
-                  { key: 'PL', label: 'PL', color: 'text-green-600' },
-                  { key: 'DPR', label: 'DPR', color: 'text-purple-600' },
-                  { key: 'LIV', label: 'LIV', color: 'text-green-600' },
-                  { key: 'SCS', label: 'SCS', color: 'text-red-600' },
-                  { key: 'MAST', label: 'MAST', color: 'text-red-600' },
-                  { key: 'MET', label: 'MET', color: 'text-orange-600' },
-                  { key: 'RP', label: 'RP', color: 'text-purple-600' },
-                  { key: 'DA', label: 'DA', color: 'text-orange-600' },
-                  { key: 'KET', label: 'KET', color: 'text-orange-600' },
-                  { key: 'MF', label: 'MF', color: 'text-orange-600' },
-                  { key: 'PTAT', label: 'PTAT', color: 'text-purple-600' },
-                  { key: 'UDC', label: 'UDC', color: 'text-purple-600' },
-                  { key: 'FLC', label: 'FLC', color: 'text-purple-600' },
-                  { key: 'SCE', label: 'SCE', color: 'text-orange-600' },
-                  { key: 'DCE', label: 'DCE', color: 'text-orange-600' },
-                  { key: 'SSB', label: 'SSB', color: 'text-orange-600' },
-                  { key: 'DSB', label: 'DSB', color: 'text-orange-600' },
-                  { key: 'H LIV', label: 'H LIV', color: 'text-green-600' },
-                  { key: 'CCR', label: 'CCR', color: 'text-orange-600' },
-                  { key: 'HCR', label: 'HCR', color: 'text-orange-600' },
-                  { key: 'FI', label: 'FI', color: 'text-gray-600' },
-                  { key: 'GL', label: 'GL', color: 'text-gray-600' },
-                  { key: 'EFC', label: 'EFC', color: 'text-blue-600' },
-                  { key: 'BWC', label: 'BWC', color: 'text-orange-600' },
-                  { key: 'STA', label: 'STA', color: 'text-purple-600' },
-                  { key: 'STR', label: 'STR', color: 'text-purple-600' },
-                  { key: 'DFM', label: 'DFM', color: 'text-purple-600' },
-                  { key: 'RUA', label: 'RUA', color: 'text-purple-600' },
-                  { key: 'RLS', label: 'RLS', color: 'text-purple-600' },
-                  { key: 'RTP', label: 'RTP', color: 'text-purple-600' },
-                  { key: 'FTL', label: 'FTL', color: 'text-purple-600' },
-                  { key: 'RW', label: 'RW', color: 'text-purple-600' },
-                  { key: 'RLR', label: 'RLR', color: 'text-purple-600' },
-                  { key: 'FTA', label: 'FTA', color: 'text-purple-600' },
-                  { key: 'FLS', label: 'FLS', color: 'text-purple-600' },
-                  { key: 'FUA', label: 'FUA', color: 'text-purple-600' },
-                  { key: 'RUH', label: 'RUH', color: 'text-purple-600' },
-                  { key: 'RUW', label: 'RUW', color: 'text-purple-600' },
-                  { key: 'UCL', label: 'UCL', color: 'text-purple-600' },
-                  { key: 'UDP', label: 'UDP', color: 'text-purple-600' },
-                  { key: 'FTP', label: 'FTP', color: 'text-purple-600' },
-                  { key: 'RFI', label: 'RFI', color: 'text-blue-600' },
-                  { key: 'Milk', label: 'Milk', color: 'text-black' },
-                  { key: 'Fat', label: 'Fat', color: 'text-purple-600' },
-                  { key: 'Protein', label: 'Protein', color: 'text-purple-600' }
-                ].map((trait) => (
-                  <div key={trait.key} className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id={trait.key}
-                      checked={selectedTraits[trait.key as keyof typeof selectedTraits]}
-                      onChange={() => toggleTrait(trait.key)}
-                      disabled={config.primaryIndex !== "Custom"}
-                      className="w-4 h-4"
-                    />
-                    <Label 
-                      htmlFor={trait.key} 
-                      className={`text-xs ${trait.color} ${config.primaryIndex !== "Custom" ? 'text-muted-foreground' : ''}`}
-                    >
-                      {trait.label}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-              
-              <div className="text-sm text-gray-600 mt-2">
-                Se nenhum traço for marcado em Custom, usar todos os traços por padrão.
-              </div>
-            </div>
-
-            {/* Pesos do Índice - Visível quando Custom é selecionado */}
-            {config.primaryIndex === "Custom" && (
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Pesos do índice customizado</h3>
-                <div className="grid grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-                  {[
-                    { key: 'HHP$', label: 'HHP$®' },
-                    { key: 'TPI', label: 'TPI' },
-                    { key: 'NM$', label: 'NM$' },
-                    { key: 'CM$', label: 'CM$' },
-                    { key: 'FM$', label: 'FM$' },
-                    { key: 'GM$', label: 'GM$' },
-                    { key: 'F SAV', label: 'F SAV' },
-                    { key: 'PTAM', label: 'PTAM' },
-                    { key: 'CFP', label: 'CFP' },
-                    { key: 'PTAF', label: 'PTAF' },
-                    { key: 'PTAF%', label: 'PTAF%' },
-                    { key: 'PTAP', label: 'PTAP' },
-                    { key: 'PTAP%', label: 'PTAP%' },
-                    { key: 'PL', label: 'PL' },
-                    { key: 'DPR', label: 'DPR' },
-                    { key: 'LIV', label: 'LIV' },
-                    { key: 'SCS', label: 'SCS' },
-                    { key: 'MAST', label: 'MAST' },
-                    { key: 'MET', label: 'MET' },
-                    { key: 'RP', label: 'RP' },
-                    { key: 'DA', label: 'DA' },
-                    { key: 'KET', label: 'KET' },
-                    { key: 'MF', label: 'MF' },
-                    { key: 'PTAT', label: 'PTAT' },
-                    { key: 'UDC', label: 'UDC' },
-                    { key: 'FLC', label: 'FLC' },
-                    { key: 'SCE', label: 'SCE' },
-                    { key: 'DCE', label: 'DCE' },
-                    { key: 'SSB', label: 'SSB' },
-                    { key: 'DSB', label: 'DSB' },
-                    { key: 'H LIV', label: 'H LIV' },
-                    { key: 'CCR', label: 'CCR' },
-                    { key: 'HCR', label: 'HCR' },
-                    { key: 'FI', label: 'FI' },
-                    { key: 'GL', label: 'GL' },
-                    { key: 'EFC', label: 'EFC' },
-                    { key: 'BWC', label: 'BWC' },
-                    { key: 'STA', label: 'STA' },
-                    { key: 'STR', label: 'STR' },
-                    { key: 'DFM', label: 'DFM' },
-                    { key: 'RUA', label: 'RUA' },
-                    { key: 'RLS', label: 'RLS' },
-                    { key: 'RTP', label: 'RTP' },
-                    { key: 'FTL', label: 'FTL' },
-                    { key: 'RW', label: 'RW' },
-                    { key: 'RLR', label: 'RLR' },
-                    { key: 'FTA', label: 'FTA' },
-                    { key: 'FLS', label: 'FLS' },
-                    { key: 'FUA', label: 'FUA' },
-                    { key: 'RUH', label: 'RUH' },
-                    { key: 'RUW', label: 'RUW' },
-                    { key: 'UCL', label: 'UCL' },
-                    { key: 'UDP', label: 'UDP' },
-                    { key: 'FTP', label: 'FTP' },
-                    { key: 'RFI', label: 'RFI' },
-                    { key: 'Milk', label: 'Milk' },
-                    { key: 'Fat', label: 'Fat' },
-                    { key: 'Protein', label: 'Protein' },
-                  ].filter(weight => selectedTraits[weight.key as keyof typeof selectedTraits]).map((weight) => (
-                    <div key={weight.key} className="flex items-center justify-between gap-2">
-                      <Label className="text-xs">{weight.label}</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={customWeights[weight.key as keyof Weights] || 0}
-                        onChange={(e) => {
-                          setCustomWeights(prev => ({...prev, [weight.key]: Number(e.target.value)}));
-                        }}
-                        className="w-20 h-8"
-                      />
-                    </div>
-                  ))}
-                </div>
-                
-                <div className="text-sm text-gray-600 mt-2">
-                  SCS é penalizado automaticamente (sinal invertido).
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Botão de aplicar */}
-          <div className="flex justify-center mt-8">
-            <Button 
-              className="bg-accent text-accent-foreground hover:bg-accent/90"
-              onClick={() => setApplyBump((v) => v + 1)}
-            >
-              Aplicar segmentação
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Gates - Valores de Corte */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Gates - Valores de Corte
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const newConfig = { ...config };
-                    Object.keys(newConfig.gates).forEach(key => {
-                      newConfig.gates[key as keyof typeof newConfig.gates].enabled = true;
-                    });
-                    setConfig(newConfig);
-                  }}
-                  className="text-xs"
-                >
-                  Ativar Todos
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const newConfig = { ...config };
-                    Object.keys(newConfig.gates).forEach(key => {
-                      newConfig.gates[key as keyof typeof newConfig.gates].enabled = false;
-                    });
-                    setConfig(newConfig);
-                  }}
-                  className="text-xs"
-                >
-                  Desativar Todos
-                </Button>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-              {[
-                { key: 'HHP$', label: 'HHP$®' },
-                { key: 'TPI', label: 'TPI' },
-                { key: 'NM$', label: 'NM$' },
-                { key: 'CM$', label: 'CM$' },
-                { key: 'FM$', label: 'FM$' },
-                { key: 'GM$', label: 'GM$' },
-                { key: 'F SAV', label: 'F SAV' },
-                { key: 'PTAM', label: 'PTAM' },
-                { key: 'CFP', label: 'CFP' },
-                { key: 'PTAF', label: 'PTAF' },
-                { key: 'PTAF%', label: 'PTAF%' },
-                { key: 'PTAP', label: 'PTAP' },
-                { key: 'PTAP%', label: 'PTAP%' },
-                { key: 'PL', label: 'PL' },
-                { key: 'DPR', label: 'DPR' },
-                { key: 'LIV', label: 'LIV' },
-                { key: 'SCS', label: 'SCS' },
-                { key: 'MAST', label: 'MAST' },
-                { key: 'MET', label: 'MET' },
-                { key: 'RP', label: 'RP' },
-                { key: 'DA', label: 'DA' },
-                { key: 'KET', label: 'KET' },
-                { key: 'MF', label: 'MF' },
-                { key: 'PTAT', label: 'PTAT' },
-                { key: 'UDC', label: 'UDC' },
-                { key: 'FLC', label: 'FLC' },
-                { key: 'SCE', label: 'SCE' },
-                { key: 'DCE', label: 'DCE' },
-                { key: 'SSB', label: 'SSB' },
-                { key: 'DSB', label: 'DSB' },
-                { key: 'H LIV', label: 'H LIV' },
-                { key: 'CCR', label: 'CCR' },
-                { key: 'HCR', label: 'HCR' },
-                { key: 'FI', label: 'FI' },
-                { key: 'GL', label: 'GL' },
-                { key: 'EFC', label: 'EFC' },
-                { key: 'BWC', label: 'BWC' },
-                { key: 'STA', label: 'STA' },
-                { key: 'STR', label: 'STR' },
-                { key: 'DFM', label: 'DFM' },
-                { key: 'RUA', label: 'RUA' },
-                { key: 'RLS', label: 'RLS' },
-                { key: 'RTP', label: 'RTP' },
-                { key: 'FTL', label: 'FTL' },
-                { key: 'RW', label: 'RW' },
-                { key: 'RLR', label: 'RLR' },
-                { key: 'FTA', label: 'FTA' },
-                { key: 'FLS', label: 'FLS' },
-                { key: 'FUA', label: 'FUA' },
-                { key: 'RUH', label: 'RUH' },
-                { key: 'RUW', label: 'RUW' },
-                { key: 'UCL', label: 'UCL' },
-                { key: 'UDP', label: 'UDP' },
-                { key: 'FTP', label: 'FTP' },
-                { key: 'RFI', label: 'RFI' },
-                { key: 'Milk', label: 'Milk' },
-                { key: 'Fat', label: 'Fat' },
-                { key: 'Protein', label: 'Protein' },
-              ].map((gate) => (
-                <div key={gate.key} className="border rounded-lg p-3 space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id={`gate-${gate.key}`}
-                      checked={config.gates[gate.key as keyof typeof config.gates]?.enabled || false}
-                      onChange={(e) => {
-                        const newConfig = { ...config };
-                        newConfig.gates[gate.key as keyof typeof newConfig.gates].enabled = e.target.checked;
-                        setConfig(newConfig);
-                      }}
-                      className="w-4 h-4"
-                    />
-                    <Label htmlFor={`gate-${gate.key}`} className="text-sm font-medium">
-                      {gate.label}
-                    </Label>
-                  </div>
-                  
-                  {config.gates[gate.key as keyof typeof config.gates]?.enabled && (
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <Label className="text-xs text-gray-600">Mín</Label>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          placeholder="Min"
-                          value={config.gates[gate.key as keyof typeof config.gates]?.min || ''}
-                          onChange={(e) => {
-                            const newConfig = { ...config };
-                            newConfig.gates[gate.key as keyof typeof newConfig.gates].min = e.target.value ? Number(e.target.value) : undefined;
-                            setConfig(newConfig);
-                          }}
-                          className="h-8 text-xs"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs text-gray-600">Máx</Label>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          placeholder="Max"
-                          value={config.gates[gate.key as keyof typeof config.gates]?.max || ''}
-                          onChange={(e) => {
-                            const newConfig = { ...config };
-                            newConfig.gates[gate.key as keyof typeof newConfig.gates].max = e.target.value ? Number(e.target.value) : undefined;
-                            setConfig(newConfig);
-                          }}
-                          className="h-8 text-xs"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-            
-            <div className="text-sm text-gray-600 mt-2">
-              Configure valores mínimos e/ou máximos para cada PTA. Animais fora dos limites serão automaticamente classificados como Receptoras.
-            </div>
-            
-            <div className="mt-4 space-y-2">
-              <div className="text-sm text-gray-600">
-                <strong>Recomendações:</strong>
-              </div>
-              <div className="text-sm space-y-1">
-                <div>• Doadoras: Animais de elite para transferência de embriões</div>
-                <div>• Inter: Animais para reprodução natural premium</div>
-                <div>• Receptoras: Animais adequados para receber embriões</div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Gráficos e Tabela */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Gráfico de Pizza */}
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <PieIcon className="h-5 w-5" />
-              Distribuição da Segmentação
-            </CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Total</CardTitle>
           </CardHeader>
           <CardContent>
-            <div style={{ width: "100%", height: 300 }}>
-              <ResponsiveContainer>
-                <PieChart>
-                  <Pie
-                    data={groupStats}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percentage }) => `${name}: ${percentage}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {groupStats.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
+            <div className="text-2xl font-bold">{segmentedAnimals.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-red-600">Doadoras</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">
+              {counts.Doadoras} ({segmentedAnimals.length > 0 ? ((counts.Doadoras / segmentedAnimals.length) * 100).toFixed(1) : '0'}%)
             </div>
           </CardContent>
         </Card>
-
-        {/* Gráfico de Barras */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Comparação por Grupos
-            </CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-green-600">Inter</CardTitle>
           </CardHeader>
           <CardContent>
-            <div style={{ width: "100%", height: 300 }}>
-              <ResponsiveContainer>
-                <BarChart data={groupStats}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Bar dataKey="value" fill="hsl(var(--primary))" />
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="text-2xl font-bold text-green-600">
+              {counts.Inter} ({segmentedAnimals.length > 0 ? ((counts.Inter / segmentedAnimals.length) * 100).toFixed(1) : '0'}%)
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Receptoras</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-600">
+              {counts.Receptoras} ({segmentedAnimals.length > 0 ? ((counts.Receptoras / segmentedAnimals.length) * 100).toFixed(1) : '0'}%)
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Tabela de Resultados */}
+      {/* Configuration Panel */}
       <Card>
         <CardHeader>
-          <CardTitle>Tabela de Animais Segmentados</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="w-5 h-5" />
+            Configuração da Segmentação
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Primary Index Selection */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <Label className="text-sm font-medium">Índice Primário</Label>
+              <Select
+                value={config.primaryIndex}
+                onValueChange={(value: PrimaryIndex) =>
+                  setConfig({ ...config, primaryIndex: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="HHP$">HHP$</SelectItem>
+                  <SelectItem value="NM$">NM$ / TLV</SelectItem>
+                  <SelectItem value="TPI">TPI</SelectItem>
+                  <SelectItem value="Custom">Custom</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Corte Doadoras (%)</Label>
+              <Input
+                type="number"
+                value={config.donorCutoffPercent}
+                onChange={(e) =>
+                  setConfig({ ...config, donorCutoffPercent: Number(e.target.value) })
+                }
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Corte Inter (%)</Label>
+              <Input
+                type="number"
+                value={config.goodCutoffUpper}
+                onChange={(e) =>
+                  setConfig({ ...config, goodCutoffUpper: Number(e.target.value) })
+                }
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium">SCS Máx Doadoras</Label>
+              <Input
+                type="number"
+                step="0.1"
+                value={config.scsMaxDonor}
+                onChange={(e) =>
+                  setConfig({ ...config, scsMaxDonor: Number(e.target.value) })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <Label className="text-sm font-medium">DPR Mín Doadoras</Label>
+              <Input
+                type="number"
+                step="0.1"
+                value={config.dprMinDonor}
+                onChange={(e) =>
+                  setConfig({ ...config, dprMinDonor: Number(e.target.value) })
+                }
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium">DPR Crítico (&lt;)</Label>
+              <Input
+                type="number"
+                step="0.1"
+                value={config.critical_dpr_lt}
+                onChange={(e) =>
+                  setConfig({ ...config, critical_dpr_lt: Number(e.target.value) })
+                }
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium">SCS Crítico (&gt;)</Label>
+              <Input
+                type="number"
+                step="0.1"
+                value={config.critical_scs_gt}
+                onChange={(e) =>
+                  setConfig({ ...config, critical_scs_gt: Number(e.target.value) })
+                }
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <PieIcon className="w-5 h-5" />
+              Distribuição por Segmento
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={[
+                    { name: "Doadoras", value: counts.Doadoras, color: COLORS.Doadoras },
+                    { name: "Inter", value: counts.Inter, color: COLORS.Inter },
+                    { name: "Receptoras", value: counts.Receptoras, color: COLORS.Receptoras },
+                  ]}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {[
+                    { name: "Doadoras", value: counts.Doadoras, color: COLORS.Doadoras },
+                    { name: "Inter", value: counts.Inter, color: COLORS.Inter },
+                    { name: "Receptoras", value: counts.Receptoras, color: COLORS.Receptoras },
+                  ].map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              Índice de Desempenho
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart
+                data={[
+                  {
+                    name: "Doadoras",
+                    tpi: segmentedAnimals
+                      .filter((f) => f._grupo === "Doadoras")
+                      .reduce((acc, f) => acc + (f.tpi || 0), 0) /
+                      Math.max(counts.Doadoras, 1),
+                  },
+                  {
+                    name: "Inter",
+                    tpi: segmentedAnimals
+                      .filter((f) => f._grupo === "Inter")
+                      .reduce((acc, f) => acc + (f.tpi || 0), 0) /
+                      Math.max(counts.Inter, 1),
+                  },
+                  {
+                    name: "Receptoras",
+                    tpi: segmentedAnimals
+                      .filter((f) => f._grupo === "Receptoras")
+                      .reduce((acc, f) => acc + (f.tpi || 0), 0) /
+                      Math.max(counts.Receptoras, 1),
+                  },
+                ]}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Bar dataKey="tpi" fill="hsl(var(--primary))" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Animals Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Animais Segmentados ({segmentedAnimals.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse border border-gray-300">
-               <thead>
-                 <tr className="bg-gray-100">
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">Grupo</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">ID Fazenda</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">Nome</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">ID CDCB</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">Pedigre Pai/Avô Materno/BisaAvô Materno</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">Data de Nascimento</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">HHP$®</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">TPI</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">NM$</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">CM$</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">FM$</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">GM$</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">F SAV</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">PTAM</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">CFP</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">PTAF</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">PTAF%</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">PTAP</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">PTAP%</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">PL</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">DPR</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">LIV</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">SCS</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">MAST</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">MET</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">RP</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">DA</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">KET</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">MF</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">PTAT</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">UDC</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">FLC</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">SCE</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">DCE</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">SSB</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">DSB</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">H LIV</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">CCR</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">HCR</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">FI</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">GL</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">EFC</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">BWC</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">STA</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">STR</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">DFM</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">RUA</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">RLS</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">RTP</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">FTL</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">RW</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">RLR</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">FTA</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">FLS</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">FUA</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">RUH</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">RUW</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">UCL</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">UDP</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">FTP</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">RFI</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">Beta-Casein</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">Kappa-Casein</th>
-                   <th className="border border-gray-300 px-2 py-1 text-left text-xs">GFI</th>
-                 </tr>
-               </thead>
-               <tbody>
-                 {segmentedFemales
-                   .sort((a, b) => {
-                     // Ordenar por grupo: Doadoras primeiro, depois Inter, depois Receptoras
-                     const groupOrder = { "Doadoras": 1, "Inter": 2, "Receptoras": 3 };
-                     const aOrder = groupOrder[a._grupo as keyof typeof groupOrder] || 4;
-                     const bOrder = groupOrder[b._grupo as keyof typeof groupOrder] || 4;
-                     if (aOrder !== bOrder) return aOrder - bOrder;
-                     // Dentro do mesmo grupo, ordenar por TPI descrescente
-                     return b.TPI - a.TPI;
-                   })
-                   .map((f, index) => {
-                     // Contar quantas doadoras já apareceram antes desta linha
-                     const doadorasCount = segmentedFemales
-                       .sort((a, b) => {
-                         const groupOrder = { "Doadoras": 1, "Inter": 2, "Receptoras": 3 };
-                         const aOrder = groupOrder[a._grupo as keyof typeof groupOrder] || 4;
-                         const bOrder = groupOrder[b._grupo as keyof typeof groupOrder] || 4;
-                         if (aOrder !== bOrder) return aOrder - bOrder;
-                         return b.TPI - a.TPI;
-                       })
-                       .slice(0, index + 1)
-                       .filter(animal => animal._grupo === "Doadoras")
-                       .length;
-
-                     const segmentLabel = f._grupo === "Doadoras" ? `D${doadorasCount}` : f._grupo;
-
-                     return (
-                       <tr key={f.id} className="border-b hover:bg-gray-50">
-                         <td className="px-2 py-1">
-                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                             f._grupo === "Doadoras" ? "bg-accent text-accent-foreground" :
-                             f._grupo === "Inter" ? "bg-blue-100 text-blue-800" :
-                             "bg-gray-100 text-gray-800"
-                           }`}>
-                             {segmentLabel}
-                           </span>
-                         </td>
-                         <td className="px-2 py-1 text-xs">{farm.id}</td>
-                         <td className="px-2 py-1 font-medium text-xs">{f.brinco}</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">{f.naabPai || '-'}</td>
-                         <td className="px-2 py-1 text-xs">{new Date(f.nascimento).toLocaleDateString()}</td>
-                         <td className="px-2 py-1 text-xs">{(f as any)["HHP$"] ? Number((f as any)["HHP$"]).toFixed(0) : "—"}</td>
-                         <td className="px-2 py-1 font-semibold text-xs">{f.TPI}</td>
-                         <td className="px-2 py-1 font-semibold text-xs">{f["NM$"]}</td>
-                         <td className="px-2 py-1 text-xs">{(f as any)["CM$"] ? Number((f as any)["CM$"]).toFixed(0) : "—"}</td>
-                         <td className="px-2 py-1 text-xs">{(f as any)["FM$"] ? Number((f as any)["FM$"]).toFixed(0) : "—"}</td>
-                         <td className="px-2 py-1 text-xs">{(f as any)["GM$"] ? Number((f as any)["GM$"]).toFixed(0) : "—"}</td>
-                         <td className="px-2 py-1 text-xs">{(f as any)["F SAV"] ? Number((f as any)["F SAV"]).toFixed(1) : "—"}</td>
-                         <td className="px-2 py-1 text-xs">{(f as any).PTAM ? Number((f as any).PTAM).toFixed(0) : "—"}</td>
-                         <td className="px-2 py-1 text-xs">{(f as any).CFP ? Number((f as any).CFP).toFixed(1) : "—"}</td>
-                         <td className="px-2 py-1 text-xs">{(f as any).PTAF ? Number((f as any).PTAF).toFixed(0) : "—"}</td>
-                         <td className="px-2 py-1 text-xs">{(f as any)["PTAF%"] ? Number((f as any)["PTAF%"]).toFixed(2) : "—"}</td>
-                         <td className="px-2 py-1 text-xs">{(f as any).PTAP ? Number((f as any).PTAP).toFixed(0) : "—"}</td>
-                         <td className="px-2 py-1 text-xs">{(f as any)["PTAP%"] ? Number((f as any)["PTAP%"]).toFixed(2) : "—"}</td>
-                         <td className="px-2 py-1 text-xs">{(f as any).PL ? Number((f as any).PL).toFixed(2) : "—"}</td>
-                         <td className="px-2 py-1 text-xs">{f.DPR?.toFixed(1)}</td>
-                         <td className="px-2 py-1 text-xs">{(f as any).LIV ? Number((f as any).LIV).toFixed(2) : "—"}</td>
-                         <td className="px-2 py-1 text-xs">{f.SCS?.toFixed(2)}</td>
-                         <td className="px-2 py-1 text-xs">{(f as any).MAST ? Number((f as any).MAST).toFixed(2) : "—"}</td>
-                         <td className="px-2 py-1 text-xs">{(f as any).MET ? Number((f as any).MET).toFixed(2) : "—"}</td>
-                         <td className="px-2 py-1 text-xs">{(f as any).RP ? Number((f as any).RP).toFixed(2) : "—"}</td>
-                         <td className="px-2 py-1 text-xs">{(f as any).DA ? Number((f as any).DA).toFixed(2) : "—"}</td>
-                         <td className="px-2 py-1 text-xs">{(f as any).KET ? Number((f as any).KET).toFixed(2) : "—"}</td>
-                         <td className="px-2 py-1 text-xs">{(f as any).MF ? Number((f as any).MF).toFixed(2) : "—"}</td>
-                         <td className="px-2 py-1 text-xs">{f.PTAT?.toFixed(2)}</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                         <td className="px-2 py-1 text-xs">-</td>
-                       </tr>
-                     );
-                   })}
-               </tbody>
-             </table>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-2">Nome</th>
+                  <th className="text-left p-2">Identificador</th>
+                  <th className="text-left p-2">NAAB Pai</th>
+                  <th className="text-left p-2">Nascimento</th>
+                  <th className="text-left p-2">Segmento</th>
+                  <th className="text-left p-2">TPI</th>
+                  <th className="text-left p-2">%</th>
+                  <th className="text-left p-2">DPR</th>
+                  <th className="text-left p-2">SCS</th>
+                  <th className="text-left p-2">PTAT</th>
+                  <th className="text-left p-2">Motivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {segmentedAnimals.map((f) => (
+                  <tr key={f.id} className="border-b hover:bg-gray-50">
+                    <td className="p-2">{f.name || f.identifier || "-"}</td>
+                    <td className="p-2">{f.identifier || "-"}</td>
+                    <td className="p-2">{f.sire_naab || "-"}</td>
+                    <td className="p-2">{f.birth_date ? new Date(f.birth_date).toLocaleDateString() : "-"}</td>
+                    <td className="p-2">
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-medium ${
+                          f._grupo === "Doadoras"
+                            ? "bg-red-100 text-red-800"
+                            : f._grupo === "Inter"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {f._grupo}
+                      </span>
+                    </td>
+                    <td className="p-2 text-right">{f.tpi?.toFixed(0) || "-"}</td>
+                    <td className="p-2 text-right">{f._percentil ? `${f._percentil}%` : "-"}</td>
+                    <td className="p-2 text-right">{f.dpr?.toFixed(1) || "-"}</td>
+                    <td className="p-2 text-right">{f.scs?.toFixed(2) || "-"}</td>
+                    <td className="p-2 text-right">{f.ptat?.toFixed(1) || "-"}</td>
+                    <td className="p-2 text-xs text-gray-600">{f._motivo}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>
-
-      {/* Export/Download Actions */}
-      <div className="flex justify-end gap-4 mt-6">
-        <Button onClick={() => toCSV(segmentedFemales, "segmentacao-animais.csv")}>
-          <Download className="w-4 h-4 mr-2" />
-          Exportar Segmentação
-        </Button>
-      </div>
     </div>
   );
 }

@@ -385,9 +385,9 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
         // Convert farm format and prepare data for SegmentationPage
         const farmForSegmentation = {
           id: selectedFarm!.farm_id,
-          nome: selectedFarm!.farm_name,
-          females: [] as any[],
-          bulls: []
+          farm_id: selectedFarm!.farm_id,
+          name: selectedFarm!.farm_name,
+          owner_name: selectedFarm!.owner_name || ''
         };
 
         // Basic weights for segmentation
@@ -472,8 +472,6 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
           <div className="min-h-screen bg-background">
             <SegmentationPage 
               farm={farmForSegmentation} 
-              weights={weights}
-              statsForCustom={{}}
               onBack={handleBackToDashboard} 
             />
           </div>
