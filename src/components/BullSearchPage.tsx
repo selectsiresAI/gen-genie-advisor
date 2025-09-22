@@ -111,6 +111,256 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
     loadBulls();
   }, []);
 
+  const downloadBullTemplate = () => {
+    // Template completo com dados reais de touros para exemplo
+    const templateBulls = [
+      {
+        code: "11HO15933",
+        name: "LADYS-MANOR PK ALTAMONT-ET",
+        registration: "HOLUSA000142457321",
+        birth_date: "2018-12-15",
+        sire_naab: "7HO13386",
+        mgs_naab: "11HO11478",
+        mmgs_naab: "1HO09918",
+        // PTAs conforme tabela bulls_denorm
+        nm_dollar: 1247,
+        fm_dollar: 1180,
+        gm_dollar: 1089,
+        cm_dollar: 1156,
+        hhp_dollar: 1098,
+        tpi: 2856,
+        ptam: 65,
+        ptaf: 89,
+        ptaf_pct: 0.15,
+        ptap: 75,
+        ptap_pct: 0.08,
+        pl: 6.8,
+        liv: 2.1,
+        scs: 2.89,
+        dpr: 1.8,
+        cfp: -0.8,
+        ptat: 1.89,
+        udc: 1.45,
+        flc: 0.78,
+        fls: 0.95,
+        fua: 1.23,
+        ruh: 0.87,
+        ruw: 1.12,
+        rlr: 0.94,
+        rls: 1.08,
+        rtp: 0.76,
+        str: 1.34,
+        dfm: 0.89,
+        rua: 1.67,
+        ftl: 0.98,
+        fta: 1.12,
+        ftp: 0.85,
+        rw: 1.05,
+        ucl: 1.23,
+        udp: 1.45,
+        rfi: 1.2,
+        gfi: -0.3,
+        ssb: 108,
+        dsb: 106,
+        dce: 105,
+        sce: 103,
+        h_liv: 102,
+        ccr: 104,
+        hcr: 103,
+        fi: 105,
+        gl: 102,
+        efc: 104,
+        bwc: 106,
+        sta: 108,
+        mf: 0.15,
+        da: 108,
+        rp: 105,
+        met: 103,
+        mast: 104,
+        ket: 102,
+        f_sav: 102,
+        kappa_casein: "AA",
+        beta_casein: "A2A2"
+      },
+      {
+        code: "29HO21513",
+        name: "PINE-TREE ACHIEVER-ET",
+        registration: "HOLUSA000142658974",
+        birth_date: "2019-03-20",
+        sire_naab: "11HO15933",
+        mgs_naab: "7HO13386",
+        mmgs_naab: "11HO11478",
+        nm_dollar: 1098,
+        fm_dollar: 1045,
+        gm_dollar: 987,
+        cm_dollar: 1023,
+        hhp_dollar: 965,
+        tpi: 2634,
+        ptam: 58,
+        ptaf: 76,
+        ptaf_pct: 0.12,
+        ptap: 68,
+        ptap_pct: 0.06,
+        pl: 5.9,
+        liv: 1.8,
+        scs: 2.95,
+        dpr: 1.5,
+        cfp: -0.6,
+        ptat: 1.67,
+        udc: 1.28,
+        flc: 0.65,
+        fls: 0.82,
+        fua: 1.05,
+        ruh: 0.74,
+        ruw: 0.98,
+        rlr: 0.81,
+        rls: 0.94,
+        rtp: 0.63,
+        str: 1.18,
+        dfm: 0.76,
+        rua: 1.42,
+        ftl: 0.85,
+        fta: 0.98,
+        ftp: 0.72,
+        rw: 0.91,
+        ucl: 1.06,
+        udp: 1.28,
+        rfi: 1.05,
+        gfi: -0.2,
+        ssb: 105,
+        dsb: 104,
+        dce: 103,
+        sce: 102,
+        h_liv: 101,
+        ccr: 103,
+        hcr: 102,
+        fi: 104,
+        gl: 101,
+        efc: 103,
+        bwc: 105,
+        sta: 106,
+        mf: 0.12,
+        da: 105,
+        rp: 103,
+        met: 102,
+        mast: 103,
+        ket: 101,
+        f_sav: 101,
+        kappa_casein: "AB",
+        beta_casein: "A1A2"
+      },
+      {
+        code: "551HO05064",
+        name: "WESTCOAST LAMBORGHINI-ET",
+        registration: "HOLUSA000142789632",
+        birth_date: "2020-01-10",
+        sire_naab: "29HO21513",
+        mgs_naab: "11HO15933",
+        mmgs_naab: "7HO13386",
+        nm_dollar: 1356,
+        fm_dollar: 1298,
+        gm_dollar: 1234,
+        cm_dollar: 1276,
+        hhp_dollar: 1187,
+        tpi: 3012,
+        ptam: 72,
+        ptaf: 98,
+        ptaf_pct: 0.18,
+        ptap: 82,
+        ptap_pct: 0.09,
+        pl: 7.2,
+        liv: 2.3,
+        scs: 2.78,
+        dpr: 2.1,
+        cfp: -0.9,
+        ptat: 2.05,
+        udc: 1.62,
+        flc: 0.89,
+        fls: 1.08,
+        fua: 1.38,
+        ruh: 0.96,
+        ruw: 1.25,
+        rlr: 1.07,
+        rls: 1.21,
+        rtp: 0.84,
+        str: 1.47,
+        dfm: 0.98,
+        rua: 1.78,
+        ftl: 1.06,
+        fta: 1.23,
+        ftp: 0.94,
+        rw: 1.15,
+        ucl: 1.36,
+        udp: 1.58,
+        rfi: 1.35,
+        gfi: -0.4,
+        ssb: 112,
+        dsb: 110,
+        dce: 108,
+        sce: 106,
+        h_liv: 105,
+        ccr: 107,
+        hcr: 106,
+        fi: 108,
+        gl: 105,
+        efc: 107,
+        bwc: 109,
+        sta: 112,
+        mf: 0.18,
+        da: 112,
+        rp: 108,
+        met: 106,
+        mast: 107,
+        ket: 105,
+        f_sav: 105,
+        kappa_casein: "BB",
+        beta_casein: "A2A2"
+      }
+    ];
+
+    // Converter para CSV
+    const headers = [
+      "code", "name", "registration", "birth_date", "sire_naab", "mgs_naab", "mmgs_naab",
+      "nm_dollar", "fm_dollar", "gm_dollar", "cm_dollar", "hhp_dollar", "tpi", "ptam", "ptaf", 
+      "ptaf_pct", "ptap", "ptap_pct", "pl", "liv", "scs", "dpr", "cfp", "ptat", "udc", "flc",
+      "fls", "fua", "ruh", "ruw", "rlr", "rls", "rtp", "str", "dfm", "rua", "ftl", "fta", 
+      "ftp", "rw", "ucl", "udp", "rfi", "gfi", "ssb", "dsb", "dce", "sce", "h_liv", "ccr", 
+      "hcr", "fi", "gl", "efc", "bwc", "sta", "mf", "da", "rp", "met", "mast", "ket", 
+      "f_sav", "kappa_casein", "beta_casein"
+    ];
+
+    const csvContent = [
+      headers.join(','),
+      ...templateBulls.map(bull => 
+        headers.map(header => {
+          const value = bull[header as keyof typeof bull];
+          // Tratar valores nulos e strings com vírgula
+          if (value === undefined || value === null) return '';
+          if (typeof value === 'string' && value.includes(',')) {
+            return `"${value}"`;
+          }
+          return value;
+        }).join(',')
+      )
+    ].join('\n');
+
+    // Download do arquivo
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'template_touros_supabase.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Template baixado",
+      description: "Template completo de touros para Supabase foi baixado com sucesso.",
+    });
+  };
+
   const loadBulls = async () => {
     try {
       setLoading(true);
@@ -400,6 +650,15 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
                   className="hidden" 
                 />
               </label>
+
+              <Button 
+                variant="outline" 
+                onClick={downloadBullTemplate}
+                title="Baixar template completo de touros para Supabase"
+              >
+                <Download size={16} className="mr-2" />
+                Template Touros
+              </Button>
               
               <Button onClick={handleExport}>
                 <Download size={16} className="mr-2" />
