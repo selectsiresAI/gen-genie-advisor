@@ -1452,23 +1452,14 @@ export default function SegmentationPage({ farm, weights, statsForCustom, onBack
           </div>
         </CardContent>
       </Card>
-                         <td className="px-3 py-2">{(f as any).RUW ? Number((f as any).RUW).toFixed(2) : "—"}</td>
-                         <td className="px-3 py-2">{(f as any).UCL ? Number((f as any).UCL).toFixed(2) : "—"}</td>
-                         <td className="px-3 py-2">{(f as any).UDP ? Number((f as any).UDP).toFixed(2) : "—"}</td>
-                         <td className="px-3 py-2">{(f as any).FTP ? Number((f as any).FTP).toFixed(2) : "—"}</td>
-                         <td className="px-3 py-2">{(f as any).RFI ? Number((f as any).RFI).toFixed(2) : "—"}</td>
-                         <td className="px-3 py-2">{f.Milk}</td>
-                         <td className="px-3 py-2">{f.Fat}</td>
-                         <td className="px-3 py-2">{f.Protein}</td>
-                         <td className="px-3 py-2">{f._percentil}%</td>
-                      </tr>
-                    );
-                  })}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+
+      {/* Export/Download Actions */}
+      <div className="flex justify-end gap-4 mt-6">
+        <Button onClick={() => toCSV(segmentedFemales, "segmentacao-animais.csv")}>
+          <Download className="w-4 h-4 mr-2" />
+          Exportar Segmentação
+        </Button>
+      </div>
     </div>
   );
 }
