@@ -453,9 +453,8 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
     Milk: 1, Fat: 1, Protein: 1
   });
   
-  // States for step-by-step process
-  const [currentStep, setCurrentStep] = useState<'select-mode' | 'show-ptas' | 'config-weights' | 'results'>('select-mode');
-  const [segmentationApplied, setSegmentationApplied] = useState(false);
+  // State for custom PTA panel visibility
+  const [showCustomPanel, setShowCustomPanel] = useState(false);
   
   // Available PTAs from the database
   const availablePTAs = useMemo(() => {
@@ -630,30 +629,6 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
     );
   }
 
-  // Helper function to proceed to next step
-  const handleModeSelection = (mode: PrimaryIndex) => {
-    setSegConfig(prev => ({ ...prev, primaryIndex: mode }));
-    if (mode === 'Custom') {
-      setCurrentStep('show-ptas');
-    } else {
-      setCurrentStep('config-weights');
-    }
-  };
-
-  const handlePTAsReview = () => {
-    setCurrentStep('config-weights');
-  };
-
-  const applySegmentation = () => {
-    setSegmentationApplied(true);
-    setCurrentStep('results');
-  };
-
-  const resetToModeSelection = () => {
-    setCurrentStep('select-mode');
-    setSegmentationApplied(false);
-  };
-
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -669,475 +644,349 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
             <span className="text-muted-foreground">• {farm.name}</span>
           </div>
           <div className="ml-auto flex items-center gap-2">
-            {segmentationApplied && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => toCSV(segmentedFemales, `segmentacao-${farm.name}.csv`)}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Exportar CSV
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={resetToModeSelection}
-                >
-                  Nova Segmentação
-                </Button>
-              </>
-            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => toCSV(segmentedFemales, `segmentacao-${farm.name}.csv`)}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Exportar CSV
+            </Button>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto p-6 space-y-6">
-        {/* Step 1: Mode Selection */}
-        {currentStep === 'select-mode' && (
-          <div className="space-y-6">
-            <div className="text-center space-y-4">
-              <h2 className="text-2xl font-bold">Escolha o Método de Segmentação</h2>
-              <p className="text-muted-foreground">Selecione como deseja segmentar suas fêmeas em Top, Intermediário e Receptoras</p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-4xl mx-auto">
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleModeSelection('HHP$')}>
-                <CardContent className="p-6 text-center">
-                  <div className="h-12 w-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <TrendingUp className="h-6 w-6 text-primary" />
-                  </div>
-                  <h3 className="text-lg font-semibold mb-2">HHP$</h3>
-                  <p className="text-sm text-muted-foreground">Segmentar por Holstein Health Profit</p>
-                </CardContent>
-              </Card>
-
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleModeSelection('TPI')}>
-                <CardContent className="p-6 text-center">
-                  <div className="h-12 w-12 bg-accent/10 rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <TrendingUp className="h-6 w-6 text-accent" />
-                  </div>
-                  <h3 className="text-lg font-semibold mb-2">TPI</h3>
-                  <p className="text-sm text-muted-foreground">Segmentar por Total Performance Index</p>
-                </CardContent>
-              </Card>
-
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleModeSelection('NM$')}>
-                <CardContent className="p-6 text-center">
-                  <div className="h-12 w-12 bg-secondary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <TrendingUp className="h-6 w-6 text-secondary" />
-                  </div>
-                  <h3 className="text-lg font-semibold mb-2">NM$</h3>
-                  <p className="text-sm text-muted-foreground">Segmentar por Net Merit Dollar</p>
-                </CardContent>
-              </Card>
-
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 border-primary/20" onClick={() => handleModeSelection('Custom')}>
-                <CardContent className="p-6 text-center">
-                  <div className="h-12 w-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <Settings className="h-6 w-6 text-primary" />
-                  </div>
-                  <h3 className="text-lg font-semibold mb-2">Customizado</h3>
-                  <p className="text-sm text-muted-foreground">Criar índice personalizado com PTAs específicas</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {females.length > 0 && (
-              <div className="text-center mt-8">
-                <Card className="max-w-sm mx-auto">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 justify-center">
-                      <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">Total de Fêmeas Carregadas</span>
-                    </div>
-                    <p className="text-2xl font-bold mt-1">{females.length}</p>
-                  </CardContent>
-                </Card>
+        {/* Quick Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Total de Fêmeas</span>
               </div>
-            )}
-          </div>
-        )}
-
-        {/* Step 2: Show PTAs (only for Custom mode) */}
-        {currentStep === 'show-ptas' && (
-          <div className="space-y-6">
-            <div className="text-center space-y-4">
-              <h2 className="text-2xl font-bold">PTAs Disponíveis no Banco de Dados</h2>
-              <p className="text-muted-foreground">
-                Abaixo estão todas as PTAs disponíveis em suas fêmeas. 
-                Na próxima etapa você poderá configurar pesos e bloqueios.
+              <p className="text-2xl font-bold mt-1">{segmentedFemales.length}</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: COLORS.Doadoras }}></div>
+                <span className="text-sm font-medium">Doadoras</span>
+              </div>
+              <p className="text-2xl font-bold mt-1">
+                {segmentStats.doadoras.count} <span className="text-sm text-muted-foreground">({segmentStats.doadoras.percent.toFixed(1)}%)</span>
               </p>
-            </div>
+            </CardContent>
+          </Card>
 
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: COLORS.Inter }}></div>
+                <span className="text-sm font-medium">Inter</span>
+              </div>
+              <p className="text-2xl font-bold mt-1">
+                {segmentStats.inter.count} <span className="text-sm text-muted-foreground">({segmentStats.inter.percent.toFixed(1)}%)</span>
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: COLORS.Receptoras }}></div>
+                <span className="text-sm font-medium">Receptoras</span>
+              </div>
+              <p className="text-2xl font-bold mt-1">
+                {segmentStats.receptoras.count} <span className="text-sm text-muted-foreground">({segmentStats.receptoras.percent.toFixed(1)}%)</span>
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Configuration Panel */}
+          <div className="lg:col-span-1 space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>PTAs Encontradas ({availablePTAs.length})</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  Configuração
+                </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-                  {availablePTAs.map((pta) => (
-                    <div key={pta.key} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <p className="font-medium">{pta.label}</p>
-                        <p className="text-sm text-muted-foreground">Ex: {pta.sampleValue}</p>
-                      </div>
-                      <div className="h-2 w-2 bg-green-500 rounded-full"></div>
-                    </div>
-                  ))}
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="primaryIndex">Índice Primário</Label>
+                  <Select
+                    value={segConfig.primaryIndex}
+                    onValueChange={(value: PrimaryIndex) => {
+                      setSegConfig(prev => ({ ...prev, primaryIndex: value }));
+                      if (value === 'Custom') {
+                        setShowCustomPanel(true);
+                      } else {
+                        setShowCustomPanel(false);
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="HHP$">HHP$</SelectItem>
+                      <SelectItem value="NM$">NM$</SelectItem>
+                      <SelectItem value="TPI">TPI</SelectItem>
+                      <SelectItem value="Custom">Customizado</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+
+                <div>
+                  <Label htmlFor="donorCutoff">% Corte Doadoras</Label>
+                  <Input
+                    id="donorCutoff"
+                    type="number"
+                    value={segConfig.donorCutoffPercent}
+                    onChange={e => setSegConfig(prev => ({ 
+                      ...prev, 
+                      donorCutoffPercent: Number(e.target.value) 
+                    }))}
+                    min={1}
+                    max={100}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="goodCutoff">% Corte Inter</Label>
+                  <Input
+                    id="goodCutoff"
+                    type="number"
+                    value={segConfig.goodCutoffUpper}
+                    onChange={e => setSegConfig(prev => ({ 
+                      ...prev, 
+                      goodCutoffUpper: Number(e.target.value) 
+                    }))}
+                    min={1}
+                    max={100}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="scsMaxDonor">SCS Máx Doadoras</Label>
+                  <Input
+                    id="scsMaxDonor"
+                    type="number"
+                    step="0.1"
+                    value={segConfig.scsMaxDonor}
+                    onChange={e => setSegConfig(prev => ({ 
+                      ...prev, 
+                      scsMaxDonor: Number(e.target.value) 
+                    }))}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="dprMinDonor">DPR Mín Doadoras</Label>
+                  <Input
+                    id="dprMinDonor"
+                    type="number"
+                    step="0.1"
+                    value={segConfig.dprMinDonor}
+                    onChange={e => setSegConfig(prev => ({ 
+                      ...prev, 
+                      dprMinDonor: Number(e.target.value) 
+                    }))}
+                  />
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="w-full"
+                >
+                  <Filter className="h-4 w-4 mr-2" />
+                  {showAdvanced ? "Ocultar" : "Mostrar"} Avançado
+                </Button>
+
+                {showAdvanced && (
+                  <div className="space-y-4 border-t pt-4">
+                    <div>
+                      <Label htmlFor="criticalDpr">DPR Crítico (&lt; vira receptora)</Label>
+                      <Input
+                        id="criticalDpr"
+                        type="number"
+                        step="0.1"
+                        value={segConfig.critical_dpr_lt}
+                        onChange={e => setSegConfig(prev => ({ 
+                          ...prev, 
+                          critical_dpr_lt: Number(e.target.value) 
+                        }))}
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="criticalScs">SCS Crítico (&gt; vira receptora)</Label>
+                      <Input
+                        id="criticalScs"
+                        type="number"
+                        step="0.1"
+                        value={segConfig.critical_scs_gt}
+                        onChange={e => setSegConfig(prev => ({ 
+                          ...prev, 
+                          critical_scs_gt: Number(e.target.value) 
+                        }))}
+                      />
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
-            <div className="flex justify-center gap-4">
-              <Button variant="outline" onClick={() => setCurrentStep('select-mode')}>
-                Voltar
-              </Button>
-              <Button onClick={handlePTAsReview}>
-                Prosseguir para Configuração
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 3: Configuration Panel */}
-        {currentStep === 'config-weights' && (
-          <div className="space-y-6">
-            <div className="text-center space-y-4">
-              <h2 className="text-2xl font-bold">
-                Configuração da Segmentação - {segConfig.primaryIndex}
-              </h2>
-              <p className="text-muted-foreground">
-                {segConfig.primaryIndex === 'Custom' 
-                  ? 'Configure os pesos para cada PTA e defina os parâmetros de bloqueio'
-                  : 'Configure os parâmetros de segmentação e bloqueios'
-                }
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Configuration Panel */}
+            {/* Custom PTA Panel */}
+            {showCustomPanel && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Settings className="h-4 w-4" />
-                    Parâmetros de Segmentação
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="donorCutoff">% Corte para Doadoras (Top %)</Label>
-                    <Input
-                      id="donorCutoff"
-                      type="number"
-                      value={segConfig.donorCutoffPercent}
-                      onChange={e => setSegConfig(prev => ({ 
-                        ...prev, 
-                        donorCutoffPercent: Number(e.target.value) 
-                      }))}
-                      min={1}
-                      max={50}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="goodCutoff">% Corte para Inter (até %)</Label>
-                    <Input
-                      id="goodCutoff"
-                      type="number"
-                      value={segConfig.goodCutoffUpper}
-                      onChange={e => setSegConfig(prev => ({ 
-                        ...prev, 
-                        goodCutoffUpper: Number(e.target.value) 
-                      }))}
-                      min={20}
-                      max={90}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="scsMaxDonor">SCS Máximo para Doadoras</Label>
-                    <Input
-                      id="scsMaxDonor"
-                      type="number"
-                      step="0.1"
-                      value={segConfig.scsMaxDonor}
-                      onChange={e => setSegConfig(prev => ({ 
-                        ...prev, 
-                        scsMaxDonor: Number(e.target.value) 
-                      }))}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="dprMinDonor">DPR Mínimo para Doadoras</Label>
-                    <Input
-                      id="dprMinDonor"
-                      type="number"
-                      step="0.1"
-                      value={segConfig.dprMinDonor}
-                      onChange={e => setSegConfig(prev => ({ 
-                        ...prev, 
-                        dprMinDonor: Number(e.target.value) 
-                      }))}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="criticalDpr">DPR Crítico (&lt; vira receptora)</Label>
-                    <Input
-                      id="criticalDpr"
-                      type="number"
-                      step="0.1"
-                      value={segConfig.critical_dpr_lt}
-                      onChange={e => setSegConfig(prev => ({ 
-                        ...prev, 
-                        critical_dpr_lt: Number(e.target.value) 
-                      }))}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="criticalScs">SCS Crítico (&gt; vira receptora)</Label>
-                    <Input
-                      id="criticalScs"
-                      type="number"
-                      step="0.1"
-                      value={segConfig.critical_scs_gt}
-                      onChange={e => setSegConfig(prev => ({ 
-                        ...prev, 
-                        critical_scs_gt: Number(e.target.value) 
-                      }))}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Custom Weights Panel (only for Custom mode) */}
-              {segConfig.primaryIndex === 'Custom' && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Filter className="h-4 w-4" />
-                      Pesos das PTAs
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3 max-h-80 overflow-y-auto">
-                      {availablePTAs.slice(0, 10).map((pta) => (
-                        <div key={pta.key} className="flex items-center justify-between">
-                          <Label className="text-sm">{pta.label}</Label>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            value={weights[pta.label as keyof Weights] || 0}
-                            onChange={e => setWeights(prev => ({
-                              ...prev,
-                              [pta.label]: Number(e.target.value)
-                            }))}
-                            className="w-20"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-4">
-                      Peso 0 = não usar, peso positivo = favorece valores altos, peso negativo = penaliza valores altos
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Basic summary for non-custom modes */}
-              {segConfig.primaryIndex !== 'Custom' && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <PieIcon className="h-4 w-4" />
-                      Resumo da Configuração
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <p><strong>Índice:</strong> {segConfig.primaryIndex}</p>
-                      <p><strong>Top {segConfig.donorCutoffPercent}%:</strong> Candidatas a Doadoras</p>
-                      <p><strong>Até {segConfig.goodCutoffUpper}%:</strong> Intermediárias</p>
-                      <p><strong>Resto:</strong> Receptoras</p>
-                    </div>
-                    
-                    <div className="border-t pt-4 space-y-2">
-                      <p className="font-semibold">Critérios de Saúde:</p>
-                      <p className="text-sm">SCS ≤ {segConfig.scsMaxDonor} para Doadoras</p>
-                      <p className="text-sm">DPR ≥ {segConfig.dprMinDonor} para Doadoras</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-
-            <div className="flex justify-center gap-4">
-              <Button 
-                variant="outline" 
-                onClick={() => setCurrentStep(segConfig.primaryIndex === 'Custom' ? 'show-ptas' : 'select-mode')}
-              >
-                Voltar
-              </Button>
-              <Button onClick={applySegmentation} size="lg">
-                <Layers3 className="h-4 w-4 mr-2" />
-                Aplicar Segmentação
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 4: Results */}
-        {currentStep === 'results' && segmentationApplied && (
-          <div className="space-y-6">
-            {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Total de Fêmeas</span>
-                  </div>
-                  <p className="text-2xl font-bold mt-1">{segmentedFemales.length}</p>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <div className="h-3 w-3 rounded-full" style={{ backgroundColor: COLORS.Doadoras }}></div>
-                    <span className="text-sm font-medium">Doadoras</span>
-                  </div>
-                  <p className="text-2xl font-bold mt-1">
-                    {segmentStats.doadoras.count} <span className="text-sm text-muted-foreground">({segmentStats.doadoras.percent.toFixed(1)}%)</span>
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <div className="h-3 w-3 rounded-full" style={{ backgroundColor: COLORS.Inter }}></div>
-                    <span className="text-sm font-medium">Intermediárias</span>
-                  </div>
-                  <p className="text-2xl font-bold mt-1">
-                    {segmentStats.inter.count} <span className="text-sm text-muted-foreground">({segmentStats.inter.percent.toFixed(1)}%)</span>
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <div className="h-3 w-3 rounded-full" style={{ backgroundColor: COLORS.Receptoras }}></div>
-                    <span className="text-sm font-medium">Receptoras</span>
-                  </div>
-                  <p className="text-2xl font-bold mt-1">
-                    {segmentStats.receptoras.count} <span className="text-sm text-muted-foreground">({segmentStats.receptoras.percent.toFixed(1)}%)</span>
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Pie Chart */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <PieIcon className="h-4 w-4" />
-                    Distribuição
-                  </CardTitle>
+                  <CardTitle>PTAs Disponíveis</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-48">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={pieData}
-                          dataKey="value"
-                          nameKey="name"
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={60}
-                          label={({ name, percent }) => 
-                            `${name} ${(Number(percent || 0) * 100).toFixed(0)}%`
-                          }
-                        >
-                          {pieData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                      </PieChart>
-                    </ResponsiveContainer>
+                  <div className="space-y-3 max-h-64 overflow-y-auto">
+                    {availablePTAs.slice(0, 15).map((pta) => (
+                      <div key={pta.key} className="flex items-center justify-between text-sm">
+                        <span>{pta.label}</span>
+                        <span className="text-muted-foreground">{pta.sampleValue}</span>
+                      </div>
+                    ))}
                   </div>
+                  
+                  <div className="mt-4 pt-4 border-t space-y-3">
+                    <Label>Configurar Pesos para Índice Customizado</Label>
+                    {availablePTAs.slice(0, 8).map((pta) => (
+                      <div key={pta.key} className="flex items-center justify-between">
+                        <Label className="text-xs">{pta.label}</Label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          value={weights[pta.label as keyof Weights] || 0}
+                          onChange={e => setWeights(prev => ({
+                            ...prev,
+                            [pta.label]: Number(e.target.value)
+                          }))}
+                          className="w-16 h-8"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <Button 
+                    className="w-full mt-4" 
+                    onClick={() => {
+                      // Apply custom segmentation
+                      console.log("Aplicando segmentação customizada");
+                    }}
+                  >
+                    Aplicar Setup Customizado
+                  </Button>
                 </CardContent>
               </Card>
+            )}
 
-              {/* Main Results Table */}
-              <div className="lg:col-span-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Fêmeas Segmentadas ({segmentedFemales.length})</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left p-2">Nome</th>
-                            <th className="text-left p-2">ID</th>
-                            <th className="text-left p-2">Nasc.</th>
-                            <th className="text-center p-2">HHP$</th>
-                            <th className="text-center p-2">TPI</th>
-                            <th className="text-center p-2">NM$</th>
-                            <th className="text-center p-2">SCS</th>
-                            <th className="text-center p-2">DPR</th>
-                            <th className="text-center p-2">%ile</th>
-                            <th className="text-left p-2">Grupo</th>
-                            <th className="text-left p-2">Motivo</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {segmentedFemales.slice(0, 100).map((female) => (
-                            <tr key={female.id} className="border-b hover:bg-muted/50">
-                              <td className="p-2 font-medium">{female.name}</td>
-                              <td className="p-2 text-muted-foreground">{female.identifier || "-"}</td>
-                              <td className="p-2 text-muted-foreground">
-                                {female.birth_date ? new Date(female.birth_date).toLocaleDateString() : "-"}
-                              </td>
-                              <td className="p-2 text-center">{female.hhp_dollar?.toFixed(0) || "-"}</td>
-                              <td className="p-2 text-center">{female.tpi?.toFixed(0) || "-"}</td>
-                              <td className="p-2 text-center">{female.nm_dollar?.toFixed(0) || "-"}</td>
-                              <td className="p-2 text-center">{female.scs?.toFixed(2) || "-"}</td>
-                              <td className="p-2 text-center">{female.dpr?.toFixed(1) || "-"}</td>
-                              <td className="p-2 text-center">{female._percentil || "-"}</td>
-                              <td className="p-2">
-                                <span 
-                                  className="px-2 py-1 rounded-full text-xs font-medium text-white"
-                                  style={{ backgroundColor: COLORS[female._grupo!] }}
-                                >
-                                  {female._grupo}
-                                </span>
-                              </td>
-                              <td className="p-2 text-xs text-muted-foreground">{female._motivo}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      {segmentedFemales.length > 100 && (
-                        <p className="text-center text-muted-foreground mt-4 text-sm">
-                          Mostrando primeiras 100 de {segmentedFemales.length} fêmeas. Exporte CSV para ver todas.
-                        </p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
+            {/* Pie Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <PieIcon className="h-4 w-4" />
+                  Distribuição
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={60}
+                        label={({ name, percent }) => 
+                          `${name} ${(Number(percent || 0) * 100).toFixed(0)}%`
+                        }
+                      >
+                        {pieData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        )}
+
+          {/* Main Content */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Fêmeas Segmentadas ({segmentedFemales.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2">Nome</th>
+                        <th className="text-left p-2">ID</th>
+                        <th className="text-left p-2">Nasc.</th>
+                        <th className="text-center p-2">HHP$</th>
+                        <th className="text-center p-2">TPI</th>
+                        <th className="text-center p-2">NM$</th>
+                        <th className="text-center p-2">SCS</th>
+                        <th className="text-center p-2">DPR</th>
+                        <th className="text-center p-2">%ile</th>
+                        <th className="text-left p-2">Grupo</th>
+                        <th className="text-left p-2">Motivo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {segmentedFemales.slice(0, 100).map((female) => (
+                        <tr key={female.id} className="border-b hover:bg-muted/50">
+                          <td className="p-2 font-medium">{female.name}</td>
+                          <td className="p-2 text-muted-foreground">{female.identifier || "-"}</td>
+                          <td className="p-2 text-muted-foreground">
+                            {female.birth_date ? new Date(female.birth_date).toLocaleDateString() : "-"}
+                          </td>
+                          <td className="p-2 text-center">{female.hhp_dollar?.toFixed(0) || "-"}</td>
+                          <td className="p-2 text-center">{female.tpi?.toFixed(0) || "-"}</td>
+                          <td className="p-2 text-center">{female.nm_dollar?.toFixed(0) || "-"}</td>
+                          <td className="p-2 text-center">{female.scs?.toFixed(2) || "-"}</td>
+                          <td className="p-2 text-center">{female.dpr?.toFixed(1) || "-"}</td>
+                          <td className="p-2 text-center">{female._percentil || "-"}</td>
+                          <td className="p-2">
+                            <span 
+                              className="px-2 py-1 rounded-full text-xs font-medium text-white"
+                              style={{ backgroundColor: COLORS[female._grupo!] }}
+                            >
+                              {female._grupo}
+                            </span>
+                          </td>
+                          <td className="p-2 text-xs text-muted-foreground">{female._motivo}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {segmentedFemales.length > 100 && (
+                    <p className="text-center text-muted-foreground mt-4 text-sm">
+                      Mostrando primeiras 100 de {segmentedFemales.length} fêmeas. Exporte CSV para ver todas.
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </div>
   );
