@@ -286,6 +286,18 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
                 </CardDescription>
               </CardHeader>
             </Card>
+
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('plano')}>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Calculator className="w-5 h-5 text-primary" />
+                  Plano Genético
+                </CardTitle>
+                <CardDescription>
+                  Projeções e calculadora de reposição
+                </CardDescription>
+              </CardHeader>
+            </Card>
           </div>
         </div>
       </div>
@@ -651,7 +663,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
                 </CardHeader>
               </Card>
 
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('plano')}>
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleQuickAction('plano')}>
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Calculator className="w-5 h-5 text-primary" />
