@@ -14,8 +14,10 @@ import MetasPage from './Metas';
 import PastaArquivosPage from './PastaArquivos';
 import PlanoApp from './PlanoApp';
 import NexusPredictor from './NexusPredictor';
-import ChartsPage from './ChartsPage';
+import OriginalChartsPage from './OriginalChartsPage';
 import HerdPage from './HerdPage';
+import BullSearchPage from './BullSearchPage';
+import FemaleUploadModal from './FemaleUploadModal';
 import FarmSegmentationPage from './FarmSegmentationPage';
 
 interface MainDashboardProps {
@@ -41,6 +43,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
   const [currentView, setCurrentView] = useState<'dashboard' | 'farm' | 'herd' | 'segmentation' | 'bulls' | 'nexus' | 'charts' | 'botijao' | 'sms' | 'metas' | 'plano' | 'arquivos'>('dashboard');
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -187,8 +190,19 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
                   <Users className="w-5 h-5 text-primary" />
                   Rebanho
                 </CardTitle>
-                <CardDescription>
-                  {selectedFarm.total_females} fêmeas cadastradas
+                <CardDescription className="flex items-center justify-between">
+                  <span>{selectedFarm.total_females} fêmeas cadastradas</span>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowUploadModal(true);
+                    }}
+                  >
+                    <Plus className="w-3 h-3 mr-1" />
+                    Importar
+                  </Button>
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -209,7 +223,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Beef className="w-5 h-5 text-primary" />
-                  Catálogo de Touros
+                  Busca de Touros
                 </CardTitle>
                 <CardDescription>
                   {selectedFarm.selected_bulls} touros selecionados
@@ -440,18 +454,15 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
       if (currentView === 'charts') {
         return (
           <div className="min-h-screen bg-background">
-            <div className="border-b">
-              <div className="flex h-16 items-center px-4">
-                <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Dashboard
-                </Button>
-                <h1 className="text-xl font-semibold">Gráficos e Análises</h1>
-              </div>
-            </div>
-            <div className="container mx-auto px-4 py-8">
-              <ChartsPage onBack={handleBackToDashboard} />
-            </div>
+            <OriginalChartsPage onBack={handleBackToDashboard} />
+          </div>
+        );
+      }
+
+      if (currentView === 'bulls') {
+        return (
+          <div className="min-h-screen bg-background">
+            <BullSearchPage farm={selectedFarm} onBack={handleBackToDashboard} />
           </div>
         );
       }
@@ -746,6 +757,16 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
         onClose={() => setShowCreateModal(false)}
         onSuccess={handleCreateFarmSuccess}
       />
+
+      {/* Upload Modal */}
+      {selectedFarm && (
+        <FemaleUploadModal
+          isOpen={showUploadModal}
+          onClose={() => setShowUploadModal(false)}
+          farmId={selectedFarm.farm_id}
+          farmName={selectedFarm.farm_name}
+        />
+      )}
     </div>
   );
 };
