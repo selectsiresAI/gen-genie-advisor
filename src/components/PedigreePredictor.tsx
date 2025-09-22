@@ -352,7 +352,7 @@ const IndividualPrediction: React.FC = () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="mgs-naab">NAAB do Avô Materno *</Label>
+              <Label htmlFor="mgs-naab">NAAB (Avô Materno)</Label>
               <Input id="mgs-naab" value={pedigreeInput.mgsNaab} onChange={e => handleNaabChange('mgsNaab', e.target.value)} placeholder="Ex: 029HO22133" className="uppercase" />
               {getBullFromCache(pedigreeInput.mgsNaab, bullsCache) && <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
                   ✅ {getBullFromCache(pedigreeInput.mgsNaab, bullsCache)?.name} - {getBullFromCache(pedigreeInput.mgsNaab, bullsCache)?.company}
@@ -360,7 +360,7 @@ const IndividualPrediction: React.FC = () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="mmgs-naab">NAAB do Bisavô Materno *</Label>
+              <Label htmlFor="mmgs-naab">NAAB (Bisavô Materno)</Label>
               <Input id="mmgs-naab" value={pedigreeInput.mmgsNaab} onChange={e => handleNaabChange('mmgsNaab', e.target.value)} placeholder="Ex: 097HO17371" className="uppercase" />
               {getBullFromCache(pedigreeInput.mmgsNaab, bullsCache) && <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
                   ✅ {getBullFromCache(pedigreeInput.mmgsNaab, bullsCache)?.name} - {getBullFromCache(pedigreeInput.mmgsNaab, bullsCache)?.company}
