@@ -139,22 +139,8 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
         throw new Error(`${invalidRows.length} linha(s) sem nome válido encontrada(s)`);
       }
 
-      // Prepare data for insertion
+      // Prepare data for insertion with direct column mapping
       const femalesToInsert = femalesData.map(row => {
-        // Create PTA object from numeric fields
-        const ptas: any = {};
-        ['hhp_dollar', 'tpi', 'nm_dollar', 'cm_dollar', 'fm_dollar', 'gm_dollar', 
-         'f_sav', 'ptam', 'cfp', 'ptaf', 'ptaf_pct', 'ptap', 'ptap_pct', 
-         'pl', 'dpr', 'liv', 'scs', 'mast', 'met', 'rp', 'da', 'ket', 'mf',
-         'ptat', 'udc', 'flc', 'sce', 'dce', 'ssb', 'dsb', 'h_liv', 'ccr',
-         'hcr', 'fi', 'gl', 'efc', 'bwc', 'sta', 'str', 'dfm', 'rua', 'rls',
-         'rtp', 'ftl', 'rw', 'rlr', 'fta', 'fls', 'fua', 'ruh', 'ruw', 
-         'ucl', 'udp', 'ftp', 'rfi', 'gfi', 'beta_casein', 'kappa_casein'].forEach(field => {
-          if (row[field] !== null && row[field] !== undefined) {
-            ptas[field] = row[field];
-          }
-        });
-
         return {
           farm_id: farmId,
           name: row.name,
@@ -164,7 +150,65 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
           sire_naab: row.sire_naab || null,
           mgs_naab: row.mgs_naab || null,
           mmgs_naab: row.mmgs_naab || null,
-          ptas: ptas
+          // Direct PTA column mapping
+          hhp_dollar: row.hhp_dollar,
+          tpi: row.tpi,
+          nm_dollar: row.nm_dollar,
+          cm_dollar: row.cm_dollar,
+          fm_dollar: row.fm_dollar,
+          gm_dollar: row.gm_dollar,
+          f_sav: row.f_sav,
+          ptam: row.ptam,
+          cfp: row.cfp,
+          ptaf: row.ptaf,
+          ptaf_pct: row.ptaf_pct,
+          ptap: row.ptap,
+          ptap_pct: row.ptap_pct,
+          pl: row.pl,
+          dpr: row.dpr,
+          liv: row.liv,
+          scs: row.scs,
+          mast: row.mast,
+          met: row.met,
+          rp: row.rp,
+          da: row.da,
+          ket: row.ket,
+          mf: row.mf,
+          ptat: row.ptat,
+          udc: row.udc,
+          flc: row.flc,
+          sce: row.sce,
+          dce: row.dce,
+          ssb: row.ssb,
+          dsb: row.dsb,
+          h_liv: row.h_liv,
+          ccr: row.ccr,
+          hcr: row.hcr,
+          fi: row.fi,
+          gl: row.gl,
+          efc: row.efc,
+          bwc: row.bwc,
+          sta: row.sta,
+          str: row.str,
+          dfm: row.dfm,
+          rua: row.rua,
+          rls: row.rls,
+          rtp: row.rtp,
+          ftl: row.ftl,
+          rw: row.rw,
+          rlr: row.rlr,
+          fta: row.fta,
+          fls: row.fls,
+          fua: row.fua,
+          ruh: row.ruh,
+          ruw: row.ruw,
+          ucl: row.ucl,
+          udp: row.udp,
+          ftp: row.ftp,
+          rfi: row.rfi,
+          gfi: row.gfi,
+          beta_casein: row.beta_casein,
+          kappa_casein: row.kappa_casein
         };
       });
 
