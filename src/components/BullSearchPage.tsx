@@ -17,6 +17,7 @@ interface Bull {
   company?: string;
   sire_naab?: string;
   mgs_naab?: string;
+  mmgs_naab?: string;
   // All genetic traits from bulls_denorm
   hhp_dollar?: number;
   tpi?: number;
@@ -383,6 +384,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
         company: bull.company,
         sire_naab: bull.sire_naab,
         mgs_naab: bull.mgs_naab,
+        mmgs_naab: bull.mmgs_naab,
         hhp_dollar: bull.hhp_dollar,
         tpi: bull.tpi,
         nm_dollar: bull.nm_dollar,
@@ -778,7 +780,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
                        <td className="px-2 py-1 font-mono text-xs">{bull.code}</td>
                        <td className="px-2 py-1 font-medium text-xs">{bull.name}</td>
                        <td className="px-2 py-1 font-mono text-xs">{bull.registration}</td>
-                       <td className="px-2 py-1 text-xs">{[bull.sire_naab, bull.mgs_naab].filter(Boolean).join(' / ') || '-'}</td>
+                       <td className="px-2 py-1 text-xs">{[bull.sire_naab, bull.mgs_naab, bull.mmgs_naab].filter(Boolean).join(' / ') || '-'}</td>
                         <td className="px-2 py-1 text-xs">{bull.birth_date}</td>
                         <td className="px-2 py-1 text-xs">{bull.company || '-'}</td>
                        <td className="px-2 py-1 text-center text-xs">{bull.hhp_dollar}</td>
@@ -789,51 +791,56 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
                        <td className="px-2 py-1 text-center text-xs">{bull.gm_dollar}</td>
                        <td className="px-2 py-1 text-center text-xs">{bull.f_sav}</td>
                        <td className="px-2 py-1 text-center text-xs">{bull.ptam}</td>
-                       <td className="px-2 py-1 text-center text-xs">{bull.cfp}</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
-                      <td className="px-2 py-1 text-center text-xs">-</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.cfp}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.ptaf}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.ptaf_pct}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.ptap}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.ptap_pct}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.pl}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.dpr}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.liv}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.scs}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.mast}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.met}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.rp}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.da}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.ket}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.mf}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.ptat}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.udc}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.flc}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.sce}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.dce}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.ssb}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.dsb}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.h_liv}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.ccr}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.hcr}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.fi}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.gl}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.efc}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.bwc}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.sta}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.str}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.dfm}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.rua}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.rls}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.rtp}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.ftl}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.rw}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.rlr}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.fta}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.fls}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.fua}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.ruh}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.ruw}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.ucl}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.udp}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.ftp}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.rfi}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.beta_casein}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.kappa_casein}</td>
+                        <td className="px-2 py-1 text-center text-xs">{bull.gfi}</td>
                       <td className="px-2 py-1 text-center text-xs">-</td>
                       <td className="px-2 py-1 text-center text-xs">-</td>
                       <td className="px-2 py-1 text-center text-xs">-</td>
