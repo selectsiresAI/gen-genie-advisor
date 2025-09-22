@@ -14,6 +14,7 @@ interface Bull {
   name: string;
   registration?: string;
   birth_date?: string;
+  company?: string;
   sire_naab?: string;
   mgs_naab?: string;
   // All genetic traits from bulls_denorm
@@ -379,6 +380,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
         name: bull.name || '',
         registration: bull.registration,
         birth_date: bull.birth_date,
+        company: bull.company,
         sire_naab: bull.sire_naab,
         mgs_naab: bull.mgs_naab,
         hhp_dollar: bull.hhp_dollar,
@@ -702,6 +704,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
                     <th className="px-2 py-1 bg-foreground text-background text-xs">Registro</th>
                     <th className="px-2 py-1 bg-foreground text-background text-xs">Pedigre Pai/Avô Materno/BisaAvô Materno</th>
                     <th className="px-2 py-1 bg-foreground text-background text-xs">Data de Nascimento</th>
+                    <th className="px-2 py-1 bg-foreground text-background text-xs">Empresa</th>
                     <th className="px-2 py-1 bg-foreground text-background text-xs">HHP$®</th>
                     <th className="px-2 py-1 bg-foreground text-background text-xs">TPI</th>
                     <th className="px-2 py-1 bg-foreground text-background text-xs">NM$</th>
@@ -776,7 +779,8 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
                        <td className="px-2 py-1 font-medium text-xs">{bull.name}</td>
                        <td className="px-2 py-1 font-mono text-xs">{bull.registration}</td>
                        <td className="px-2 py-1 text-xs">{[bull.sire_naab, bull.mgs_naab].filter(Boolean).join(' / ') || '-'}</td>
-                       <td className="px-2 py-1 text-xs">{bull.birth_date}</td>
+                        <td className="px-2 py-1 text-xs">{bull.birth_date}</td>
+                        <td className="px-2 py-1 text-xs">{bull.company || '-'}</td>
                        <td className="px-2 py-1 text-center text-xs">{bull.hhp_dollar}</td>
                        <td className="px-2 py-1 text-center text-xs">{bull.tpi}</td>
                        <td className="px-2 py-1 text-center text-xs">{bull.nm_dollar}</td>
