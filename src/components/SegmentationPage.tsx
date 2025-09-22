@@ -215,34 +215,6 @@ type SegmentConfig = {
   };
 };
 
-// Utility function for automatic categorization
-function categorizeAnimal(nascimento: string, ordemParto?: number): string {
-  const birthDate = new Date(nascimento);
-  const now = new Date();
-  const ageInDays = Math.floor((now.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24));
-  
-  // Se não tem ordem de parto definida, assumir 0
-  const parity = ordemParto || 0;
-  
-  // Bezerra: do nascimento até 90 dias
-  if (ageInDays <= 90) {
-    return "Bezerra";
-  }
-  
-  // Baseado na ordem de parto
-  if (parity === 0) {
-    return "Novilha"; // Após 90 dias e nunca pariu
-  } else if (parity === 1) {
-    return "Primípara"; // Pariu uma vez
-  } else if (parity === 2) {
-    return "Secundípara"; // Pariu duas vezes
-  } else if (parity >= 3) {
-    return "Multípara"; // Pariu 3 ou mais vezes
-  }
-  
-  return "Novilha"; // Default
-}
-
 // Color scheme matching Select Sires branding
 const COLORS = {
   Doadoras: "hsl(var(--primary))", // Red
@@ -317,7 +289,7 @@ function getPrimaryValue(
       
       const base = {
         tpi: f.tpi || 0,
-        nm_dollar: Number(nmCandidate ?? 0),
+        nm_dollar: Number(nmCandidate || 0),
         scs: f.scs || 0, 
         ptat: f.ptat || 0,
       };
@@ -370,14 +342,14 @@ function segmentAnimals(
 
   return females.map((f) => {
     const p = pct.get(f.id) ?? null;
-    const crit = (f.dpr ?? 0) < cfg.critical_dpr_lt || (f.scs ?? 0) > cfg.critical_scs_gt;
+    const crit = (f.dpr || 0) < cfg.critical_dpr_lt || (f.scs || 0) > cfg.critical_scs_gt;
     if (crit) {
       return { ...f, _percentil: p, _grupo: "Receptoras", _motivo: "Crítico: DPR/SCS" };
     }
 
     if (p !== null && p <= cfg.donorCutoffPercent) {
-      const okSCS = (f.scs ?? 99) <= cfg.scsMaxDonor;
-      const okDPR = (f.dpr ?? -99) >= cfg.dprMinDonor;
+      const okSCS = (f.scs || 99) <= cfg.scsMaxDonor;
+      const okDPR = (f.dpr || -99) >= cfg.dprMinDonor;
       if (okSCS && okDPR) {
         return { ...f, _percentil: p, _grupo: "Doadoras", _motivo: "Top + saúde OK" };
       }
@@ -470,6 +442,16 @@ interface SegmentationPageProps {
 export default function SegmentationPage({ farm, onBack }: SegmentationPageProps) {
   const [females, setFemales] = useState<Female[]>([]);
   const [loading, setLoading] = useState(true);
+  const [segConfig, setSegConfig] = useState<SegmentConfig>(defaultSegConfig);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [selectedTraits, setSelectedTraits] = useState<Record<string, boolean>>({});
+  const [weights, setWeights] = useState<Weights>({
+    ["HHP$"]: 0, TPI: 1, ["NM$"]: 1, ["CM$"]: 0, ["FM$"]: 0, ["GM$"]: 0, ["F SAV"]: 0, PTAM: 0, CFP: 0,
+    PTAF: 0, ["PTAF%"]: 0, PTAP: 0, ["PTAP%"]: 0, PL: 0, DPR: 0, LIV: 0, SCS: 1, MAST: 0, MET: 0, RP: 0, DA: 0, KET: 0, MF: 0,
+    PTAT: 1, UDC: 0, FLC: 0, SCE: 0, DCE: 0, SSB: 0, DSB: 0, ["H LIV"]: 0, CCR: 0, HCR: 0, FI: 0, GL: 0, EFC: 0, BWC: 0, STA: 0,
+    STR: 0, DFM: 0, RUA: 0, RLS: 0, RTP: 0, FTL: 0, RW: 0, RLR: 0, FTA: 0, FLS: 0, FUA: 0, RUH: 0, RUW: 0, UCL: 0, UDP: 0, FTP: 0, RFI: 0,
+    Milk: 1, Fat: 1, Protein: 1
+  });
 
   // Load females from database
   const loadFemales = async () => {
@@ -486,7 +468,72 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
         return;
       }
 
-      setFemales(data || []);
+      // Convert database data to Female type
+      const convertedFemales: Female[] = (data || []).map(dbFemale => ({
+        id: dbFemale.id,
+        name: dbFemale.name || '',
+        identifier: dbFemale.identifier,
+        birth_date: dbFemale.birth_date,
+        sire_naab: dbFemale.sire_naab,
+        hhp_dollar: dbFemale.hhp_dollar,
+        nm_dollar: dbFemale.nm_dollar,
+        tpi: dbFemale.tpi,
+        cm_dollar: dbFemale.cm_dollar,
+        fm_dollar: dbFemale.fm_dollar,
+        gm_dollar: dbFemale.gm_dollar,
+        f_sav: dbFemale.f_sav,
+        ptam: dbFemale.ptam,
+        cfp: dbFemale.cfp,
+        ptaf: dbFemale.ptaf,
+        ptaf_pct: dbFemale.ptaf_pct,
+        ptap: dbFemale.ptap,
+        ptap_pct: dbFemale.ptap_pct,
+        pl: dbFemale.pl,
+        dpr: dbFemale.dpr,
+        liv: dbFemale.liv,
+        scs: dbFemale.scs,
+        mast: dbFemale.mast,
+        met: dbFemale.met,
+        rp: dbFemale.rp,
+        da: dbFemale.da,
+        ket: dbFemale.ket,
+        mf: dbFemale.mf,
+        ptat: dbFemale.ptat,
+        udc: dbFemale.udc,
+        flc: dbFemale.flc,
+        sce: dbFemale.sce,
+        dce: dbFemale.dce,
+        ssb: dbFemale.ssb,
+        dsb: dbFemale.dsb,
+        h_liv: dbFemale.h_liv,
+        ccr: dbFemale.ccr,
+        hcr: dbFemale.hcr,
+        fi: dbFemale.fi,
+        gl: dbFemale.gl,
+        efc: dbFemale.efc,
+        bwc: dbFemale.bwc,
+        sta: dbFemale.sta,
+        str: dbFemale.str,
+        dfm: dbFemale.dfm,
+        rua: dbFemale.rua,
+        rls: dbFemale.rls,
+        rtp: dbFemale.rtp,
+        ftl: dbFemale.ftl,
+        rw: dbFemale.rw,
+        rlr: dbFemale.rlr,
+        fta: dbFemale.fta,
+        fls: dbFemale.fls,
+        fua: dbFemale.fua,
+        ruh: dbFemale.ruh,
+        ruw: dbFemale.ruw,
+        ucl: dbFemale.ucl,
+        udp: dbFemale.udp,
+        ftp: dbFemale.ftp,
+        rfi: dbFemale.rfi,
+        gfi: dbFemale.gfi
+      }));
+
+      setFemales(convertedFemales);
     } catch (error) {
       console.error('Error loading females:', error);
     } finally {
@@ -500,403 +547,340 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
     }
   }, [farm.farm_id]);
 
-  const [config, setConfig] = useState<SegmentConfig>(defaultSegConfig);
-  const [customWeights, setCustomWeights] = useState<Weights>({
-    ["HHP$"]: 0,
-    TPI: 1,
-    ["NM$"]: 1,
-    ["CM$"]: 0, ["FM$"]: 0, ["GM$"]: 0, ["F SAV"]: 0, PTAM: 0, CFP: 0,
-    PTAF: 0, ["PTAF%"]: 0, PTAP: 0, ["PTAP%"]: 0, PL: 0, DPR: 0, LIV: 0,
-    SCS: 1, MAST: 0, MET: 0, RP: 0, DA: 0, KET: 0, MF: 0,
-    PTAT: 1, UDC: 0, FLC: 0, SCE: 0, DCE: 0, SSB: 0, DSB: 0,
-    ["H LIV"]: 0, CCR: 0, HCR: 0, FI: 0, GL: 0, EFC: 0, BWC: 0, STA: 0,
-    STR: 0, DFM: 0, RUA: 0, RLS: 0, RTP: 0, FTL: 0, RW: 0, RLR: 0,
-    FTA: 0, FLS: 0, FUA: 0, RUH: 0, RUW: 0, UCL: 0, UDP: 0, FTP: 0, RFI: 0,
-    Milk: 1, Fat: 1, Protein: 1
-  });
-  const [selectedTraits, setSelectedTraits] = useState({
-    ["HHP$"]: true, TPI: true, ["NM$"]: true, ["CM$"]: false, ["FM$"]: false, ["GM$"]: false,
-    ["F SAV"]: false, PTAM: false, CFP: false, PTAF: false, ["PTAF%"]: false, PTAP: false, ["PTAP%"]: false,
-    PL: false, DPR: true, LIV: false, SCS: true, MAST: false, MET: false, RP: false, DA: false, KET: false,
-    MF: false, PTAT: true, UDC: false, FLC: false, SCE: false, DCE: false, SSB: false, DSB: false,
-    ["H LIV"]: false, CCR: false, HCR: false, FI: false, GL: false, EFC: false, BWC: false, STA: false,
-    STR: false, DFM: false, RUA: false, RLS: false, RTP: false, FTL: false, RW: false, RLR: false,
-    FTA: false, FLS: false, FUA: false, RUH: false, RUW: false, UCL: false, UDP: false, FTP: false,
-    RFI: false, Milk: false, Fat: false, Protein: false
-  });
-
-  // Calculate statistics for custom scoring
+  // Compute stats for custom scoring
   const statsForCustom = useMemo(() => {
     if (!females.length) return {};
     
-    const stats: any = {};
-    const keys = ['tpi', 'nm_dollar', 'scs', 'ptat'];
-    
-    keys.forEach(key => {
-      const values = females.map(f => (f as any)[key]).filter(v => v != null && !isNaN(v));
-      if (values.length > 0) {
-        const mean = values.reduce((a, b) => a + b, 0) / values.length;
-        const variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length;
-        const sd = Math.sqrt(variance);
-        stats[key] = { mean, sd };
-      }
-    });
-    
-    return stats;
+    const tpiValues = females.map(f => f.tpi).filter(v => v != null && isFinite(v)) as number[];
+    const nmValues = females.map(f => f.nm_dollar).filter(v => v != null && isFinite(v)) as number[];
+    const scsValues = females.map(f => f.scs).filter(v => v != null && isFinite(v)) as number[];
+    const ptatValues = females.map(f => f.ptat).filter(v => v != null && isFinite(v)) as number[];
+
+    const mean = (arr: number[]) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+    const sd = (arr: number[]) => {
+      const m = mean(arr);
+      const variance = arr.length ? arr.reduce((acc, val) => acc + Math.pow(val - m, 2), 0) / arr.length : 0;
+      return Math.sqrt(variance);
+    };
+
+    return {
+      tpi: { mean: mean(tpiValues), sd: sd(tpiValues) },
+      nm_dollar: { mean: mean(nmValues), sd: sd(nmValues) },
+      scs: { mean: mean(scsValues), sd: sd(scsValues) },
+      ptat: { mean: mean(ptatValues), sd: sd(ptatValues) }
+    };
   }, [females]);
 
-  // Processo de segmentação baseado no rebanho
-  const segmentedAnimals = useMemo(() => {
+  // Apply segmentation
+  const segmentedFemales = useMemo(() => {
     if (!females.length) return [];
+    return segmentAnimals(females, segConfig, statsForCustom, weights, selectedTraits);
+  }, [females, segConfig, statsForCustom, weights, selectedTraits]);
+
+  // Calculate statistics
+  const segmentStats = useMemo(() => {
+    const doadoras = segmentedFemales.filter(f => f._grupo === "Doadoras");
+    const inter = segmentedFemales.filter(f => f._grupo === "Inter");  
+    const receptoras = segmentedFemales.filter(f => f._grupo === "Receptoras");
     
-    return segmentAnimals(
-      females,
-      config,
-      statsForCustom,
-      customWeights,
-      selectedTraits
-    );
-  }, [females, config, statsForCustom, customWeights, selectedTraits]);
+    return {
+      doadoras: { count: doadoras.length, percent: segmentedFemales.length ? (doadoras.length / segmentedFemales.length) * 100 : 0 },
+      inter: { count: inter.length, percent: segmentedFemales.length ? (inter.length / segmentedFemales.length) * 100 : 0 },
+      receptoras: { count: receptoras.length, percent: segmentedFemales.length ? (receptoras.length / segmentedFemales.length) * 100 : 0 }
+    };
+  }, [segmentedFemales]);
 
-  const counts = useMemo(() => {
-    const cats = { Doadoras: 0, Inter: 0, Receptoras: 0 };
-    segmentedAnimals.forEach((f) => cats[f._grupo!]++);
-    return cats;
-  }, [segmentedAnimals]);
-
-  // Função para determinação automatica de categoria com base na idade e parto
-  const handleAutoCategory = () => {
-    // Essa função pode ser implementada se necessário
-  };
-
-  const handleExport = () => {
-    toCSV(segmentedAnimals, `segmentacao-${farm.name}.csv`);
-  };
+  const pieData = [
+    { name: "Doadoras", value: segmentStats.doadoras.count, color: COLORS.Doadoras },
+    { name: "Inter", value: segmentStats.inter.count, color: COLORS.Inter },
+    { name: "Receptoras", value: segmentStats.receptoras.count, color: COLORS.Receptoras }
+  ];
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <Button onClick={onBack} variant="outline" size="sm">
-              <ArrowLeftRight className="w-4 h-4 mr-2" />
-              Voltar
-            </Button>
-            <h1 className="text-2xl font-bold">Segmentação - {farm.name}</h1>
-          </div>
-        </div>
-        <div className="flex items-center justify-center py-20">
-          <div className="text-lg">Carregando dados...</div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando fêmeas...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button onClick={onBack} variant="outline" size="sm">
-            <ArrowLeftRight className="w-4 h-4 mr-2" />
+      <div className="sticky top-0 z-40 border-b bg-card shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
+          <Button variant="outline" size="sm" onClick={onBack}>
+            <ArrowLeftRight className="h-4 w-4 mr-2" />
             Voltar
           </Button>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Layers3 className="w-7 h-7" />
-            Segmentação - {farm.name}
-          </h1>
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={handleExport} variant="outline" size="sm">
-            <Download className="w-4 h-4 mr-2" />
-            Exportar
-          </Button>
+          <div className="flex items-center gap-2">
+            <Layers3 className="h-5 w-5 text-primary" />
+            <h1 className="text-xl font-bold">Segmentação</h1>
+            <span className="text-muted-foreground">• {farm.name}</span>
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => toCSV(segmentedFemales, `segmentacao-${farm.name}.csv`)}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Exportar CSV
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{segmentedAnimals.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-red-600">Doadoras</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {counts.Doadoras} ({segmentedAnimals.length > 0 ? ((counts.Doadoras / segmentedAnimals.length) * 100).toFixed(1) : '0'}%)
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-green-600">Inter</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {counts.Inter} ({segmentedAnimals.length > 0 ? ((counts.Inter / segmentedAnimals.length) * 100).toFixed(1) : '0'}%)
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Receptoras</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-600">
-              {counts.Receptoras} ({segmentedAnimals.length > 0 ? ((counts.Receptoras / segmentedAnimals.length) * 100).toFixed(1) : '0'}%)
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
+        {/* Quick Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Total de Fêmeas</span>
+              </div>
+              <p className="text-2xl font-bold mt-1">{segmentedFemales.length}</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: COLORS.Doadoras }}></div>
+                <span className="text-sm font-medium">Doadoras</span>
+              </div>
+              <p className="text-2xl font-bold mt-1">
+                {segmentStats.doadoras.count} <span className="text-sm text-muted-foreground">({segmentStats.doadoras.percent.toFixed(1)}%)</span>
+              </p>
+            </CardContent>
+          </Card>
 
-      {/* Configuration Panel */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="w-5 h-5" />
-            Configuração da Segmentação
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Primary Index Selection */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <Label className="text-sm font-medium">Índice Primário</Label>
-              <Select
-                value={config.primaryIndex}
-                onValueChange={(value: PrimaryIndex) =>
-                  setConfig({ ...config, primaryIndex: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="HHP$">HHP$</SelectItem>
-                  <SelectItem value="NM$">NM$ / TLV</SelectItem>
-                  <SelectItem value="TPI">TPI</SelectItem>
-                  <SelectItem value="Custom">Custom</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-sm font-medium">Corte Doadoras (%)</Label>
-              <Input
-                type="number"
-                value={config.donorCutoffPercent}
-                onChange={(e) =>
-                  setConfig({ ...config, donorCutoffPercent: Number(e.target.value) })
-                }
-              />
-            </div>
-            <div>
-              <Label className="text-sm font-medium">Corte Inter (%)</Label>
-              <Input
-                type="number"
-                value={config.goodCutoffUpper}
-                onChange={(e) =>
-                  setConfig({ ...config, goodCutoffUpper: Number(e.target.value) })
-                }
-              />
-            </div>
-            <div>
-              <Label className="text-sm font-medium">SCS Máx Doadoras</Label>
-              <Input
-                type="number"
-                step="0.1"
-                value={config.scsMaxDonor}
-                onChange={(e) =>
-                  setConfig({ ...config, scsMaxDonor: Number(e.target.value) })
-                }
-              />
-            </div>
-          </div>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: COLORS.Inter }}></div>
+                <span className="text-sm font-medium">Inter</span>
+              </div>
+              <p className="text-2xl font-bold mt-1">
+                {segmentStats.inter.count} <span className="text-sm text-muted-foreground">({segmentStats.inter.percent.toFixed(1)}%)</span>
+              </p>
+            </CardContent>
+          </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <Label className="text-sm font-medium">DPR Mín Doadoras</Label>
-              <Input
-                type="number"
-                step="0.1"
-                value={config.dprMinDonor}
-                onChange={(e) =>
-                  setConfig({ ...config, dprMinDonor: Number(e.target.value) })
-                }
-              />
-            </div>
-            <div>
-              <Label className="text-sm font-medium">DPR Crítico (&lt;)</Label>
-              <Input
-                type="number"
-                step="0.1"
-                value={config.critical_dpr_lt}
-                onChange={(e) =>
-                  setConfig({ ...config, critical_dpr_lt: Number(e.target.value) })
-                }
-              />
-            </div>
-            <div>
-              <Label className="text-sm font-medium">SCS Crítico (&gt;)</Label>
-              <Input
-                type="number"
-                step="0.1"
-                value={config.critical_scs_gt}
-                onChange={(e) =>
-                  setConfig({ ...config, critical_scs_gt: Number(e.target.value) })
-                }
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: COLORS.Receptoras }}></div>
+                <span className="text-sm font-medium">Receptoras</span>
+              </div>
+              <p className="text-2xl font-bold mt-1">
+                {segmentStats.receptoras.count} <span className="text-sm text-muted-foreground">({segmentStats.receptoras.percent.toFixed(1)}%)</span>
+              </p>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <PieIcon className="w-5 h-5" />
-              Distribuição por Segmento
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={[
-                    { name: "Doadoras", value: counts.Doadoras, color: COLORS.Doadoras },
-                    { name: "Inter", value: counts.Inter, color: COLORS.Inter },
-                    { name: "Receptoras", value: counts.Receptoras, color: COLORS.Receptoras },
-                  ]}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Configuration Panel */}
+          <div className="lg:col-span-1 space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  Configuração
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="primaryIndex">Índice Primário</Label>
+                  <Select
+                    value={segConfig.primaryIndex}
+                    onValueChange={(value: PrimaryIndex) => 
+                      setSegConfig(prev => ({ ...prev, primaryIndex: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="HHP$">HHP$</SelectItem>
+                      <SelectItem value="NM$">NM$</SelectItem>
+                      <SelectItem value="TPI">TPI</SelectItem>
+                      <SelectItem value="Custom">Personalizado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="donorCutoff">% Corte Doadoras</Label>
+                  <Input
+                    id="donorCutoff"
+                    type="number"
+                    value={segConfig.donorCutoffPercent}
+                    onChange={e => setSegConfig(prev => ({ 
+                      ...prev, 
+                      donorCutoffPercent: Number(e.target.value) 
+                    }))}
+                    min={1}
+                    max={100}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="goodCutoff">% Corte Inter</Label>
+                  <Input
+                    id="goodCutoff"
+                    type="number"
+                    value={segConfig.goodCutoffUpper}
+                    onChange={e => setSegConfig(prev => ({ 
+                      ...prev, 
+                      goodCutoffUpper: Number(e.target.value) 
+                    }))}
+                    min={1}
+                    max={100}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="scsMaxDonor">SCS Máx Doadoras</Label>
+                  <Input
+                    id="scsMaxDonor"
+                    type="number"
+                    step="0.1"
+                    value={segConfig.scsMaxDonor}
+                    onChange={e => setSegConfig(prev => ({ 
+                      ...prev, 
+                      scsMaxDonor: Number(e.target.value) 
+                    }))}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="dprMinDonor">DPR Mín Doadoras</Label>
+                  <Input
+                    id="dprMinDonor"
+                    type="number"
+                    step="0.1"
+                    value={segConfig.dprMinDonor}
+                    onChange={e => setSegConfig(prev => ({ 
+                      ...prev, 
+                      dprMinDonor: Number(e.target.value) 
+                    }))}
+                  />
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="w-full"
                 >
-                  {[
-                    { name: "Doadoras", value: counts.Doadoras, color: COLORS.Doadoras },
-                    { name: "Inter", value: counts.Inter, color: COLORS.Inter },
-                    { name: "Receptoras", value: counts.Receptoras, color: COLORS.Receptoras },
-                  ].map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+                  <Filter className="h-4 w-4 mr-2" />
+                  {showAdvanced ? "Ocultar" : "Mostrar"} Avançado
+                </Button>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5" />
-              Índice de Desempenho
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart
-                data={[
-                  {
-                    name: "Doadoras",
-                    tpi: segmentedAnimals
-                      .filter((f) => f._grupo === "Doadoras")
-                      .reduce((acc, f) => acc + (f.tpi || 0), 0) /
-                      Math.max(counts.Doadoras, 1),
-                  },
-                  {
-                    name: "Inter",
-                    tpi: segmentedAnimals
-                      .filter((f) => f._grupo === "Inter")
-                      .reduce((acc, f) => acc + (f.tpi || 0), 0) /
-                      Math.max(counts.Inter, 1),
-                  },
-                  {
-                    name: "Receptoras",
-                    tpi: segmentedAnimals
-                      .filter((f) => f._grupo === "Receptoras")
-                      .reduce((acc, f) => acc + (f.tpi || 0), 0) /
-                      Math.max(counts.Receptoras, 1),
-                  },
-                ]}
-                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Bar dataKey="tpi" fill="hsl(var(--primary))" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Animals Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Animais Segmentados ({segmentedAnimals.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-2">Nome</th>
-                  <th className="text-left p-2">Identificador</th>
-                  <th className="text-left p-2">NAAB Pai</th>
-                  <th className="text-left p-2">Nascimento</th>
-                  <th className="text-left p-2">Segmento</th>
-                  <th className="text-left p-2">TPI</th>
-                  <th className="text-left p-2">%</th>
-                  <th className="text-left p-2">DPR</th>
-                  <th className="text-left p-2">SCS</th>
-                  <th className="text-left p-2">PTAT</th>
-                  <th className="text-left p-2">Motivo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {segmentedAnimals.map((f) => (
-                  <tr key={f.id} className="border-b hover:bg-gray-50">
-                    <td className="p-2">{f.name || f.identifier || "-"}</td>
-                    <td className="p-2">{f.identifier || "-"}</td>
-                    <td className="p-2">{f.sire_naab || "-"}</td>
-                    <td className="p-2">{f.birth_date ? new Date(f.birth_date).toLocaleDateString() : "-"}</td>
-                    <td className="p-2">
-                      <span
-                        className={`px-2 py-1 rounded text-xs font-medium ${
-                          f._grupo === "Doadoras"
-                            ? "bg-red-100 text-red-800"
-                            : f._grupo === "Inter"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
+            {/* Pie Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <PieIcon className="h-4 w-4" />
+                  Distribuição
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={60}
+                        label={({ name, percent }) => 
+                          `${name} ${(Number(percent || 0) * 100).toFixed(0)}%`
+                        }
                       >
-                        {f._grupo}
-                      </span>
-                    </td>
-                    <td className="p-2 text-right">{f.tpi?.toFixed(0) || "-"}</td>
-                    <td className="p-2 text-right">{f._percentil ? `${f._percentil}%` : "-"}</td>
-                    <td className="p-2 text-right">{f.dpr?.toFixed(1) || "-"}</td>
-                    <td className="p-2 text-right">{f.scs?.toFixed(2) || "-"}</td>
-                    <td className="p-2 text-right">{f.ptat?.toFixed(1) || "-"}</td>
-                    <td className="p-2 text-xs text-gray-600">{f._motivo}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        {pieData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Main Content */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Fêmeas Segmentadas ({segmentedFemales.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2">Nome</th>
+                        <th className="text-left p-2">ID</th>
+                        <th className="text-left p-2">Nasc.</th>
+                        <th className="text-center p-2">HHP$</th>
+                        <th className="text-center p-2">TPI</th>
+                        <th className="text-center p-2">NM$</th>
+                        <th className="text-center p-2">SCS</th>
+                        <th className="text-center p-2">DPR</th>
+                        <th className="text-center p-2">%ile</th>
+                        <th className="text-left p-2">Grupo</th>
+                        <th className="text-left p-2">Motivo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {segmentedFemales.slice(0, 100).map((female) => (
+                        <tr key={female.id} className="border-b hover:bg-muted/50">
+                          <td className="p-2 font-medium">{female.name}</td>
+                          <td className="p-2 text-muted-foreground">{female.identifier || "-"}</td>
+                          <td className="p-2 text-muted-foreground">
+                            {female.birth_date ? new Date(female.birth_date).toLocaleDateString() : "-"}
+                          </td>
+                          <td className="p-2 text-center">{female.hhp_dollar?.toFixed(0) || "-"}</td>
+                          <td className="p-2 text-center">{female.tpi?.toFixed(0) || "-"}</td>
+                          <td className="p-2 text-center">{female.nm_dollar?.toFixed(0) || "-"}</td>
+                          <td className="p-2 text-center">{female.scs?.toFixed(2) || "-"}</td>
+                          <td className="p-2 text-center">{female.dpr?.toFixed(1) || "-"}</td>
+                          <td className="p-2 text-center">{female._percentil || "-"}</td>
+                          <td className="p-2">
+                            <span 
+                              className="px-2 py-1 rounded-full text-xs font-medium text-white"
+                              style={{ backgroundColor: COLORS[female._grupo!] }}
+                            >
+                              {female._grupo}
+                            </span>
+                          </td>
+                          <td className="p-2 text-xs text-muted-foreground">{female._motivo}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {segmentedFemales.length > 100 && (
+                    <p className="text-center text-muted-foreground mt-4 text-sm">
+                      Mostrando primeiras 100 de {segmentedFemales.length} fêmeas. Exporte CSV para ver todas.
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

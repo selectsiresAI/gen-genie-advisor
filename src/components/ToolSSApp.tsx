@@ -1133,7 +1133,7 @@ export default function ToolSSApp() {
         </DialogContent>
       </Dialog>
 
-      {page === "segmentacao" && farm && <SegmentationPage farm={farm} weights={weights} statsForCustom={stats} onBack={() => setPage("fazenda")} />}
+      {page === "segmentacao" && farm && <SegmentationPage farm={{ id: farm.id, farm_id: farm.id, name: farm.nome, owner_name: farm.nome }} onBack={() => setPage("fazenda")} />}
 
       {page === "nexus" && <div className="min-h-screen bg-background">
           <div className="sticky top-0 z-40 border-b bg-card shadow-sm mb-6">

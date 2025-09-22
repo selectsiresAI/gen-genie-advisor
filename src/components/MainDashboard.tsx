@@ -406,63 +406,23 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
           // Try from ToolSS window object
           const toolSSData = (window as any).ToolSS?.fazendas?.find((f: any) => f.id === selectedFarm!.farm_id);
           if (toolSSData?.females?.length > 0) {
-            farmForSegmentation.females = toolSSData.females;
+            // farmForSegmentation.females = toolSSData.females;
           } else {
             // Try from Rebanho window object
             const rebanhoData = (window as any).Rebanho?.find((f: any) => f.id === selectedFarm!.farm_id);
             if (rebanhoData?.females?.length > 0) {
-              farmForSegmentation.females = rebanhoData.females;
+              // farmForSegmentation.females = rebanhoData.females;
             } else {
               // Try from localStorage
               const storedFemales = localStorage.getItem(`females-${selectedFarm!.farm_id}`);
               if (storedFemales) {
                 try {
-                  farmForSegmentation.females = JSON.parse(storedFemales);
+                  // farmForSegmentation.females = JSON.parse(storedFemales);
                 } catch (e) {
                   console.warn('Could not parse stored females data');
                 }
               } else {
-                // Add sample data if no data is found
-                farmForSegmentation.females = [
-                  {
-                    id: "sample-1",
-                    brinco: "001",
-                    nascimento: "2020-01-15",
-                    ordemParto: 1,
-                    categoria: "Primípara",
-                    naabPai: "99HO12345",
-                    nomePai: "Exemplo Touro",
-                    TPI: 2456,
-                    "HHP$": 580,
-                    "NM$": 720,
-                    DPR: 1.2,
-                    SCS: 2.8,
-                    PTAT: 1.5,
-                    Milk: 850,
-                    Fat: 45,
-                    Protein: 32,
-                    year: 2020
-                  },
-                  {
-                    id: "sample-2", 
-                    brinco: "002",
-                    nascimento: "2019-03-20",
-                    ordemParto: 2,
-                    categoria: "Secundípara",
-                    naabPai: "99HO23456",
-                    nomePai: "Outro Touro",
-                    TPI: 2234,
-                    "HHP$": 520,
-                    "NM$": 650,
-                    DPR: 0.8,
-                    SCS: 3.1,
-                    PTAT: 0.9,
-                    Milk: 720,
-                    Fat: 38,
-                    Protein: 28,
-                    year: 2019
-                  }
-                ];
+                // No data found - using database instead
               }
             }
           }
