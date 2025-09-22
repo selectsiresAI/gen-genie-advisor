@@ -56,14 +56,14 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
           console.log('Header line:', headerLine);
           
           // Handle different CSV delimiters and quoted fields
-          const headers = headerLine.split(',').map(h => h.trim().replace(/^["']|["']$/g, ''));
+          const headers = headerLine.split(';').map(h => h.trim().replace(/^["']|["']$/g, ''));
           console.log('Parsed headers:', headers);
           
           const data = lines.slice(1).map((line, lineIndex) => {
             console.log(`Processing line ${lineIndex + 2}:`, line.substring(0, 100) + '...');
             
             // Split values more carefully
-            const values = line.split(',').map(v => v.trim().replace(/^["']|["']$/g, ''));
+            const values = line.split(';').map(v => v.trim().replace(/^["']|["']$/g, ''));
             const row: any = {};
             
             headers.forEach((header, index) => {
