@@ -14,6 +14,7 @@ import MetasPage from './Metas';
 import PastaArquivosPage from './PastaArquivos';
 import PlanoApp from './PlanoApp';
 import NexusPredictor from './NexusPredictor';
+import ChartsPage from './ChartsPage';
 
 interface MainDashboardProps {
   user: User;
@@ -401,6 +402,25 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
             </div>
             <div className="container mx-auto px-4 py-8">
               <MetasPage farm={farmData} onBack={handleBackToDashboard} />
+            </div>
+          </div>
+        );
+      }
+
+      if (currentView === 'charts') {
+        return (
+          <div className="min-h-screen bg-background">
+            <div className="border-b">
+              <div className="flex h-16 items-center px-4">
+                <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Dashboard
+                </Button>
+                <h1 className="text-xl font-semibold">Gráficos e Análises</h1>
+              </div>
+            </div>
+            <div className="container mx-auto px-4 py-8">
+              <ChartsPage onBack={handleBackToDashboard} />
             </div>
           </div>
         );
