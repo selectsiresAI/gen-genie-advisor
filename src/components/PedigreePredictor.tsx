@@ -344,8 +344,7 @@ const IndividualPrediction: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="sire-naab">NAAB 
-Pai)
-            </Label>
+(Pai)</Label>
               <Input id="sire-naab" value={pedigreeInput.sireNaab} onChange={e => handleNaabChange('sireNaab', e.target.value)} placeholder="Ex: 001HO25295" className="uppercase" />
               {getBullFromCache(pedigreeInput.sireNaab, bullsCache) && <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
                   ✅ {getBullFromCache(pedigreeInput.sireNaab, bullsCache)?.name} - {getBullFromCache(pedigreeInput.sireNaab, bullsCache)?.company}
