@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,24 +6,76 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Search, Upload, Download } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Bull {
-  naab: string;
-  nome: string;
-  empresa: string;
-  registro: string;
-  pedigree: string;
-  nascimento: string;
-  HHP_dollar: number;
-  TPI: number;
-  NM_dollar: number;
-  CM_dollar: number;
-  FM_dollar: number;
-  GM_dollar: number;
-  F_SAV: number;
-  PTAM: number;
-  CFP: number;
-  score?: number;
+  id: string;
+  code: string;
+  name: string;
+  registration?: string;
+  birth_date?: string;
+  sire_naab?: string;
+  mgs_naab?: string;
+  // All genetic traits from bulls_denorm
+  hhp_dollar?: number;
+  tpi?: number;
+  nm_dollar?: number;
+  cm_dollar?: number;
+  fm_dollar?: number;
+  gm_dollar?: number;
+  f_sav?: number;
+  ptam?: number;
+  cfp?: number;
+  ptaf?: number;
+  ptaf_pct?: number;
+  ptap?: number;
+  ptap_pct?: number;
+  pl?: number;
+  dpr?: number;
+  liv?: number;
+  scs?: number;
+  mast?: number;
+  met?: number;
+  rp?: number;
+  da?: number;
+  ket?: number;
+  mf?: number;
+  ptat?: number;
+  udc?: number;
+  flc?: number;
+  sce?: number;
+  dce?: number;
+  ssb?: number;
+  dsb?: number;
+  h_liv?: number;
+  ccr?: number;
+  hcr?: number;
+  fi?: number;
+  gl?: number;
+  efc?: number;
+  bwc?: number;
+  sta?: number;
+  str?: number;
+  dfm?: number;
+  rua?: number;
+  rls?: number;
+  rtp?: number;
+  ftl?: number;
+  rw?: number;
+  rlr?: number;
+  fta?: number;
+  fls?: number;
+  fua?: number;
+  ruh?: number;
+  ruw?: number;
+  ucl?: number;
+  udp?: number;
+  ftp?: number;
+  rfi?: number;
+  beta_casein?: string;
+  kappa_casein?: string;
+  gfi?: number;
+  score?: number; // Calculated score
 }
 
 interface Farm {
@@ -36,11 +88,13 @@ interface Farm {
 interface BullSearchPageProps {
   farm: Farm;
   onBack: () => void;
+  onBullsSelected?: (selectedBulls: string[]) => void;
 }
 
-const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack }) => {
+const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSelected }) => {
+  const [bulls, setBulls] = useState<Bull[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedEmpresa, setSelectedEmpresa] = useState("todas");
   const [selectedBulls, setSelectedBulls] = useState<string[]>([]);
   const [weights, setWeights] = useState({
     TPI: 0.3,
@@ -51,94 +105,152 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack }) => {
   });
   const { toast } = useToast();
 
-  // Sample bull data for demonstration
-  const sampleBulls: Bull[] = [
-    {
-      naab: "200HO12345",
-      nome: "PEAK ALTAIRR-ET",
-      empresa: "Select Sires",
-      registro: "HO12345678",
-      pedigree: "PEAK ALTABAXTER x PEAK ALTAMONTE",
-      nascimento: "2018-03-15",
-      HHP_dollar: 890,
-      TPI: 2850,
-      NM_dollar: 920,
-      CM_dollar: 780,
-      FM_dollar: 650,
-      GM_dollar: 420,
-      F_SAV: -1.2,
-      PTAM: 1850,
-      CFP: 65
-    },
-    {
-      naab: "200HO67890",
-      nome: "SANDY-VALLEY MOGUL",
-      empresa: "Genex",
-      registro: "HO67890123",
-      pedigree: "SANDY-VALLEY GRANITE x SANDY-VALLEY MAXIMO",
-      nascimento: "2019-01-22",
-      HHP_dollar: 820,
-      TPI: 2780,
-      NM_dollar: 860,
-      CM_dollar: 720,
-      FM_dollar: 580,
-      GM_dollar: 380,
-      F_SAV: -0.8,
-      PTAM: 1780,
-      CFP: 58
-    },
-    {
-      naab: "200HO11111",
-      nome: "WESTCOAST DYNAMO-ET",
-      empresa: "ABS Global",
-      registro: "HO11111222",
-      pedigree: "WESTCOAST DYNAMIC x WESTCOAST DELUXE",
-      nascimento: "2017-11-08",
-      HHP_dollar: 950,
-      TPI: 2920,
-      NM_dollar: 980,
-      CM_dollar: 820,
-      FM_dollar: 720,
-      GM_dollar: 480,
-      F_SAV: -1.5,
-      PTAM: 1920,
-      CFP: 72
+  useEffect(() => {
+    loadBulls();
+  }, []);
+
+  const loadBulls = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('bulls_denorm')
+        .select('*')
+        .order('tpi', { ascending: false });
+
+      if (error) throw error;
+      
+      // Transform data to match expected format
+      const transformedBulls: Bull[] = (data || []).map(bull => ({
+        id: bull.id || bull.code,
+        code: bull.code || '',
+        name: bull.name || '',
+        registration: bull.registration,
+        birth_date: bull.birth_date,
+        sire_naab: bull.sire_naab,
+        mgs_naab: bull.mgs_naab,
+        hhp_dollar: bull.hhp_dollar,
+        tpi: bull.tpi,
+        nm_dollar: bull.nm_dollar,
+        cm_dollar: bull.cm_dollar,
+        fm_dollar: bull.fm_dollar,
+        gm_dollar: bull.gm_dollar,
+        f_sav: bull.f_sav,
+        ptam: bull.ptam,
+        cfp: bull.cfp,
+        ptaf: bull.ptaf,
+        ptaf_pct: bull.ptaf_pct,
+        ptap: bull.ptap,
+        ptap_pct: bull.ptap_pct,
+        pl: bull.pl,
+        dpr: bull.dpr,
+        liv: bull.liv,
+        scs: bull.scs,
+        mast: bull.mast,
+        met: bull.met,
+        rp: bull.rp,
+        da: bull.da,
+        ket: bull.ket,
+        mf: bull.mf,
+        ptat: bull.ptat,
+        udc: bull.udc,
+        flc: bull.flc,
+        sce: bull.sce,
+        dce: bull.dce,
+        ssb: bull.ssb,
+        dsb: bull.dsb,
+        h_liv: bull.h_liv,
+        ccr: bull.ccr,
+        hcr: bull.hcr,
+        fi: bull.fi,
+        gl: bull.gl,
+        efc: bull.efc,
+        bwc: bull.bwc,
+        sta: bull.sta,
+        str: bull.str,
+        dfm: bull.dfm,
+        rua: bull.rua,
+        rls: bull.rls,
+        rtp: bull.rtp,
+        ftl: bull.ftl,
+        rw: bull.rw,
+        rlr: bull.rlr,
+        fta: bull.fta,
+        fls: bull.fls,
+        fua: bull.fua,
+        ruh: bull.ruh,
+        ruw: bull.ruw,
+        ucl: bull.ucl,
+        udp: bull.udp,
+        ftp: bull.ftp,
+        rfi: bull.rfi,
+        beta_casein: bull.beta_casein,
+        kappa_casein: bull.kappa_casein,
+        gfi: bull.gfi
+      }));
+
+      setBulls(transformedBulls);
+    } catch (error) {
+      console.error('Error loading bulls:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar banco de touros",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   // Calculate weighted scores for bulls
   const rankedBulls = useMemo(() => {
-    const bullsWithScores = sampleBulls.map(bull => {
+    const bullsWithScores = bulls.map(bull => {
       const score = (
-        bull.TPI * weights.TPI +
-        bull.NM_dollar * weights.NM_dollar +
-        bull.HHP_dollar * weights.HHP_dollar +
-        bull.PTAM * weights.PTAM +
-        bull.CFP * weights.CFP
+        (bull.tpi || 0) * weights.TPI +
+        (bull.nm_dollar || 0) * weights.NM_dollar +
+        (bull.hhp_dollar || 0) * weights.HHP_dollar +
+        (bull.ptam || 0) * weights.PTAM +
+        (bull.cfp || 0) * weights.CFP
       );
       return { ...bull, score };
     });
 
     return bullsWithScores
       .filter(bull => {
-        const matchesSearch = bull.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                             bull.naab.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                             bull.pedigree.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesEmpresa = selectedEmpresa === "todas" || bull.empresa === selectedEmpresa;
-        return matchesSearch && matchesEmpresa;
+        const matchesSearch = bull.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                             bull.code.toLowerCase().includes(searchTerm.toLowerCase());
+        return matchesSearch;
       })
       .sort((a, b) => (b.score || 0) - (a.score || 0));
-  }, [sampleBulls, weights, searchTerm, selectedEmpresa]);
+  }, [bulls, weights, searchTerm]);
 
-  const empresas = [...new Set(sampleBulls.map(bull => bull.empresa))];
   const totalWeight = Object.values(weights).reduce((sum, weight) => sum + weight, 0);
 
-  const handleBullToggle = (naab: string) => {
+  const handleBullToggle = (code: string) => {
     setSelectedBulls(prev =>
-      prev.includes(naab)
-        ? prev.filter(n => n !== naab)
-        : [...prev, naab]
+      prev.includes(code)
+        ? prev.filter(n => n !== code)
+        : [...prev, code]
     );
+  };
+
+  const handleAddToBotijao = () => {
+    if (selectedBulls.length === 0) {
+      toast({
+        title: "Nenhum touro selecionado",
+        description: "Selecione pelo menos um touro para adicionar ao Botijão Virtual.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (onBullsSelected) {
+      onBullsSelected(selectedBulls);
+    }
+
+    toast({
+      title: "Touros selecionados",
+      description: `${selectedBulls.length} touro(s) foram selecionados para o Botijão Virtual.`,
+    });
   };
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -150,19 +262,53 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack }) => {
       description: "Processando arquivo de touros...",
     });
 
-    // Simulate file processing
+    // TODO: Implement actual file processing
     setTimeout(() => {
       toast({
         title: "Touros importados",
         description: "Banco de touros atualizado com sucesso!",
       });
+      loadBulls(); // Reload data
     }, 2000);
   };
 
   const handleExport = () => {
+    if (rankedBulls.length === 0) return;
+    
+    const csvData = rankedBulls.map(bull => ({
+      NAAB: bull.code,
+      Nome: bull.name,
+      'Data Nascimento': bull.birth_date || '',
+      'HHP$': bull.hhp_dollar || 0,
+      TPI: bull.tpi || 0,
+      'NM$': bull.nm_dollar || 0,
+      'CM$': bull.cm_dollar || 0,
+      'FM$': bull.fm_dollar || 0,
+      'GM$': bull.gm_dollar || 0,
+      Score: bull.score?.toFixed(0) || 0
+    }));
+
+    // Create CSV content
+    const headers = Object.keys(csvData[0]);
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map(row => Object.values(row).join(','))
+    ].join('\n');
+
+    // Download file
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `banco-touros-${farm.farm_name}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
     toast({
-      title: "Exportação iniciada",
-      description: "Arquivo CSV será baixado em instantes...",
+      title: "Exportação concluída",
+      description: "Arquivo CSV foi baixado com sucesso!",
     });
   };
 

@@ -389,11 +389,19 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
       }
 
       if (currentView === 'botijao') {
+        // Get selected bulls from localStorage if coming from bull search
+        const storedBulls = localStorage.getItem(`selected-bulls-${selectedFarm.farm_id}`);
+        const selectedBulls = storedBulls ? JSON.parse(storedBulls) : [];
+        
         return (
           <div className="min-h-screen bg-background">
             <div className="border-b">
               <div className="flex h-16 items-center px-4">
-                <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
+                <Button variant="ghost" onClick={() => {
+                  // Clear selected bulls when going back
+                  localStorage.removeItem(`selected-bulls-${selectedFarm.farm_id}`);
+                  handleBackToDashboard();
+                }} className="mr-4">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Dashboard
                 </Button>
@@ -404,9 +412,12 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
               <BotijaoVirtualPage 
                 client={{ id: 1, nome: selectedFarm?.owner_name || '', farms: [] }}
                 farm={farmData}
-                bulls={[]}
-                selectedBulls={[]}
-                onBack={handleBackToDashboard}
+                bulls={[]} // Bulls will be loaded from Supabase in BotijaoVirtual
+                selectedBulls={selectedBulls}
+                onBack={() => {
+                  localStorage.removeItem(`selected-bulls-${selectedFarm.farm_id}`);
+                  handleBackToDashboard();
+                }}
               />
             </div>
           </div>
@@ -462,7 +473,16 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
       if (currentView === 'bulls') {
         return (
           <div className="min-h-screen bg-background">
-            <BullSearchPage farm={selectedFarm} onBack={handleBackToDashboard} />
+            <BullSearchPage 
+              farm={selectedFarm} 
+              onBack={handleBackToDashboard}
+              onBullsSelected={(selectedBulls) => {
+                // Navigate to Botijão Virtual with selected bulls
+                setCurrentView('botijao');
+                // Store selected bulls for BotijaoVirtual
+                localStorage.setItem(`selected-bulls-${selectedFarm.farm_id}`, JSON.stringify(selectedBulls));
+              }}
+            />
           </div>
         );
       }

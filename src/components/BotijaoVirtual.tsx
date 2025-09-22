@@ -7,19 +7,77 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
-// Types
+// Types - Updated to match Supabase structure
 type Bull = {
-  naab: string;
-  nome: string;
-  pedigree: string;
-  TPI: number;
-  ["NM$"]: number;
-  Milk: number;
-  Fat: number;
-  Protein: number;
-  SCS: number;
-  PTAT: number;
+  id: string;
+  code: string;
+  name: string;
+  registration?: string;
+  birth_date?: string;
+  sire_naab?: string;
+  mgs_naab?: string;
+  // All genetic traits from bulls_denorm
+  hhp_dollar?: number;
+  tpi?: number;
+  nm_dollar?: number;
+  cm_dollar?: number;
+  fm_dollar?: number;
+  gm_dollar?: number;
+  f_sav?: number;
+  ptam?: number;
+  cfp?: number;
+  ptaf?: number;
+  ptaf_pct?: number;
+  ptap?: number;
+  ptap_pct?: number;
+  pl?: number;
+  dpr?: number;
+  liv?: number;
+  scs?: number;
+  mast?: number;
+  met?: number;
+  rp?: number;
+  da?: number;
+  ket?: number;
+  mf?: number;
+  ptat?: number;
+  udc?: number;
+  flc?: number;
+  sce?: number;
+  dce?: number;
+  ssb?: number;
+  dsb?: number;
+  h_liv?: number;
+  ccr?: number;
+  hcr?: number;
+  fi?: number;
+  gl?: number;
+  efc?: number;
+  bwc?: number;
+  sta?: number;
+  str?: number;
+  dfm?: number;
+  rua?: number;
+  rls?: number;
+  rtp?: number;
+  ftl?: number;
+  rw?: number;
+  rlr?: number;
+  fta?: number;
+  fls?: number;
+  fua?: number;
+  ruh?: number;
+  ruw?: number;
+  ucl?: number;
+  udp?: number;
+  ftp?: number;
+  rfi?: number;
+  beta_casein?: string;
+  kappa_casein?: string;
+  gfi?: number;
   disponibilidade?: "Disponível" | "Sem estoque";
   empresa?: string;
 };
@@ -70,13 +128,118 @@ interface BotijaoVirtualPageProps {
   onBack: () => void;
 }
 
-function BotijaoVirtualPage({ client, farm, bulls, selectedBulls = [], onBack }: BotijaoVirtualPageProps) {
+function BotijaoVirtualPage({ client, farm, bulls: propBulls, selectedBulls = [], onBack }: BotijaoVirtualPageProps) {
+  const [bulls, setBulls] = useState<Bull[]>(propBulls || []);
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+  
   const [botijao, setBotijao] = useState<BotijaoVirtual>({
     fazendaId: farm.id,
     itens: [],
     dataAtualizacao: new Date().toISOString(),
     estoqueAtual: { total: 0, convencional: 0, sexado: 0 }
   });
+
+  // Load bulls from Supabase if not provided
+  useEffect(() => {
+    if (!propBulls || propBulls.length === 0) {
+      loadBulls();
+    }
+  }, [propBulls]);
+
+  const loadBulls = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('bulls_denorm')
+        .select('*')
+        .order('tpi', { ascending: false });
+
+      if (error) throw error;
+      
+      // Transform data to match expected format
+      const transformedBulls: Bull[] = (data || []).map(bull => ({
+        id: bull.id || bull.code,
+        code: bull.code || '',
+        name: bull.name || '',
+        registration: bull.registration,
+        birth_date: bull.birth_date,
+        sire_naab: bull.sire_naab,
+        mgs_naab: bull.mgs_naab,
+        hhp_dollar: bull.hhp_dollar,
+        tpi: bull.tpi,
+        nm_dollar: bull.nm_dollar,
+        cm_dollar: bull.cm_dollar,
+        fm_dollar: bull.fm_dollar,
+        gm_dollar: bull.gm_dollar,
+        f_sav: bull.f_sav,
+        ptam: bull.ptam,
+        cfp: bull.cfp,
+        ptaf: bull.ptaf,
+        ptaf_pct: bull.ptaf_pct,
+        ptap: bull.ptap,
+        ptap_pct: bull.ptap_pct,
+        pl: bull.pl,
+        dpr: bull.dpr,
+        liv: bull.liv,
+        scs: bull.scs,
+        mast: bull.mast,
+        met: bull.met,
+        rp: bull.rp,
+        da: bull.da,
+        ket: bull.ket,
+        mf: bull.mf,
+        ptat: bull.ptat,
+        udc: bull.udc,
+        flc: bull.flc,
+        sce: bull.sce,
+        dce: bull.dce,
+        ssb: bull.ssb,
+        dsb: bull.dsb,
+        h_liv: bull.h_liv,
+        ccr: bull.ccr,
+        hcr: bull.hcr,
+        fi: bull.fi,
+        gl: bull.gl,
+        efc: bull.efc,
+        bwc: bull.bwc,
+        sta: bull.sta,
+        str: bull.str,
+        dfm: bull.dfm,
+        rua: bull.rua,
+        rls: bull.rls,
+        rtp: bull.rtp,
+        ftl: bull.ftl,
+        rw: bull.rw,
+        rlr: bull.rlr,
+        fta: bull.fta,
+        fls: bull.fls,
+        fua: bull.fua,
+        ruh: bull.ruh,
+        ruw: bull.ruw,
+        ucl: bull.ucl,
+        udp: bull.udp,
+        ftp: bull.ftp,
+        rfi: bull.rfi,
+        beta_casein: bull.beta_casein,
+        kappa_casein: bull.kappa_casein,
+        gfi: bull.gfi,
+        disponibilidade: "Disponível",
+        empresa: "N/A"
+      }));
+
+      setBulls(transformedBulls);
+    } catch (error) {
+      console.error('Error loading bulls:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar banco de touros",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Carregar dados salvos do localStorage na inicialização
   useEffect(() => {
@@ -171,15 +334,15 @@ function BotijaoVirtualPage({ client, farm, bulls, selectedBulls = [], onBack }:
 
   // Auto-adicionar touros selecionados
   useEffect(() => {
-    if (selectedBulls.length > 0) {
+    if (selectedBulls.length > 0 && bulls.length > 0) {
       const bullsToAdd = selectedBulls
-        .map(naab => bulls.find(b => b.naab === naab))
+        .map(code => bulls.find(b => b.code === code))
         .filter(Boolean)
-        .filter(bull => !botijao.itens.some(item => item.touro.naab === bull!.naab));
+        .filter(bull => !botijao.itens.some(item => item.touro.code === bull!.code));
 
       if (bullsToAdd.length > 0) {
         const newItems: BotijaoItem[] = bullsToAdd.map(bull => ({
-          id: `${bull!.naab}-${Date.now()}-${Math.random()}`,
+          id: `${bull!.code}-${Date.now()}-${Math.random()}`,
           touro: bull!,
           tipo: "Convencional",
           doses: 5, // Valor padrão
@@ -202,9 +365,14 @@ function BotijaoVirtualPage({ client, farm, bulls, selectedBulls = [], onBack }:
             estoqueAtual
           };
         });
+
+        toast({
+          title: "Touros adicionados",
+          description: `${bullsToAdd.length} touro(s) foram adicionados ao Botijão Virtual.`,
+        });
       }
     }
-  }, [selectedBulls, bulls]);
+  }, [selectedBulls, bulls, botijao.itens]);
 
   // Calcular estoque
   const calculateStock = (itens: BotijaoItem[]) => {
@@ -217,8 +385,8 @@ function BotijaoVirtualPage({ client, farm, bulls, selectedBulls = [], onBack }:
   // Filtrar touros
   const filteredBulls = useMemo(() => {
     let filtered = bulls.filter(bull => 
-      bull.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      bull.naab.toLowerCase().includes(searchTerm.toLowerCase())
+      bull.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      bull.code.toLowerCase().includes(searchTerm.toLowerCase())
     );
     
     if (selectedEmpresa !== "todas") {
