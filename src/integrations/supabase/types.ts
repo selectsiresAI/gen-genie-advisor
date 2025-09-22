@@ -1061,9 +1061,76 @@ export type Database = {
       }
     }
     Functions: {
+      add_bull_to_farm: {
+        Args: { bull_uuid: string; farm_uuid: string; notes_text?: string }
+        Returns: {
+          message: string
+          success: boolean
+        }[]
+      }
       can_edit_farm: {
         Args: { farm_uuid: string }
         Returns: boolean
+      }
+      create_farm_basic: {
+        Args: { farm_metadata?: Json; farm_name: string; owner_name: string }
+        Returns: {
+          farm_id: string
+          message: string
+          success: boolean
+        }[]
+      }
+      delete_farm: {
+        Args: { farm_uuid: string }
+        Returns: {
+          message: string
+          success: boolean
+        }[]
+      }
+      get_bull_by_naab: {
+        Args: { naab: string }
+        Returns: {
+          bull_id: string
+          code: string
+          found: boolean
+          name: string
+          ptas: Json
+          suggestions: string[]
+        }[]
+      }
+      get_bulls_by_naab_list: {
+        Args: { naabs: string[] }
+        Returns: {
+          bull_id: string
+          input_naab: string
+          name: string
+          normalized_naab: string
+          ptas: Json
+          status: string
+          suggestions: string[]
+        }[]
+      }
+      get_farm_dashboard: {
+        Args: { farm_uuid: string }
+        Returns: {
+          avg_hhp_dollar: number
+          avg_nm_dollar: number
+          avg_tpi: number
+          donor_females: number
+          donor_percentage: number
+          farm_id: string
+          farm_name: string
+          inter_females: number
+          inter_percentage: number
+          owner_name: string
+          recipient_females: number
+          recipient_percentage: number
+          selected_bulls: number
+          total_females: number
+          total_matings: number
+          total_predictions: number
+          total_semen_doses: number
+        }[]
       }
       is_farm_member: {
         Args: { farm_uuid: string }
@@ -1072,6 +1139,55 @@ export type Database = {
       is_farm_owner: {
         Args: { farm_uuid: string }
         Returns: boolean
+      }
+      my_farms: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          farm_id: string
+          farm_name: string
+          is_default: boolean
+          my_role: string
+          owner_name: string
+          selected_bulls: number
+          total_females: number
+        }[]
+      }
+      normalize_naab: {
+        Args: { input_naab: string }
+        Returns: string
+      }
+      remove_bull_from_farm: {
+        Args: { bull_uuid: string; farm_uuid: string }
+        Returns: {
+          message: string
+          success: boolean
+        }[]
+      }
+      search_bulls: {
+        Args: { limit_count?: number; q: string }
+        Returns: {
+          bull_id: string
+          code: string
+          name: string
+          ptas: Json
+        }[]
+      }
+      set_default_farm: {
+        Args: { farm_uuid: string }
+        Returns: {
+          message: string
+          success: boolean
+        }[]
+      }
+      validate_naab: {
+        Args: { naab: string }
+        Returns: {
+          bull_id: string
+          code: string
+          is_valid: boolean
+          message: string
+        }[]
       }
     }
     Enums: {
