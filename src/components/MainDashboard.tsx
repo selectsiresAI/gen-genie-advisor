@@ -4,10 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Users, Beef, BarChart3, Plus, LogOut, Zap, ArrowLeft } from "lucide-react";
+import { Building2, Users, Beef, BarChart3, Plus, LogOut, Zap, ArrowLeft, TrendingUp, Beaker, MessageSquare, Target, FolderOpen, Calculator } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import CreateFarmModal from './CreateFarmModal';
+import BotijaoVirtualPage from './BotijaoVirtual';
+import SMSPage from './SMS';
+import MetasPage from './Metas';
+import PastaArquivosPage from './PastaArquivos';
+import PlanoApp from './PlanoApp';
+import NexusPredictor from './NexusPredictor';
 
 interface MainDashboardProps {
   user: User;
@@ -31,7 +37,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'farm' | 'herd' | 'segmentation' | 'bulls' | 'nexus'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'farm' | 'herd' | 'segmentation' | 'bulls' | 'nexus' | 'charts' | 'botijao' | 'sms' | 'metas' | 'plano' | 'arquivos'>('dashboard');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -219,6 +225,66 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
                 </CardDescription>
               </CardHeader>
             </Card>
+
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('charts')}>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <TrendingUp className="w-5 h-5 text-primary" />
+                  Gráficos
+                </CardTitle>
+                <CardDescription>
+                  Análises e estatísticas do rebanho
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('botijao')}>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Beaker className="w-5 h-5 text-primary" />
+                  Botijão Virtual
+                </CardTitle>
+                <CardDescription>
+                  Gerenciamento de doses de sêmen
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('metas')}>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Target className="w-5 h-5 text-primary" />
+                  Metas
+                </CardTitle>
+                <CardDescription>
+                  Definir objetivos genéticos
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('sms')}>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <MessageSquare className="w-5 h-5 text-primary" />
+                  SMS
+                </CardTitle>
+                <CardDescription>
+                  Comunicação e notificações
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('arquivos')}>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <FolderOpen className="w-5 h-5 text-primary" />
+                  Arquivos
+                </CardTitle>
+                <CardDescription>
+                  Gerenciamento de documentos
+                </CardDescription>
+              </CardHeader>
+            </Card>
           </div>
         </div>
       </div>
@@ -226,7 +292,141 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
   }
 
   // Render specific views
-  if (currentView !== 'dashboard') {
+  if (currentView !== 'dashboard' && currentView !== 'farm') {
+    // Transform selectedFarm into the format expected by the components
+    const farmData = selectedFarm ? {
+      id: selectedFarm.farm_id,
+      nome: selectedFarm.farm_name,
+      proprietario: selectedFarm.owner_name,
+      females: [], // Initialize with empty array
+      bulls: [], // Initialize with empty array
+    } : null;
+
+    // Handle views that need special rendering
+    if (currentView === 'nexus') {
+      return (
+        <div className="min-h-screen bg-background">
+          <div className="border-b">
+            <div className="flex h-16 items-center px-4">
+              <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Dashboard
+              </Button>
+              <h1 className="text-xl font-semibold">Nexus - Sistema de Predição Genética</h1>
+            </div>
+          </div>
+          <div className="container mx-auto px-4 py-8">
+            <NexusPredictor />
+          </div>
+        </div>
+      );
+    }
+
+    if (currentView === 'plano') {
+      return (
+        <div className="min-h-screen bg-background">
+          <div className="border-b">
+            <div className="flex h-16 items-center px-4">
+              <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Dashboard
+              </Button>
+              <h1 className="text-xl font-semibold">Plano Genético</h1>
+            </div>
+          </div>
+          <div className="container mx-auto px-4 py-8">
+            <PlanoApp onBack={handleBackToDashboard} />
+          </div>
+        </div>
+      );
+    }
+
+    // For components that need farm data
+    if (farmData) {
+      if (currentView === 'botijao') {
+        return (
+          <div className="min-h-screen bg-background">
+            <div className="border-b">
+              <div className="flex h-16 items-center px-4">
+                <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Dashboard
+                </Button>
+                <h1 className="text-xl font-semibold">{selectedFarm?.farm_name} - Botijão Virtual</h1>
+              </div>
+            </div>
+            <div className="container mx-auto px-4 py-8">
+              <BotijaoVirtualPage 
+                client={{ id: 1, nome: selectedFarm?.owner_name || '', farms: [] }}
+                farm={farmData}
+                bulls={[]}
+                selectedBulls={[]}
+                onBack={handleBackToDashboard}
+              />
+            </div>
+          </div>
+        );
+      }
+
+      if (currentView === 'sms') {
+        return (
+          <div className="min-h-screen bg-background">
+            <div className="border-b">
+              <div className="flex h-16 items-center px-4">
+                <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Dashboard
+                </Button>
+                <h1 className="text-xl font-semibold">{selectedFarm?.farm_name} - SMS</h1>
+              </div>
+            </div>
+            <div className="container mx-auto px-4 py-8">
+              <SMSPage farm={farmData} onBack={handleBackToDashboard} />
+            </div>
+          </div>
+        );
+      }
+
+      if (currentView === 'metas') {
+        return (
+          <div className="min-h-screen bg-background">
+            <div className="border-b">
+              <div className="flex h-16 items-center px-4">
+                <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Dashboard
+                </Button>
+                <h1 className="text-xl font-semibold">{selectedFarm?.farm_name} - Metas</h1>
+              </div>
+            </div>
+            <div className="container mx-auto px-4 py-8">
+              <MetasPage farm={farmData} onBack={handleBackToDashboard} />
+            </div>
+          </div>
+        );
+      }
+
+      if (currentView === 'arquivos') {
+        return (
+          <div className="min-h-screen bg-background">
+            <div className="border-b">
+              <div className="flex h-16 items-center px-4">
+                <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Dashboard
+                </Button>
+                <h1 className="text-xl font-semibold">{selectedFarm?.farm_name} - Pasta de Arquivos</h1>
+              </div>
+            </div>
+            <div className="container mx-auto px-4 py-8">
+              <PastaArquivosPage onBack={handleBackToDashboard} />
+            </div>
+          </div>
+        );
+      }
+    }
+
+    // Default view for other modules
     return (
       <div className="min-h-screen bg-background">
         <div className="border-b">
@@ -240,7 +440,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
                 currentView === 'herd' ? 'Rebanho' :
                 currentView === 'segmentation' ? 'Segmentação' :
                 currentView === 'bulls' ? 'Catálogo de Touros' :
-                currentView === 'nexus' ? 'Nexus' : 'Módulo'
+                currentView === 'charts' ? 'Gráficos' : 'Módulo'
               }
             </h1>
           </div>
@@ -251,7 +451,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
               {currentView === 'herd' && <Users className="w-8 h-8 text-muted-foreground" />}
               {currentView === 'segmentation' && <BarChart3 className="w-8 h-8 text-muted-foreground" />}
               {currentView === 'bulls' && <Beef className="w-8 h-8 text-muted-foreground" />}
-              {currentView === 'nexus' && <Zap className="w-8 h-8 text-muted-foreground" />}
+              {currentView === 'charts' && <TrendingUp className="w-8 h-8 text-muted-foreground" />}
             </div>
             <h2 className="text-2xl font-bold">Módulo em Desenvolvimento</h2>
             <p className="text-muted-foreground max-w-md mx-auto">
@@ -259,7 +459,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
                 currentView === 'herd' ? 'gerenciar seu rebanho e cadastrar fêmeas' :
                 currentView === 'segmentation' ? 'segmentar animais por performance genética' :
                 currentView === 'bulls' ? 'explorar o catálogo de touros e fazer seleções' :
-                currentView === 'nexus' ? 'gerar predições genéticas e sugerir acasalamentos' : 'usar esta funcionalidade'
+                currentView === 'charts' ? 'visualizar gráficos e estatísticas do rebanho' : 'usar esta funcionalidade'
               }.
             </p>
           </div>
@@ -395,30 +595,6 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
                 </CardHeader>
               </Card>
 
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleQuickAction('segmentation')}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <BarChart3 className="w-5 h-5 text-primary" />
-                    Segmentação
-                  </CardTitle>
-                  <CardDescription>
-                    Classificar animais por performance
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleQuickAction('bulls')}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Beef className="w-5 h-5 text-primary" />
-                    Catálogo de Touros
-                  </CardTitle>
-                  <CardDescription>
-                    Buscar e selecionar touros
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-
               <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleQuickAction('nexus')}>
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
@@ -427,6 +603,78 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
                   </CardTitle>
                   <CardDescription>
                     Predições genéticas e acasalamentos
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleQuickAction('botijao')}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Beaker className="w-5 h-5 text-primary" />
+                    Botijão Virtual
+                  </CardTitle>
+                  <CardDescription>
+                    Gerenciamento de doses de sêmen
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleQuickAction('metas')}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Target className="w-5 h-5 text-primary" />
+                    Metas
+                  </CardTitle>
+                  <CardDescription>
+                    Definir objetivos genéticos
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('plano')}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Calculator className="w-5 h-5 text-primary" />
+                    Plano Genético
+                  </CardTitle>
+                  <CardDescription>
+                    Calcular índices e projeções
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleQuickAction('charts')}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <TrendingUp className="w-5 h-5 text-primary" />
+                    Gráficos
+                  </CardTitle>
+                  <CardDescription>
+                    Análises e estatísticas
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleQuickAction('sms')}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <MessageSquare className="w-5 h-5 text-primary" />
+                    SMS
+                  </CardTitle>
+                  <CardDescription>
+                    Comunicação e notificações
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleQuickAction('arquivos')}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <FolderOpen className="w-5 h-5 text-primary" />
+                    Arquivos
+                  </CardTitle>
+                  <CardDescription>
+                    Gerenciamento de documentos
                   </CardDescription>
                 </CardHeader>
               </Card>
