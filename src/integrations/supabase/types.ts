@@ -126,6 +126,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "farm_bull_picks_bull_id_fkey"
+            columns: ["bull_id"]
+            isOneToOne: false
+            referencedRelation: "bulls_denorm"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "farm_bull_picks_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farm_dashboard_kpis"
+            referencedColumns: ["farm_id"]
+          },
+          {
             foreignKeyName: "farm_bull_picks_farm_id_fkey"
             columns: ["farm_id"]
             isOneToOne: false
@@ -167,6 +181,13 @@ export type Database = {
             foreignKeyName: "farm_index_settings_farm_id_fkey"
             columns: ["farm_id"]
             isOneToOne: true
+            referencedRelation: "farm_dashboard_kpis"
+            referencedColumns: ["farm_id"]
+          },
+          {
+            foreignKeyName: "farm_index_settings_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: true
             referencedRelation: "farms"
             referencedColumns: ["id"]
           },
@@ -201,6 +222,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "farm_tanks_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farm_dashboard_kpis"
+            referencedColumns: ["farm_id"]
+          },
           {
             foreignKeyName: "farm_tanks_farm_id_fkey"
             columns: ["farm_id"]
@@ -273,6 +301,13 @@ export type Database = {
             foreignKeyName: "female_segmentations_farm_id_fkey"
             columns: ["farm_id"]
             isOneToOne: false
+            referencedRelation: "farm_dashboard_kpis"
+            referencedColumns: ["farm_id"]
+          },
+          {
+            foreignKeyName: "female_segmentations_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
             referencedRelation: "farms"
             referencedColumns: ["id"]
           },
@@ -281,6 +316,13 @@ export type Database = {
             columns: ["female_id"]
             isOneToOne: false
             referencedRelation: "females"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "female_segmentations_female_id_fkey"
+            columns: ["female_id"]
+            isOneToOne: false
+            referencedRelation: "females_denorm"
             referencedColumns: ["id"]
           },
         ]
@@ -333,6 +375,13 @@ export type Database = {
             foreignKeyName: "females_farm_id_fkey"
             columns: ["farm_id"]
             isOneToOne: false
+            referencedRelation: "farm_dashboard_kpis"
+            referencedColumns: ["farm_id"]
+          },
+          {
+            foreignKeyName: "females_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
             referencedRelation: "farms"
             referencedColumns: ["id"]
           },
@@ -374,6 +423,13 @@ export type Database = {
             foreignKeyName: "genetic_predictions_farm_id_fkey"
             columns: ["farm_id"]
             isOneToOne: false
+            referencedRelation: "farm_dashboard_kpis"
+            referencedColumns: ["farm_id"]
+          },
+          {
+            foreignKeyName: "genetic_predictions_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
             referencedRelation: "farms"
             referencedColumns: ["id"]
           },
@@ -382,6 +438,13 @@ export type Database = {
             columns: ["female_id"]
             isOneToOne: false
             referencedRelation: "females"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "genetic_predictions_female_id_fkey"
+            columns: ["female_id"]
+            isOneToOne: false
+            referencedRelation: "females_denorm"
             referencedColumns: ["id"]
           },
         ]
@@ -426,6 +489,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "matings_bull_id_fkey"
+            columns: ["bull_id"]
+            isOneToOne: false
+            referencedRelation: "bulls_denorm"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matings_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farm_dashboard_kpis"
+            referencedColumns: ["farm_id"]
+          },
+          {
             foreignKeyName: "matings_farm_id_fkey"
             columns: ["farm_id"]
             isOneToOne: false
@@ -437,6 +514,13 @@ export type Database = {
             columns: ["female_id"]
             isOneToOne: false
             referencedRelation: "females"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matings_female_id_fkey"
+            columns: ["female_id"]
+            isOneToOne: false
+            referencedRelation: "females_denorm"
             referencedColumns: ["id"]
           },
         ]
@@ -523,6 +607,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "semen_movements_bull_id_fkey"
+            columns: ["bull_id"]
+            isOneToOne: false
+            referencedRelation: "bulls_denorm"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "semen_movements_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farm_dashboard_kpis"
+            referencedColumns: ["farm_id"]
+          },
+          {
             foreignKeyName: "semen_movements_farm_id_fkey"
             columns: ["farm_id"]
             isOneToOne: false
@@ -565,6 +663,13 @@ export type Database = {
             foreignKeyName: "user_farms_farm_id_fkey"
             columns: ["farm_id"]
             isOneToOne: false
+            referencedRelation: "farm_dashboard_kpis"
+            referencedColumns: ["farm_id"]
+          },
+          {
+            foreignKeyName: "user_farms_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
             referencedRelation: "farms"
             referencedColumns: ["id"]
           },
@@ -572,7 +677,388 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      bulls_denorm: {
+        Row: {
+          beta_casein: string | null
+          birth_date: string | null
+          bwc: number | null
+          ccr: number | null
+          cfp: number | null
+          cm_dollar: number | null
+          code: string | null
+          created_at: string | null
+          da: number | null
+          dce: number | null
+          dfm: number | null
+          dpr: number | null
+          dsb: number | null
+          efc: number | null
+          f_sav: number | null
+          fi: number | null
+          flc: number | null
+          fls: number | null
+          fm_dollar: number | null
+          fta: number | null
+          ftl: number | null
+          ftp: number | null
+          fua: number | null
+          gfi: number | null
+          gl: number | null
+          gm_dollar: number | null
+          h_liv: number | null
+          hcr: number | null
+          hhp_dollar: number | null
+          id: string | null
+          kappa_casein: string | null
+          ket: number | null
+          liv: number | null
+          mast: number | null
+          met: number | null
+          mf: number | null
+          mgs_naab: string | null
+          mmgs_naab: string | null
+          name: string | null
+          nm_dollar: number | null
+          pl: number | null
+          ptaf: number | null
+          ptaf_pct: number | null
+          ptam: number | null
+          ptap: number | null
+          ptap_pct: number | null
+          ptat: number | null
+          registration: string | null
+          rfi: number | null
+          rlr: number | null
+          rls: number | null
+          rp: number | null
+          rtp: number | null
+          rua: number | null
+          ruh: number | null
+          ruw: number | null
+          rw: number | null
+          sce: number | null
+          scs: number | null
+          sire_naab: string | null
+          ssb: number | null
+          sta: number | null
+          str: number | null
+          tpi: number | null
+          ucl: number | null
+          udc: number | null
+          udp: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          beta_casein?: never
+          birth_date?: string | null
+          bwc?: never
+          ccr?: never
+          cfp?: never
+          cm_dollar?: never
+          code?: string | null
+          created_at?: string | null
+          da?: never
+          dce?: never
+          dfm?: never
+          dpr?: never
+          dsb?: never
+          efc?: never
+          f_sav?: never
+          fi?: never
+          flc?: never
+          fls?: never
+          fm_dollar?: never
+          fta?: never
+          ftl?: never
+          ftp?: never
+          fua?: never
+          gfi?: never
+          gl?: never
+          gm_dollar?: never
+          h_liv?: never
+          hcr?: never
+          hhp_dollar?: never
+          id?: string | null
+          kappa_casein?: never
+          ket?: never
+          liv?: never
+          mast?: never
+          met?: never
+          mf?: never
+          mgs_naab?: string | null
+          mmgs_naab?: string | null
+          name?: string | null
+          nm_dollar?: never
+          pl?: never
+          ptaf?: never
+          ptaf_pct?: never
+          ptam?: never
+          ptap?: never
+          ptap_pct?: never
+          ptat?: never
+          registration?: string | null
+          rfi?: never
+          rlr?: never
+          rls?: never
+          rp?: never
+          rtp?: never
+          rua?: never
+          ruh?: never
+          ruw?: never
+          rw?: never
+          sce?: never
+          scs?: never
+          sire_naab?: string | null
+          ssb?: never
+          sta?: never
+          str?: never
+          tpi?: never
+          ucl?: never
+          udc?: never
+          udp?: never
+          updated_at?: string | null
+        }
+        Update: {
+          beta_casein?: never
+          birth_date?: string | null
+          bwc?: never
+          ccr?: never
+          cfp?: never
+          cm_dollar?: never
+          code?: string | null
+          created_at?: string | null
+          da?: never
+          dce?: never
+          dfm?: never
+          dpr?: never
+          dsb?: never
+          efc?: never
+          f_sav?: never
+          fi?: never
+          flc?: never
+          fls?: never
+          fm_dollar?: never
+          fta?: never
+          ftl?: never
+          ftp?: never
+          fua?: never
+          gfi?: never
+          gl?: never
+          gm_dollar?: never
+          h_liv?: never
+          hcr?: never
+          hhp_dollar?: never
+          id?: string | null
+          kappa_casein?: never
+          ket?: never
+          liv?: never
+          mast?: never
+          met?: never
+          mf?: never
+          mgs_naab?: string | null
+          mmgs_naab?: string | null
+          name?: string | null
+          nm_dollar?: never
+          pl?: never
+          ptaf?: never
+          ptaf_pct?: never
+          ptam?: never
+          ptap?: never
+          ptap_pct?: never
+          ptat?: never
+          registration?: string | null
+          rfi?: never
+          rlr?: never
+          rls?: never
+          rp?: never
+          rtp?: never
+          rua?: never
+          ruh?: never
+          ruw?: never
+          rw?: never
+          sce?: never
+          scs?: never
+          sire_naab?: string | null
+          ssb?: never
+          sta?: never
+          str?: never
+          tpi?: never
+          ucl?: never
+          udc?: never
+          udp?: never
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      farm_dashboard_kpis: {
+        Row: {
+          avg_hhp_dollar: number | null
+          avg_nm_dollar: number | null
+          avg_tpi: number | null
+          donor_females: number | null
+          donor_percentage: number | null
+          farm_created_at: string | null
+          farm_id: string | null
+          farm_name: string | null
+          farm_updated_at: string | null
+          inter_females: number | null
+          inter_percentage: number | null
+          last_female_added: string | null
+          last_mating_date: string | null
+          last_movement_date: string | null
+          last_prediction_date: string | null
+          owner_name: string | null
+          recipient_females: number | null
+          recipient_percentage: number | null
+          selected_bulls: number | null
+          total_females: number | null
+          total_matings: number | null
+          total_predictions: number | null
+          total_semen_doses: number | null
+        }
+        Relationships: []
+      }
+      females_denorm: {
+        Row: {
+          beta_casein: string | null
+          birth_date: string | null
+          bwc: number | null
+          ccr: number | null
+          cdcb_id: string | null
+          cfp: number | null
+          cm_dollar: number | null
+          created_at: string | null
+          da: number | null
+          dce: number | null
+          dfm: number | null
+          dpr: number | null
+          dsb: number | null
+          efc: number | null
+          f_sav: number | null
+          farm_id: string | null
+          fi: number | null
+          flc: number | null
+          fls: number | null
+          fm_dollar: number | null
+          fta: number | null
+          ftl: number | null
+          ftp: number | null
+          fua: number | null
+          gfi: number | null
+          gl: number | null
+          gm_dollar: number | null
+          h_liv: number | null
+          hcr: number | null
+          hhp_dollar: number | null
+          id: string | null
+          identifier: string | null
+          kappa_casein: string | null
+          ket: number | null
+          last_prediction_confidence: number | null
+          last_prediction_date: string | null
+          last_prediction_method:
+            | Database["public"]["Enums"]["prediction_method"]
+            | null
+          last_prediction_value: number | null
+          liv: number | null
+          mast: number | null
+          met: number | null
+          mf: number | null
+          mgs_naab: string | null
+          mmgs_naab: string | null
+          name: string | null
+          nm_dollar: number | null
+          pl: number | null
+          ptaf: number | null
+          ptaf_pct: number | null
+          ptam: number | null
+          ptap: number | null
+          ptap_pct: number | null
+          ptat: number | null
+          rfi: number | null
+          rlr: number | null
+          rls: number | null
+          rp: number | null
+          rtp: number | null
+          rua: number | null
+          ruh: number | null
+          ruw: number | null
+          rw: number | null
+          sce: number | null
+          scs: number | null
+          segmentation_class:
+            | Database["public"]["Enums"]["segmentation_class"]
+            | null
+          segmentation_score: number | null
+          sire_naab: string | null
+          ssb: number | null
+          sta: number | null
+          str: number | null
+          tpi: number | null
+          ucl: number | null
+          udc: number | null
+          udp: number | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "females_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farm_dashboard_kpis"
+            referencedColumns: ["farm_id"]
+          },
+          {
+            foreignKeyName: "females_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      semen_inventory: {
+        Row: {
+          balance: number | null
+          bull_id: string | null
+          bull_naab: string | null
+          bull_name: string | null
+          farm_id: string | null
+          last_movement_date: string | null
+          semen_type: Database["public"]["Enums"]["semen_type"] | null
+          total_movements: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "semen_movements_bull_id_fkey"
+            columns: ["bull_id"]
+            isOneToOne: false
+            referencedRelation: "bulls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "semen_movements_bull_id_fkey"
+            columns: ["bull_id"]
+            isOneToOne: false
+            referencedRelation: "bulls_denorm"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "semen_movements_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farm_dashboard_kpis"
+            referencedColumns: ["farm_id"]
+          },
+          {
+            foreignKeyName: "semen_movements_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       can_edit_farm: {
