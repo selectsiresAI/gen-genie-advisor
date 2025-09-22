@@ -604,10 +604,8 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack }) => {
 
       <FemaleUploadModal
         isOpen={showUploadModal}
-        onClose={() => {
-          setShowUploadModal(false);
-          loadFemales(); // Reload data after upload
-        }}
+        onClose={() => setShowUploadModal(false)}
+        onImportSuccess={loadFemales}
         farmId={farm.farm_id}
         farmName={farm.farm_name}
       />

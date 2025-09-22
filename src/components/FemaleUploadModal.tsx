@@ -6,19 +6,22 @@ import { Label } from "@/components/ui/label";
 import { Upload, FileText, AlertCircle } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { supabase } from '@/integrations/supabase/client';
 
 interface FemaleUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   farmId: string;
   farmName: string;
+  onImportSuccess?: () => void;
 }
 
 const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({ 
   isOpen, 
   onClose, 
   farmId, 
-  farmName 
+  farmName,
+  onImportSuccess
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -29,6 +32,55 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
     if (file) {
       setSelectedFile(file);
     }
+  };
+
+  const parseCsvFile = async (file: File): Promise<any[]> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const text = e.target?.result as string;
+          const lines = text.split('\n').filter(line => line.trim());
+          if (lines.length < 2) {
+            reject(new Error('Arquivo deve conter pelo menos um cabeçalho e uma linha de dados'));
+            return;
+          }
+          
+          const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+          const data = lines.slice(1).map(line => {
+            const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
+            const row: any = {};
+            headers.forEach((header, index) => {
+              const value = values[index];
+              if (value && value !== '') {
+                // Convert numeric fields
+                if (['hhp_dollar', 'tpi', 'nm_dollar', 'cm_dollar', 'fm_dollar', 'gm_dollar', 
+                     'f_sav', 'ptam', 'cfp', 'ptaf', 'ptaf_pct', 'ptap', 'ptap_pct', 
+                     'pl', 'dpr', 'liv', 'scs', 'mast', 'met', 'rp', 'da', 'ket', 'mf',
+                     'ptat', 'udc', 'flc', 'sce', 'dce', 'ssb', 'dsb', 'h_liv', 'ccr',
+                     'hcr', 'fi', 'gl', 'efc', 'bwc', 'sta', 'str', 'dfm', 'rua', 'rls',
+                     'rtp', 'ftl', 'rw', 'rlr', 'fta', 'fls', 'fua', 'ruh', 'ruw', 
+                     'ucl', 'udp', 'ftp', 'rfi', 'gfi'].includes(header)) {
+                  const numValue = parseFloat(value);
+                  row[header] = isNaN(numValue) ? null : numValue;
+                } else {
+                  row[header] = value;
+                }
+              } else {
+                row[header] = null;
+              }
+            });
+            return row;
+          }).filter(row => row.name && row.name.trim() !== ''); // Filter out empty rows
+          
+          resolve(data);
+        } catch (error) {
+          reject(new Error('Erro ao processar arquivo CSV'));
+        }
+      };
+      reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
+      reader.readAsText(file, 'UTF-8');
+    });
   };
 
   const handleUpload = async () => {
@@ -44,20 +96,92 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
     setIsUploading(true);
 
     try {
-      // Simulate file processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      let femalesData: any[] = [];
+
+      // Parse CSV file
+      if (selectedFile.name.toLowerCase().endsWith('.csv')) {
+        femalesData = await parseCsvFile(selectedFile);
+      } else {
+        throw new Error('Apenas arquivos CSV são suportados no momento. Use o template CSV.');
+      }
+
+      if (femalesData.length === 0) {
+        throw new Error('Nenhum dado válido encontrado no arquivo');
+      }
+
+      // Validate required fields
+      const invalidRows = femalesData.filter(row => !row.name);
+      if (invalidRows.length > 0) {
+        throw new Error(`${invalidRows.length} linha(s) sem nome válido encontrada(s)`);
+      }
+
+      // Prepare data for insertion
+      const femalesToInsert = femalesData.map(row => {
+        // Create PTA object from numeric fields
+        const ptas: any = {};
+        ['hhp_dollar', 'tpi', 'nm_dollar', 'cm_dollar', 'fm_dollar', 'gm_dollar', 
+         'f_sav', 'ptam', 'cfp', 'ptaf', 'ptaf_pct', 'ptap', 'ptap_pct', 
+         'pl', 'dpr', 'liv', 'scs', 'mast', 'met', 'rp', 'da', 'ket', 'mf',
+         'ptat', 'udc', 'flc', 'sce', 'dce', 'ssb', 'dsb', 'h_liv', 'ccr',
+         'hcr', 'fi', 'gl', 'efc', 'bwc', 'sta', 'str', 'dfm', 'rua', 'rls',
+         'rtp', 'ftl', 'rw', 'rlr', 'fta', 'fls', 'fua', 'ruh', 'ruw', 
+         'ucl', 'udp', 'ftp', 'rfi', 'gfi', 'beta_casein', 'kappa_casein'].forEach(field => {
+          if (row[field] !== null && row[field] !== undefined) {
+            ptas[field] = row[field];
+          }
+        });
+
+        return {
+          farm_id: farmId,
+          name: row.name,
+          identifier: row.identifier || null,
+          cdcb_id: row.cdcb_id || null,
+          birth_date: row.birth_date || null,
+          sire_naab: row.sire_naab || null,
+          mgs_naab: row.mgs_naab || null,
+          mmgs_naab: row.mmgs_naab || null,
+          ptas: ptas
+        };
+      });
+
+      // Insert females in batches
+      const batchSize = 100;
+      let totalInserted = 0;
+      
+      for (let i = 0; i < femalesToInsert.length; i += batchSize) {
+        const batch = femalesToInsert.slice(i, i + batchSize);
+        
+        const { data, error } = await supabase
+          .from('females')
+          .insert(batch)
+          .select('id');
+
+        if (error) {
+          console.error('Supabase insertion error:', error);
+          throw new Error(`Erro ao inserir dados: ${error.message}`);
+        }
+
+        totalInserted += data?.length || 0;
+      }
 
       toast({
         title: "Fêmeas importadas com sucesso!",
-        description: `Arquivo processado para a fazenda ${farmName}`,
+        description: `${totalInserted} fêmea(s) importada(s) para a fazenda ${farmName}`,
       });
 
       setSelectedFile(null);
+      
+      // Call import success callback if provided
+      if (onImportSuccess) {
+        onImportSuccess();
+      }
+      
       onClose();
     } catch (error) {
+      console.error('Upload error:', error);
       toast({
         title: "Erro no upload",
-        description: "Não foi possível processar o arquivo. Tente novamente.",
+        description: error instanceof Error ? error.message : "Não foi possível processar o arquivo. Tente novamente.",
         variant: "destructive",
       });
     } finally {
