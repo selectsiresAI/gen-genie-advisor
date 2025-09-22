@@ -927,6 +927,10 @@ export default function ToolSSApp() {
     if (!farm) return [];
     return [...farm.bulls].map(b => ({
       ...b,
+      // Ensure compatibility with new Bull interface
+      id: (b as any).id || (b as any).naab || b.naab || '',
+      code: (b as any).code || (b as any).naab || b.naab || '',
+      name: (b as any).name || (b as any).nome || b.nome || '',
       _score: scoreAnimal(b as any, stats, weights)
     })).sort((a, b) => b._score - a._score);
   }, [farm, stats, weights]);

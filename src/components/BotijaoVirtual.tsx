@@ -427,7 +427,7 @@ function BotijaoVirtualPage({ client, farm, bulls: propBulls, selectedBulls = []
     if (!newItem.touro) return;
     
     const item: BotijaoItem = {
-      id: `${newItem.touro.naab}-${Date.now()}-${Math.random()}`,
+      id: `${newItem.touro.code}-${Date.now()}-${Math.random()}`,
       touro: newItem.touro,
       tipo: newItem.tipo || "Convencional",
       doses: newItem.doses || 1,
@@ -523,8 +523,8 @@ function BotijaoVirtualPage({ client, farm, bulls: propBulls, selectedBulls = []
       
       switch (sortField) {
         case "nome":
-          aValue = a.touro.nome.toLowerCase();
-          bValue = b.touro.nome.toLowerCase();
+          aValue = a.touro.name.toLowerCase();
+          bValue = b.touro.name.toLowerCase();
           break;
         case "tipo":
           aValue = a.tipo.toLowerCase();
@@ -599,7 +599,7 @@ function BotijaoVirtualPage({ client, farm, bulls: propBulls, selectedBulls = []
   const duplicateItem = (originalItem: BotijaoItem) => {
     const duplicatedItem: BotijaoItem = {
       ...originalItem,
-      id: `${originalItem.touro.naab}-${Date.now()}-${Math.random()}`,
+      id: `${originalItem.touro.code}-${Date.now()}-${Math.random()}`,
       dataAdicao: new Date().toISOString()
     };
 
@@ -657,8 +657,8 @@ function BotijaoVirtualPage({ client, farm, bulls: propBulls, selectedBulls = []
 
   const exportBotijao = () => {
     const csvData = botijao.itens.map(item => ({
-      NAAB: item.touro.naab,
-      Nome: item.touro.nome,
+      NAAB: item.touro.code,
+      Nome: item.touro.name,
       Empresa: item.touro.empresa || "-",
       Tipo: item.tipo,
       Doses: item.doses,
@@ -802,9 +802,9 @@ function BotijaoVirtualPage({ client, farm, bulls: propBulls, selectedBulls = []
                 <div>
                   <Label>Selecionar Touro</Label>
                   <Select 
-                    value={newItem.touro?.naab || ""} 
+                    value={newItem.touro?.code || ""} 
                     onValueChange={(value) => {
-                      const touro = filteredBulls.find(b => b.naab === value);
+                      const touro = filteredBulls.find(b => b.code === value);
                       setNewItem(prev => ({ ...prev, touro }));
                     }}
                   >
@@ -813,8 +813,8 @@ function BotijaoVirtualPage({ client, farm, bulls: propBulls, selectedBulls = []
                     </SelectTrigger>
                     <SelectContent>
                       {filteredBulls.map(bull => (
-                        <SelectItem key={bull.naab} value={bull.naab}>
-                          {bull.naab} - {bull.nome} ({bull.empresa || "S/Empresa"})
+                        <SelectItem key={bull.code} value={bull.code}>
+                          {bull.code} - {bull.name} ({bull.empresa || "S/Empresa"})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1104,8 +1104,8 @@ function BotijaoVirtualPage({ client, farm, bulls: propBulls, selectedBulls = []
                 <tbody>
                   {sortedItems.map((item) => (
                     <tr key={item.id} className="border-b hover:bg-muted/50">
-                      <td className="p-3">{item.touro.naab}</td>
-                      <td className="p-3 font-medium">{item.touro.nome}</td>
+                      <td className="p-3">{item.touro.code}</td>
+                      <td className="p-3 font-medium">{item.touro.name}</td>
                       <td className="p-3">{item.touro.empresa || "-"}</td>
                       <td className="p-3">
                         <Badge variant={item.tipo === "Sexado" ? "default" : "secondary"}>
@@ -1310,7 +1310,7 @@ function BotijaoVirtualPage({ client, farm, bulls: propBulls, selectedBulls = []
                 <SelectContent>
                   {botijao.itens.filter(item => item.doses > 0).map(item => (
                     <SelectItem key={item.id} value={item.id}>
-                      {item.touro.naab} - {item.touro.nome} ({item.doses} doses disponíveis)
+                      {item.touro.code} - {item.touro.name} ({item.doses} doses disponíveis)
                     </SelectItem>
                   ))}
                 </SelectContent>

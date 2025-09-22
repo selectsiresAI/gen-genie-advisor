@@ -96,6 +96,8 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBulls, setSelectedBulls] = useState<string[]>([]);
+  const [selectedEmpresa, setSelectedEmpresa] = useState("");
+  const [empresas] = useState<string[]>(["Todas", "ABS", "SELECT", "SEMEX"]);
   const [weights, setWeights] = useState({
     TPI: 0.3,
     NM_dollar: 0.25,
@@ -483,29 +485,29 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
                   </tr>
                 </thead>
                 <tbody>
-                  {rankedBulls.map((bull, index) => (
-                    <tr key={bull.naab} className={index % 2 === 0 ? "bg-muted/50" : ""}>
-                      <td className="px-2 py-1 text-center">
-                        <input
-                          type="checkbox"
-                          checked={selectedBulls.includes(bull.naab)}
-                          onChange={() => handleBullToggle(bull.naab)}
-                        />
-                      </td>
-                      <td className="px-2 py-1 font-mono text-xs">{bull.naab}</td>
-                      <td className="px-2 py-1 font-medium text-xs">{bull.nome}</td>
-                      <td className="px-2 py-1 font-mono text-xs">{bull.registro}</td>
-                      <td className="px-2 py-1 text-xs">{bull.pedigree}</td>
-                      <td className="px-2 py-1 text-xs">{bull.nascimento}</td>
-                      <td className="px-2 py-1 text-center text-xs">{bull.HHP_dollar}</td>
-                      <td className="px-2 py-1 text-center text-xs">{bull.TPI}</td>
-                      <td className="px-2 py-1 text-center text-xs">{bull.NM_dollar}</td>
-                      <td className="px-2 py-1 text-center text-xs">{bull.CM_dollar}</td>
-                      <td className="px-2 py-1 text-center text-xs">{bull.FM_dollar}</td>
-                      <td className="px-2 py-1 text-center text-xs">{bull.GM_dollar}</td>
-                      <td className="px-2 py-1 text-center text-xs">{bull.F_SAV}</td>
-                      <td className="px-2 py-1 text-center text-xs">{bull.PTAM}</td>
-                      <td className="px-2 py-1 text-center text-xs">{bull.CFP}</td>
+                   {rankedBulls.map((bull, index) => (
+                     <tr key={bull.code} className={index % 2 === 0 ? "bg-muted/50" : ""}>
+                       <td className="px-2 py-1 text-center">
+                         <input
+                           type="checkbox"
+                           checked={selectedBulls.includes(bull.code)}
+                           onChange={() => handleBullToggle(bull.code)}
+                         />
+                       </td>
+                       <td className="px-2 py-1 font-mono text-xs">{bull.code}</td>
+                       <td className="px-2 py-1 font-medium text-xs">{bull.name}</td>
+                       <td className="px-2 py-1 font-mono text-xs">{bull.registration}</td>
+                       <td className="px-2 py-1 text-xs">{[bull.sire_naab, bull.mgs_naab].filter(Boolean).join(' / ') || '-'}</td>
+                       <td className="px-2 py-1 text-xs">{bull.birth_date}</td>
+                       <td className="px-2 py-1 text-center text-xs">{bull.hhp_dollar}</td>
+                       <td className="px-2 py-1 text-center text-xs">{bull.tpi}</td>
+                       <td className="px-2 py-1 text-center text-xs">{bull.nm_dollar}</td>
+                       <td className="px-2 py-1 text-center text-xs">{bull.cm_dollar}</td>
+                       <td className="px-2 py-1 text-center text-xs">{bull.fm_dollar}</td>
+                       <td className="px-2 py-1 text-center text-xs">{bull.gm_dollar}</td>
+                       <td className="px-2 py-1 text-center text-xs">{bull.f_sav}</td>
+                       <td className="px-2 py-1 text-center text-xs">{bull.ptam}</td>
+                       <td className="px-2 py-1 text-center text-xs">{bull.cfp}</td>
                       <td className="px-2 py-1 text-center text-xs">-</td>
                       <td className="px-2 py-1 text-center text-xs">-</td>
                       <td className="px-2 py-1 text-center text-xs">-</td>
