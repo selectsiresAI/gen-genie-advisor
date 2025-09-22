@@ -859,42 +859,213 @@ export type Database = {
     Views: {
       bulls_denorm: {
         Row: {
+          beta_casein: string | null
           birth_date: string | null
+          bwc: number | null
+          ccr: number | null
+          cfp: number | null
+          cm_dollar: number | null
           code: string | null
           created_at: string | null
+          da: number | null
+          dce: number | null
+          dfm: number | null
+          dpr: number | null
+          dsb: number | null
+          efc: number | null
+          f_sav: number | null
+          fi: number | null
+          flc: number | null
+          fls: number | null
+          fm_dollar: number | null
+          fta: number | null
+          ftl: number | null
+          ftp: number | null
+          fua: number | null
+          gfi: number | null
+          gl: number | null
+          gm_dollar: number | null
+          h_liv: number | null
+          hcr: number | null
+          hhp_dollar: number | null
           id: string | null
+          kappa_casein: string | null
+          ket: number | null
+          liv: number | null
+          mast: number | null
+          met: number | null
+          mf: number | null
           mgs_naab: string | null
           mmgs_naab: string | null
           name: string | null
-          ptas: Json | null
+          nm_dollar: number | null
+          pl: number | null
+          ptaf: number | null
+          ptaf_pct: number | null
+          ptam: number | null
+          ptap: number | null
+          ptap_pct: number | null
+          ptat: number | null
           registration: string | null
+          rfi: number | null
+          rlr: number | null
+          rls: number | null
+          rp: number | null
+          rtp: number | null
+          rua: number | null
+          ruh: number | null
+          ruw: number | null
+          rw: number | null
+          sce: number | null
+          scs: number | null
           sire_naab: string | null
+          ssb: number | null
+          sta: number | null
+          str: number | null
+          tpi: number | null
+          ucl: number | null
+          udc: number | null
+          udp: number | null
           updated_at: string | null
         }
         Insert: {
+          beta_casein?: never
           birth_date?: string | null
+          bwc?: never
+          ccr?: never
+          cfp?: never
+          cm_dollar?: never
           code?: string | null
           created_at?: string | null
+          da?: never
+          dce?: never
+          dfm?: never
+          dpr?: never
+          dsb?: never
+          efc?: never
+          f_sav?: never
+          fi?: never
+          flc?: never
+          fls?: never
+          fm_dollar?: never
+          fta?: never
+          ftl?: never
+          ftp?: never
+          fua?: never
+          gfi?: never
+          gl?: never
+          gm_dollar?: never
+          h_liv?: never
+          hcr?: never
+          hhp_dollar?: never
           id?: string | null
+          kappa_casein?: never
+          ket?: never
+          liv?: never
+          mast?: never
+          met?: never
+          mf?: never
           mgs_naab?: string | null
           mmgs_naab?: string | null
           name?: string | null
-          ptas?: Json | null
+          nm_dollar?: never
+          pl?: never
+          ptaf?: never
+          ptaf_pct?: never
+          ptam?: never
+          ptap?: never
+          ptap_pct?: never
+          ptat?: never
           registration?: string | null
+          rfi?: never
+          rlr?: never
+          rls?: never
+          rp?: never
+          rtp?: never
+          rua?: never
+          ruh?: never
+          ruw?: never
+          rw?: never
+          sce?: never
+          scs?: never
           sire_naab?: string | null
+          ssb?: never
+          sta?: never
+          str?: never
+          tpi?: never
+          ucl?: never
+          udc?: never
+          udp?: never
           updated_at?: string | null
         }
         Update: {
+          beta_casein?: never
           birth_date?: string | null
+          bwc?: never
+          ccr?: never
+          cfp?: never
+          cm_dollar?: never
           code?: string | null
           created_at?: string | null
+          da?: never
+          dce?: never
+          dfm?: never
+          dpr?: never
+          dsb?: never
+          efc?: never
+          f_sav?: never
+          fi?: never
+          flc?: never
+          fls?: never
+          fm_dollar?: never
+          fta?: never
+          ftl?: never
+          ftp?: never
+          fua?: never
+          gfi?: never
+          gl?: never
+          gm_dollar?: never
+          h_liv?: never
+          hcr?: never
+          hhp_dollar?: never
           id?: string | null
+          kappa_casein?: never
+          ket?: never
+          liv?: never
+          mast?: never
+          met?: never
+          mf?: never
           mgs_naab?: string | null
           mmgs_naab?: string | null
           name?: string | null
-          ptas?: Json | null
+          nm_dollar?: never
+          pl?: never
+          ptaf?: never
+          ptaf_pct?: never
+          ptam?: never
+          ptap?: never
+          ptap_pct?: never
+          ptat?: never
           registration?: string | null
+          rfi?: never
+          rlr?: never
+          rls?: never
+          rp?: never
+          rtp?: never
+          rua?: never
+          ruh?: never
+          ruw?: never
+          rw?: never
+          sce?: never
+          scs?: never
           sire_naab?: string | null
+          ssb?: never
+          sta?: never
+          str?: never
+          tpi?: never
+          ucl?: never
+          udc?: never
+          udp?: never
           updated_at?: string | null
         }
         Relationships: []
