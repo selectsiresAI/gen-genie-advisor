@@ -40,19 +40,35 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
       reader.onload = (e) => {
         try {
           const text = e.target?.result as string;
-          const lines = text.split('\n').filter(line => line.trim());
+          console.log('Raw CSV text (first 500 chars):', text.substring(0, 500));
+          
+          // Split lines and filter empty ones
+          const lines = text.split(/\r?\n/).filter(line => line.trim());
+          console.log('Number of lines after filtering:', lines.length);
+          
           if (lines.length < 2) {
             reject(new Error('Arquivo deve conter pelo menos um cabeçalho e uma linha de dados'));
             return;
           }
           
-          const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-          const data = lines.slice(1).map(line => {
-            const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
+          // Parse headers more carefully
+          const headerLine = lines[0];
+          console.log('Header line:', headerLine);
+          
+          // Handle different CSV delimiters and quoted fields
+          const headers = headerLine.split(',').map(h => h.trim().replace(/^["']|["']$/g, ''));
+          console.log('Parsed headers:', headers);
+          
+          const data = lines.slice(1).map((line, lineIndex) => {
+            console.log(`Processing line ${lineIndex + 2}:`, line.substring(0, 100) + '...');
+            
+            // Split values more carefully
+            const values = line.split(',').map(v => v.trim().replace(/^["']|["']$/g, ''));
             const row: any = {};
+            
             headers.forEach((header, index) => {
               const value = values[index];
-              if (value && value !== '') {
+              if (value && value !== '' && value !== '#########') { // Filter out Excel overflow values
                 // Convert numeric fields
                 if (['hhp_dollar', 'tpi', 'nm_dollar', 'cm_dollar', 'fm_dollar', 'gm_dollar', 
                      'f_sav', 'ptam', 'cfp', 'ptaf', 'ptaf_pct', 'ptap', 'ptap_pct', 
@@ -70,11 +86,19 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
                 row[header] = null;
               }
             });
+            
+            console.log(`Row ${lineIndex + 2} name:`, row.name);
             return row;
-          }).filter(row => row.name && row.name.trim() !== ''); // Filter out empty rows
+          });
           
-          resolve(data);
+          // Filter out rows without names
+          const validData = data.filter(row => row.name && row.name.trim() !== '');
+          console.log('Valid rows after filtering:', validData.length);
+          console.log('Sample valid row:', validData[0]);
+          
+          resolve(validData);
         } catch (error) {
+          console.error('CSV parsing error:', error);
           reject(new Error('Erro ao processar arquivo CSV'));
         }
       };
