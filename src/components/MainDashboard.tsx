@@ -15,6 +15,8 @@ import PastaArquivosPage from './PastaArquivos';
 import PlanoApp from './PlanoApp';
 import NexusPredictor from './NexusPredictor';
 import ChartsPage from './ChartsPage';
+import HerdPage from './HerdPage';
+import FarmSegmentationPage from './FarmSegmentationPage';
 
 interface MainDashboardProps {
   user: User;
@@ -356,6 +358,22 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
 
     // For components that need farm data
     if (farmData) {
+      if (currentView === 'herd') {
+        return (
+          <div className="min-h-screen bg-background">
+            <HerdPage farm={selectedFarm!} onBack={handleBackToDashboard} />
+          </div>
+        );
+      }
+
+      if (currentView === 'segmentation') {
+        return (
+          <div className="min-h-screen bg-background">
+            <FarmSegmentationPage farm={selectedFarm!} onBack={handleBackToDashboard} />
+          </div>
+        );
+      }
+
       if (currentView === 'botijao') {
         return (
           <div className="min-h-screen bg-background">
