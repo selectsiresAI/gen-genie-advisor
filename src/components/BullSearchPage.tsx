@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Search, Upload, Download } from "lucide-react";
+import { ArrowLeft, Search, Upload, Download, Beaker } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -89,9 +89,10 @@ interface BullSearchPageProps {
   farm: Farm;
   onBack: () => void;
   onBullsSelected?: (selectedBulls: string[]) => void;
+  onGoToBotijao?: () => void;
 }
 
-const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSelected }) => {
+const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSelected, onGoToBotijao }) => {
   const [bulls, setBulls] = useState<Bull[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -495,14 +496,22 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
       return;
     }
 
+    // Save selected bulls to localStorage for the Botijão Virtual
+    localStorage.setItem(`selected-bulls-${farm.farm_id}`, JSON.stringify(selectedBulls));
+
     if (onBullsSelected) {
       onBullsSelected(selectedBulls);
     }
 
     toast({
       title: "Touros selecionados",
-      description: `${selectedBulls.length} touro(s) foram selecionados para o Botijão Virtual.`,
+      description: `${selectedBulls.length} touro(s) foram enviados para o Botijão Virtual.`,
     });
+
+    // Navigate to Botijão Virtual if callback is provided
+    if (onGoToBotijao) {
+      onGoToBotijao();
+    }
   };
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -669,6 +678,16 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
             <Badge variant="secondary">
               Selecionados: {selectedBulls.length}
             </Badge>
+            
+            {selectedBulls.length > 0 && (
+              <Button 
+                onClick={handleAddToBotijao}
+                className="bg-primary hover:bg-primary/90"
+              >
+                <Beaker size={16} className="mr-2" />
+                Enviar para Botijão Virtual
+              </Button>
+            )}
           </div>
 
           {/* Bulls Table */}

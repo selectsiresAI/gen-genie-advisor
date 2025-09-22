@@ -574,6 +574,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
                 // Store selected bulls for BotijaoVirtual
                 localStorage.setItem(`selected-bulls-${selectedFarm.farm_id}`, JSON.stringify(selectedBulls));
               }}
+              onGoToBotijao={() => setCurrentView('botijao')}
             />
           </div>
         );
