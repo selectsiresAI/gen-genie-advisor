@@ -165,6 +165,40 @@ function downloadText(filename: string, text: string) {
   URL.revokeObjectURL(url);
 }
 
+function formatDate(dateString: string | null | undefined): string {
+  if (!dateString) return '-';
+  
+  try {
+    const dateObj = new Date(dateString);
+    if (isNaN(dateObj.getTime())) return '-';
+    
+    const formatted = `${dateObj.getDate().toString().padStart(2, '0')}/${(dateObj.getMonth() + 1).toString().padStart(2, '0')}/${dateObj.getFullYear()}`;
+    return formatted;
+  } catch {
+    return '-';
+  }
+}
+
+function getAge(birthDate: string | null | undefined): string {
+  if (!birthDate) return '-';
+  
+  try {
+    const today = new Date();
+    const birth = new Date(birthDate);
+    
+    let years = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      years--;
+    }
+    
+    return `${years}a`;
+  } catch {
+    return '-';
+  }
+}
+
 function computeZMeta(list: Female[], traits: string[]) {
   const meta: Record<string, { mu: number; sigma: number }> = {};
   for (const t of traits) {
@@ -680,41 +714,154 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
           {loading ? (
             <div className="text-sm" style={{ color: SS.black }}>Carregando…</div>
           ) : (
-            <div className="overflow-auto">
-              <table className="min-w-full text-sm">
+            <div className="overflow-x-auto">
+              <table className="min-w-[2000px] w-full text-sm border-collapse">
                 <thead>
-                  <tr className="border-b" style={{ color: SS.black, borderColor: SS.gray }}>
-                    <th className="py-2 pr-4">ID</th>
-                    <th className="py-2 pr-4">Nome</th>
-                    <th className="py-2 pr-4">Data Nasc.</th>
-                    <th className="py-2 pr-4">Ordem</th>
-                    <th className="py-2 pr-4">Categ.</th>
-                    <th className="py-2 pr-4">HHP$</th>
-                    <th className="py-2 pr-4">TPI</th>
-                    <th className="py-2 pr-4">NM$</th>
-                    <th className="py-2 pr-4">PTAM</th>
-                    <th className="py-2 pr-4">PTAF</th>
-                    <th className="py-2 pr-4">SCS</th>
-                    <th className="py-2 pr-4">DPR</th>
-                    <th className="py-2 pr-4">CustomScore</th>
+                  <tr className="border-b" style={{ color: SS.black, borderColor: SS.gray, background: SS.gray }}>
+                    <th className="border px-2 py-1 text-left text-xs">ID Fazenda</th>
+                    <th className="border px-2 py-1 text-left text-xs">Nome</th>
+                    <th className="border px-2 py-1 text-left text-xs">ID CDCB</th>
+                    <th className="border px-2 py-1 text-left text-xs">Pedigre Pai/Avô Materno/BisaAvô Materno</th>
+                    <th className="border px-2 py-1 text-left text-xs">Data de Nascimento</th>
+                    <th className="border px-2 py-1 text-left text-xs">Ordem de Parto</th>
+                    <th className="border px-2 py-1 text-left text-xs">Categoria</th>
+                    <th className="border px-2 py-1 text-left text-xs">HHP$®</th>
+                    <th className="border px-2 py-1 text-left text-xs">TPI</th>
+                    <th className="border px-2 py-1 text-left text-xs">NM$</th>
+                    <th className="border px-2 py-1 text-left text-xs">CM$</th>
+                    <th className="border px-2 py-1 text-left text-xs">FM$</th>
+                    <th className="border px-2 py-1 text-left text-xs">GM$</th>
+                    <th className="border px-2 py-1 text-left text-xs">F SAV</th>
+                    <th className="border px-2 py-1 text-left text-xs">PTAM</th>
+                    <th className="border px-2 py-1 text-left text-xs">CFP</th>
+                    <th className="border px-2 py-1 text-left text-xs">PTAF</th>
+                    <th className="border px-2 py-1 text-left text-xs">PTAF%</th>
+                    <th className="border px-2 py-1 text-left text-xs">PTAP</th>
+                    <th className="border px-2 py-1 text-left text-xs">PTAP%</th>
+                    <th className="border px-2 py-1 text-left text-xs">PL</th>
+                    <th className="border px-2 py-1 text-left text-xs">DPR</th>
+                    <th className="border px-2 py-1 text-left text-xs">LIV</th>
+                    <th className="border px-2 py-1 text-left text-xs">SCS</th>
+                    <th className="border px-2 py-1 text-left text-xs">MAST</th>
+                    <th className="border px-2 py-1 text-left text-xs">MET</th>
+                    <th className="border px-2 py-1 text-left text-xs">RP</th>
+                    <th className="border px-2 py-1 text-left text-xs">DA</th>
+                    <th className="border px-2 py-1 text-left text-xs">KET</th>
+                    <th className="border px-2 py-1 text-left text-xs">MF</th>
+                    <th className="border px-2 py-1 text-left text-xs">PTAT</th>
+                    <th className="border px-2 py-1 text-left text-xs">UDC</th>
+                    <th className="border px-2 py-1 text-left text-xs">FLC</th>
+                    <th className="border px-2 py-1 text-left text-xs">SCE</th>
+                    <th className="border px-2 py-1 text-left text-xs">DCE</th>
+                    <th className="border px-2 py-1 text-left text-xs">SSB</th>
+                    <th className="border px-2 py-1 text-left text-xs">DSB</th>
+                    <th className="border px-2 py-1 text-left text-xs">H LIV</th>
+                    <th className="border px-2 py-1 text-left text-xs">CCR</th>
+                    <th className="border px-2 py-1 text-left text-xs">HCR</th>
+                    <th className="border px-2 py-1 text-left text-xs">FI</th>
+                    <th className="border px-2 py-1 text-left text-xs">GL</th>
+                    <th className="border px-2 py-1 text-left text-xs">EFC</th>
+                    <th className="border px-2 py-1 text-left text-xs">BWC</th>
+                    <th className="border px-2 py-1 text-left text-xs">STA</th>
+                    <th className="border px-2 py-1 text-left text-xs">STR</th>
+                    <th className="border px-2 py-1 text-left text-xs">DFM</th>
+                    <th className="border px-2 py-1 text-left text-xs">RUA</th>
+                    <th className="border px-2 py-1 text-left text-xs">RLS</th>
+                    <th className="border px-2 py-1 text-left text-xs">RTP</th>
+                    <th className="border px-2 py-1 text-left text-xs">FTL</th>
+                    <th className="border px-2 py-1 text-left text-xs">RW</th>
+                    <th className="border px-2 py-1 text-left text-xs">RLR</th>
+                    <th className="border px-2 py-1 text-left text-xs">FTA</th>
+                    <th className="border px-2 py-1 text-left text-xs">FLS</th>
+                    <th className="border px-2 py-1 text-left text-xs">FUA</th>
+                    <th className="border px-2 py-1 text-left text-xs">RUH</th>
+                    <th className="border px-2 py-1 text-left text-xs">RUW</th>
+                    <th className="border px-2 py-1 text-left text-xs">UCL</th>
+                    <th className="border px-2 py-1 text-left text-xs">UDP</th>
+                    <th className="border px-2 py-1 text-left text-xs">FTP</th>
+                    <th className="border px-2 py-1 text-left text-xs">RFI</th>
+                    <th className="border px-2 py-1 text-left text-xs">Beta-Casein</th>
+                    <th className="border px-2 py-1 text-left text-xs">Kappa-Casein</th>
+                    <th className="border px-2 py-1 text-left text-xs">GFI</th>
+                    <th className="border px-2 py-1 text-left text-xs">CustomScore</th>
                   </tr>
                 </thead>
                 <tbody>
                   {sorted.map((a, idx) => (
                     <tr key={(a.__idKey ? (a as any)[a.__idKey] : (a.id ?? idx))} className="border-b hover:opacity-90" style={{ borderColor: SS.gray, color: SS.black }}>
-                      <td className="py-2 pr-4">{a.__idKey ? (a as any)[a.__idKey] : (a.id ?? "")}</td>
-                      <td className="py-2 pr-4">{a.__nameKey ? (a as any)[a.__nameKey] : (a.name ?? "")}</td>
-                      <td className="py-2 pr-4">{a.birth_date ? new Date(a.birth_date).toLocaleDateString() : "-"}</td>
-                      <td className="py-2 pr-4">{a.parity_order ?? "-"}</td>
-                      <td className="py-2 pr-4">{a.category ?? "-"}</td>
-                      <td className="py-2 pr-4">{a.hhp_dollar ?? ""}</td>
-                      <td className="py-2 pr-4">{a.tpi ?? ""}</td>
-                      <td className="py-2 pr-4">{a.nm_dollar ?? ""}</td>
-                      <td className="py-2 pr-4">{a.ptam ?? ""}</td>
-                      <td className="py-2 pr-4">{a.ptaf ?? ""}</td>
-                      <td className="py-2 pr-4">{a.scs ?? ""}</td>
-                      <td className="py-2 pr-4">{a.dpr ?? ""}</td>
-                      <td className="py-2 pr-4 font-semibold">{Number(a.CustomScore).toFixed(3)}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).farm_id || '-'}</td>
+                      <td className="border px-2 py-1 text-xs font-medium">{a.__nameKey ? (a as any)[a.__nameKey] : ((a as any).name ?? '')}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).cdcb_id || (a as any).identifier || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{[(a as any).sire_naab, (a as any).mgs_naab, (a as any).mmgs_naab].filter(Boolean).join('/') || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">
+                        {(a as any).birth_date ? formatDate((a as any).birth_date) : '-'}
+                        {(a as any).birth_date && (
+                          <span className="ml-1" style={{ color: '#9CA3AF' }}>
+                            ({getAge((a as any).birth_date)})
+                          </span>
+                        )}
+                      </td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).parity_order || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).category || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).hhp_dollar || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).tpi || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).nm_dollar || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).cm_dollar || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).fm_dollar || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).gm_dollar || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).f_sav || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).ptam || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).cfp || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).ptaf || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).ptaf_pct || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).ptap || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).ptap_pct || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).pl || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).dpr || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).liv || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).scs || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).mast || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).met || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).rp || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).da || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).ket || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).mf || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).ptat || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).udc || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).flc || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).sce || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).dce || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).ssb || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).dsb || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).h_liv || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).ccr || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).hcr || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).fi || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).gl || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).efc || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).bwc || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).sta || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).str || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).dfm || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).rua || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).rls || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).rtp || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).ftl || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).rw || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).rlr || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).fta || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).fls || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).fua || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).ruh || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).ruw || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).ucl || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).udp || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).ftp || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).rfi || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).beta_casein || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).kappa_casein || '-'}</td>
+                      <td className="border px-2 py-1 text-xs">{(a as any).gfi || '-'}</td>
+                      <td className="border px-2 py-1 text-xs font-semibold">{Number(a.CustomScore).toFixed(3)}</td>
                     </tr>
                   ))}
                 </tbody>
