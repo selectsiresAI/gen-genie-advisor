@@ -77,7 +77,9 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
                      'hcr', 'fi', 'gl', 'efc', 'bwc', 'sta', 'str', 'dfm', 'rua', 'rls',
                      'rtp', 'ftl', 'rw', 'rlr', 'fta', 'fls', 'fua', 'ruh', 'ruw', 
                      'ucl', 'udp', 'ftp', 'rfi', 'gfi'].includes(header)) {
-                  const numValue = parseFloat(value);
+                  // Handle European decimal notation (comma as decimal separator)
+                  const normalizedValue = value.replace(',', '.');
+                  const numValue = parseFloat(normalizedValue);
                   row[header] = isNaN(numValue) ? null : numValue;
                 } else {
                   row[header] = value;
