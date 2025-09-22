@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ArrowLeft, Users, Search, Plus, Upload, Download, Filter } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import FemaleUploadModal from './FemaleUploadModal';
 
 interface Farm {
   farm_id: string;
@@ -35,6 +36,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack }) => {
   const [females, setFemales] = useState<Female[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -166,7 +168,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack }) => {
               <Plus className="w-4 h-4 mr-2" />
               Adicionar Fêmea
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" onClick={() => setShowUploadModal(true)}>
               <Upload className="w-4 h-4 mr-2" />
               Importar
             </Button>
@@ -240,6 +242,16 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack }) => {
           </Card>
         </div>
       </div>
+
+      <FemaleUploadModal
+        isOpen={showUploadModal}
+        onClose={() => {
+          setShowUploadModal(false);
+          loadFemales(); // Reload data after upload
+        }}
+        farmId={farm.farm_id}
+        farmName={farm.farm_name}
+      />
     </div>
   );
 };
