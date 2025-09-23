@@ -215,6 +215,41 @@ function getAge(birthDate: string | null | undefined): string {
   }
 }
 
+function getAutomaticCategory(birthDate?: string, parityOrder?: number): string {
+  if (!birthDate) return 'Indefinida';
+  
+  const birth = new Date(birthDate);
+  const today = new Date();
+  const daysDiff = Math.floor((today.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24));
+  
+  // Bezerras - até 90 dias pós nascimento e ordem de parto 0 ou null
+  if (daysDiff <= 90 && (!parityOrder || parityOrder === 0)) {
+    return 'Bezerra';
+  }
+  
+  // Novilhas - de 91 dias após nascimento até primeiro parto (ordem de parto 0 ou null)
+  if (daysDiff > 90 && (!parityOrder || parityOrder === 0)) {
+    return 'Novilha';
+  }
+  
+  // Primípara - ordem de parto 1
+  if (parityOrder === 1) {
+    return 'Primípara';
+  }
+  
+  // Secundípara - ordem de parto 2
+  if (parityOrder === 2) {
+    return 'Secundípara';
+  }
+  
+  // Multípara - ordem de parto 3 ou maior
+  if (parityOrder && parityOrder >= 3) {
+    return 'Multípara';
+  }
+  
+  return 'Indefinida';
+}
+
 function computeZMeta(list: Female[], traits: string[]) {
   const meta: Record<string, { mu: number; sigma: number }> = {};
   for (const t of traits) {
@@ -1212,8 +1247,38 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
                           </span>
                         )}
                       </td>
-                      <td className="border px-2 py-1 text-xs">{(a as any).parity_order || '-'}</td>
-                       <td className="border px-2 py-1 text-xs">{(a as any).category || '-'}</td>
+                       <td className="border px-2 py-1 text-xs">{(a as any).parity_order || '-'}</td>
+                       <td className="border px-2 py-1 text-xs">
+                         <span 
+                           className="px-2 py-1 rounded text-xs font-medium"
+                           style={{
+                             backgroundColor: 
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Bezerra' ? '#EBF4FF' :
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Novilha' ? '#F0FDF4' :
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Primípara' ? '#FAF5FF' :
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Secundípara' ? '#FFF7ED' :
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Multípara' ? '#FEF2F2' :
+                               '#F9FAFB',
+                             color:
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Bezerra' ? '#1E40AF' :
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Novilha' ? '#166534' :
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Primípara' ? '#7C3AED' :
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Secundípara' ? '#EA580C' :
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Multípara' ? '#DC2626' :
+                               '#6B7280',
+                             border: '1px solid',
+                             borderColor:
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Bezerra' ? '#DBEAFE' :
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Novilha' ? '#DCFCE7' :
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Primípara' ? '#F3E8FF' :
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Secundípara' ? '#FED7AA' :
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Multípara' ? '#FECACA' :
+                               '#E5E7EB'
+                           }}
+                         >
+                           {getAutomaticCategory((a as any).birth_date, (a as any).parity_order)}
+                         </span>
+                       </td>
                        {segmentationEnabled && (
                          <td className="border px-2 py-1 text-xs">
                            {a.Classification && (
