@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -460,15 +461,16 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
       return sorted;
     }
 
-    const totalPercent = superiorPercent[0] + intermediarioPercent[0] + inferiorPercent[0];
-    if (totalPercent !== 100) {
-      // If percentages don't add up to 100, return unsegmented
-      return sorted.map(animal => ({ ...animal, Classification: undefined }));
+    const total = sorted.length;
+    if (total === 0) {
+      return sorted;
     }
 
-    const total = sorted.length;
+    // Calculate counts based on percentages, ensuring all animals are classified
     const superiorCount = Math.floor((superiorPercent[0] / 100) * total);
     const intermediarioCount = Math.floor((intermediarioPercent[0] / 100) * total);
+    // Assign remaining animals to inferior to ensure all are classified
+    const inferiorCount = total - superiorCount - intermediarioCount;
     
     return sorted.map((animal, index) => {
       let classification: "Superior" | "Intermediário" | "Inferior";
