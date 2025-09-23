@@ -384,6 +384,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
               farm={selectedFarm!} 
               onBack={handleBackToDashboard}
               onNavigateToCharts={handleNavigateToCharts}
+              onGoToBotijao={() => setCurrentView('botijao')}
             />
           </div>
         );
@@ -451,13 +452,18 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
         const storedBulls = localStorage.getItem(`selected-bulls-${selectedFarm.farm_id}`);
         const selectedBulls = storedBulls ? JSON.parse(storedBulls) : [];
         
+        // Get selected females from localStorage if coming from herd page
+        const storedFemales = localStorage.getItem(`selected-females-${selectedFarm.farm_id}`);
+        const selectedFemales = storedFemales ? JSON.parse(storedFemales) : [];
+        
         return (
           <div className="min-h-screen bg-background">
             <div className="border-b">
               <div className="flex h-16 items-center px-4">
                 <Button variant="ghost" onClick={() => {
-                  // Clear selected bulls when going back
+                  // Clear selected bulls and females when going back
                   localStorage.removeItem(`selected-bulls-${selectedFarm.farm_id}`);
+                  localStorage.removeItem(`selected-females-${selectedFarm.farm_id}`);
                   handleBackToDashboard();
                 }} className="mr-4">
                   <ArrowLeft className="w-4 h-4 mr-2" />
@@ -472,8 +478,10 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
                 farm={farmData}
                 bulls={[]} // Bulls will be loaded from Supabase in BotijaoVirtual
                 selectedBulls={selectedBulls}
+                selectedFemales={selectedFemales}
                 onBack={() => {
                   localStorage.removeItem(`selected-bulls-${selectedFarm.farm_id}`);
+                  localStorage.removeItem(`selected-females-${selectedFarm.farm_id}`);
                   handleBackToDashboard();
                 }}
               />

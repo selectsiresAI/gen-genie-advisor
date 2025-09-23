@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Users, Search, Plus, Upload, Download, Filter, TrendingUp } from "lucide-react";
+import { ArrowLeft, Users, Search, Plus, Upload, Download, Filter, TrendingUp, Beaker } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import FemaleUploadModal from './FemaleUploadModal';
@@ -23,6 +23,7 @@ interface HerdPageProps {
   farm: Farm;
   onBack: () => void;
   onNavigateToCharts?: () => void;
+  onGoToBotijao?: () => void;
 }
 
 interface Female {
@@ -100,11 +101,12 @@ interface Female {
   gfi?: number;
 }
 
-const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts }) => {
+const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts, onGoToBotijao }) => {
   const [females, setFemales] = useState<Female[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedYear, setSelectedYear] = useState<string>('');
+  const [selectedFemales, setSelectedFemales] = useState<string[]>([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const { toast } = useToast();
   const { setSelectedHerdId, setDashboardCounts } = useHerdStore();
@@ -259,6 +261,58 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
       return `${years}a ${months >= 0 ? months : 12 + months}m`;
     }
     return `${months >= 0 ? months : 12 + months}m`;
+  };
+
+  const handleSelectFemale = (femaleId: string) => {
+    setSelectedFemales(prev => 
+      prev.includes(femaleId) 
+        ? prev.filter(id => id !== femaleId)
+        : [...prev, femaleId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedFemales.length === filteredFemales.length) {
+      setSelectedFemales([]);
+    } else {
+      setSelectedFemales(filteredFemales.map(f => f.id));
+    }
+  };
+
+  const handleAddToBotijao = () => {
+    if (selectedFemales.length === 0) {
+      toast({
+        title: "Nenhuma fêmea selecionada",
+        description: "Selecione pelo menos uma fêmea para adicionar ao Botijão Virtual.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Convert selected females to a format that the Botijao can use
+    const selectedFemaleData = selectedFemales.map(id => {
+      const female = females.find(f => f.id === id);
+      return female ? {
+        id: female.id,
+        name: female.name,
+        identifier: female.identifier,
+        sire_naab: female.sire_naab,
+        category: getAutomaticCategory(female.birth_date, female.parity_order)
+      } : null;
+    }).filter(Boolean);
+
+    // Store selected females for BotijaoVirtual
+    localStorage.setItem(`selected-females-${farm.farm_id}`, JSON.stringify(selectedFemaleData));
+    
+    toast({
+      title: "Fêmeas selecionadas",
+      description: `${selectedFemales.length} fêmea(s) selecionada(s) para o Botijão Virtual.`,
+    });
+
+    // Navigate to Botijao Virtual
+    if (onGoToBotijao) {
+      onGoToBotijao();
+    }
   };
 
   const handleExport = () => {
@@ -581,6 +635,14 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
               <Download className="w-4 h-4 mr-2" />
               Exportar
             </Button>
+            <Button 
+              onClick={handleAddToBotijao}
+              disabled={selectedFemales.length === 0}
+              variant="default"
+            >
+              <Beaker className="w-4 h-4 mr-2" />
+              Botijão Virtual ({selectedFemales.length})
+            </Button>
           </div>
 
           {/* Table */}
@@ -619,6 +681,15 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
                     <table className="w-full border-collapse">
                       <thead className="sticky top-0 z-10">
                         <tr className="bg-muted">
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">
+                            <input
+                              type="checkbox"
+                              checked={selectedFemales.length === filteredFemales.length && filteredFemales.length > 0}
+                              onChange={handleSelectAll}
+                              className="mr-1"
+                            />
+                            Selecionar
+                          </th>
                           <th className="border px-2 py-1 text-left text-xs bg-muted">ID Fazenda</th>
                           <th className="border px-2 py-1 text-left text-xs bg-muted">Nome</th>
                           <th className="border px-2 py-1 text-left text-xs bg-muted">ID CDCB</th>
@@ -689,6 +760,14 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
                       <tbody>
                         {filteredFemales.slice(0, 10).map((female) => (
                           <tr key={female.id} className="hover:bg-muted/50">
+                            <td className="border px-2 py-1 text-xs">
+                              <input
+                                type="checkbox"
+                                checked={selectedFemales.includes(female.id)}
+                                onChange={() => handleSelectFemale(female.id)}
+                                className="mr-1"
+                              />
+                            </td>
                             <td className="border px-2 py-1 text-xs">{farm.farm_id}</td>
                             <td className="border px-2 py-1 text-xs font-medium">{female.name}</td>
                             <td className="border px-2 py-1 text-xs">{female.cdcb_id || female.identifier || '-'}</td>

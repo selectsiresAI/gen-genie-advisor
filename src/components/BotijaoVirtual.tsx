@@ -123,10 +123,11 @@ interface BotijaoVirtualPageProps {
   farm: any;
   bulls: Bull[];
   selectedBulls?: string[];
+  selectedFemales?: any[];
   onBack: () => void;
 }
 
-function BotijaoVirtualPage({ client, farm, bulls: propBulls, selectedBulls = [], onBack }: BotijaoVirtualPageProps) {
+function BotijaoVirtualPage({ client, farm, bulls: propBulls, selectedBulls = [], selectedFemales = [], onBack }: BotijaoVirtualPageProps) {
   const [bulls, setBulls] = useState<Bull[]>(propBulls || []);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -697,6 +698,45 @@ function BotijaoVirtualPage({ client, farm, bulls: propBulls, selectedBulls = []
           Voltar
         </Button>
       </div>
+
+      {/* Selected Females Display */}
+      {selectedFemales.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-lg">Fêmeas Selecionadas para Acasalamento</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {selectedFemales.length} fêmea(s) selecionada(s) do rebanho
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2 max-h-48 overflow-y-auto">
+              {selectedFemales.map((female: any, index: number) => (
+                <div key={female.id} className="flex items-center justify-between p-2 border rounded">
+                  <div className="flex items-center space-x-3">
+                    <span className="text-sm font-medium">{female.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {female.identifier} • {female.category}
+                    </span>
+                    {female.sire_naab && (
+                      <span className="text-xs text-muted-foreground">
+                        Pai: {female.sire_naab}
+                      </span>
+                    )}
+                  </div>
+                  <Badge variant="outline" className="text-xs">
+                    {female.category}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
+              <p className="text-sm text-blue-800">
+                <strong>Dica:</strong> Configure os touros no Botijão Virtual abaixo para criar acasalamentos ideais para estas fêmeas.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ÚNICO conjunto de Painéis de Gestão de Estoque */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
