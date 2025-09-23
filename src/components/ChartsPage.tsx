@@ -200,10 +200,11 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
       });
       
       processedData = Object.values(dataByYear)
+        .filter(yearData => yearData && typeof yearData === 'object')
         .map((yearData: any) => {
-          const result: any = { year: yearData.year, count: yearData.count };
+          const result: any = { year: yearData.year, count: yearData.count || 0 };
           selectedPTAs.forEach(pta => {
-            const values = yearData[pta];
+            const values = yearData[pta] || [];
             result[pta] = values.length > 0 
               ? values.reduce((sum: number, val: number) => sum + val, 0) / values.length 
               : null;
@@ -236,10 +237,11 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
       });
       
       processedData = Object.values(dataByCategory)
+        .filter(catData => catData && typeof catData === 'object')
         .map((catData: any) => {
-          const result: any = { name: catData.category, count: catData.count };
+          const result: any = { name: catData.category, count: catData.count || 0 };
           selectedPTAs.forEach(pta => {
-            const values = catData[pta];
+            const values = catData[pta] || [];
             result[pta] = values.length > 0 
               ? values.reduce((sum: number, val: number) => sum + val, 0) / values.length 
               : null;
@@ -271,10 +273,11 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
       });
       
       processedData = Object.values(dataByParity)
+        .filter(parityData => parityData && typeof parityData === 'object')
         .map((parityData: any) => {
-          const result: any = { name: parityData.parity, count: parityData.count };
+          const result: any = { name: parityData.parity, count: parityData.count || 0 };
           selectedPTAs.forEach(pta => {
-            const values = parityData[pta];
+            const values = parityData[pta] || [];
             result[pta] = values.length > 0 
               ? values.reduce((sum: number, val: number) => sum + val, 0) / values.length 
               : null;
