@@ -772,6 +772,9 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
             Voltar
           </Button>
           <h1 className="text-xl font-semibold">{farm.farm_name} - Busca de Touros</h1>
+          <div className="ml-auto flex items-center gap-2">
+            <Badge variant="outline">{rankedBulls.length} touros disponíveis</Badge>
+          </div>
         </div>
       </div>
       

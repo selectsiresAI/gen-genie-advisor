@@ -47,7 +47,8 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
   const [currentView, setCurrentView] = useState<'dashboard' | 'farm' | 'herd' | 'segmentation' | 'bulls' | 'nexus' | 'charts' | 'botijao' | 'sms' | 'metas' | 'plano' | 'arquivos'>('dashboard');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [totalFarms, setTotalFarms] = useState(0);
-  const [totalAnimals, setTotalAnimals] = useState(0);
+    const [totalAnimals, setTotalAnimals] = useState(0);
+    const [totalBulls, setTotalBulls] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -71,24 +72,33 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
         setUserProfile(profile);
       }
 
-      // Load farms
-      const { data: farmsData, error: farmsError } = await supabase.rpc('my_farms');
-      
-      if (farmsError) {
-        console.error('Error loading farms:', farmsError);
-        toast({
-          title: "Erro ao carregar fazendas",
-          description: farmsError.message,
-          variant: "destructive",
-        });
-      } else {
-        setFarms(farmsData || []);
+        // Load farms
+        const { data: farmsData, error: farmsError } = await supabase.rpc('my_farms');
         
-        // Calcular totais
-        setTotalFarms(farmsData?.length || 0);
-        const totalFemales = farmsData?.reduce((sum: number, farm: Farm) => sum + (farm.total_females || 0), 0) || 0;
-        setTotalAnimals(totalFemales);
-      }
+        if (farmsError) {
+          console.error('Error loading farms:', farmsError);
+          toast({
+            title: "Erro ao carregar fazendas",
+            description: farmsError.message,
+            variant: "destructive",
+          });
+        } else {
+          setFarms(farmsData || []);
+          
+          // Calcular totais
+          setTotalFarms(farmsData?.length || 0);
+          const totalFemales = farmsData?.reduce((sum: number, farm: Farm) => sum + (farm.total_females || 0), 0) || 0;
+          setTotalAnimals(totalFemales);
+        }
+
+        // Load total bulls count from database
+        const { count: bullsCount, error: bullsError } = await supabase
+          .from('bulls')
+          .select('*', { count: 'exact', head: true });
+        
+        if (!bullsError) {
+          setTotalBulls(bullsCount || 0);
+        }
     } catch (error: any) {
       console.error('Error loading data:', error);
       toast({
@@ -297,7 +307,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
                         Busca de Touros
                       </CardTitle>
                       <CardDescription>
-                        {selectedFarm.selected_bulls} touros selecionados
+                        <span>{totalBulls} touros no banco • {selectedFarm.selected_bulls} selecionados</span>
                       </CardDescription>
                     </CardHeader>
                   </Card>
