@@ -7,10 +7,46 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, TrendingUp, TrendingDown, BarChart3, LineChart as LineChartIcon, Download, Settings, Filter, Eye, EyeOff, RefreshCw, Users } from "lucide-react";
+import { ArrowLeft, Settings, Download, RefreshCw, Users, TrendingUp, BarChart3, PieChart as PieChartIcon, Activity, LineChart as LineChartIcon, Eye, EyeOff } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from '@/integrations/supabase/client';
+
+// Constants
+const YEARS_FIXED = [2021, 2022, 2023, 2024, 2025];
+const YEARS = [2021, 2022, 2023, 2024, 2025];
+
+type RawRow = Record<string, any>;
+
+function coerceYear(v: any): number | null {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function pickNumber(row: RawRow, keys: string[], fallback = 0): number {
+  for (const k of keys) {
+    const v = row?.[k];
+    const n = Number(v);
+    if (Number.isFinite(n)) return n;
+  }
+  return fallback;
+}
+
+function mean(arr: number[]): number {
+  if (!arr.length) return 0;
+  return arr.reduce((sum, val) => sum + val, 0) / arr.length;
+}
+
+function linearRegression(xs: number[], ys: number[]) {
+  if (xs.length !== ys.length || xs.length < 2) return { a: 0, b: 0 };
+  const meanFn = (a: number[]) => a.reduce((s, v) => s + v, 0) / a.length;
+  const mx = meanFn(xs), my = meanFn(ys);
+  const vxx = xs.reduce((s, x) => s + (x - mx) * (x - mx), 0) / xs.length;
+  if (vxx === 0) return { a: my, b: 0 };
+  const cov = xs.reduce((s, x, i) => s + (x - mx) * (ys[i] - my), 0) / xs.length;
+  const b = cov / vxx;
+  const a = my - b * mx;
+  return { a, b };
+}
 
 interface ChartsPageProps {
   farm?: any;
@@ -146,22 +182,30 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
     }
   };
 
-  // Calcular estatísticas
+  // Calcular estatísticas - VERSÃO DEFENSIVA
   const calculateStatistics = (data: any[]) => {
-    if (!data.length) return;
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      setStatisticsData({});
+      return;
+    }
 
     const stats: any = {};
     
     selectedPTAs.forEach(pta => {
-      const values = data.map(f => Number(f[pta])).filter(v => !isNaN(v) && v !== null);
+      if (!pta) return;
+      
+      const values = data
+        .map(f => pickNumber(f || {}, [pta], NaN))
+        .filter(v => Number.isFinite(v));
+        
       if (values.length > 0) {
         const sorted = [...values].sort((a, b) => a - b);
         stats[pta] = {
-          mean: values.reduce((sum, val) => sum + val, 0) / values.length,
+          mean: mean(values),
           median: sorted[Math.floor(sorted.length / 2)],
           min: Math.min(...values),
           max: Math.max(...values),
-          std: Math.sqrt(values.reduce((sum, val) => sum + Math.pow(val - (values.reduce((s, v) => s + v, 0) / values.length), 2), 0) / values.length),
+          std: Math.sqrt(values.reduce((sum, val) => sum + Math.pow(val - mean(values), 2), 0) / values.length),
           count: values.length
         };
       }
@@ -170,127 +214,118 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
     setStatisticsData(stats);
   };
 
-  // Processar dados para gráficos de tendência
+  // Processar dados para gráficos de tendência - VERSÃO DEFENSIVA
   const processedTrendData = useMemo(() => {
-    if (!females.length) return [];
+    if (!females || !Array.isArray(females) || females.length === 0) return [];
     
     let processedData: any[] = [];
     
     if (groupBy === 'year') {
-      const dataByYear: { [key: string]: any } = {};
+      // Normaliza dados por ano com segurança
+      const byYear = new Map<number, { year: number; n: number; values: number[] }>();
       
       females.forEach(female => {
-        if (!female.birth_date) return;
+        if (!female) return;
         
-        const year = new Date(female.birth_date).getFullYear();
-        if (!dataByYear[year]) {
-          dataByYear[year] = { year, count: 0 };
-          selectedPTAs.forEach(pta => {
-            dataByYear[year][pta] = [];
-          });
+        const birthYear = coerceYear(female.birth_date ? new Date(female.birth_date).getFullYear() : null);
+        if (!birthYear) return;
+        
+        if (!byYear.has(birthYear)) {
+          byYear.set(birthYear, { year: birthYear, n: 0, values: [] });
         }
         
-        dataByYear[year].count++;
+        const yearData = byYear.get(birthYear)!;
+        yearData.n++;
+        
         selectedPTAs.forEach(pta => {
-          const value = Number(female[pta]);
-          if (!isNaN(value) && value !== null) {
-            dataByYear[year][pta].push(value);
+          const value = pickNumber(female, [pta], NaN);
+          if (Number.isFinite(value)) {
+            yearData.values.push(value);
           }
         });
       });
       
-      processedData = Object.values(dataByYear)
-        .filter(yearData => yearData && typeof yearData === 'object')
-        .map((yearData: any) => {
-          const result: any = { year: yearData.year, count: yearData.count || 0 };
+      // Constrói array final para o range fixo
+      processedData = YEARS_FIXED.map(year => {
+        const entry = byYear.get(year);
+        const count = entry?.n || 0;
+        const values = entry?.values || [];
+        const meanVal = values.length > 0 ? mean(values) : 0;
+        
+        const result: any = { year, count };
         selectedPTAs.forEach(pta => {
-          if (pta && yearData && typeof yearData === 'object') {
-            const values = yearData[pta] || [];
-            result[pta] = values.length > 0 
-              ? values.reduce((sum: number, val: number) => sum + val, 0) / values.length 
-              : null;
-          }
+          const ptaValues = values.length > 0 ? values : [];
+          result[pta] = ptaValues.length > 0 ? meanVal : null;
         });
-          return result;
-        })
-        .filter(d => d.count > 0)
-        .sort((a, b) => a.year - b.year);
+        
+        return result;
+      }).filter(d => d.count > 0);
     }
     
     else if (groupBy === 'category') {
-      const dataByCategory: { [key: string]: any } = {};
+      const byCategory = new Map<string, { category: string; n: number; values: number[] }>();
       
       females.forEach(female => {
+        if (!female) return;
+        
         const category = female.category || 'Sem Categoria';
-        if (!dataByCategory[category]) {
-          dataByCategory[category] = { category, count: 0 };
-          selectedPTAs.forEach(pta => {
-            dataByCategory[category][pta] = [];
-          });
+        
+        if (!byCategory.has(category)) {
+          byCategory.set(category, { category, n: 0, values: [] });
         }
         
-        dataByCategory[category].count++;
+        const catData = byCategory.get(category)!;
+        catData.n++;
+        
         selectedPTAs.forEach(pta => {
-          const value = Number(female[pta]);
-          if (!isNaN(value) && value !== null) {
-            dataByCategory[category][pta].push(value);
+          const value = pickNumber(female, [pta], NaN);
+          if (Number.isFinite(value)) {
+            catData.values.push(value);
           }
         });
       });
       
-      processedData = Object.values(dataByCategory)
-        .filter(catData => catData && typeof catData === 'object')
-        .map((catData: any) => {
-          const result: any = { name: catData.category, count: catData.count || 0 };
+      processedData = Array.from(byCategory.values()).map(catData => {
+        const result: any = { name: catData.category, count: catData.n };
         selectedPTAs.forEach(pta => {
-          if (pta && catData && typeof catData === 'object') {
-            const values = catData[pta] || [];
-            result[pta] = values.length > 0 
-              ? values.reduce((sum: number, val: number) => sum + val, 0) / values.length 
-              : null;
-          }
+          const values = catData.values;
+          result[pta] = values.length > 0 ? mean(values) : null;
         });
-          return result;
-        })
-        .filter(d => d.count > 0);
+        return result;
+      }).filter(d => d.count > 0);
     }
     
     else if (groupBy === 'parity') {
-      const dataByParity: { [key: string]: any } = {};
+      const byParity = new Map<string, { parity: string; n: number; values: number[] }>();
       
       females.forEach(female => {
-        const parity = female.parity_order || 'Primípara';
-        if (!dataByParity[parity]) {
-          dataByParity[parity] = { parity, count: 0 };
-          selectedPTAs.forEach(pta => {
-            dataByParity[parity][pta] = [];
-          });
+        if (!female) return;
+        
+        const parity = String(female.parity_order || 'Primípara');
+        
+        if (!byParity.has(parity)) {
+          byParity.set(parity, { parity, n: 0, values: [] });
         }
         
-        dataByParity[parity].count++;
+        const parData = byParity.get(parity)!;
+        parData.n++;
+        
         selectedPTAs.forEach(pta => {
-          const value = Number(female[pta]);
-          if (!isNaN(value) && value !== null) {
-            dataByParity[parity][pta].push(value);
+          const value = pickNumber(female, [pta], NaN);
+          if (Number.isFinite(value)) {
+            parData.values.push(value);
           }
         });
       });
       
-      processedData = Object.values(dataByParity)
-        .filter(parityData => parityData && typeof parityData === 'object')
-        .map((parityData: any) => {
-          const result: any = { name: parityData.parity, count: parityData.count || 0 };
+      processedData = Array.from(byParity.values()).map(parData => {
+        const result: any = { name: parData.parity, count: parData.n };
         selectedPTAs.forEach(pta => {
-          if (pta && parityData && typeof parityData === 'object') {
-            const values = parityData[pta] || [];
-            result[pta] = values.length > 0 
-              ? values.reduce((sum: number, val: number) => sum + val, 0) / values.length 
-              : null;
-          }
+          const values = parData.values;
+          result[pta] = values.length > 0 ? mean(values) : null;
         });
-          return result;
-        })
-        .filter(d => d.count > 0);
+        return result;
+      }).filter(d => d.count > 0);
     }
     
     return processedData;
@@ -944,28 +979,8 @@ const PTA_TO_KEY_MAP: Record<string, string> = {
   "GFI": "gfi"
 };
 
-const YEARS = [2021, 2022, 2023, 2024, 2025];
-
-// Utilitários matemáticos
-const mean = (arr: number[]) => (arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0);
-const variance = (arr: number[]) => {
-  if (arr.length <= 1) return 0;
-  const m = mean(arr);
-  return arr.reduce((s, v) => s + (v - m) * (v - m), 0) / arr.length;
-};
-
-function linearRegression(xs: number[], ys: number[]) {
-  if (xs.length !== ys.length || xs.length === 0) return { a: 0, b: 0 };
-  const mx = mean(xs), my = mean(ys);
-  const vxx = variance(xs);
-  if (vxx === 0) return { a: my, b: 0 };
-  const cov = xs.reduce((s, x, i) => s + (x - mx) * (ys[i] - my), 0) / xs.length;
-  const b = cov / vxx;
-  const a = my - b * mx;
-  return { a, b };
-}
-
-function descriptiveStats(values: number[]) {
+// Utility functions
+const descriptiveStats = (values: number[]) => {
   const vals = values.filter((v) => Number.isFinite(v));
   const m = mean(vals);
   const std = Math.sqrt(variance(vals));
@@ -973,7 +988,13 @@ function descriptiveStats(values: number[]) {
   const min = vals.length ? Math.min(...vals) : 0;
   const belowPct = vals.length ? (vals.filter(v => v < m).length / vals.length) * 100 : 0;
   return { mean: m, std, max, min, belowPct };
-}
+};
+
+const variance = (arr: number[]) => {
+  if (arr.length <= 1) return 0;
+  const m = mean(arr);
+  return arr.reduce((s, v) => s + (v - m) * (v - m), 0) / arr.length;
+};
 
 // Herdabilidades (fallback = 0.30 quando não houver)
 const H2: Record<string, number> = { 
