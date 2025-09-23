@@ -160,9 +160,11 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
     
     try {
       setLoading(true);
+      // Use same approach as HerdPage - load all females with high limit
       const { data, error } = await supabase
         .rpc('get_females_denorm', { target_farm_id: farm.farm_id })
-        .order('birth_date', { ascending: true });
+        .order('birth_date', { ascending: true })
+        .limit(10000); // Set high limit to ensure all records are loaded
 
       if (error) throw error;
       
