@@ -303,7 +303,7 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
   const [standardize, setStandardize] = useState(true);
 
   // Segmentation state
-  const [segmentationEnabled, setSegmentationEnabled] = useState(false);
+  const [segmentationEnabled, setSegmentationEnabled] = useState(true);
   const [superiorPercent, setSuperiorPercent] = useState([20]);
   const [intermediarioPercent, setIntermediarioPercent] = useState([60]);
   const [inferiorPercent, setInferiorPercent] = useState([20]);
@@ -455,7 +455,7 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
     return copy.sort((a, b) => (Number(b.CustomScore) || 0) - (Number(a.CustomScore) || 0));
   }, [calc]);
 
-  // Segmentation calculation
+  // Segmentation calculation with proper score handling for all index types
   const segmentedAnimals = useMemo(() => {
     if (!segmentationEnabled) {
       return sorted;
@@ -466,13 +466,39 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
       return sorted;
     }
 
+    // Create a properly sorted list based on the selected index
+    let scoredAnimals = [...sorted];
+    
+    // Sort based on the current index selection
+    scoredAnimals.sort((a, b) => {
+      let scoreA = 0;
+      let scoreB = 0;
+      
+      if (indexSelection === "HHP$") {
+        scoreA = Number(a.hhp_dollar) || 0;
+        scoreB = Number(b.hhp_dollar) || 0;
+      } else if (indexSelection === "TPI") {
+        scoreA = Number(a.tpi) || 0;
+        scoreB = Number(b.tpi) || 0;
+      } else if (indexSelection === "NM$") {
+        scoreA = Number(a.nm_dollar) || 0;
+        scoreB = Number(b.nm_dollar) || 0;
+      } else {
+        // Custom index
+        scoreA = Number(a.CustomScore) || 0;
+        scoreB = Number(b.CustomScore) || 0;
+      }
+      
+      return scoreB - scoreA; // Higher scores first
+    });
+
     // Calculate counts based on percentages, ensuring all animals are classified
     const superiorCount = Math.floor((superiorPercent[0] / 100) * total);
     const intermediarioCount = Math.floor((intermediarioPercent[0] / 100) * total);
     // Assign remaining animals to inferior to ensure all are classified
     const inferiorCount = total - superiorCount - intermediarioCount;
     
-    return sorted.map((animal, index) => {
+    return scoredAnimals.map((animal, index) => {
       let classification: "Superior" | "Intermediário" | "Inferior";
       
       if (index < superiorCount) {
@@ -485,7 +511,7 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
       
       return { ...animal, Classification: classification };
     });
-  }, [sorted, segmentationEnabled, superiorPercent, intermediarioPercent, inferiorPercent]);
+  }, [sorted, segmentationEnabled, superiorPercent, intermediarioPercent, inferiorPercent, indexSelection]);
 
   // Get available birth years for filter
   const availableYears = useMemo(() => {
