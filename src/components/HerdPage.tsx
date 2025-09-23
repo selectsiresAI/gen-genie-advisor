@@ -758,7 +758,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts, o
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredFemales.slice(0, 10).map((female) => (
+                        {filteredFemales.map((female) => (
                           <tr key={female.id} className="hover:bg-muted/50">
                             <td className="border px-2 py-1 text-xs">
                               <input
