@@ -1330,6 +1330,89 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
           })()}
         </div>
       </Section>
+      
+      {/* Fórmula e Explicação do ROI */}
+      <Section title="Fórmula do ROI">
+        <div style={{ backgroundColor: COLORS.white, padding: 20, borderRadius: 10, border: `1px solid ${COLORS.gray}` }}>
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 10 }}>Fórmula:</div>
+            <div style={{ 
+              backgroundColor: '#f8f9fa', 
+              padding: 15, 
+              borderRadius: 8, 
+              fontFamily: 'monospace', 
+              fontSize: 14,
+              border: `1px solid ${COLORS.gray}`,
+              textAlign: 'center',
+              fontWeight: 600
+            }}>
+              ROI = (NM$ Ponderado × Total de Bezerras) - Custo Total do Sêmen
+            </div>
+          </div>
+          
+          <div style={{ marginBottom: 15 }}>
+            <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 10 }}>Explicação:</div>
+            <div style={{ fontSize: 14, lineHeight: 1.6, color: COLORS.black }}>
+              <div style={{ marginBottom: 8 }}>
+                <strong>NM$ Ponderado:</strong> Valor médio ponderado do NM$ (Net Merit Dollar) dos touros selecionados, 
+                considerando o número de doses utilizadas de cada touro.
+              </div>
+              <div style={{ marginBottom: 8 }}>
+                <strong>Total de Bezerras:</strong> Número total estimado de bezerras fêmeas nascidas 
+                (considerando taxa de natalidade feminina variável por tipo de sêmen: Sexado 90%, Convencional 47%).
+              </div>
+              <div style={{ marginBottom: 8 }}>
+                <strong>Custo Total do Sêmen:</strong> Somatória do valor gasto com todas as doses de sêmen utilizadas no plano.
+              </div>
+            </div>
+          </div>
+          
+          <div style={{ 
+            backgroundColor: '#f8f9fa', 
+            padding: 15, 
+            borderRadius: 8, 
+            border: `1px solid ${COLORS.gray}`,
+            marginTop: 15 
+          }}>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Interpretação do Resultado:</div>
+            <div style={{ fontSize: 13, lineHeight: 1.5 }}>
+              <div style={{ marginBottom: 5 }}>
+                <span style={{ color: "#167C2B", fontWeight: 600 }}>ROI Positivo:</span> O retorno genético supera o investimento em sêmen
+              </div>
+              <div>
+                <span style={{ color: COLORS.red, fontWeight: 600 }}>ROI Negativo:</span> O investimento em sêmen é maior que o retorno genético projetado
+              </div>
+            </div>
+          </div>
+          
+          {calc.totalBez > 0 && (
+            <div style={{ 
+              backgroundColor: '#e3f2fd', 
+              padding: 15, 
+              borderRadius: 8, 
+              border: '1px solid #90caf9',
+              marginTop: 15 
+            }}>
+              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Valores do Plano Atual:</div>
+              <div style={{ fontSize: 13, lineHeight: 1.5 }}>
+                <div>NM$ Ponderado: <strong>${(calc.ptaPondGeral["NM$"] || 0).toFixed(2)}</strong></div>
+                <div>Total de Bezerras: <strong>{calc.totalBez.toLocaleString()}</strong></div>
+                <div>Custo Total: <strong>{BRL(calc.totalValor)}</strong></div>
+                <div style={{ marginTop: 8, fontSize: 14, fontWeight: 600 }}>
+                  ROI Total: <span style={{ color: (() => {
+                    const totalROI = (calc.ptaPondGeral["NM$"] || 0) * calc.totalBez - calc.totalValor;
+                    return totalROI >= 0 ? "#167C2B" : COLORS.red;
+                  })() }}>
+                    {BRL((() => {
+                      return (calc.ptaPondGeral["NM$"] || 0) * calc.totalBez - calc.totalValor;
+                    })())}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </Section>
     </div>
   );
 }
