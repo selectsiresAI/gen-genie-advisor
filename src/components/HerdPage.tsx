@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowLeft, Users, Search, Plus, Upload, Download, Filter, TrendingUp } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -102,6 +104,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
   const [females, setFemales] = useState<Female[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedYear, setSelectedYear] = useState<string>('');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const { toast } = useToast();
   const { setSelectedHerdId, setDashboardCounts } = useHerdStore();
@@ -220,10 +223,26 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
     }
   };
 
-  const filteredFemales = females.filter(female =>
-    female.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (female.identifier && female.identifier.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Get available birth years for filter
+  const availableYears = useMemo(() => {
+    const years = new Set<string>();
+    females.forEach(female => {
+      if (female.birth_date) {
+        years.add(new Date(female.birth_date).getFullYear().toString());
+      }
+    });
+    return Array.from(years).sort((a, b) => b.localeCompare(a));
+  }, [females]);
+
+  const filteredFemales = females.filter(female => {
+    const matchesSearch = female.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (female.identifier && female.identifier.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesYear = !selectedYear || (female.birth_date && 
+      new Date(female.birth_date).getFullYear().toString() === selectedYear);
+    
+    return matchesSearch && matchesYear;
+  });
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR');
@@ -539,6 +558,17 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
                 className="pl-10"
               />
             </div>
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Ano nascimento" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Todos os anos</SelectItem>
+                {availableYears.map(year => (
+                  <SelectItem key={year} value={year}>{year}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button>
               <Plus className="w-4 h-4 mr-2" />
               Adicionar Fêmea
@@ -584,168 +614,170 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
                   )}
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-[2000px] w-full border-collapse">
-                    <thead>
-                      <tr className="bg-muted">
-                        <th className="border px-2 py-1 text-left text-xs">ID Fazenda</th>
-                        <th className="border px-2 py-1 text-left text-xs">Nome</th>
-                        <th className="border px-2 py-1 text-left text-xs">ID CDCB</th>
-                        <th className="border px-2 py-1 text-left text-xs">Pedigre Pai/Avô Materno/BisaAvô Materno</th>
-                        <th className="border px-2 py-1 text-left text-xs">Data de Nascimento</th>
-                        <th className="border px-2 py-1 text-left text-xs">Ordem de Parto</th>
-                        <th className="border px-2 py-1 text-left text-xs">Categoria</th>
-                        <th className="border px-2 py-1 text-left text-xs">HHP$®</th>
-                        <th className="border px-2 py-1 text-left text-xs">TPI</th>
-                        <th className="border px-2 py-1 text-left text-xs">NM$</th>
-                        <th className="border px-2 py-1 text-left text-xs">CM$</th>
-                        <th className="border px-2 py-1 text-left text-xs">FM$</th>
-                        <th className="border px-2 py-1 text-left text-xs">GM$</th>
-                        <th className="border px-2 py-1 text-left text-xs">F SAV</th>
-                        <th className="border px-2 py-1 text-left text-xs">PTAM</th>
-                        <th className="border px-2 py-1 text-left text-xs">CFP</th>
-                        <th className="border px-2 py-1 text-left text-xs">PTAF</th>
-                        <th className="border px-2 py-1 text-left text-xs">PTAF%</th>
-                        <th className="border px-2 py-1 text-left text-xs">PTAP</th>
-                        <th className="border px-2 py-1 text-left text-xs">PTAP%</th>
-                        <th className="border px-2 py-1 text-left text-xs">PL</th>
-                        <th className="border px-2 py-1 text-left text-xs">DPR</th>
-                        <th className="border px-2 py-1 text-left text-xs">LIV</th>
-                        <th className="border px-2 py-1 text-left text-xs">SCS</th>
-                        <th className="border px-2 py-1 text-left text-xs">MAST</th>
-                        <th className="border px-2 py-1 text-left text-xs">MET</th>
-                        <th className="border px-2 py-1 text-left text-xs">RP</th>
-                        <th className="border px-2 py-1 text-left text-xs">DA</th>
-                        <th className="border px-2 py-1 text-left text-xs">KET</th>
-                        <th className="border px-2 py-1 text-left text-xs">MF</th>
-                        <th className="border px-2 py-1 text-left text-xs">PTAT</th>
-                        <th className="border px-2 py-1 text-left text-xs">UDC</th>
-                        <th className="border px-2 py-1 text-left text-xs">FLC</th>
-                        <th className="border px-2 py-1 text-left text-xs">SCE</th>
-                        <th className="border px-2 py-1 text-left text-xs">DCE</th>
-                        <th className="border px-2 py-1 text-left text-xs">SSB</th>
-                        <th className="border px-2 py-1 text-left text-xs">DSB</th>
-                        <th className="border px-2 py-1 text-left text-xs">H LIV</th>
-                        <th className="border px-2 py-1 text-left text-xs">CCR</th>
-                        <th className="border px-2 py-1 text-left text-xs">HCR</th>
-                        <th className="border px-2 py-1 text-left text-xs">FI</th>
-                        <th className="border px-2 py-1 text-left text-xs">GL</th>
-                        <th className="border px-2 py-1 text-left text-xs">EFC</th>
-                        <th className="border px-2 py-1 text-left text-xs">BWC</th>
-                        <th className="border px-2 py-1 text-left text-xs">STA</th>
-                        <th className="border px-2 py-1 text-left text-xs">STR</th>
-                        <th className="border px-2 py-1 text-left text-xs">DFM</th>
-                        <th className="border px-2 py-1 text-left text-xs">RUA</th>
-                        <th className="border px-2 py-1 text-left text-xs">RLS</th>
-                        <th className="border px-2 py-1 text-left text-xs">RTP</th>
-                        <th className="border px-2 py-1 text-left text-xs">FTL</th>
-                        <th className="border px-2 py-1 text-left text-xs">RW</th>
-                        <th className="border px-2 py-1 text-left text-xs">RLR</th>
-                        <th className="border px-2 py-1 text-left text-xs">FTA</th>
-                        <th className="border px-2 py-1 text-left text-xs">FLS</th>
-                        <th className="border px-2 py-1 text-left text-xs">FUA</th>
-                        <th className="border px-2 py-1 text-left text-xs">RUH</th>
-                        <th className="border px-2 py-1 text-left text-xs">RUW</th>
-                        <th className="border px-2 py-1 text-left text-xs">UCL</th>
-                        <th className="border px-2 py-1 text-left text-xs">UDP</th>
-                        <th className="border px-2 py-1 text-left text-xs">FTP</th>
-                        <th className="border px-2 py-1 text-left text-xs">RFI</th>
-                        <th className="border px-2 py-1 text-left text-xs">Beta-Casein</th>
-                        <th className="border px-2 py-1 text-left text-xs">Kappa-Casein</th>
-                        <th className="border px-2 py-1 text-left text-xs">GFI</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredFemales.map((female) => (
-                        <tr key={female.id} className="hover:bg-muted/50">
-                          <td className="border px-2 py-1 text-xs">{farm.farm_id}</td>
-                          <td className="border px-2 py-1 text-xs font-medium">{female.name}</td>
-                          <td className="border px-2 py-1 text-xs">{female.cdcb_id || female.identifier || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{[female.sire_naab, female.mgs_naab, female.mmgs_naab].filter(Boolean).join('/') || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">
-                            {female.birth_date ? formatDate(female.birth_date) : '-'} 
-                            {female.birth_date && (
-                              <span className="text-muted-foreground ml-1">
-                                ({getAge(female.birth_date)})
-                              </span>
-                            )}
-                          </td>
-                          <td className="border px-2 py-1 text-xs">{female.parity_order || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">
-                            <Badge variant="outline" className={
-                              getAutomaticCategory(female.birth_date, female.parity_order) === 'Bezerra' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                              getAutomaticCategory(female.birth_date, female.parity_order) === 'Novilha' ? 'bg-green-50 text-green-700 border-green-200' :
-                              getAutomaticCategory(female.birth_date, female.parity_order) === 'Primípara' ? 'bg-purple-50 text-purple-700 border-purple-200' :
-                              getAutomaticCategory(female.birth_date, female.parity_order) === 'Secundípara' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                              getAutomaticCategory(female.birth_date, female.parity_order) === 'Multípara' ? 'bg-red-50 text-red-700 border-red-200' :
-                              'bg-gray-50 text-gray-700 border-gray-200'
-                            }>
-                              {getAutomaticCategory(female.birth_date, female.parity_order)}
-                            </Badge>
-                          </td>
-                          <td className="border px-2 py-1 text-xs">{female.hhp_dollar ? Number(female.hhp_dollar).toFixed(0) : '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.tpi || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.nm_dollar || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.cm_dollar || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.fm_dollar || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.gm_dollar || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.f_sav || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.ptam || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.cfp || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.ptaf || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.ptaf_pct || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.ptap || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.ptap_pct || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.pl || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.dpr || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.liv || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.scs || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.mast || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.met || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.rp || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.da || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.ket || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.mf || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.ptat || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.udc || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.flc || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.sce || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.dce || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.ssb || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.dsb || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.h_liv || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.ccr || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.hcr || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.fi || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.gl || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.efc || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.bwc || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.sta || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.str || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.dfm || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.rua || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.rls || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.rtp || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.ftl || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.rw || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.rlr || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.fta || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.fls || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.fua || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.ruh || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.ruw || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.ucl || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.udp || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.ftp || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.rfi || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.beta_casein || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.kappa_casein || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.gfi || '-'}</td>
+                <ScrollArea className="h-[500px] w-full">
+                  <div className="min-w-[2000px]">
+                    <table className="w-full border-collapse">
+                      <thead className="sticky top-0 z-10">
+                        <tr className="bg-muted">
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">ID Fazenda</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">Nome</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">ID CDCB</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">Pedigre Pai/Avô Materno/BisaAvô Materno</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">Data de Nascimento</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">Ordem de Parto</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">Categoria</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">HHP$®</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">TPI</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">NM$</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">CM$</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">FM$</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">GM$</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">F SAV</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">PTAM</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">CFP</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">PTAF</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">PTAF%</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">PTAP</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">PTAP%</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">PL</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">DPR</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">LIV</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">SCS</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">MAST</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">MET</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">RP</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">DA</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">KET</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">MF</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">PTAT</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">UDC</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">FLC</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">SCE</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">DCE</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">SSB</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">DSB</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">H LIV</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">CCR</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">HCR</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">FI</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">GL</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">EFC</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">BWC</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">STA</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">STR</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">DFM</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">RUA</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">RLS</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">RTP</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">FTL</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">RW</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">RLR</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">FTA</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">FLS</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">FUA</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">RUH</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">RUW</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">UCL</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">UDP</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">FTP</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">RFI</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">Beta-Casein</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">Kappa-Casein</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">GFI</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {filteredFemales.slice(0, 10).map((female) => (
+                          <tr key={female.id} className="hover:bg-muted/50">
+                            <td className="border px-2 py-1 text-xs">{farm.farm_id}</td>
+                            <td className="border px-2 py-1 text-xs font-medium">{female.name}</td>
+                            <td className="border px-2 py-1 text-xs">{female.cdcb_id || female.identifier || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{[female.sire_naab, female.mgs_naab, female.mmgs_naab].filter(Boolean).join('/') || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">
+                              {female.birth_date ? formatDate(female.birth_date) : '-'} 
+                              {female.birth_date && (
+                                <span className="text-muted-foreground ml-1">
+                                  ({getAge(female.birth_date)})
+                                </span>
+                              )}
+                            </td>
+                            <td className="border px-2 py-1 text-xs">{female.parity_order || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">
+                              <Badge variant="outline" className={
+                                getAutomaticCategory(female.birth_date, female.parity_order) === 'Bezerra' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                getAutomaticCategory(female.birth_date, female.parity_order) === 'Novilha' ? 'bg-green-50 text-green-700 border-green-200' :
+                                getAutomaticCategory(female.birth_date, female.parity_order) === 'Primípara' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                                getAutomaticCategory(female.birth_date, female.parity_order) === 'Secundípara' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                                getAutomaticCategory(female.birth_date, female.parity_order) === 'Multípara' ? 'bg-red-50 text-red-700 border-red-200' :
+                                'bg-gray-50 text-gray-700 border-gray-200'
+                              }>
+                                {getAutomaticCategory(female.birth_date, female.parity_order)}
+                              </Badge>
+                            </td>
+                            <td className="border px-2 py-1 text-xs">{female.hhp_dollar ? Number(female.hhp_dollar).toFixed(0) : '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.tpi || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.nm_dollar || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.cm_dollar || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.fm_dollar || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.gm_dollar || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.f_sav || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.ptam || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.cfp || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.ptaf || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.ptaf_pct || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.ptap || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.ptap_pct || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.pl || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.dpr || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.liv || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.scs || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.mast || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.met || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.rp || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.da || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.ket || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.mf || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.ptat || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.udc || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.flc || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.sce || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.dce || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.ssb || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.dsb || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.h_liv || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.ccr || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.hcr || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.fi || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.gl || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.efc || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.bwc || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.sta || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.str || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.dfm || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.rua || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.rls || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.rtp || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.ftl || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.rw || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.rlr || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.fta || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.fls || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.fua || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.ruh || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.ruw || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.ucl || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.udp || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.ftp || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.rfi || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.beta_casein || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.kappa_casein || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{female.gfi || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </ScrollArea>
               )}
             </CardContent>
           </Card>
