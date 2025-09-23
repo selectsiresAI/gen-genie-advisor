@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { usePlanStore, AVAILABLE_PTAS, getFemalesByFarm, countFromCategoria, calculateMotherAverages, getBullPTAValue, calculatePopulationStructure } from "../hooks/usePlanStore";
 import { useHerdStore } from "../hooks/useHerdStore";
+import { useFileStore } from "../hooks/useFileStore";
 import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
 import EstruturalPopulacional from './EstruturalPopulacional';
@@ -309,14 +310,15 @@ function useAppState() {
     console.log('🔄 ProjecaoGenetica usando dados direto do Supabase');
   }, []);
 
-  // Auto-load herd data on page load
+  // Auto-load herd data on page load - prioritize useHerdStore (from HerdPage)
   useEffect(() => {
     const loadHerdData = () => {
       try {
-        const { selectedFarmId } = usePlanStore.getState();
         const { selectedHerdId } = useHerdStore.getState();
+        const { selectedFarmId } = usePlanStore.getState();
         
-        const farmId = selectedFarmId || selectedHerdId;
+        // Priority: 1) useHerdStore (from entering farm), 2) usePlanStore (manual selection)
+        const farmId = selectedHerdId || selectedFarmId;
         if (farmId) {
           console.log('🔄 Carregando rebanho automaticamente:', farmId);
           const populationStructure = calculatePopulationStructure(farmId);
@@ -1555,6 +1557,7 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
 function PageExport({ st }: { st: AppState }) {
   const ref = useRef<HTMLDivElement>(null);
   const { ready } = useCharts();
+  const { addReport } = useFileStore();
 
   const doExport = async () => {
     const el = ref.current;
@@ -1575,19 +1578,52 @@ function PageExport({ st }: { st: AppState }) {
     a.appendChild(el.cloneNode(true));
 
     if ((window as any).html2canvas && (window as any).jspdf) {
-      // @ts-ignore
-      const { jsPDF } = (window as any).jspdf;
-      // @ts-ignore
-      const canvas = await (window as any).html2canvas(a, { scale: 2, backgroundColor: "#FFFFFF" });
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({ orientation: canvas.width > canvas.height ? "l" : "p", unit: "pt", format: "a4" });
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const ratio = Math.min(pageWidth / canvas.width, pageHeight / canvas.height);
-      const w = canvas.width * ratio;
-      const h = canvas.height * ratio;
-      pdf.addImage(imgData, "PNG", (pageWidth - w) / 2, 24, w, h);
-      pdf.save("Projecao_Genetica_MVP.pdf");
+      try {
+        // @ts-ignore
+        const { jsPDF } = (window as any).jspdf;
+        // @ts-ignore
+        const canvas = await (window as any).html2canvas(a, { scale: 2, backgroundColor: "#FFFFFF" });
+        const imgData = canvas.toDataURL("image/png");
+        const pdf = new jsPDF({ orientation: canvas.width > canvas.height ? "l" : "p", unit: "pt", format: "a4" });
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const ratio = Math.min(pageWidth / canvas.width, pageHeight / canvas.height);
+        const w = canvas.width * ratio;
+        const h = canvas.height * ratio;
+        pdf.addImage(imgData, "PNG", (pageWidth - w) / 2, 24, w, h);
+        
+        // Convert PDF to blob for saving to Files page
+        const pdfBlob = pdf.output('blob');
+        
+        // Save to Files page
+        const reportName = `Projeção Genética ${st.farm.farmName || 'MVP'} - ${new Date().toLocaleDateString('pt-BR')}`;
+        addReport({
+          name: reportName,
+          type: 'genetic_projection',
+          sourceId: st.farm.farmName,
+          data: st,
+          metadata: {
+            createdAt: new Date().toISOString(),
+            size: pdfBlob.size,
+            description: `Projeção genética com ${st.bulls.length} touros e ${st.structure.total} fêmeas`,
+            settings: {
+              selectedPTAs: st.selectedPTAs,
+              numberOfBulls: st.numberOfBulls,
+              structure: st.structure,
+              repro: st.repro
+            }
+          },
+          fileBlob: pdfBlob
+        });
+        
+        // Also download the file
+        pdf.save("Projecao_Genetica_MVP.pdf");
+        
+        toast.success('PDF salvo na página Arquivos e baixado com sucesso!');
+      } catch (error) {
+        console.error('Erro ao exportar PDF:', error);
+        toast.error('Erro ao exportar PDF');
+      }
     } else {
       // Fallback
       window.print();
