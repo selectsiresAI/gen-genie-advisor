@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
+import { generateSegmentationPDF, generatePDFBlob } from '@/utils/pdfGenerator';
+import { useFileStore } from '@/hooks/useFileStore';
 
 interface Farm {
   id: string;
@@ -294,6 +296,7 @@ type Gate = {
 // ────────────────────────────────────────────────────────────────────
 export default function SegmentationPage({ farm, onBack }: SegmentationPageProps) {
   const [indexSelection, setIndexSelection] = useState<"HHP$" | "TPI" | "NM$" | "Custom">("HHP$");
+  const { addReport } = useFileStore();
 
   // Custom state - separated search terms for different purposes
   const [ptaSearch, setPtaSearch] = useState(""); // For filtering PTAs in selection
@@ -639,6 +642,63 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
     const csv = toCSV(rows);
     downloadText("segmentacao_custom_index.csv", csv);
   }
+
+  const saveReportToFiles = async () => {
+    try {
+      const reportData = {
+        farmName: farm.name,
+        filters: {
+          categories: availableCategories.filter(cat => !categoryFilter || categoryFilter === 'all' || cat === categoryFilter),
+          classifications: ['donor', 'inter', 'recipient']
+        },
+        distribution: {
+          superior: distributionStats.superior.percentage,
+          intermediario: distributionStats.intermediario.percentage,
+          inferior: distributionStats.inferior.percentage
+        },
+        customSettings: indexSelection === 'Custom' ? {
+          selectedIndex: indexSelection,
+          selectedTraits,
+          weights
+        } : undefined,
+        femalesData: filteredAnimals,
+        date: new Date().toLocaleDateString('pt-BR')
+      };
+
+      const pdf = await generateSegmentationPDF(reportData);
+      const pdfBlob = await generatePDFBlob(pdf);
+
+      // Salvar no store de arquivos
+      addReport({
+        name: `Segmentação ${farm.name} - ${new Date().toLocaleDateString('pt-BR')}`,
+        type: 'segmentation',
+        sourceId: farm.farm_id,
+        data: reportData,
+        metadata: {
+          createdAt: new Date().toISOString(),
+          size: pdfBlob.size,
+          description: `Relatório de segmentação com ${filteredAnimals.length} fêmeas`,
+          filters: reportData.filters,
+          settings: reportData.customSettings
+        },
+        fileBlob: pdfBlob
+      });
+
+      // Também fazer o download
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Segmentacao_${farm.name}_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      console.log('Relatório salvo na Pasta de Arquivos');
+    } catch (error) {
+      console.error('Erro ao salvar relatório:', error);
+    }
+  };
 
   function savePreset() {
     if (!presetName.trim()) { 
@@ -1279,6 +1339,17 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
               </TooltipTrigger>
               <TooltipContent>
                 <p>Baixar dados da segmentação em planilha CSV</p>
+              </TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button onClick={saveReportToFiles} className="px-4 py-2 rounded-xl border text-sm flex items-center gap-2" style={{ borderColor: SS.gray, color: SS.black }}>
+                  <Download size={18}/> Salvar Relatório
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Salvar relatório completo na Pasta de Arquivos</p>
               </TooltipContent>
             </Tooltip>
             
