@@ -153,6 +153,41 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
     return `${months >= 0 ? months : 12 + months}m`;
   };
 
+  const getAutomaticCategory = (birthDate?: string, parityOrder?: number) => {
+    if (!birthDate) return 'Indefinida';
+    
+    const birth = new Date(birthDate);
+    const today = new Date();
+    const daysDiff = Math.floor((today.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Bezerras - até 90 dias pós nascimento e ordem de parto 0 ou null
+    if (daysDiff <= 90 && (!parityOrder || parityOrder === 0)) {
+      return 'Bezerra';
+    }
+    
+    // Novilhas - de 91 dias após nascimento até primeiro parto (ordem de parto 0 ou null)
+    if (daysDiff > 90 && (!parityOrder || parityOrder === 0)) {
+      return 'Novilha';
+    }
+    
+    // Primípara - ordem de parto 1
+    if (parityOrder === 1) {
+      return 'Primípara';
+    }
+    
+    // Secundípara - ordem de parto 2
+    if (parityOrder === 2) {
+      return 'Secundípara';
+    }
+    
+    // Multípara - ordem de parto 3 ou maior
+    if (parityOrder && parityOrder >= 3) {
+      return 'Multípara';
+    }
+    
+    return 'Indefinida';
+  };
+
   const handleExport = () => {
     if (filteredFemales.length === 0) {
       toast({
@@ -244,7 +279,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
       female.identifier || '',
       female.birth_date ? formatDate(female.birth_date) : '',
       female.parity_order || '',
-      female.category || '',
+      getAutomaticCategory(female.birth_date, female.parity_order),
       female.sire_naab || '',
       female.mgs_naab || '',
       female.mmgs_naab || '',
@@ -558,7 +593,18 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
                             )}
                           </td>
                           <td className="border px-2 py-1 text-xs">{female.parity_order || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.category || '-'}</td>
+                          <td className="border px-2 py-1 text-xs">
+                            <Badge variant="outline" className={
+                              getAutomaticCategory(female.birth_date, female.parity_order) === 'Bezerra' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                              getAutomaticCategory(female.birth_date, female.parity_order) === 'Novilha' ? 'bg-green-50 text-green-700 border-green-200' :
+                              getAutomaticCategory(female.birth_date, female.parity_order) === 'Primípara' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                              getAutomaticCategory(female.birth_date, female.parity_order) === 'Secundípara' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                              getAutomaticCategory(female.birth_date, female.parity_order) === 'Multípara' ? 'bg-red-50 text-red-700 border-red-200' :
+                              'bg-gray-50 text-gray-700 border-gray-200'
+                            }>
+                              {getAutomaticCategory(female.birth_date, female.parity_order)}
+                            </Badge>
+                          </td>
                           <td className="border px-2 py-1 text-xs">{female.hhp_dollar ? Number(female.hhp_dollar).toFixed(0) : '-'}</td>
                           <td className="border px-2 py-1 text-xs">{female.tpi || '-'}</td>
                           <td className="border px-2 py-1 text-xs">{female.nm_dollar || '-'}</td>
