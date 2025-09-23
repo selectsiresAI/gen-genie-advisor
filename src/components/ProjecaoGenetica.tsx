@@ -311,7 +311,7 @@ function useAppState() {
 
   // Auto-load herd data on page load
   useEffect(() => {
-    const loadHerdData = async () => {
+    const loadHerdData = () => {
       try {
         const { selectedFarmId } = usePlanStore.getState();
         const { selectedHerdId } = useHerdStore.getState();
@@ -319,8 +319,12 @@ function useAppState() {
         const farmId = selectedFarmId || selectedHerdId;
         if (farmId) {
           console.log('🔄 Carregando rebanho automaticamente:', farmId);
-          const populationStructure = await calculatePopulationStructure(farmId);
-          const motherAverages = await calculateMotherAverages(farmId, usePlanStore.getState().selectedPTAList);
+          const populationStructure = calculatePopulationStructure(farmId);
+          
+          // Get farm data for calculating mother averages
+          const females = getFemalesByFarm(farmId);
+          const farmData = { females };
+          const motherAverages = calculateMotherAverages(farmData, usePlanStore.getState().selectedPTAList);
           
           setState(prev => ({
             ...prev,
@@ -344,9 +348,12 @@ function useAppState() {
           
           console.log('✅ Rebanho carregado automaticamente');
           toast.success('Rebanho carregado automaticamente');
+        } else {
+          console.log('⚠️ Nenhuma fazenda selecionada para carregar automaticamente');
         }
       } catch (error) {
         console.error('❌ Erro ao carregar rebanho:', error);
+        toast.error('Erro ao carregar rebanho automaticamente');
       }
     };
     
