@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Building2, Users, Beef, BarChart3, Plus, LogOut, Zap, ArrowLeft, TrendingUp, Beaker, MessageSquare, Target, FolderOpen, Calculator, Trash2 } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -223,146 +224,234 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
       <div className="min-h-screen bg-background">
         <div className="border-b">
           <div className="flex h-16 items-center px-4">
-            <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Voltar
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Voltar ao dashboard principal</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <h1 className="text-xl font-semibold">{selectedFarm.farm_name}</h1>
           </div>
         </div>
         <div className="container mx-auto px-4 py-8">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('herd')}>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Users className="w-5 h-5 text-primary" />
-                  Rebanho
-                </CardTitle>
-                <CardDescription className="flex items-center justify-between">
-                  <span>{selectedFarm.total_females} fêmeas cadastradas</span>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowUploadModal(true);
-                    }}
-                  >
-                    <Plus className="w-3 h-3 mr-1" />
-                    Importar
-                  </Button>
-                </CardDescription>
-              </CardHeader>
-            </Card>
+          <TooltipProvider>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('herd')}>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Users className="w-5 h-5 text-primary" />
+                        Rebanho
+                      </CardTitle>
+                      <CardDescription className="flex items-center justify-between">
+                        <span>{selectedFarm.total_females} fêmeas cadastradas</span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowUploadModal(true);
+                              }}
+                            >
+                              <Plus className="w-3 h-3 mr-1" />
+                              Importar
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Importar planilha com dados das fêmeas do rebanho</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </CardDescription>
+                    </CardHeader>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Visualizar e gerenciar todas as fêmeas cadastradas na fazenda</p>
+                </TooltipContent>
+              </Tooltip>
 
-            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('segmentation')}>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <BarChart3 className="w-5 h-5 text-primary" />
-                  Segmentação
-                </CardTitle>
-                <CardDescription>
-                  Classificar animais por performance
-                </CardDescription>
-              </CardHeader>
-            </Card>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('segmentation')}>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <BarChart3 className="w-5 h-5 text-primary" />
+                        Segmentação
+                      </CardTitle>
+                      <CardDescription>
+                        Classificar animais por performance
+                      </CardDescription>
+                    </CardHeader>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Criar índices personalizados e segmentar o rebanho em categorias de performance</p>
+                </TooltipContent>
+              </Tooltip>
 
-            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('bulls')}>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Beef className="w-5 h-5 text-primary" />
-                  Busca de Touros
-                </CardTitle>
-                <CardDescription>
-                  {selectedFarm.selected_bulls} touros selecionados
-                </CardDescription>
-              </CardHeader>
-            </Card>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('bulls')}>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Beef className="w-5 h-5 text-primary" />
+                        Busca de Touros
+                      </CardTitle>
+                      <CardDescription>
+                        {selectedFarm.selected_bulls} touros selecionados
+                      </CardDescription>
+                    </CardHeader>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Pesquisar e selecionar touros para acasalamentos baseado em PTAs</p>
+                </TooltipContent>
+              </Tooltip>
 
-            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('nexus')}>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Zap className="w-5 h-5 text-primary" />
-                  Nexus
-                </CardTitle>
-                <CardDescription>
-                  Predições genéticas e acasalamentos
-                </CardDescription>
-              </CardHeader>
-            </Card>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('nexus')}>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Zap className="w-5 h-5 text-primary" />
+                        Nexus
+                      </CardTitle>
+                      <CardDescription>
+                        Predições genéticas e acasalamentos
+                      </CardDescription>
+                    </CardHeader>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Sistema avançado de predições genéticas e sugestões de acasalamentos</p>
+                </TooltipContent>
+              </Tooltip>
 
-            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('charts')}>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <TrendingUp className="w-5 h-5 text-primary" />
-                  Gráficos
-                </CardTitle>
-                <CardDescription>
-                  Análises e estatísticas do rebanho
-                </CardDescription>
-              </CardHeader>
-            </Card>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('charts')}>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <TrendingUp className="w-5 h-5 text-primary" />
+                        Gráficos
+                      </CardTitle>
+                      <CardDescription>
+                        Análises e estatísticas do rebanho
+                      </CardDescription>
+                    </CardHeader>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Visualizar gráficos e relatórios estatísticos do desempenho do rebanho</p>
+                </TooltipContent>
+              </Tooltip>
 
-            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('botijao')}>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Beaker className="w-5 h-5 text-primary" />
-                  Botijão Virtual
-                </CardTitle>
-                <CardDescription>
-                  Gerenciamento de doses de sêmen
-                </CardDescription>
-              </CardHeader>
-            </Card>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('botijao')}>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Beaker className="w-5 h-5 text-primary" />
+                        Botijão Virtual
+                      </CardTitle>
+                      <CardDescription>
+                        Gerenciamento de doses de sêmen
+                      </CardDescription>
+                    </CardHeader>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Controlar estoque de sêmen, entradas, saídas e inventário de doses</p>
+                </TooltipContent>
+              </Tooltip>
 
-            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('metas')}>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Target className="w-5 h-5 text-primary" />
-                  Metas
-                </CardTitle>
-                <CardDescription>
-                  Definir objetivos genéticos
-                </CardDescription>
-              </CardHeader>
-            </Card>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('metas')}>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Target className="w-5 h-5 text-primary" />
+                        Metas
+                      </CardTitle>
+                      <CardDescription>
+                        Definir objetivos genéticos
+                      </CardDescription>
+                    </CardHeader>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Estabelecer metas genéticas e acompanhar progresso do melhoramento</p>
+                </TooltipContent>
+              </Tooltip>
 
-            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('sms')}>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <MessageSquare className="w-5 h-5 text-primary" />
-                  SMS
-                </CardTitle>
-                <CardDescription>
-                  Comunicação e notificações
-                </CardDescription>
-              </CardHeader>
-            </Card>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('sms')}>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <MessageSquare className="w-5 h-5 text-primary" />
+                        SMS
+                      </CardTitle>
+                      <CardDescription>
+                        Comunicação e notificações
+                      </CardDescription>
+                    </CardHeader>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Envio de SMS para clientes e sistema de comunicação da fazenda</p>
+                </TooltipContent>
+              </Tooltip>
 
-            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('arquivos')}>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <FolderOpen className="w-5 h-5 text-primary" />
-                  Arquivos
-                </CardTitle>
-                <CardDescription>
-                  Gerenciamento de documentos
-                </CardDescription>
-              </CardHeader>
-            </Card>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('arquivos')}>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <FolderOpen className="w-5 h-5 text-primary" />
+                        Arquivos
+                      </CardTitle>
+                      <CardDescription>
+                        Gerenciamento de documentos
+                      </CardDescription>
+                    </CardHeader>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Armazenar e organizar documentos, relatórios e arquivos da fazenda</p>
+                </TooltipContent>
+              </Tooltip>
 
-            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('plano')}>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Calculator className="w-5 h-5 text-primary" />
-                  Plano Genético
-                </CardTitle>
-                <CardDescription>
-                  Projeções e calculadora de reposição
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('plano')}>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Calculator className="w-5 h-5 text-primary" />
+                        Plano Genético
+                      </CardTitle>
+                      <CardDescription>
+                        Projeções e calculadora de reposição
+                      </CardDescription>
+                    </CardHeader>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Calculadoras para planejamento genético e projeções futuras do rebanho</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
         </div>
       </div>
     );

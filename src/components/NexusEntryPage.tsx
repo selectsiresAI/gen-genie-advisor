@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dna, Calendar, ArrowRight, TrendingUp, FileSpreadsheet } from 'lucide-react';
 
 interface NexusEntryPageProps {

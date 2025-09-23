@@ -5,7 +5,8 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Farm {
@@ -770,16 +771,24 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
   // ────────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b">
-        <div className="flex h-16 items-center px-4">
-          <Button variant="ghost" onClick={onBack} className="mr-4">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Dashboard
-          </Button>
-          <h1 className="text-xl font-semibold">{farm.name} - Segmentação</h1>
+      <TooltipProvider>
+        {/* Header */}
+        <div className="border-b">
+          <div className="flex h-16 items-center px-4">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" onClick={onBack} className="mr-4">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Dashboard
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Voltar ao painel principal da fazenda</p>
+              </TooltipContent>
+            </Tooltip>
+            <h1 className="text-xl font-semibold">{farm.name} - Segmentação</h1>
+          </div>
         </div>
-      </div>
 
       <div className="w-full max-w-7xl mx-auto p-4 space-y-4">
         {/* Header / Index selector */}
@@ -788,16 +797,27 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
             <h2 className="text-xl font-semibold" style={{ color: SS.black }}>Segmentação — Índice</h2>
             <div className="flex items-center gap-2">
               {(["HHP$", "TPI", "NM$", "Custom"] as const).map(opt => (
-                <button
-                  key={opt}
-                  onClick={() => setIndexSelection(opt)}
-                  className="px-3 py-2 rounded-xl border text-sm"
-                  style={{
-                    borderColor: indexSelection === opt ? SS.black : SS.gray,
-                    background: indexSelection === opt ? SS.black : SS.white,
-                    color: indexSelection === opt ? SS.white : SS.black,
-                  }}
-                >{opt}</button>
+                <Tooltip key={opt}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setIndexSelection(opt)}
+                      className="px-3 py-2 rounded-xl border text-sm"
+                      style={{
+                        borderColor: indexSelection === opt ? SS.black : SS.gray,
+                        background: indexSelection === opt ? SS.black : SS.white,
+                        color: indexSelection === opt ? SS.white : SS.black,
+                      }}
+                    >{opt}</button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      {opt === "HHP$" && "Índice econômico Health, Herd & Profit"}
+                      {opt === "TPI" && "Total Performance Index - índice geral de performance"}
+                      {opt === "NM$" && "Net Merit Dollar - mérito líquido em dólares"}
+                      {opt === "Custom" && "Índice personalizado com PTAs selecionadas"}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
               ))}
             </div>
           </div>
@@ -814,9 +834,16 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
             Fonte: <span className="font-semibold">Rebanho</span> {animals && animals.length ? `— ${animals.length} registros` : ""}
             {error && <span className="ml-2 text-red-600">(erro: {error})</span>}
           </div>
-          <button onClick={fetchAnimals} className="px-3 py-2 rounded-xl border text-sm flex items-center gap-2" style={{ borderColor: SS.gray, color: SS.black }}>
-            <RefreshCw size={16}/> Recarregar
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button onClick={fetchAnimals} className="px-3 py-2 rounded-xl border text-sm flex items-center gap-2" style={{ borderColor: SS.gray, color: SS.black }}>
+                <RefreshCw size={16}/> Recarregar
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Recarregar dados do rebanho da fazenda</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         {indexSelection === "Custom" && (
@@ -852,17 +879,56 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold" style={{ color: SS.black }}>Quadro B — Pesos por PTA</h3>
                 <div className="flex items-center gap-2">
-                  <button onClick={normalizeAll} className="px-3 py-2 rounded-xl border text-sm" style={{ borderColor: SS.gray, color: SS.black }}>Normalizar</button>
-                  <button onClick={resetWeights} className="px-3 py-2 rounded-xl border text-sm" style={{ borderColor: SS.gray, color: SS.black }}>Resetar</button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button onClick={normalizeAll} className="px-3 py-2 rounded-xl border text-sm" style={{ borderColor: SS.gray, color: SS.black }}>Normalizar</button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Distribuir pesos proporcionalmente para somar 100%</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button onClick={resetWeights} className="px-3 py-2 rounded-xl border text-sm" style={{ borderColor: SS.gray, color: SS.black }}>Resetar</button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Definir pesos iguais para todas as PTAs selecionadas</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  
                   <div className="flex items-center gap-2">
-                    <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Nome do preset" value={presetName} onChange={e => setPresetName(e.target.value)} style={{ borderColor: SS.gray, color: SS.black, background: SS.white }} />
-                    <button onClick={savePreset} className="px-3 py-2 rounded-xl border text-sm" style={{ borderColor: SS.gray, color: SS.black }}>Salvar preset</button>
-                    <select className="border rounded-lg px-3 py-2 text-sm" onChange={e => e.target.value && loadPreset(e.target.value)} defaultValue="" style={{ borderColor: SS.gray, color: SS.black, background: SS.white }}>
-                      <option value="" disabled>Carregar preset…</option>
-                      {presets.map(p => (
-                        <option key={p.name} value={p.name}>{p.name}</option>
-                      ))}
-                    </select>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Nome do preset" value={presetName} onChange={e => setPresetName(e.target.value)} style={{ borderColor: SS.gray, color: SS.black, background: SS.white }} />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Digite um nome para salvar esta configuração</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button onClick={savePreset} className="px-3 py-2 rounded-xl border text-sm" style={{ borderColor: SS.gray, color: SS.black }}>Salvar preset</button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Salvar configuração atual para reutilização</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <select className="border rounded-lg px-3 py-2 text-sm" onChange={e => e.target.value && loadPreset(e.target.value)} defaultValue="" style={{ borderColor: SS.gray, color: SS.black, background: SS.white }}>
+                          <option value="" disabled>Carregar preset…</option>
+                          {presets.map(p => (
+                            <option key={p.name} value={p.name}>{p.name}</option>
+                          ))}
+                        </select>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Carregar uma configuração previamente salva</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                 </div>
               </div>
@@ -1190,16 +1256,31 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
         {/* Ações + Resumo */}
         <div className="rounded-2xl shadow p-4" style={{ background: SS.white }}>
           <div className="flex flex-wrap items-center gap-3">
-            <button 
-              onClick={triggerSegmentation}
-              className="px-4 py-2 rounded-xl text-sm flex items-center gap-2" 
-              style={{ background: SS.red, color: SS.white }}
-            > 
-              <Check size={18}/> Aplicar Índice 
-            </button>
-            <button onClick={exportCSV} className="px-4 py-2 rounded-xl border text-sm flex items-center gap-2" style={{ borderColor: SS.gray, color: SS.black }}>
-              <Download size={18}/> Exportar CSV
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button 
+                  onClick={triggerSegmentation}
+                  className="px-4 py-2 rounded-xl text-sm flex items-center gap-2" 
+                  style={{ background: SS.red, color: SS.white }}
+                > 
+                  <Check size={18}/> Aplicar Índice 
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Executar segmentação com o índice selecionado</p>
+              </TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button onClick={exportCSV} className="px-4 py-2 rounded-xl border text-sm flex items-center gap-2" style={{ borderColor: SS.gray, color: SS.black }}>
+                  <Download size={18}/> Exportar CSV
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Baixar dados da segmentação em planilha CSV</p>
+              </TooltipContent>
+            </Tooltip>
             
             {/* Filtros simplificados */}
             <div className="flex items-center gap-4">
@@ -1494,7 +1575,8 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
         </div>
 
         <div className="text-xs text-center pb-8" style={{ color: SS.black }}>MVP demonstrativo — dados seguros via RLS</div>
-      </div>
+        </div>
+      </TooltipProvider>
     </div>
   );
 }
