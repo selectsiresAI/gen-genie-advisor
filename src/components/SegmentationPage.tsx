@@ -270,7 +270,7 @@ function normalizeWeights(weights: Record<string, number>) {
   const sum = Object.values(weights).reduce((s, v) => s + (Number(v) || 0), 0);
   if (sum === 0) return { ...weights };
   const out: Record<string, number> = {};
-  for (const k of Object.keys(weights)) out[k] = (Number(weights[k]) || 0) / sum;
+  for (const k of Object.keys(weights)) out[k] = ((Number(weights[k]) || 0) / sum) * 100;
   return out;
 }
 
@@ -292,15 +292,16 @@ type Gate = {
 // Componente principal
 // ────────────────────────────────────────────────────────────────────
 export default function SegmentationPage({ farm, onBack }: SegmentationPageProps) {
-  const [indexSelection, setIndexSelection] = useState<"HHP$" | "TPI" | "NM$" | "Custom">("Custom");
+  const [indexSelection, setIndexSelection] = useState<"HHP$" | "TPI" | "NM$" | "Custom">("HHP$");
 
   // Custom state - separated search terms for different purposes
   const [ptaSearch, setPtaSearch] = useState(""); // For filtering PTAs in selection
   const [animalSearch, setAnimalSearch] = useState(""); // For filtering animals in table
-  const [selectedYear, setSelectedYear] = useState<string>('');
-  const [selectedTraits, setSelectedTraits] = useState(["PTAM", "PTAF", "SCS"]);
-  const [weights, setWeights] = useState<Record<string, number>>({ PTAM: 0.4, PTAF: 0.4, SCS: -0.2 });
+  const [categoryFilter, setCategoryFilter] = useState<string>("all"); // Filter by category
+  const [selectedTraits, setSelectedTraits] = useState(["HHP$®", "PTAM", "PTAF"]);
+  const [weights, setWeights] = useState<Record<string, number>>({ "HHP$®": 40, PTAM: 30, PTAF: 30 });
   const [standardize, setStandardize] = useState(true);
+  const [segmentationTriggered, setSegmentationTriggered] = useState(false);
 
   // Segmentation state
   const [segmentationEnabled, setSegmentationEnabled] = useState(true);
@@ -421,7 +422,7 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
       else {
         for (const t of selectedTraits) {
           const k = getKey(t);
-          const w = Number(weights[t]) || 0;
+          const w = (Number(weights[t]) || 0) / 100; // Convert percentage to decimal
           const raw = Number((a as any)[k]);
           if (!Number.isFinite(raw)) continue;
           const val = standardize ? (zMeta[t] && zMeta[t].sigma ? (raw - zMeta[t].mu) / zMeta[t].sigma : 0) : raw;
@@ -457,7 +458,13 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
 
   // Segmentation calculation with proper score handling for all index types
   const segmentedAnimals = useMemo(() => {
-    if (!segmentationEnabled) {
+    if (!segmentationEnabled || !segmentationTriggered) {
+      return sorted;
+    }
+
+    // Only run segmentation if percentages sum to 100%
+    const totalPercent = superiorPercent[0] + intermediarioPercent[0] + inferiorPercent[0];
+    if (totalPercent !== 100) {
       return sorted;
     }
 
@@ -509,9 +516,9 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
         classification = "Inferior";
       }
       
-      return { ...animal, Classification: classification };
+    return { ...animal, Classification: classification };
     });
-  }, [sorted, segmentationEnabled, superiorPercent, intermediarioPercent, inferiorPercent, indexSelection]);
+  }, [sorted, segmentationEnabled, segmentationTriggered, superiorPercent, intermediarioPercent, inferiorPercent, indexSelection]);
 
   // Get available birth years for filter
   const availableYears = useMemo(() => {
@@ -538,7 +545,7 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
     };
   }, [segmentedAnimals]);
 
-  // Filter animals by search, year and classification
+  // Filter animals by search, category and classification
   const filteredAnimals = useMemo(() => {
     let result = segmentedAnimals;
     
@@ -552,12 +559,11 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
       );
     }
     
-    // Apply year filter
-    if (selectedYear && selectedYear !== "all-years") {
+    // Apply category filter
+    if (categoryFilter !== "all") {
       result = result.filter(animal => {
-        if (!(animal as any).birth_date) return false;
-        const animalYear = new Date((animal as any).birth_date).getFullYear().toString();
-        return animalYear === selectedYear;
+        const automaticCategory = getAutomaticCategory((animal as any).birth_date, animal.parity_order);
+        return automaticCategory === categoryFilter;
       });
     }
     
@@ -567,7 +573,7 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
     }
     
     return result;
-  }, [segmentedAnimals, animalSearch, selectedYear, classificationFilter]);
+  }, [segmentedAnimals, animalSearch, categoryFilter, classificationFilter]);
 
   // Chart data
   const chartData = useMemo(() => [
@@ -592,8 +598,14 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
   }
   
   function resetWeights() { 
+    const equalWeight = selectedTraits.length > 0 ? Math.floor(100 / selectedTraits.length) : 0;
     const out: Record<string, number> = {}; 
-    for (const t of selectedTraits) out[t] = 1; 
+    for (const t of selectedTraits) out[t] = equalWeight; 
+    // Distribute remainder to first traits
+    const remainder = 100 - (equalWeight * selectedTraits.length);
+    for (let i = 0; i < remainder && i < selectedTraits.length; i++) {
+      out[selectedTraits[i]] += 1;
+    }
     setWeights(out); 
   }
   
@@ -728,6 +740,25 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
   }
 
   const weightSum = useMemo(() => Object.values(weights).reduce((s, v) => s + (Number(v) || 0), 0), [weights]);
+
+  // Get available categories from animals
+  const availableCategories = useMemo(() => {
+    const categories = new Set<string>();
+    animals.forEach(animal => {
+      const category = getAutomaticCategory((animal as any).birth_date, animal.parity_order);
+      categories.add(category);
+    });
+    return Array.from(categories).sort();
+  }, [animals]);
+
+  function triggerSegmentation() {
+    const totalPercent = superiorPercent[0] + intermediarioPercent[0] + inferiorPercent[0];
+    if (totalPercent !== 100) {
+      alert("A soma das porcentagens deve ser exatamente 100% para executar a segmentação.");
+      return;
+    }
+    setSegmentationTriggered(true);
+  }
   const filteredPTAs = useMemo(() => { 
     const s = ptaSearch.trim().toLowerCase(); 
     if (!s) return ALL_PTAS; 
@@ -1159,25 +1190,46 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
         {/* Ações + Resumo */}
         <div className="rounded-2xl shadow p-4" style={{ background: SS.white }}>
           <div className="flex flex-wrap items-center gap-3">
-            <button className="px-4 py-2 rounded-xl text-sm flex items-center gap-2" style={{ background: SS.red, color: SS.white }}> 
+            <button 
+              onClick={triggerSegmentation}
+              className="px-4 py-2 rounded-xl text-sm flex items-center gap-2" 
+              style={{ background: SS.red, color: SS.white }}
+            > 
               <Check size={18}/> Aplicar Índice 
             </button>
             <button onClick={exportCSV} className="px-4 py-2 rounded-xl border text-sm flex items-center gap-2" style={{ borderColor: SS.gray, color: SS.black }}>
               <Download size={18}/> Exportar CSV
             </button>
             
-            {/* Filtros de Classificação e Status */}
+            {/* Filtros simplificados */}
             <div className="flex items-center gap-4">
-              {segmentationEnabled && (
+              {/* Filtro por Categoria */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium" style={{ color: SS.black }}>Categoria:</span>
+                <select 
+                  value={categoryFilter} 
+                  onChange={e => setCategoryFilter(e.target.value)}
+                  className="border rounded-lg px-3 py-2 text-sm"
+                  style={{ borderColor: SS.gray, color: SS.black, background: SS.white }}
+                >
+                  <option value="all">Todas</option>
+                  {availableCategories.map(category => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Filtro por Classificação */}
+              {segmentationEnabled && segmentationTriggered && (
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium" style={{ color: SS.black }}>Filtrar por grupo:</span>
+                  <span className="text-sm font-medium" style={{ color: SS.black }}>Classificação:</span>
                   <select 
                     value={classificationFilter} 
                     onChange={e => setClassificationFilter(e.target.value as any)}
                     className="border rounded-lg px-3 py-2 text-sm"
                     style={{ borderColor: SS.gray, color: SS.black, background: SS.white }}
                   >
-                    <option value="all">Todos os Grupos</option>
+                    <option value="all">Todas</option>
                     <option value="Superior">Superior</option>
                     <option value="Intermediário">Intermediário</option>
                     <option value="Inferior">Inferior</option>
@@ -1187,43 +1239,8 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
               
               <div className="text-sm" style={{ color: SS.black }}>
                 <span className="font-medium">Resultados: {filteredAnimals.length} animais</span>
-                {animalSearch.trim() && <span className="ml-2">(filtrado por: "{animalSearch.trim()}")</span>}
-                {selectedYear && selectedYear !== "all-years" && <span className="ml-2">(ano: {selectedYear})</span>}
+                {animalSearch.trim() && <span className="ml-2">(busca: "{animalSearch.trim()}")</span>}
               </div>
-            </div>
-            
-            {/* Filtros de Classificação */}
-            {segmentationEnabled && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium" style={{ color: SS.black }}>Filtrar:</span>
-                <select 
-                  value={classificationFilter} 
-                  onChange={e => setClassificationFilter(e.target.value as any)}
-                  className="border rounded-lg px-3 py-2 text-sm"
-                  style={{ borderColor: SS.gray, color: SS.black, background: SS.white }}
-                >
-                  <option value="all">Todos os Grupos</option>
-                  <option value="Superior">Superior</option>
-                  <option value="Intermediário">Intermediário</option>
-                  <option value="Inferior">Inferior</option>
-                </select>
-              </div>
-            )}
-            
-            <div className="ml-auto text-sm" style={{ color: SS.black }}>
-              <div className="font-semibold">Resumo</div>
-              {indexSelection === "Custom" ? (
-                <div>
-                  PTAs: {selectedTraits.map(t => `${t} (${Number(weights[t] ?? 0).toFixed(2)})`).join(", ")} — Padronização: {standardize ? "ON" : "OFF"}
-                  <br/>
-                  Gates ({gatesPhase}): {gates.map(g => `${g.trait} ${g.op === ">=" ? "≥" : g.op === "<=" ? "≤" : g.op === "=" ? "=" : "entre"} ${g.op === "between" ? `${g.min ?? "-∞"}–${g.max ?? "+∞"}` : (g.value ?? "—")}`).join("; ")}
-                  <br/>
-                  Aprovadas: {approvedCountDisplay} | Reprovadas: {rejectedCountDisplay}
-                  {segmentationEnabled && <><br/>Segmentação: Superior {superiorPercent[0]}% | Intermediário {intermediarioPercent[0]}% | Inferior {inferiorPercent[0]}%</>}
-                </div>
-              ) : (
-                <div>Índice padrão: {indexSelection}</div>
-              )}
             </div>
           </div>
         </div>
@@ -1246,17 +1263,7 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
               
               {/* Year Filter */}
               <div className="flex items-center gap-2">
-                <Select value={selectedYear} onValueChange={setSelectedYear}>
-                  <SelectTrigger className="w-[150px]" style={{ borderColor: SS.gray }}>
-                    <SelectValue placeholder="Ano nascimento" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all-years">Todos os anos</SelectItem>
-                    {availableYears.map(year => (
-                      <SelectItem key={year} value={year}>{year}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <span className="text-sm" style={{ color: SS.black }}>Busca por Nome/ID:</span>
               </div>
               
               {segmentationEnabled && (
