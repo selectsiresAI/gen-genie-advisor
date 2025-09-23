@@ -21,12 +21,10 @@ import BullSearchPage from './BullSearchPage';
 import FemaleUploadModal from './FemaleUploadModal';
 import SegmentationPage from './SegmentationPage';
 import { usePlanStore } from '@/hooks/usePlanStore';
-
 interface MainDashboardProps {
   user: User;
   onLogout: () => void;
 }
-
 interface Farm {
   farm_id: string;
   farm_name: string;
@@ -37,8 +35,10 @@ interface Farm {
   selected_bulls: number;
   created_at: string;
 }
-
-const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
+const MainDashboard: React.FC<MainDashboardProps> = ({
+  user,
+  onLogout
+}) => {
   const [farms, setFarms] = useState<Farm[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<any>(null);
@@ -47,117 +47,114 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
   const [currentView, setCurrentView] = useState<'dashboard' | 'farm' | 'herd' | 'segmentation' | 'bulls' | 'nexus' | 'charts' | 'botijao' | 'sms' | 'metas' | 'plano' | 'arquivos'>('dashboard');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [totalFarms, setTotalFarms] = useState(0);
-    const [totalAnimals, setTotalAnimals] = useState(0);
-    const [totalBulls, setTotalBulls] = useState(0);
-  const { toast } = useToast();
-
+  const [totalAnimals, setTotalAnimals] = useState(0);
+  const [totalBulls, setTotalBulls] = useState(0);
+  const {
+    toast
+  } = useToast();
   useEffect(() => {
     loadUserData();
   }, []);
-
   const loadUserData = async () => {
     try {
       setIsLoading(true);
-      
+
       // Load user profile
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      
+      const {
+        data: profile,
+        error: profileError
+      } = await supabase.from('profiles').select('*').eq('id', user.id).single();
       if (profileError) {
         console.error('Error loading profile:', profileError);
       } else {
         setUserProfile(profile);
       }
 
-        // Load farms
-        const { data: farmsData, error: farmsError } = await supabase.rpc('my_farms');
-        
-        if (farmsError) {
-          console.error('Error loading farms:', farmsError);
-          toast({
-            title: "Erro ao carregar fazendas",
-            description: farmsError.message,
-            variant: "destructive",
-          });
-        } else {
-          setFarms(farmsData || []);
-          
-          // Calcular totais
-          setTotalFarms(farmsData?.length || 0);
-          const totalFemales = farmsData?.reduce((sum: number, farm: Farm) => sum + (farm.total_females || 0), 0) || 0;
-          setTotalAnimals(totalFemales);
-        }
+      // Load farms
+      const {
+        data: farmsData,
+        error: farmsError
+      } = await supabase.rpc('my_farms');
+      if (farmsError) {
+        console.error('Error loading farms:', farmsError);
+        toast({
+          title: "Erro ao carregar fazendas",
+          description: farmsError.message,
+          variant: "destructive"
+        });
+      } else {
+        setFarms(farmsData || []);
 
-        // Load total bulls count from database
-        const { count: bullsCount, error: bullsError } = await supabase
-          .from('bulls')
-          .select('*', { count: 'exact', head: true });
-        
-        if (!bullsError) {
-          setTotalBulls(bullsCount || 0);
-        }
+        // Calcular totais
+        setTotalFarms(farmsData?.length || 0);
+        const totalFemales = farmsData?.reduce((sum: number, farm: Farm) => sum + (farm.total_females || 0), 0) || 0;
+        setTotalAnimals(totalFemales);
+      }
+
+      // Load total bulls count from database
+      const {
+        count: bullsCount,
+        error: bullsError
+      } = await supabase.from('bulls').select('*', {
+        count: 'exact',
+        head: true
+      });
+      if (!bullsError) {
+        setTotalBulls(bullsCount || 0);
+      }
     } catch (error: any) {
       console.error('Error loading data:', error);
       toast({
         title: "Erro ao carregar dados",
         description: error.message || 'Erro inesperado',
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
-
   const handleLogout = async () => {
     await supabase.auth.signOut();
     onLogout();
   };
-
   const handleCreateFarm = () => {
     setShowCreateModal(true);
   };
-
   const handleCreateFarmSuccess = () => {
     loadUserData();
   };
-
   const handleDeleteFarm = async (farmId: string, farmName: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevenir que o click do delete abra a fazenda
-    
+
     const isConfirmed = confirm(`Tem certeza que deseja apagar a fazenda "${farmName}"? Esta ação não pode ser desfeita.`);
-    
     if (!isConfirmed) {
       return;
     }
-
     try {
-      const { data, error } = await supabase.rpc('delete_farm', {
+      const {
+        data,
+        error
+      } = await supabase.rpc('delete_farm', {
         farm_uuid: farmId
       });
-
       if (error) {
         throw error;
       }
-
       if (data && data.length > 0) {
         const result = data[0];
-        
         if (result.success) {
           toast({
             title: "Fazenda apagada com sucesso!",
-            description: `${farmName} foi removida do seu portfólio`,
+            description: `${farmName} foi removida do seu portfólio`
           });
-          
+
           // Recarregar a lista de fazendas
           loadUserData();
         } else {
           toast({
             title: "Erro ao apagar fazenda",
             description: result.message || 'Erro desconhecido',
-            variant: "destructive",
+            variant: "destructive"
           });
         }
       }
@@ -166,21 +163,18 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
       toast({
         title: "Erro ao apagar fazenda",
         description: error.message || 'Tente novamente',
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const handleFarmSelect = (farm: Farm) => {
     setSelectedFarm(farm);
     setCurrentView('farm');
   };
-
   const handleBackToDashboard = () => {
     setCurrentView('dashboard');
     setSelectedFarm(null);
   };
-
   const handleQuickAction = (action: string) => {
     if (farms.length > 0) {
       const defaultFarm = farms.find(f => f.is_default) || farms[0];
@@ -188,16 +182,9 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
       setCurrentView(action as any);
     }
   };
-
   const getUserInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word.charAt(0))
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+    return name.split(' ').map(word => word.charAt(0)).join('').toUpperCase().slice(0, 2);
   };
-
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
       case 'owner':
@@ -210,7 +197,6 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
         return 'outline';
     }
   };
-
   const getRoleLabel = (role: string) => {
     switch (role) {
       case 'owner':
@@ -223,22 +209,18 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
         return role;
     }
   };
-
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
+    return <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
           <p className="text-muted-foreground">Carregando dashboard...</p>
         </div>
-      </div>
-    );
+      </div>;
   }
 
   // Render farm view
   if (currentView === 'farm' && selectedFarm) {
-    return (
-      <div className="min-h-screen bg-background">
+    return <div className="min-h-screen bg-background">
         <div className="border-b">
           <div className="flex h-16 items-center px-4">
             <TooltipProvider>
@@ -452,8 +434,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
             </div>
           </TooltipProvider>
         </div>
-      </div>
-    );
+      </div>;
   }
 
   // Render specific views
@@ -463,14 +444,14 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
       id: selectedFarm.farm_id,
       nome: selectedFarm.farm_name,
       proprietario: selectedFarm.owner_name,
-      females: [], // Initialize with empty array
-      bulls: [], // Initialize with empty array
+      females: [],
+      // Initialize with empty array
+      bulls: [] // Initialize with empty array
     } : null;
 
     // Handle views that need special rendering
     if (currentView === 'nexus') {
-      return (
-        <div className="min-h-screen bg-background">
+      return <div className="min-h-screen bg-background">
           <div className="border-b">
             <div className="flex h-16 items-center px-4">
               <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
@@ -483,13 +464,10 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
           <div className="container mx-auto px-4 py-8">
             <NexusApp />
           </div>
-        </div>
-      );
+        </div>;
     }
-
     if (currentView === 'plano') {
-      return (
-        <div className="min-h-screen bg-background">
+      return <div className="min-h-screen bg-background">
           <div className="border-b">
             <div className="flex h-16 items-center px-4">
               <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
@@ -502,8 +480,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
           <div className="container mx-auto px-4 py-8">
             <PlanoApp onBack={handleBackToDashboard} />
           </div>
-        </div>
-      );
+        </div>;
     }
 
     // For components that need farm data
@@ -512,18 +489,10 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
         const handleNavigateToCharts = () => {
           setCurrentView('charts');
         };
-        
-        return (
-          <div className="min-h-screen bg-background">
-            <HerdPage 
-              farm={selectedFarm!} 
-              onBack={handleBackToDashboard}
-              onNavigateToCharts={handleNavigateToCharts}
-            />
-          </div>
-        );
+        return <div className="min-h-screen bg-background">
+            <HerdPage farm={selectedFarm!} onBack={handleBackToDashboard} onNavigateToCharts={handleNavigateToCharts} />
+          </div>;
       }
-
       if (currentView === 'segmentation') {
         // Convert farm format and prepare data for SegmentationPage
         const farmForSegmentation = {
@@ -570,36 +539,27 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
             }
           }
         }
-
-        return (
-          <div className="min-h-screen bg-background">
-            <SegmentationPage 
-              farm={farmForSegmentation} 
-              onBack={handleBackToDashboard} 
-            />
-          </div>
-        );
+        return <div className="min-h-screen bg-background">
+            <SegmentationPage farm={farmForSegmentation} onBack={handleBackToDashboard} />
+          </div>;
       }
-
       if (currentView === 'botijao') {
         // Get selected bulls from localStorage if coming from bull search
         const storedBulls = localStorage.getItem(`selected-bulls-${selectedFarm.farm_id}`);
         const selectedBulls = storedBulls ? JSON.parse(storedBulls) : [];
-        
+
         // Get selected females from localStorage if coming from herd page
         const storedFemales = localStorage.getItem(`selected-females-${selectedFarm.farm_id}`);
         const selectedFemales = storedFemales ? JSON.parse(storedFemales) : [];
-        
-        return (
-          <div className="min-h-screen bg-background">
+        return <div className="min-h-screen bg-background">
             <div className="border-b">
               <div className="flex h-16 items-center px-4">
                 <Button variant="ghost" onClick={() => {
-                  // Clear selected bulls and females when going back
-                  localStorage.removeItem(`selected-bulls-${selectedFarm.farm_id}`);
-                  localStorage.removeItem(`selected-females-${selectedFarm.farm_id}`);
-                  handleBackToDashboard();
-                }} className="mr-4">
+                // Clear selected bulls and females when going back
+                localStorage.removeItem(`selected-bulls-${selectedFarm.farm_id}`);
+                localStorage.removeItem(`selected-females-${selectedFarm.farm_id}`);
+                handleBackToDashboard();
+              }} className="mr-4">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Dashboard
                 </Button>
@@ -607,26 +567,21 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
               </div>
             </div>
             <div className="container mx-auto px-4 py-8">
-              <BotijaoVirtualPage 
-                client={{ id: 1, nome: selectedFarm?.owner_name || '', farms: [] }}
-                farm={farmData}
-                bulls={[]} // Bulls will be loaded from Supabase in BotijaoVirtual
-                selectedBulls={selectedBulls}
-                selectedFemales={selectedFemales}
-                onBack={() => {
-                  localStorage.removeItem(`selected-bulls-${selectedFarm.farm_id}`);
-                  localStorage.removeItem(`selected-females-${selectedFarm.farm_id}`);
-                  handleBackToDashboard();
-                }}
-              />
+              <BotijaoVirtualPage client={{
+              id: 1,
+              nome: selectedFarm?.owner_name || '',
+              farms: []
+            }} farm={farmData} bulls={[]} // Bulls will be loaded from Supabase in BotijaoVirtual
+            selectedBulls={selectedBulls} selectedFemales={selectedFemales} onBack={() => {
+              localStorage.removeItem(`selected-bulls-${selectedFarm.farm_id}`);
+              localStorage.removeItem(`selected-females-${selectedFarm.farm_id}`);
+              handleBackToDashboard();
+            }} />
             </div>
-          </div>
-        );
+          </div>;
       }
-
       if (currentView === 'sms') {
-        return (
-          <div className="min-h-screen bg-background">
+        return <div className="min-h-screen bg-background">
             <div className="border-b">
               <div className="flex h-16 items-center px-4">
                 <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
@@ -639,13 +594,10 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
             <div className="container mx-auto px-4 py-8">
               <SMSPage farm={farmData} onBack={handleBackToDashboard} />
             </div>
-          </div>
-        );
+          </div>;
       }
-
       if (currentView === 'metas') {
-        return (
-          <div className="min-h-screen bg-background">
+        return <div className="min-h-screen bg-background">
             <div className="border-b">
               <div className="flex h-16 items-center px-4">
                 <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
@@ -658,47 +610,28 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
             <div className="container mx-auto px-4 py-8">
               <MetasPage farm={farmData} onBack={handleBackToDashboard} />
             </div>
-          </div>
-        );
+          </div>;
       }
-
       if (currentView === 'charts') {
         const handleNavigateToHerd = () => {
           setCurrentView('herd');
         };
-        
-        return (
-          <div className="min-h-screen bg-background">
-            <ChartsPage 
-              farm={selectedFarm!} 
-              onBack={handleBackToDashboard}
-              onNavigateToHerd={handleNavigateToHerd}
-            />
-          </div>
-        );
+        return <div className="min-h-screen bg-background">
+            <ChartsPage farm={selectedFarm!} onBack={handleBackToDashboard} onNavigateToHerd={handleNavigateToHerd} />
+          </div>;
       }
-
       if (currentView === 'bulls') {
-        return (
-          <div className="min-h-screen bg-background">
-            <BullSearchPage 
-              farm={selectedFarm} 
-              onBack={handleBackToDashboard}
-              onBullsSelected={(selectedBulls) => {
-                // Navigate to Botijão Virtual with selected bulls
-                setCurrentView('botijao');
-                // Store selected bulls for BotijaoVirtual
-                localStorage.setItem(`selected-bulls-${selectedFarm.farm_id}`, JSON.stringify(selectedBulls));
-              }}
-              onGoToBotijao={() => setCurrentView('botijao')}
-            />
-          </div>
-        );
+        return <div className="min-h-screen bg-background">
+            <BullSearchPage farm={selectedFarm} onBack={handleBackToDashboard} onBullsSelected={selectedBulls => {
+            // Navigate to Botijão Virtual with selected bulls
+            setCurrentView('botijao');
+            // Store selected bulls for BotijaoVirtual
+            localStorage.setItem(`selected-bulls-${selectedFarm.farm_id}`, JSON.stringify(selectedBulls));
+          }} onGoToBotijao={() => setCurrentView('botijao')} />
+          </div>;
       }
-
       if (currentView === 'arquivos') {
-        return (
-          <div className="min-h-screen bg-background">
+        return <div className="min-h-screen bg-background">
             <div className="border-b">
               <div className="flex h-16 items-center px-4">
                 <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
@@ -711,14 +644,12 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
             <div className="container mx-auto px-4 py-8">
               <PastaArquivosPage onBack={handleBackToDashboard} />
             </div>
-          </div>
-        );
+          </div>;
       }
     }
 
     // Default view for other modules
-    return (
-      <div className="min-h-screen bg-background">
+    return <div className="min-h-screen bg-background">
         <div className="border-b">
           <div className="flex h-16 items-center px-4">
             <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
@@ -726,12 +657,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
               Dashboard
             </Button>
             <h1 className="text-xl font-semibold">
-              {selectedFarm?.farm_name} - {
-                currentView === 'herd' ? 'Rebanho' :
-                currentView === 'segmentation' ? 'Segmentação' :
-                currentView === 'bulls' ? 'Catálogo de Touros' :
-                currentView === 'charts' ? 'Gráficos' : 'Módulo'
-              }
+              {selectedFarm?.farm_name} - {currentView === 'herd' ? 'Rebanho' : currentView === 'segmentation' ? 'Segmentação' : currentView === 'bulls' ? 'Catálogo de Touros' : currentView === 'charts' ? 'Gráficos' : 'Módulo'}
             </h1>
           </div>
         </div>
@@ -745,21 +671,13 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
             </div>
             <h2 className="text-2xl font-bold">Módulo em Desenvolvimento</h2>
             <p className="text-muted-foreground max-w-md mx-auto">
-              Este módulo estará disponível em breve. Você poderá {
-                currentView === 'herd' ? 'gerenciar seu rebanho e cadastrar fêmeas' :
-                currentView === 'segmentation' ? 'segmentar animais por performance genética' :
-                currentView === 'bulls' ? 'explorar o catálogo de touros e fazer seleções' :
-                currentView === 'charts' ? 'visualizar gráficos e estatísticas do rebanho' : 'usar esta funcionalidade'
-              }.
+              Este módulo estará disponível em breve. Você poderá {currentView === 'herd' ? 'gerenciar seu rebanho e cadastrar fêmeas' : currentView === 'segmentation' ? 'segmentar animais por performance genética' : currentView === 'bulls' ? 'explorar o catálogo de touros e fazer seleções' : currentView === 'charts' ? 'visualizar gráficos e estatísticas do rebanho' : 'usar esta funcionalidade'}.
             </p>
           </div>
         </div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b">
         <div className="flex h-16 items-center px-4">
@@ -810,8 +728,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
               </Button>
             </div>
             
-            {farms.length === 0 ? (
-              <Card>
+            {farms.length === 0 ? <Card>
                 <CardContent className="flex flex-col items-center justify-center py-8">
                   <Building2 className="w-12 h-12 text-muted-foreground mb-4" />
                   <h3 className="text-lg font-semibold mb-2">Nenhuma fazenda encontrada</h3>
@@ -823,15 +740,8 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
                     Criar Primeira Fazenda
                   </Button>
                 </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {farms.map((farm) => (
-                  <Card 
-                    key={farm.farm_id} 
-                    className="hover:shadow-lg transition-shadow cursor-pointer"
-                    onClick={() => handleFarmSelect(farm)}
-                  >
+              </Card> : <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {farms.map(farm => <Card key={farm.farm_id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleFarmSelect(farm)}>
                      <CardHeader>
                        <div className="flex justify-between items-start">
                          <div className="space-y-1">
@@ -844,20 +754,10 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
                            <Badge variant={getRoleBadgeVariant(farm.my_role)}>
                              {getRoleLabel(farm.my_role)}
                            </Badge>
-                           {farm.is_default && (
-                             <Badge variant="outline">Padrão</Badge>
-                           )}
-                           {farm.my_role === 'owner' && (
-                             <Button
-                               variant="ghost"
-                               size="sm"
-                               className="h-8 w-8 p-0 hover:bg-destructive hover:text-destructive-foreground"
-                               onClick={(e) => handleDeleteFarm(farm.farm_id, farm.farm_name, e)}
-                               title="Apagar fazenda"
-                             >
+                           {farm.is_default && <Badge variant="outline">Padrão</Badge>}
+                           {farm.my_role === 'owner' && <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-destructive hover:text-destructive-foreground" onClick={e => handleDeleteFarm(farm.farm_id, farm.farm_name, e)} title="Apagar fazenda">
                                <Trash2 className="h-4 w-4" />
-                             </Button>
-                           )}
+                             </Button>}
                          </div>
                        </div>
                      </CardHeader>
@@ -868,15 +768,13 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
                           <span>{farm.total_females} fêmeas</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Beef className="w-4 h-4 text-muted-foreground" />
-                          <span>{farm.selected_bulls} touros</span>
+                          
+                          
                         </div>
                       </div>
                     </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+                  </Card>)}
+              </div>}
           </div>
 
           {/* Account Totals */}
@@ -930,23 +828,10 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
         </div>
       </div>
 
-      <CreateFarmModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSuccess={handleCreateFarmSuccess}
-      />
+      <CreateFarmModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onSuccess={handleCreateFarmSuccess} />
 
       {/* Upload Modal */}
-      {selectedFarm && (
-        <FemaleUploadModal
-          isOpen={showUploadModal}
-          onClose={() => setShowUploadModal(false)}
-          farmId={selectedFarm.farm_id}
-          farmName={selectedFarm.farm_name}
-        />
-      )}
-    </div>
-  );
+      {selectedFarm && <FemaleUploadModal isOpen={showUploadModal} onClose={() => setShowUploadModal(false)} farmId={selectedFarm.farm_id} farmName={selectedFarm.farm_name} />}
+    </div>;
 };
-
 export default MainDashboard;
