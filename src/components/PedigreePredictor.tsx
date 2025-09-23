@@ -648,33 +648,141 @@ const PedigreePredictor: React.FC = () => {
                   <h3 className="font-semibold mb-2">Resultados ({batchResults.length} animais)</h3>
                   <div className="max-h-96 overflow-auto border rounded-lg">
                     <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Nome</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>TPI</TableHead>
-                          <TableHead>NM$</TableHead>
-                          <TableHead>PL</TableHead>
-                          <TableHead>SCS</TableHead>
-                        </TableRow>
-                      </TableHeader>
+                       <TableHeader>
+                         <TableRow>
+                           <TableHead>Nome</TableHead>
+                           <TableHead>Status</TableHead>
+                           <TableHead>HHP$®</TableHead>
+                           <TableHead>TPI</TableHead>
+                           <TableHead>NM$</TableHead>
+                           <TableHead>CM$</TableHead>
+                           <TableHead>FM$</TableHead>
+                           <TableHead>GM$</TableHead>
+                           <TableHead>F SAV</TableHead>
+                           <TableHead>PTAM</TableHead>
+                           <TableHead>CFP</TableHead>
+                           <TableHead>PTAF</TableHead>
+                           <TableHead>PTAF%</TableHead>
+                           <TableHead>PTAP</TableHead>
+                           <TableHead>PTAP%</TableHead>
+                           <TableHead>PL</TableHead>
+                           <TableHead>DPR</TableHead>
+                           <TableHead>LIV</TableHead>
+                           <TableHead>SCS</TableHead>
+                           <TableHead>MAST</TableHead>
+                           <TableHead>MET</TableHead>
+                           <TableHead>RP</TableHead>
+                           <TableHead>DA</TableHead>
+                           <TableHead>KET</TableHead>
+                           <TableHead>MF</TableHead>
+                           <TableHead>PTAT</TableHead>
+                           <TableHead>UDC</TableHead>
+                           <TableHead>FLC</TableHead>
+                           <TableHead>SCE</TableHead>
+                           <TableHead>DCE</TableHead>
+                           <TableHead>SSB</TableHead>
+                           <TableHead>DSB</TableHead>
+                           <TableHead>H LIV</TableHead>
+                           <TableHead>CCR</TableHead>
+                           <TableHead>HCR</TableHead>
+                           <TableHead>FI</TableHead>
+                           <TableHead>GL</TableHead>
+                           <TableHead>EFC</TableHead>
+                           <TableHead>BWC</TableHead>
+                           <TableHead>STA</TableHead>
+                           <TableHead>STR</TableHead>
+                           <TableHead>DFM</TableHead>
+                           <TableHead>RUA</TableHead>
+                           <TableHead>RLS</TableHead>
+                           <TableHead>RTP</TableHead>
+                           <TableHead>FTL</TableHead>
+                           <TableHead>RW</TableHead>
+                           <TableHead>RLR</TableHead>
+                           <TableHead>FTA</TableHead>
+                           <TableHead>FLS</TableHead>
+                           <TableHead>FUA</TableHead>
+                           <TableHead>RUH</TableHead>
+                           <TableHead>RUW</TableHead>
+                           <TableHead>UCL</TableHead>
+                           <TableHead>UDP</TableHead>
+                           <TableHead>FTP</TableHead>
+                           <TableHead>RFI</TableHead>
+                           <TableHead>Beta-Casein</TableHead>
+                           <TableHead>Kappa-Casein</TableHead>
+                           <TableHead>GFI</TableHead>
+                         </TableRow>
+                       </TableHeader>
                       <TableBody>
-                        {batchResults.slice(0, 10).map((result, index) => (
-                          <TableRow key={index}>
-                            <TableCell>{result.nome}</TableCell>
-                            <TableCell>
-                              {result.status === 'success' ? (
-                                <Badge variant="default">Válido</Badge>
-                              ) : (
-                                <Badge variant="destructive">Erro</Badge>
-                              )}
-                            </TableCell>
-                            <TableCell>{formatPTAValue('tpi', result.predictedPTAs?.tpi || null)}</TableCell>
-                            <TableCell>{formatPTAValue('nm_dollar', result.predictedPTAs?.nm_dollar || null)}</TableCell>
-                            <TableCell>{formatPTAValue('pl', result.predictedPTAs?.pl || null)}</TableCell>
-                            <TableCell>{formatPTAValue('scs', result.predictedPTAs?.scs || null)}</TableCell>
-                          </TableRow>
-                        ))}
+                         {batchResults.slice(0, 10).map((result, index) => (
+                           <TableRow key={index}>
+                             <TableCell>{result.nome}</TableCell>
+                             <TableCell>
+                               {result.status === 'success' ? (
+                                 <Badge variant="default">Válido</Badge>
+                               ) : (
+                                 <Badge variant="destructive">Erro</Badge>
+                               )}
+                             </TableCell>
+                             <TableCell>{formatPTAValue('hhp_dollar', result.predictedPTAs?.hhp_dollar || null)}</TableCell>
+                             <TableCell>{formatPTAValue('tpi', result.predictedPTAs?.tpi || null)}</TableCell>
+                             <TableCell>{formatPTAValue('nm_dollar', result.predictedPTAs?.nm_dollar || null)}</TableCell>
+                             <TableCell>{formatPTAValue('cm_dollar', result.predictedPTAs?.cm_dollar || null)}</TableCell>
+                             <TableCell>{formatPTAValue('fm_dollar', result.predictedPTAs?.fm_dollar || null)}</TableCell>
+                             <TableCell>{formatPTAValue('gm_dollar', result.predictedPTAs?.gm_dollar || null)}</TableCell>
+                             <TableCell>{formatPTAValue('f_sav', result.predictedPTAs?.f_sav || null)}</TableCell>
+                             <TableCell>{formatPTAValue('ptam', result.predictedPTAs?.ptam || null)}</TableCell>
+                             <TableCell>{formatPTAValue('cfp', result.predictedPTAs?.cfp || null)}</TableCell>
+                             <TableCell>{formatPTAValue('ptaf', result.predictedPTAs?.ptaf || null)}</TableCell>
+                             <TableCell>{formatPTAValue('ptaf_pct', result.predictedPTAs?.ptaf_pct || null)}</TableCell>
+                             <TableCell>{formatPTAValue('ptap', result.predictedPTAs?.ptap || null)}</TableCell>
+                             <TableCell>{formatPTAValue('ptap_pct', result.predictedPTAs?.ptap_pct || null)}</TableCell>
+                             <TableCell>{formatPTAValue('pl', result.predictedPTAs?.pl || null)}</TableCell>
+                             <TableCell>{formatPTAValue('dpr', result.predictedPTAs?.dpr || null)}</TableCell>
+                             <TableCell>{formatPTAValue('liv', result.predictedPTAs?.liv || null)}</TableCell>
+                             <TableCell>{formatPTAValue('scs', result.predictedPTAs?.scs || null)}</TableCell>
+                             <TableCell>{formatPTAValue('mast', result.predictedPTAs?.mast || null)}</TableCell>
+                             <TableCell>{formatPTAValue('met', result.predictedPTAs?.met || null)}</TableCell>
+                             <TableCell>{formatPTAValue('rp', result.predictedPTAs?.rp || null)}</TableCell>
+                             <TableCell>{formatPTAValue('da', result.predictedPTAs?.da || null)}</TableCell>
+                             <TableCell>{formatPTAValue('ket', result.predictedPTAs?.ket || null)}</TableCell>
+                             <TableCell>{formatPTAValue('mf', result.predictedPTAs?.mf || null)}</TableCell>
+                             <TableCell>{formatPTAValue('ptat', result.predictedPTAs?.ptat || null)}</TableCell>
+                             <TableCell>{formatPTAValue('udc', result.predictedPTAs?.udc || null)}</TableCell>
+                             <TableCell>{formatPTAValue('flc', result.predictedPTAs?.flc || null)}</TableCell>
+                             <TableCell>{formatPTAValue('sce', result.predictedPTAs?.sce || null)}</TableCell>
+                             <TableCell>{formatPTAValue('dce', result.predictedPTAs?.dce || null)}</TableCell>
+                             <TableCell>{formatPTAValue('ssb', result.predictedPTAs?.ssb || null)}</TableCell>
+                             <TableCell>{formatPTAValue('dsb', result.predictedPTAs?.dsb || null)}</TableCell>
+                             <TableCell>{formatPTAValue('h_liv', result.predictedPTAs?.h_liv || null)}</TableCell>
+                             <TableCell>{formatPTAValue('ccr', result.predictedPTAs?.ccr || null)}</TableCell>
+                             <TableCell>{formatPTAValue('hcr', result.predictedPTAs?.hcr || null)}</TableCell>
+                             <TableCell>{formatPTAValue('fi', result.predictedPTAs?.fi || null)}</TableCell>
+                             <TableCell>{formatPTAValue('gl', result.predictedPTAs?.gl || null)}</TableCell>
+                             <TableCell>{formatPTAValue('efc', result.predictedPTAs?.efc || null)}</TableCell>
+                             <TableCell>{formatPTAValue('bwc', result.predictedPTAs?.bwc || null)}</TableCell>
+                             <TableCell>{formatPTAValue('sta', result.predictedPTAs?.sta || null)}</TableCell>
+                             <TableCell>{formatPTAValue('str', result.predictedPTAs?.str || null)}</TableCell>
+                             <TableCell>{formatPTAValue('dfm', result.predictedPTAs?.dfm || null)}</TableCell>
+                             <TableCell>{formatPTAValue('rua', result.predictedPTAs?.rua || null)}</TableCell>
+                             <TableCell>{formatPTAValue('rls', result.predictedPTAs?.rls || null)}</TableCell>
+                             <TableCell>{formatPTAValue('rtp', result.predictedPTAs?.rtp || null)}</TableCell>
+                             <TableCell>{formatPTAValue('ftl', result.predictedPTAs?.ftl || null)}</TableCell>
+                             <TableCell>{formatPTAValue('rw', result.predictedPTAs?.rw || null)}</TableCell>
+                             <TableCell>{formatPTAValue('rlr', result.predictedPTAs?.rlr || null)}</TableCell>
+                             <TableCell>{formatPTAValue('fta', result.predictedPTAs?.fta || null)}</TableCell>
+                             <TableCell>{formatPTAValue('fls', result.predictedPTAs?.fls || null)}</TableCell>
+                             <TableCell>{formatPTAValue('fua', result.predictedPTAs?.fua || null)}</TableCell>
+                             <TableCell>{formatPTAValue('ruh', result.predictedPTAs?.ruh || null)}</TableCell>
+                             <TableCell>{formatPTAValue('ruw', result.predictedPTAs?.ruw || null)}</TableCell>
+                             <TableCell>{formatPTAValue('ucl', result.predictedPTAs?.ucl || null)}</TableCell>
+                             <TableCell>{formatPTAValue('udp', result.predictedPTAs?.udp || null)}</TableCell>
+                             <TableCell>{formatPTAValue('ftp', result.predictedPTAs?.ftp || null)}</TableCell>
+                             <TableCell>{formatPTAValue('rfi', result.predictedPTAs?.rfi || null)}</TableCell>
+                             <TableCell>{result.predictedPTAs?.beta_casein || '-'}</TableCell>
+                             <TableCell>{result.predictedPTAs?.kappa_casein || '-'}</TableCell>
+                             <TableCell>{formatPTAValue('gfi', result.predictedPTAs?.gfi || null)}</TableCell>
+                           </TableRow>
+                         ))}
                       </TableBody>
                     </Table>
                   </div>
