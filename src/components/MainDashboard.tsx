@@ -13,7 +13,7 @@ import SMSPage from './SMS';
 import MetasPage from './Metas';
 import PastaArquivosPage from './PastaArquivos';
 import PlanoApp from './PlanoApp';
-import NexusPredictor from './NexusPredictor';
+import NexusApp from './NexusApp';
 import ChartsPage from './ChartsPage';
 import HerdPage from './HerdPage';
 import BullSearchPage from './BullSearchPage';
@@ -346,7 +346,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
             </div>
           </div>
           <div className="container mx-auto px-4 py-8">
-            <NexusPredictor />
+            <NexusApp />
           </div>
         </div>
       );
