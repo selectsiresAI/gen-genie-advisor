@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Users, Search, Plus, Upload, Download, Filter } from "lucide-react";
+import { ArrowLeft, Users, Search, Plus, Upload, Download, Filter, TrendingUp } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import FemaleUploadModal from './FemaleUploadModal';
@@ -19,6 +19,7 @@ interface Farm {
 interface HerdPageProps {
   farm: Farm;
   onBack: () => void;
+  onNavigateToCharts?: () => void;
 }
 
 interface Female {
@@ -96,7 +97,7 @@ interface Female {
   gfi?: number;
 }
 
-const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack }) => {
+const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts }) => {
   const [females, setFemales] = useState<Female[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -346,12 +347,20 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack }) => {
   return (
     <div className="min-h-screen bg-background">
       <div className="border-b">
-        <div className="flex h-16 items-center px-4">
-          <Button variant="ghost" onClick={onBack} className="mr-4">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Dashboard
-          </Button>
-          <h1 className="text-xl font-semibold">{farm.farm_name} - Rebanho</h1>
+        <div className="flex h-16 items-center px-4 justify-between">
+          <div className="flex items-center">
+            <Button variant="ghost" onClick={onBack} className="mr-4">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Dashboard
+            </Button>
+            <h1 className="text-xl font-semibold">{farm.farm_name} - Rebanho</h1>
+          </div>
+          {onNavigateToCharts && (
+            <Button onClick={onNavigateToCharts} className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4" />
+              Ver Gráficos
+            </Button>
+          )}
         </div>
       </div>
 

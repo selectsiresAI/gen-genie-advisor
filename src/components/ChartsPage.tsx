@@ -8,13 +8,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, TrendingUp, TrendingDown, BarChart3, LineChart as LineChartIcon, Download, Settings, Filter, Eye, EyeOff, RefreshCw } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, BarChart3, LineChart as LineChartIcon, Download, Settings, Filter, Eye, EyeOff, RefreshCw, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 
 interface ChartsPageProps {
   farm?: any;
   onBack: () => void;
+  onNavigateToHerd?: () => void;
 }
 
 // Cores para os gráficos
@@ -28,7 +29,7 @@ const COLORS = {
 
 const CHART_COLORS = [COLORS.primary, COLORS.accent, COLORS.secondary, '#FFA500', '#8B5CF6', '#06B6D4', '#F59E0B'];
 
-const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack }) => {
+const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd }) => {
   const [females, setFemales] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedPTAs, setSelectedPTAs] = useState<string[]>(['tpi', 'hhp_dollar', 'nm_dollar']);
@@ -498,6 +499,12 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack }) => {
             <Badge variant="outline" className="text-xs">
               {females.length} animais
             </Badge>
+            {onNavigateToHerd && (
+              <Button variant="outline" size="sm" onClick={onNavigateToHerd}>
+                <Users className="w-4 h-4 mr-2" />
+                Ver Rebanho
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={loadFemalesData} disabled={loading}>
               <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               Atualizar

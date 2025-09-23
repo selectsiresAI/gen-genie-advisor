@@ -14,7 +14,7 @@ import MetasPage from './Metas';
 import PastaArquivosPage from './PastaArquivos';
 import PlanoApp from './PlanoApp';
 import NexusPredictor from './NexusPredictor';
-import OriginalChartsPage from './OriginalChartsPage';
+import ChartsPage from './ChartsPage';
 import HerdPage from './HerdPage';
 import BullSearchPage from './BullSearchPage';
 import FemaleUploadModal from './FemaleUploadModal';
@@ -374,9 +374,17 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
     // For components that need farm data
     if (farmData) {
       if (currentView === 'herd') {
+        const handleNavigateToCharts = () => {
+          setCurrentView('charts');
+        };
+        
         return (
           <div className="min-h-screen bg-background">
-            <HerdPage farm={selectedFarm!} onBack={handleBackToDashboard} />
+            <HerdPage 
+              farm={selectedFarm!} 
+              onBack={handleBackToDashboard}
+              onNavigateToCharts={handleNavigateToCharts}
+            />
           </div>
         );
       }
@@ -513,9 +521,17 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
       }
 
       if (currentView === 'charts') {
+        const handleNavigateToHerd = () => {
+          setCurrentView('herd');
+        };
+        
         return (
           <div className="min-h-screen bg-background">
-            <OriginalChartsPage onBack={handleBackToDashboard} />
+            <ChartsPage 
+              farm={selectedFarm!} 
+              onBack={handleBackToDashboard}
+              onNavigateToHerd={handleNavigateToHerd}
+            />
           </div>
         );
       }
