@@ -854,7 +854,266 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack }) => {
   );
 };
 
-// Componente para a visualização Panorama do Rebanho
+// Lista completa de PTAs para o Panorama
+const ALL_PTAS_PANORAMA = [
+  "HHP$®","TPI","NM$","CM$","FM$","GM$","F SAV","PTAM","CFP","PTAF","PTAF%","PTAP","PTAP%","PL","DPR","LIV","SCS","MAST","MET","RP","DA","KET","MF","PTAT","UDC","FLC","SCE","DCE","SSB","DSB","H LIV","CCR","HCR","FI","GL","EFC","BWC","STA","STR","DFM","RUA","RLS","RTP","FTL","RW","RLR","FTA","FLS","FUA","RUH","RUW","UCL","UDP","FTP","RFI","GFI"
+];
+
+// Mapeamento de rótulos para chaves de banco
+const PTA_TO_KEY_MAP: Record<string, string> = {
+  "HHP$®": "hhp_dollar",
+  "TPI": "tpi",
+  "NM$": "nm_dollar",
+  "CM$": "cm_dollar",
+  "FM$": "fm_dollar",
+  "GM$": "gm_dollar",
+  "F SAV": "f_sav",
+  "PTAM": "ptam",
+  "CFP": "cfp",
+  "PTAF": "ptaf",
+  "PTAF%": "ptaf_pct",
+  "PTAP": "ptap",
+  "PTAP%": "ptap_pct",
+  "PL": "pl",
+  "DPR": "dpr",
+  "LIV": "liv",
+  "SCS": "scs",
+  "MAST": "mast",
+  "MET": "met",
+  "RP": "rp",
+  "DA": "da",
+  "KET": "ket",
+  "MF": "mf",
+  "PTAT": "ptat",
+  "UDC": "udc",
+  "FLC": "flc",
+  "SCE": "sce",
+  "DCE": "dce",
+  "SSB": "ssb",
+  "DSB": "dsb",
+  "H LIV": "h_liv",
+  "CCR": "ccr",
+  "HCR": "hcr",
+  "FI": "fi",
+  "GL": "gl",
+  "EFC": "efc",
+  "BWC": "bwc",
+  "STA": "sta",
+  "STR": "str",
+  "DFM": "dfm",
+  "RUA": "rua",
+  "RLS": "rls",
+  "RTP": "rtp",
+  "FTL": "ftl",
+  "RW": "rw",
+  "RLR": "rlr",
+  "FTA": "fta",
+  "FLS": "fls",
+  "FUA": "fua",
+  "RUH": "ruh",
+  "RUW": "ruw",
+  "UCL": "ucl",
+  "UDP": "udp",
+  "FTP": "ftp",
+  "RFI": "rfi",
+  "GFI": "gfi"
+};
+
+const YEARS = [2021, 2022, 2023, 2024, 2025];
+
+// Utilitários matemáticos
+const mean = (arr: number[]) => (arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0);
+const variance = (arr: number[]) => {
+  if (arr.length <= 1) return 0;
+  const m = mean(arr);
+  return arr.reduce((s, v) => s + (v - m) * (v - m), 0) / arr.length;
+};
+
+function linearRegression(xs: number[], ys: number[]) {
+  if (xs.length !== ys.length || xs.length === 0) return { a: 0, b: 0 };
+  const mx = mean(xs), my = mean(ys);
+  const vxx = variance(xs);
+  if (vxx === 0) return { a: my, b: 0 };
+  const cov = xs.reduce((s, x, i) => s + (x - mx) * (ys[i] - my), 0) / xs.length;
+  const b = cov / vxx;
+  const a = my - b * mx;
+  return { a, b };
+}
+
+function descriptiveStats(values: number[]) {
+  const vals = values.filter((v) => Number.isFinite(v));
+  const m = mean(vals);
+  const std = Math.sqrt(variance(vals));
+  const max = vals.length ? Math.max(...vals) : 0;
+  const min = vals.length ? Math.min(...vals) : 0;
+  const belowPct = vals.length ? (vals.filter(v => v < m).length / vals.length) * 100 : 0;
+  return { mean: m, std, max, min, belowPct };
+}
+
+// Herdabilidades (fallback = 0.30 quando não houver)
+const H2: Record<string, number> = { 
+  PTAM: 0.35, PTAF: 0.28, "NM$": 0.25, TPI: 0.25, SCS: 0.15, DPR: 0.07 
+};
+
+// Componente Card para cada característica
+function TraitCard({ 
+  trait, 
+  data, 
+  showFarmMean, 
+  showTrend 
+}: { 
+  trait: string; 
+  data: Array<{year:number;n:number;mean:number}>; 
+  showFarmMean: boolean; 
+  showTrend: boolean; 
+}) {
+  const colorMean = "#111827"; // preto/cinza-900
+  const colorFarmMean = "#22C3EE"; // azul claro para média da fazenda
+  const colorTrend = "#10B981"; // verde-emerald
+
+  const farmMeanRaw = useMemo(() => mean(data.map(d => d.mean)), [data]);
+  const farmMean = Math.round(farmMeanRaw);
+
+  const slopeRounded = useMemo(() => {
+    const xs = data.map(d => d.year);
+    const ys = data.map(d => d.mean);
+    const { b } = linearRegression(xs, ys);
+    return Math.round(b);
+  }, [data]);
+
+  const chartData = useMemo(() => {
+    return data.map((d, i) => ({
+      year: d.year,
+      n: Math.round(d.n),
+      mean: Math.round(d.mean),
+      delta: Math.round(i === 0 ? 0 : d.mean - data[i - 1].mean),
+      farmMean,
+    }));
+  }, [data, farmMean]);
+
+  const trendLine = useMemo(() => {
+    if (!showTrend) return [] as Array<{year:number; trend:number}>;
+    const years = data.map(d => d.year);
+    if (years.length < 2) return [];
+    const { a, b } = linearRegression(years, data.map(d => d.mean));
+    const y1 = Math.round(a + b * years[0]);
+    const y2 = Math.round(a + b * years[years.length - 1]);
+    return [
+      { year: years[0], trend: y1 },
+      { year: years[years.length - 1], trend: y2 },
+    ];
+  }, [data, showTrend]);
+
+  const stats = useMemo(() => descriptiveStats(data.map(d => d.mean)), [data]);
+  const h2 = H2[trait] ?? 0.30;
+
+  return (
+    <div className="rounded-2xl shadow overflow-hidden bg-white">
+      {/* Header tarja preta com tendência geral */}
+      <div className="bg-black text-white px-4 py-2 text-sm font-semibold flex items-center justify-between">
+        <div className="truncate">{trait}</div>
+        <div className="text-xs opacity-90">Tendência: {slopeRounded >= 0 ? "+" : ""}{slopeRounded}/ano</div>
+      </div>
+
+      <div className="p-3 h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={chartData} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+            <defs>
+              <linearGradient id={`shade-${trait}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#111827" stopOpacity={0.25} />
+                <stop offset="100%" stopColor="#111827" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="year" type="number" domain={[2021, 2025]} ticks={[2021,2022,2023,2024,2025]} tickMargin={6} />
+            <YAxis tickMargin={6} />
+            <Tooltip
+              content={({ active, payload, label }) => {
+                if (!active || !payload || !payload.length) return null;
+                const p = payload[0].payload as any;
+                return (
+                  <div className="bg-white/95 shadow rounded-md px-3 py-2 text-xs text-gray-800">
+                    <div className="font-semibold">Ano: {label}</div>
+                    <div>N: {Math.round(p.n)}</div>
+                    <div>Ganho: {Math.round(p.delta)}</div>
+                  </div>
+                );
+              }}
+            />
+            <Legend wrapperStyle={{ opacity: 0.9 }} />
+            {/* Área sombreada sob a linha principal */}
+            <Area type="monotone" dataKey="mean" fill={`url(#shade-${trait})`} stroke="none" />
+            <Line
+              type="monotone"
+              dataKey="mean"
+              name="Média anual"
+              stroke={colorMean}
+              dot={{ r: 5, strokeWidth: 2, stroke: '#111827', fill: '#fff' }}
+              label={{ position: 'top', formatter: (v:any) => Math.round(v), fontSize: 12 }}
+            />
+            {showFarmMean && (
+              <ReferenceLine 
+                y={farmMean} 
+                stroke="#22C3EE" 
+                strokeDasharray="6 6" 
+                ifOverflow="extendDomain" 
+                label={{ 
+                  value: `Média ${farmMean}`, 
+                  position: 'insideTopLeft', 
+                  fill: '#0EA5B7', 
+                  fontSize: 12 
+                }} 
+              />
+            )}
+            {showTrend && trendLine.length === 2 && (
+              <Line 
+                type="linear" 
+                dataKey="trend" 
+                name={`Tendência (${slopeRounded}/ano)`} 
+                stroke={colorTrend} 
+                dot={false} 
+                data={trendLine}
+              />
+            )}
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Rodapé estatística descritiva */}
+      <div className="border-t px-4 py-2 text-xs text-gray-700 flex flex-wrap gap-x-6 gap-y-1">
+        <span><strong>STD:</strong> {Math.round(stats.std)}</span>
+        <span><strong>Max:</strong> {Math.round(stats.max)}</span>
+        <span><strong>Média:</strong> {Math.round(stats.mean)}</span>
+        <span><strong>Min:</strong> {Math.round(stats.min)}</span>
+        <span><strong>% &lt; Média:</strong> {Math.round(stats.belowPct)}%</span>
+        <span><strong>Herdabilidade:</strong> {(h2 ?? 0.30).toFixed(2).replace('.', ',')}</span>
+      </div>
+
+      {/* Ações */}
+      <div className="px-4 pb-3 pt-1 text-right">
+        <button
+          onClick={() => {
+            const rows = chartData.map(d => ({ year: d.year, n: d.n, mean: d.mean, ganho: d.delta }));
+            const headers = Object.keys(rows[0] || {});
+            const csv = [headers.join(","), ...rows.map(r => headers.map(h => (r as any)[h]).join(","))].join("\n");
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a"); 
+            a.href = url; 
+            a.download = `panorama_${trait}.csv`; 
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+          className="text-xs inline-flex items-center gap-1 px-3 py-2 rounded-xl border hover:bg-gray-50"
+        >
+          <Download size={14}/> Exportar CSV
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Componente principal do Panorama do Rebanho
 const PanoramaRebanhoView: React.FC<{
   females: any[];
   selectedPTAs: string[];
@@ -878,429 +1137,174 @@ const PanoramaRebanhoView: React.FC<{
   loading,
   farmName 
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const { toast } = useToast();
+  const [showFarmMean, setShowFarmMean] = useState(true);
+  const [showTrend, setShowTrend] = useState(true);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<string[]>(["TPI", "NM$"]);
 
-  // Filtrar PTAs disponíveis baseado na busca
   const filteredPTAs = useMemo(() => {
-    const q = searchTerm.trim().toLowerCase();
-    if (!q) return availablePTAs;
-    return availablePTAs.filter(pta => 
-      pta.label.toLowerCase().includes(q) ||
-      pta.description.toLowerCase().includes(q)
-    );
-  }, [availablePTAs, searchTerm]);
+    const q = search.trim().toLowerCase();
+    if (!q) return ALL_PTAS_PANORAMA;
+    return ALL_PTAS_PANORAMA.filter((t) => t.toLowerCase().includes(q));
+  }, [search]);
 
-  // Utilitários matemáticos
-  const mean = (arr: number[]) => (arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0);
-  const variance = (arr: number[]) => {
-    if (arr.length <= 1) return 0;
-    const m = mean(arr);
-    return arr.reduce((s, v) => s + (v - m) * (v - m), 0) / arr.length;
-  };
+  function toggle(t: string) {
+    setSelected((prev) => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
+  }
 
-  const linearRegression = (xs: number[], ys: number[]) => {
-    if (xs.length !== ys.length || xs.length === 0) return { a: 0, b: 0 };
-    const mx = mean(xs), my = mean(ys);
-    const vxx = variance(xs);
-    if (vxx === 0) return { a: my, b: 0 };
-    const cov = xs.reduce((s, x, i) => s + (x - mx) * (ys[i] - my), 0) / xs.length;
-    const b = cov / vxx;
-    const a = my - b * mx;
-    return { a, b };
-  };
+  function reset() { setSelected(["TPI", "NM$"]); }
+  function selectAll() { setSelected([...ALL_PTAS_PANORAMA]); }
+  function clearAll() { setSelected([]); }
 
-  const descriptiveStats = (values: number[]) => {
-    const vals = values.filter((v) => Number.isFinite(v));
-    const m = mean(vals);
-    const std = Math.sqrt(variance(vals));
-    const max = vals.length ? Math.max(...vals) : 0;
-    const min = vals.length ? Math.min(...vals) : 0;
-    const belowPct = vals.length ? (vals.filter(v => v < m).length / vals.length) * 100 : 0;
-    return { mean: m, std, max, min, belowPct };
-  };
-
-  // Herdabilidades
-  const getHeritability = (pta: string): string => {
-    const heritabilities: { [key: string]: number } = {
-      'hhp_dollar': 0.25, 'tpi': 0.25, 'nm_dollar': 0.25, 'cm_dollar': 0.25, 'fm_dollar': 0.25,
-      'ptam': 0.35, 'ptaf': 0.28, 'ptap': 0.25, 'scs': 0.15, 'pl': 0.10, 'dpr': 0.07
-    };
-    const h2 = heritabilities[pta] || 0.30;
-    return h2.toFixed(2).replace('.', ',');
-  };
-
-  // Processar dados por ano (2021-2025) para cada PTA
-  const processedPanoramaData = useMemo(() => {
-    if (!females.length || !selectedPTAs.length) return {};
-
-    const dataByPTA: any = {};
-    const years = [2021, 2022, 2023, 2024, 2025];
-
-    selectedPTAs.forEach(pta => {
-      const yearData: any = {};
-      let allValues: number[] = [];
-
-      years.forEach(year => {
-        const yearFemales = females.filter(f => {
-          if (!f.birth_date) return false;
-          const femaleYear = new Date(f.birth_date).getFullYear();
-          return femaleYear === year;
-        });
-
-        const values = yearFemales
-          .map(f => Number(f[pta]))
-          .filter(v => !isNaN(v) && v !== null && v !== undefined);
-
-        const meanVal = values.length > 0 ? values.reduce((sum, val) => sum + val, 0) / values.length : null;
+  // Processar dados do Supabase
+  const seriesByTrait = useMemo(() => {
+    const out: Record<string, Array<{year:number;n:number;mean:number}>> = {};
+    
+    for (const trait of selected) {
+      const dbKey = PTA_TO_KEY_MAP[trait];
+      if (!dbKey) continue;
+      
+      // Agrupar dados por ano
+      const dataByYear: { [key: string]: number[] } = {};
+      
+      females.forEach(female => {
+        if (!female.birth_date) return;
+        const year = new Date(female.birth_date).getFullYear();
+        const value = Number(female[dbKey]);
         
-        yearData[year] = {
-          year,
-          n: values.length,
-          mean: meanVal ? Math.round(meanVal) : null,
-          values
-        };
-
-        allValues = allValues.concat(values);
-      });
-
-      // Calcular ganho (delta) entre anos
-      years.forEach((year, index) => {
-        if (index === 0) {
-          yearData[year].ganho = 0;
-        } else {
-          const prevYear = years[index - 1];
-          const currentMean = yearData[year].mean;
-          const prevMean = yearData[prevYear].mean;
-          
-          if (currentMean !== null && prevMean !== null) {
-            yearData[year].ganho = Math.round(currentMean - prevMean);
-          } else {
-            yearData[year].ganho = 0;
-          }
+        if (!isNaN(value) && value !== null && year >= 2021 && year <= 2025) {
+          if (!dataByYear[year]) dataByYear[year] = [];
+          dataByYear[year].push(value);
         }
       });
-
-      // Calcular tendência linear
-      const validYearData = years
-        .map(year => ({ year, mean: yearData[year].mean }))
-        .filter(d => d.mean !== null);
-
-      let trend = 0;
-      if (validYearData.length >= 2) {
-        const xs = validYearData.map(d => d.year);
-        const ys = validYearData.map(d => d.mean!);
-        const { b } = linearRegression(xs, ys);
-        trend = Math.round(b);
-      }
-
-      // Calcular estatísticas descritivas
-      const stats = allValues.length > 0 ? {
-        ...descriptiveStats(allValues),
-        std: Math.round(descriptiveStats(allValues).std),
-        max: Math.round(descriptiveStats(allValues).max),
-        mean: Math.round(descriptiveStats(allValues).mean),
-        min: Math.round(descriptiveStats(allValues).min),
-        belowMean: Math.round(descriptiveStats(allValues).belowPct),
-        heritability: getHeritability(pta)
-      } : null;
-
-      dataByPTA[pta] = {
-        years: years.map(year => yearData[year]),
-        trend,
-        stats,
-        farmMean: stats?.mean || 0
-      };
-    });
-
-    return dataByPTA;
-  }, [females, selectedPTAs]);
-
-  // Exportar CSV para uma PTA específica
-  const handleExportPTA = (pta: string) => {
-    const data = processedPanoramaData[pta];
-    if (!data) return;
-
-    const csvContent = [
-      'year,n,mean,ganho',
-      ...data.years.map((yearData: any) => 
-        `${yearData.year},${yearData.n},${yearData.mean || ''},${yearData.ganho}`
-      )
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `panorama-${pta}-${farmName || 'fazenda'}-${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    toast({
-      title: "Exportação concluída",
-      description: `Dados de ${availablePTAs.find(p => p.key === pta)?.label} exportados com sucesso!`
-    });
-  };
-
-  // Componente TraitCard para cada PTA
-  const TraitCard = ({ trait, data }: { trait: string; data: any }) => {
-    const ptaInfo = availablePTAs.find(p => p.key === trait);
-    const chartData = data.years.filter((y: any) => y.mean !== null);
-
-    if (chartData.length === 0) {
-      return (
-        <div className="rounded-2xl shadow overflow-hidden bg-white">
-          <div className="bg-black text-white px-4 py-2 flex justify-between items-center">
-            <h3 className="font-medium">{ptaInfo?.label || trait}</h3>
-            <span className="text-sm">Tendência: 0/ano</span>
-          </div>
-          <div className="p-8 text-center text-muted-foreground">
-            <p>Sem dados disponíveis para {ptaInfo?.label}</p>
-          </div>
-        </div>
-      );
+      
+      // Calcular médias por ano
+      const series = YEARS.map(year => {
+        const values = dataByYear[year] || [];
+        return {
+          year,
+          n: values.length,
+          mean: values.length > 0 ? mean(values) : 0
+        };
+      }).filter(d => d.n > 0);
+      
+      out[trait] = series;
     }
-
-    // Calcular linha de tendência
-    const trendLineData = chartData.length >= 2 ? chartData.map((d: any) => ({
-      year: d.year,
-      trend: data.stats.mean + data.trend * (d.year - 2023)
-    })) : [];
-
-    const CustomTooltip = ({ active, payload, label }: any) => {
-      if (active && payload && payload.length) {
-        const yearData = data.years.find((y: any) => y.year === label);
-        return (
-          <div className="bg-white/95 shadow rounded-md px-3 py-2 text-xs text-gray-800">
-            <div className="font-semibold">Ano: {label}</div>
-            <div>N: {yearData?.n || 0}</div>
-            <div>Ganho: {yearData?.ganho || 0}</div>
-          </div>
-        );
-      }
-      return null;
-    };
-
-    return (
-      <div className="rounded-2xl shadow overflow-hidden bg-white">
-        {/* Header tarja preta com tendência geral */}
-        <div className="bg-black text-white px-4 py-2 text-sm font-semibold flex items-center justify-between">
-          <div className="truncate">{ptaInfo?.label || trait}</div>
-          <div className="text-xs opacity-90">
-            Tendência: {data.trend >= 0 ? "+" : ""}{data.trend}/ano
-          </div>
-        </div>
-
-        <div className="p-3 h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
-              <defs>
-                <linearGradient id={`shade-${trait}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#111827" stopOpacity={0.25} />
-                  <stop offset="100%" stopColor="#111827" stopOpacity={0.02} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="year" 
-                type="number" 
-                domain={[2021, 2025]} 
-                ticks={[2021, 2022, 2023, 2024, 2025]} 
-                tickMargin={6} 
-              />
-              <YAxis tickMargin={6} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend wrapperStyle={{ opacity: 0.9 }} />
-              
-              {/* Área sombreada sob a linha principal */}
-              <Area 
-                type="monotone" 
-                dataKey="mean" 
-                fill={`url(#shade-${trait})`} 
-                stroke="none" 
-              />
-              
-              <Line
-                type="monotone"
-                dataKey="mean"
-                name="Média anual"
-                stroke="#111827"
-                strokeWidth={2}
-                dot={{ r: 5, strokeWidth: 2, stroke: '#111827', fill: '#fff' }}
-              />
-              
-              {showFarmAverage && (
-                <ReferenceLine 
-                  y={data.farmMean} 
-                  stroke="#22C3EE" 
-                  strokeDasharray="6 6" 
-                  ifOverflow="extendDomain" 
-                  label={{ 
-                    value: `Média ${data.farmMean}`, 
-                    position: 'insideTopLeft', 
-                    fill: '#0EA5B7', 
-                    fontSize: 12 
-                  }} 
-                />
-              )}
-              
-              {showTrendLine && trendLineData.length === 2 && (
-                <Line 
-                  type="linear" 
-                  dataKey="trend" 
-                  name={`Tendência (${data.trend}/ano)`} 
-                  stroke="#10B981" 
-                  strokeWidth={2}
-                  dot={false} 
-                  data={trendLineData} 
-                />
-              )}
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Rodapé estatística descritiva */}
-        {data.stats && (
-          <div className="border-t px-4 py-2 text-xs text-gray-700 flex flex-wrap gap-x-6 gap-y-1">
-            <span><strong>STD:</strong> {data.stats.std}</span>
-            <span><strong>Max:</strong> {data.stats.max}</span>
-            <span><strong>Média:</strong> {data.stats.mean}</span>
-            <span><strong>Min:</strong> {data.stats.min}</span>
-            <span><strong>% &lt; Média:</strong> {data.stats.belowMean}%</span>
-            <span><strong>Herdabilidade:</strong> {data.stats.heritability}</span>
-          </div>
-        )}
-
-        {/* Botão de exportar */}
-        <div className="px-4 pb-3 pt-1 text-right">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleExportPTA(trait)}
-            className="text-xs"
-          >
-            <Download className="w-3 h-3 mr-1" />
-            Exportar CSV
-          </Button>
-        </div>
-      </div>
-    );
-  };
+    
+    return out;
+  }, [selected, females]);
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-4">
+    <div className="w-full max-w-7xl mx-auto p-4 space-y-4">
       {/* Toolbar */}
-      <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-center gap-3">
-            <CardTitle className="text-xl">Panorama do Rebanho</CardTitle>
-            <div className="ml-auto flex items-center gap-4">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="farm-average"
-                  checked={showFarmAverage}
-                  onCheckedChange={setShowFarmAverage}
-                />
-                <Label htmlFor="farm-average" className="text-sm">Mostrar média da fazenda</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="trend-line"
-                  checked={showTrendLine}
-                  onCheckedChange={setShowTrendLine}
-                />
-                <Label htmlFor="trend-line" className="text-sm">Mostrar tendência genética</Label>
-              </div>
-            </div>
-          </div>
-        </CardHeader>
-        
-        <CardContent className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Input
-              className="w-72"
-              placeholder="Buscar característica (PTA)..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setSelectedPTAs(availablePTAs.map(p => p.key))}
+      <div className="bg-white rounded-2xl shadow p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-xl font-semibold">Gráficos — Panorama do Rebanho</h2>
+          <div className="ml-auto flex items-center gap-2">
+            <label className="text-sm flex items-center gap-2">
+              <input 
+                type="checkbox" 
+                className="accent-black" 
+                checked={showFarmMean} 
+                onChange={(e) => setShowFarmMean(e.target.checked)} 
+              />
+              Mostrar média da fazenda
+            </label>
+            <label className="text-sm flex items-center gap-2">
+              <input 
+                type="checkbox" 
+                className="accent-black" 
+                checked={showTrend} 
+                onChange={(e) => setShowTrend(e.target.checked)} 
+              />
+              Mostrar tendência genética
+            </label>
+            <button 
+              onClick={reset} 
+              className="px-3 py-2 rounded-xl border text-sm hover:bg-gray-50"
             >
-              Selecionar todas
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setSelectedPTAs([])}
-            >
-              Limpar
-            </Button>
+              Resetar seleção
+            </button>
           </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-52 overflow-auto pr-2">
-            {filteredPTAs.map((pta) => {
-              const isSelected = selectedPTAs.includes(pta.key);
-              return (
-                <Badge
-                  key={pta.key}
-                  variant={isSelected ? "default" : "outline"}
-                  className={`cursor-pointer justify-center text-xs py-2 ${
-                    isSelected 
-                      ? "bg-emerald-100 border-emerald-300 text-emerald-800" 
-                      : "bg-white border-gray-200 hover:bg-gray-50"
-                  }`}
-                  onClick={() => {
-                    if (isSelected) {
-                      setSelectedPTAs(selectedPTAs.filter(p => p !== pta.key));
-                    } else {
-                      setSelectedPTAs([...selectedPTAs, pta.key]);
-                    }
-                  }}
-                >
-                  {pta.label}
-                </Badge>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+        <div className="mt-3 flex items-center gap-2">
+          <input
+            className="border rounded-lg px-3 py-2 text-sm w-72"
+            placeholder="Buscar característica (PTA)…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <button 
+            onClick={selectAll} 
+            className="px-3 py-2 rounded-xl border text-sm hover:bg-gray-50"
+          >
+            Selecionar todas
+          </button>
+          <button 
+            onClick={clearAll} 
+            className="px-3 py-2 rounded-xl border text-sm hover:bg-gray-50"
+          >
+            Limpar
+          </button>
+        </div>
+        <div className="mt-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-52 overflow-auto pr-2">
+          {filteredPTAs.map((t) => {
+            const on = selected.includes(t);
+            return (
+              <label 
+                key={t} 
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer ${
+                  on ? "bg-emerald-50 border-emerald-300" : "bg-white border-gray-200 hover:bg-gray-50"
+                }`}
+              >
+                <input 
+                  type="checkbox" 
+                  className="accent-black" 
+                  checked={on} 
+                  onChange={() => toggle(t)} 
+                />
+                <span className="text-sm">{t}</span>
+              </label>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Cards por PTA */}
       {loading ? (
-        <div className="grid md:grid-cols-2 gap-4">
-          {[1, 2, 3].map(i => (
-            <Card key={i}>
-              <CardContent className="p-4">
-                <div className="animate-pulse space-y-4">
-                  <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                  <div className="h-64 bg-gray-200 rounded"></div>
-                  <div className="h-12 bg-gray-200 rounded"></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="flex items-center justify-center py-8">
+          <div className="text-center">
+            <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">Carregando dados...</p>
+          </div>
         </div>
-      ) : selectedPTAs.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">
-            <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p className="text-lg font-medium mb-2">Nenhuma característica selecionada</p>
-            <p>Selecione uma ou mais PTAs para visualizar o panorama do rebanho</p>
-          </CardContent>
-        </Card>
+      ) : selected.length === 0 ? (
+        <div className="bg-white rounded-2xl shadow p-8 text-center text-muted-foreground">
+          <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
+          <p className="text-lg font-medium mb-2">Nenhuma característica selecionada</p>
+          <p>Selecione uma ou mais PTAs para visualizar o panorama do rebanho</p>
+        </div>
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
-          {selectedPTAs.map((trait) => {
-            const data = processedPanoramaData[trait];
-            if (!data) return null;
-            return <TraitCard key={trait} trait={trait} data={data} />;
+          {selected.map((t) => {
+            const data = seriesByTrait[t];
+            if (!data || data.length === 0) return null;
+            return (
+              <TraitCard 
+                key={t} 
+                trait={t} 
+                data={data} 
+                showFarmMean={showFarmMean} 
+                showTrend={showTrend} 
+              />
+            );
           })}
         </div>
       )}
+
+      <div className="text-xs text-gray-500 text-center pb-8">
+        Dados processados do rebanho da fazenda{farmName ? ` ${farmName}` : ''} com agrupamento por ano de nascimento (2021-2025).
+      </div>
     </div>
   );
 };
