@@ -1172,6 +1172,8 @@ const PanoramaRebanhoView: React.FC<{
 
   // Processar dados do Supabase
   const seriesByTrait = useMemo(() => {
+    if (!females || !females.length) return {};
+    
     const out: Record<string, Array<{year:number;n:number;mean:number}>> = {};
     
     for (const trait of selected) {
@@ -1182,7 +1184,7 @@ const PanoramaRebanhoView: React.FC<{
       const dataByYear: { [key: string]: number[] } = {};
       
       females.forEach(female => {
-        if (!female.birth_date) return;
+        if (!female || !female.birth_date) return;
         const year = new Date(female.birth_date).getFullYear();
         const value = Number(female[dbKey]);
         
