@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Users, Beef, BarChart3, Plus, LogOut, Zap, ArrowLeft, TrendingUp, Beaker, MessageSquare, Target, FolderOpen, Calculator } from "lucide-react";
+import { Building2, Users, Beef, BarChart3, Plus, LogOut, Zap, ArrowLeft, TrendingUp, Beaker, MessageSquare, Target, FolderOpen, Calculator, Trash2 } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import CreateFarmModal from './CreateFarmModal';
@@ -104,6 +104,53 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
 
   const handleCreateFarmSuccess = () => {
     loadUserData();
+  };
+
+  const handleDeleteFarm = async (farmId: string, farmName: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevenir que o click do delete abra a fazenda
+    
+    const isConfirmed = confirm(`Tem certeza que deseja apagar a fazenda "${farmName}"? Esta ação não pode ser desfeita.`);
+    
+    if (!isConfirmed) {
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('delete_farm', {
+        farm_uuid: farmId
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data && data.length > 0) {
+        const result = data[0];
+        
+        if (result.success) {
+          toast({
+            title: "Fazenda apagada com sucesso!",
+            description: `${farmName} foi removida do seu portfólio`,
+          });
+          
+          // Recarregar a lista de fazendas
+          loadUserData();
+        } else {
+          toast({
+            title: "Erro ao apagar fazenda",
+            description: result.message || 'Erro desconhecido',
+            variant: "destructive",
+          });
+        }
+      }
+    } catch (error: any) {
+      console.error('Erro ao apagar fazenda:', error);
+      toast({
+        title: "Erro ao apagar fazenda",
+        description: error.message || 'Tente novamente',
+        variant: "destructive",
+      });
+    }
   };
 
   const handleFarmSelect = (farm: Farm) => {
@@ -698,24 +745,35 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
                     className="hover:shadow-lg transition-shadow cursor-pointer"
                     onClick={() => handleFarmSelect(farm)}
                   >
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-1">
-                          <CardTitle className="text-lg">{farm.farm_name}</CardTitle>
-                          <CardDescription>
-                            Proprietário: {farm.owner_name}
-                          </CardDescription>
-                        </div>
-                        <div className="flex gap-2">
-                          <Badge variant={getRoleBadgeVariant(farm.my_role)}>
-                            {getRoleLabel(farm.my_role)}
-                          </Badge>
-                          {farm.is_default && (
-                            <Badge variant="outline">Padrão</Badge>
-                          )}
-                        </div>
-                      </div>
-                    </CardHeader>
+                     <CardHeader>
+                       <div className="flex justify-between items-start">
+                         <div className="space-y-1">
+                           <CardTitle className="text-lg">{farm.farm_name}</CardTitle>
+                           <CardDescription>
+                             Proprietário: {farm.owner_name}
+                           </CardDescription>
+                         </div>
+                         <div className="flex gap-2 items-center">
+                           <Badge variant={getRoleBadgeVariant(farm.my_role)}>
+                             {getRoleLabel(farm.my_role)}
+                           </Badge>
+                           {farm.is_default && (
+                             <Badge variant="outline">Padrão</Badge>
+                           )}
+                           {farm.my_role === 'owner' && (
+                             <Button
+                               variant="ghost"
+                               size="sm"
+                               className="h-8 w-8 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                               onClick={(e) => handleDeleteFarm(farm.farm_id, farm.farm_name, e)}
+                               title="Apagar fazenda"
+                             >
+                               <Trash2 className="h-4 w-4" />
+                             </Button>
+                           )}
+                         </div>
+                       </div>
+                     </CardHeader>
                     <CardContent>
                       <div className="flex justify-between text-sm">
                         <div className="flex items-center gap-1">
