@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
 import EstruturalPopulacional from './EstruturalPopulacional';
 import PTAMothersTable from './PTAMothersTable';
+import { BullSelector } from '@/components/BullSelector';
 
 /**
  * Projeção Genética MVP – Select Sires (Frontend Only, Single File)
@@ -939,32 +940,38 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
       {/* Configuração de cada touro */}
       {st.bulls.slice(0, st.numberOfBulls).map((b, idx) => (
         <Section key={b.id} title={`Touro ${idx + 1}`}>
-          {/* Seleção do touro do ToolSSApp */}
+          {/* Seleção do touro usando BullSelector */}
           {toolssBulls.length > 0 && (
             <div style={{ marginBottom: 12 }}>
-              <Label>Selecionar touro do ToolSS</Label>
-              <Select 
-                value={b.naab || ""} 
-                onChange={(naab) => {
-                  console.log(`🔄 Touro ${idx + 1}: selecionado NAAB = ${naab}`);
+              <BullSelector 
+                label={`Selecionar Touro ${idx + 1}`}
+                placeholder="Digite o código NAAB ou selecione da lista"
+                value={b.naab ? {
+                  id: b.naab,
+                  code: b.naab,
+                  name: b.name || "",
+                  company: b.empresa || ""
+                } : null}
+                onChange={(bull) => {
+                  console.log(`🔄 Touro ${idx + 1}: selecionado bull =`, bull);
                   
-                  if (naab === "") {
+                  if (!bull) {
                     // Limpa o touro
                     console.log(`🧹 Limpando dados do Touro ${idx + 1}`);
                     setSt(s => ({ 
                       ...s, 
-                      bulls: s.bulls.map((bull, i) => 
+                      bulls: s.bulls.map((bullItem, i) => 
                         i === idx ? {
-                          ...bull,
+                          ...bullItem,
                           name: "",
                           naab: "",
                           empresa: "",
                           pta: Object.fromEntries(planStore.selectedPTAList.map(pta => [pta, 0]))
-                        } : bull
+                        } : bullItem
                       )
                     }));
                   } else {
-                    const selectedBull = toolssBulls.find(bull => bull.naab === naab);
+                    const selectedBull = toolssBulls.find(toolsBull => toolsBull.naab === bull.code);
                     if (selectedBull) {
                       console.log(`✅ Touro encontrado: ${selectedBull.nome} (${selectedBull.empresa})`);
                       
@@ -981,31 +988,25 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
                       
                       setSt(s => ({ 
                         ...s, 
-                        bulls: s.bulls.map((bull, i) => 
+                        bulls: s.bulls.map((bullItem, i) => 
                           i === idx ? {
-                            ...bull,
+                            ...bullItem,
                             name: selectedBull.nome || "",
                             naab: selectedBull.naab || "",
                             empresa: selectedBull.empresa || "",
                             pta: updatedPTA
-                          } : bull
+                          } : bullItem
                         )
                       }));
                       
                       // Show success toast
                       console.log(`✅ Touro ${idx + 1} configurado: ${selectedBull.nome} - ${selectedBull.naab}`);
                     } else {
-                      console.log(`❌ Touro com NAAB ${naab} não encontrado na lista`);
+                      console.log(`❌ Touro com código ${bull.code} não encontrado na lista`);
                     }
                   }
                 }}
-                 options={[
-                   { value: "", label: "Selecione um touro" },
-                   ...toolssBulls.map((bull) => ({
-                     value: bull.naab,
-                     label: `${bull.naab} - ${bull.nome} (${bull.empresa || "S/Empresa"})`
-                   }))
-                 ]}
+                showPTAs={true}
               />
               {b.naab && (
                 <div style={{ marginTop: 4, fontSize: 11, color: "#16a34a" }}>

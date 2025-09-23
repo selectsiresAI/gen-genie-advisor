@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { BullSelector } from '@/components/BullSelector';
 
 // Types - Updated to match Supabase structure
 type Bull = {
@@ -835,25 +836,33 @@ function BotijaoVirtualPage({ client, farm, bulls: propBulls, selectedBulls = []
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label>Selecionar Touro</Label>
-                  <Select 
-                    value={newItem.touro?.code || ""} 
-                    onValueChange={(value) => {
-                      const touro = filteredBulls.find(b => b.code === value);
-                      setNewItem(prev => ({ ...prev, touro }));
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Escolha um touro" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredBulls.map(bull => (
-                        <SelectItem key={bull.code} value={bull.code}>
-                          {bull.code} - {bull.name} ({bull.empresa || "S/Empresa"})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <BullSelector 
+                    label="Selecionar Touro"
+                    placeholder="Digite o código NAAB ou selecione da lista"
+                    value={newItem.touro ? {
+                      id: newItem.touro.code,
+                      code: newItem.touro.code,
+                      name: newItem.touro.name,
+                      company: newItem.touro.empresa
+                    } : null}
+                     onChange={(bull) => {
+                       if (bull) {
+                         setNewItem(prev => ({ 
+                           ...prev, 
+                           touro: {
+                             id: bull.id || bull.code,
+                             code: bull.code,
+                             name: bull.name,
+                             empresa: bull.company || "",
+                             ptas: bull.ptas || {}
+                           }
+                         }));
+                       } else {
+                         setNewItem(prev => ({ ...prev, touro: undefined }));
+                       }
+                     }}
+                    showPTAs={true}
+                  />
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
