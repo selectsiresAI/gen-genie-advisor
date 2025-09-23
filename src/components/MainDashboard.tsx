@@ -520,7 +520,6 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
               farm={selectedFarm!} 
               onBack={handleBackToDashboard}
               onNavigateToCharts={handleNavigateToCharts}
-              onGoToBotijao={() => setCurrentView('botijao')}
             />
           </div>
         );

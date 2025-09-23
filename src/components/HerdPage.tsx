@@ -23,7 +23,6 @@ interface HerdPageProps {
   farm: Farm;
   onBack: () => void;
   onNavigateToCharts?: () => void;
-  onGoToBotijao?: () => void;
 }
 
 interface Female {
@@ -101,7 +100,7 @@ interface Female {
   gfi?: number;
 }
 
-const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts, onGoToBotijao }) => {
+const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts }) => {
   const [females, setFemales] = useState<Female[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -276,42 +275,6 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts, o
       setSelectedFemales([]);
     } else {
       setSelectedFemales(filteredFemales.map(f => f.id));
-    }
-  };
-
-  const handleAddToBotijao = () => {
-    if (selectedFemales.length === 0) {
-      toast({
-        title: "Nenhuma fêmea selecionada",
-        description: "Selecione pelo menos uma fêmea para adicionar ao Botijão Virtual.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Convert selected females to a format that the Botijao can use
-    const selectedFemaleData = selectedFemales.map(id => {
-      const female = females.find(f => f.id === id);
-      return female ? {
-        id: female.id,
-        name: female.name,
-        identifier: female.identifier,
-        sire_naab: female.sire_naab,
-        category: getAutomaticCategory(female.birth_date, female.parity_order)
-      } : null;
-    }).filter(Boolean);
-
-    // Store selected females for BotijaoVirtual
-    localStorage.setItem(`selected-females-${farm.farm_id}`, JSON.stringify(selectedFemaleData));
-    
-    toast({
-      title: "Fêmeas selecionadas",
-      description: `${selectedFemales.length} fêmea(s) selecionada(s) para o Botijão Virtual.`,
-    });
-
-    // Navigate to Botijao Virtual
-    if (onGoToBotijao) {
-      onGoToBotijao();
     }
   };
 
@@ -634,14 +597,6 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts, o
             <Button variant="outline" onClick={handleExport}>
               <Download className="w-4 h-4 mr-2" />
               Exportar
-            </Button>
-            <Button 
-              onClick={handleAddToBotijao}
-              disabled={selectedFemales.length === 0}
-              variant="default"
-            >
-              <Beaker className="w-4 h-4 mr-2" />
-              Botijão Virtual ({selectedFemales.length})
             </Button>
           </div>
 
