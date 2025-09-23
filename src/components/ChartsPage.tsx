@@ -693,7 +693,9 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
                   {selectedPTAs.map(pta => {
                     const stats = statisticsData[pta];
                     const ptaInfo = availablePTAs.find(p => p.key === pta);
-                    if (!stats) return null;
+                    
+                    // Enhanced null safety check
+                    if (!stats || typeof stats !== 'object') return null;
                     
                     return (
                       <Card key={pta}>
@@ -725,7 +727,7 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
                         </CardContent>
                       </Card>
                     );
-                  })}
+                  }).filter(Boolean)}
                 </div>
               )}
             </TabsContent>
