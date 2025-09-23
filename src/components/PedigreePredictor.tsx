@@ -297,6 +297,8 @@ const PedigreePredictor: React.FC = () => {
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
       const jsonData = utils.sheet_to_json(worksheet) as any[];
       
+      console.log(`🔄 Processando ${jsonData.length} linhas do arquivo em lote`);
+      
       const results: BatchResult[] = [];
       
       for (const row of jsonData) {
@@ -309,6 +311,8 @@ const PedigreePredictor: React.FC = () => {
           naabBisavoMaterno: row.naabBisavoMaterno || ''
         };
 
+        console.log(`📋 Processando linha: ${input.nome} - Pai: ${input.naabPai}`);
+
         const pedigreeData = {
           sireNaab: input.naabPai,
           mgsNaab: input.naabAvoMaterno,
@@ -318,12 +322,43 @@ const PedigreePredictor: React.FC = () => {
         const errors = validateNaabs(pedigreeData);
         
         if (errors.length === 0) {
-          const sire = getBullFromCache(input.naabPai, bullsCache);
-          const mgs = getBullFromCache(input.naabAvoMaterno, bullsCache);
-          const mmgs = getBullFromCache(input.naabBisavoMaterno, bullsCache);
+          // Try to get from cache first, if not found, fetch from Supabase
+          let sire = getBullFromCache(input.naabPai, bullsCache);
+          let mgs = getBullFromCache(input.naabAvoMaterno, bullsCache);
+          let mmgs = getBullFromCache(input.naabBisavoMaterno, bullsCache);
+          
+          // Fetch missing bulls from Supabase
+          if (!sire && input.naabPai) {
+            console.log(`🔍 Buscando pai ${input.naabPai} no Supabase...`);
+            sire = await fetchBullFromDatabase(input.naabPai);
+            if (sire) {
+              setBullCache(input.naabPai, sire);
+              console.log(`✅ Pai encontrado: ${sire.name}`);
+            }
+          }
+          
+          if (!mgs && input.naabAvoMaterno) {
+            console.log(`🔍 Buscando avô materno ${input.naabAvoMaterno} no Supabase...`);
+            mgs = await fetchBullFromDatabase(input.naabAvoMaterno);
+            if (mgs) {
+              setBullCache(input.naabAvoMaterno, mgs);
+              console.log(`✅ Avô materno encontrado: ${mgs.name}`);
+            }
+          }
+          
+          if (!mmgs && input.naabBisavoMaterno) {
+            console.log(`🔍 Buscando bisavô materno ${input.naabBisavoMaterno} no Supabase...`);
+            mmgs = await fetchBullFromDatabase(input.naabBisavoMaterno);
+            if (mmgs) {
+              setBullCache(input.naabBisavoMaterno, mmgs);
+              console.log(`✅ Bisavô materno encontrado: ${mmgs.name}`);
+            }
+          }
           
           if (sire) {
             const predictedPTAs = predictFromPedigree(sire, mgs, mmgs);
+            
+            console.log(`✅ Predição gerada para ${input.nome}`);
             
             results.push({
               ...input,
@@ -331,13 +366,15 @@ const PedigreePredictor: React.FC = () => {
               predictedPTAs
             });
           } else {
+            console.log(`❌ Pai não encontrado para ${input.nome}`);
             results.push({
               ...input,
               status: 'error',
-              errors: ['Dados do pai não encontrados']
+              errors: [`Pai com NAAB ${input.naabPai} não encontrado no banco de dados`]
             });
           }
         } else {
+          console.log(`❌ Erros de validação para ${input.nome}: ${errors.join(', ')}`);
           results.push({
             ...input,
             status: 'error',
