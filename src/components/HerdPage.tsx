@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -106,6 +106,58 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
   const { toast } = useToast();
   const { setSelectedHerdId, setDashboardCounts } = useHerdStore();
 
+  // Memoize category counts to avoid recalculating on every render
+  const categoryCounts = useMemo(() => {
+    const counts = {
+      total: females.length,
+      bezerras: 0,
+      novilhas: 0,
+      primiparas: 0,
+      secundiparas: 0,
+      multiparas: 0
+    };
+
+    females.forEach(female => {
+      const category = getAutomaticCategory(female.birth_date, female.parity_order);
+      switch (category) {
+        case 'Bezerra':
+          counts.bezerras++;
+          break;
+        case 'Novilha':
+          counts.novilhas++;
+          break;
+        case 'Primípara':
+          counts.primiparas++;
+          break;
+        case 'Secundípara':
+          counts.secundiparas++;
+          break;
+        case 'Multípara':
+          counts.multiparas++;
+          break;
+      }
+    });
+
+    return counts;
+  }, [females]);
+
+  // Update the herd store when counts change
+  useEffect(() => {
+    if (categoryCounts.total > 0) {
+      const dashboardCounts = {
+        "Total de Fêmeas": categoryCounts.total,
+        "Bezerra": categoryCounts.bezerras,
+        "Novilhas": categoryCounts.novilhas,
+        "Primíparas": categoryCounts.primiparas,
+        "Secundíparas": categoryCounts.secundiparas,
+        "Multíparas": categoryCounts.multiparas,
+      };
+      
+      setSelectedHerdId(farm.farm_id);
+      setDashboardCounts(dashboardCounts);
+    }
+  }, [categoryCounts, farm.farm_id, setSelectedHerdId, setDashboardCounts]);
+
   useEffect(() => {
     loadFemales();
   }, [farm.farm_id]);
@@ -188,53 +240,6 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
     }
     
     return 'Indefinida';
-  };
-
-  const getCategoryCounts = () => {
-    const counts = {
-      total: females.length,
-      bezerras: 0,
-      novilhas: 0,
-      primiparas: 0,
-      secundiparas: 0,
-      multiparas: 0
-    };
-
-    females.forEach(female => {
-      const category = getAutomaticCategory(female.birth_date, female.parity_order);
-      switch (category) {
-        case 'Bezerra':
-          counts.bezerras++;
-          break;
-        case 'Novilha':
-          counts.novilhas++;
-          break;
-        case 'Primípara':
-          counts.primiparas++;
-          break;
-        case 'Secundípara':
-          counts.secundiparas++;
-          break;
-        case 'Multípara':
-          counts.multiparas++;
-          break;
-      }
-    });
-
-    // Update the herd store with dashboard counts
-    const dashboardCounts = {
-      "Total de Fêmeas": counts.total,
-      "Bezerra": counts.bezerras,
-      "Novilhas": counts.novilhas,
-      "Primíparas": counts.primiparas,
-      "Secundíparas": counts.secundiparas,
-      "Multíparas": counts.multiparas,
-    };
-    
-    setSelectedHerdId(farm.farm_id);
-    setDashboardCounts(dashboardCounts);
-
-    return counts;
   };
 
   const handleExport = () => {
@@ -458,7 +463,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{getCategoryCounts().total}</div>
+                <div className="text-2xl font-bold">{categoryCounts.total}</div>
               </CardContent>
             </Card>
 
@@ -470,7 +475,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-blue-700">{getCategoryCounts().bezerras}</div>
+                <div className="text-2xl font-bold text-blue-700">{categoryCounts.bezerras}</div>
               </CardContent>
             </Card>
 
@@ -482,7 +487,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-700">{getCategoryCounts().novilhas}</div>
+                <div className="text-2xl font-bold text-green-700">{categoryCounts.novilhas}</div>
               </CardContent>
             </Card>
 
@@ -494,7 +499,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-purple-700">{getCategoryCounts().primiparas}</div>
+                <div className="text-2xl font-bold text-purple-700">{categoryCounts.primiparas}</div>
               </CardContent>
             </Card>
 
@@ -506,7 +511,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-orange-700">{getCategoryCounts().secundiparas}</div>
+                <div className="text-2xl font-bold text-orange-700">{categoryCounts.secundiparas}</div>
               </CardContent>
             </Card>
 
@@ -518,7 +523,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-red-700">{getCategoryCounts().multiparas}</div>
+                <div className="text-2xl font-bold text-red-700">{categoryCounts.multiparas}</div>
               </CardContent>
             </Card>
           </div>
