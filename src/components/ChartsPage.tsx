@@ -610,7 +610,7 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack }) => {
               </TabsTrigger>
               <TabsTrigger value="panorama" className="flex items-center gap-2">
                 <Eye className="w-4 h-4" />
-                Panorama
+                Panorama do Rebanho
               </TabsTrigger>
             </TabsList>
 
