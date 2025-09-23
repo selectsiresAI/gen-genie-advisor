@@ -203,12 +203,14 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
         .filter(yearData => yearData && typeof yearData === 'object')
         .map((yearData: any) => {
           const result: any = { year: yearData.year, count: yearData.count || 0 };
-          selectedPTAs.forEach(pta => {
+        selectedPTAs.forEach(pta => {
+          if (pta && yearData && typeof yearData === 'object') {
             const values = yearData[pta] || [];
             result[pta] = values.length > 0 
               ? values.reduce((sum: number, val: number) => sum + val, 0) / values.length 
               : null;
-          });
+          }
+        });
           return result;
         })
         .filter(d => d.count > 0)
@@ -240,12 +242,14 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
         .filter(catData => catData && typeof catData === 'object')
         .map((catData: any) => {
           const result: any = { name: catData.category, count: catData.count || 0 };
-          selectedPTAs.forEach(pta => {
+        selectedPTAs.forEach(pta => {
+          if (pta && catData && typeof catData === 'object') {
             const values = catData[pta] || [];
             result[pta] = values.length > 0 
               ? values.reduce((sum: number, val: number) => sum + val, 0) / values.length 
               : null;
-          });
+          }
+        });
           return result;
         })
         .filter(d => d.count > 0);
@@ -276,12 +280,14 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
         .filter(parityData => parityData && typeof parityData === 'object')
         .map((parityData: any) => {
           const result: any = { name: parityData.parity, count: parityData.count || 0 };
-          selectedPTAs.forEach(pta => {
+        selectedPTAs.forEach(pta => {
+          if (pta && parityData && typeof parityData === 'object') {
             const values = parityData[pta] || [];
             result[pta] = values.length > 0 
               ? values.reduce((sum: number, val: number) => sum + val, 0) / values.length 
               : null;
-          });
+          }
+        });
           return result;
         })
         .filter(d => d.count > 0);
@@ -318,7 +324,9 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
     });
     
     buckets.forEach(bucket => {
-      bucket.percentage = (bucket.count / values.length) * 100;
+      if (bucket && typeof bucket === 'object' && typeof bucket.count === 'number') {
+        bucket.percentage = (bucket.count / values.length) * 100;
+      }
     });
     
     return buckets;
