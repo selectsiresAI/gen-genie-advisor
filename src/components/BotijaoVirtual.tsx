@@ -54,8 +54,6 @@ type Bull = {
   ccr?: number;
   hcr?: number;
   fi?: number;
-  gl?: number;
-  efc?: number;
   bwc?: number;
   sta?: number;
   str?: number;
@@ -200,8 +198,6 @@ function BotijaoVirtualPage({ client, farm, bulls: propBulls, selectedBulls = []
         ccr: bull.ccr,
         hcr: bull.hcr,
         fi: bull.fi,
-        gl: bull.gl,
-        efc: bull.efc,
         bwc: bull.bwc,
         sta: bull.sta,
         str: bull.str,

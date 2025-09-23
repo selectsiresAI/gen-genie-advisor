@@ -53,8 +53,6 @@ interface Bull {
   ccr?: number;
   hcr?: number;
   fi?: number;
-  gl?: number;
-  efc?: number;
   bwc?: number;
   sta?: number;
   str?: number;
@@ -171,8 +169,6 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
         ccr: 104,
         hcr: 103,
         fi: 105,
-        gl: 102,
-        efc: 104,
         bwc: 106,
         sta: 108,
         mf: 0.15,
@@ -238,8 +234,6 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
         ccr: 103,
         hcr: 102,
         fi: 104,
-        gl: 101,
-        efc: 103,
         bwc: 105,
         sta: 106,
         mf: 0.12,
@@ -305,8 +299,6 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
         ccr: 107,
         hcr: 106,
         fi: 108,
-        gl: 105,
-        efc: 107,
         bwc: 109,
         sta: 112,
         mf: 0.18,
@@ -328,7 +320,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
       "ptaf_pct", "ptap", "ptap_pct", "pl", "liv", "scs", "dpr", "cfp", "ptat", "udc", "flc",
       "fls", "fua", "ruh", "ruw", "rlr", "rls", "rtp", "str", "dfm", "rua", "ftl", "fta", 
       "ftp", "rw", "ucl", "udp", "rfi", "gfi", "ssb", "dsb", "dce", "sce", "h_liv", "ccr", 
-      "hcr", "fi", "gl", "efc", "bwc", "sta", "mf", "da", "rp", "met", "mast", "ket", 
+      "hcr", "fi", "bwc", "sta", "mf", "da", "rp", "met", "mast", "ket", 
       "f_sav", "kappa_casein", "beta_casein"
     ];
 
@@ -419,8 +411,6 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
         ccr: bull.ccr,
         hcr: bull.hcr,
         fi: bull.fi,
-        gl: bull.gl,
-        efc: bull.efc,
         bwc: bull.bwc,
         sta: bull.sta,
         str: bull.str,
@@ -518,16 +508,191 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
     }
   };
 
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    toast({
-      title: "Upload iniciado",
-      description: "Processando arquivo de touros...",
-    });
+    try {
+      setLoading(true);
+      
+      toast({
+        title: "Upload iniciado",
+        description: "Processando arquivo de touros...",
+      });
 
-    // TODO: Implement actual file processing
+      // Read CSV file
+      const text = await file.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      
+      if (lines.length < 2) {
+        toast({
+          title: "Erro no arquivo",
+          description: "Arquivo CSV deve conter pelo menos um cabeçalho e uma linha de dados.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Parse CSV
+      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+      const rows = lines.slice(1).map(line => {
+        const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
+        const row: any = {};
+        headers.forEach((header, index) => {
+          row[header] = values[index] || null;
+        });
+        return row;
+      });
+
+      let successCount = 0;
+      let errorCount = 0;
+      const errors: string[] = [];
+
+      // Process each row
+      for (const row of rows) {
+        try {
+          // Prepare bull data, ignoring empty id and handling all columns
+          const bullData: any = {
+            code: row.code || row.NAAB || row.Code,
+            name: row.name || row.Nome || row.Name,
+            registration: row.registration || row.Registro || row.Registration || null,
+            pedigree: row.pedigree || row.Pedigre || row.Pedigree || null,
+            birth_date: row.birth_date || row['Data de Nascimento'] || row.BirthDate || null,
+            company: row.company || row.Empresa || row.Company || null,
+            sire_naab: row.sire_naab || row.sire || row.Sire || null,
+            mgs_naab: row.mgs_naab || row.mgs || row.MGS || null,
+            mmgs_naab: row.mmgs_naab || row.mmgs || row.MMGS || null,
+            beta_casein: row.beta_casein || row['Beta-Caseina'] || row.BetaCasein || null,
+            kappa_casein: row.kappa_casein || row['Kappa-Caseina'] || row.KappaCasein || null,
+            // Numeric fields - convert to number or null
+            hhp_dollar: parseFloat(row.hhp_dollar || row['HHP$®'] || row.HHP) || null,
+            tpi: parseFloat(row.tpi || row.TPI) || null,
+            nm_dollar: parseFloat(row.nm_dollar || row['NM$'] || row.NM) || null,
+            cm_dollar: parseFloat(row.cm_dollar || row['CM$'] || row.CM) || null,
+            fm_dollar: parseFloat(row.fm_dollar || row['FM$'] || row.FM) || null,
+            gm_dollar: parseFloat(row.gm_dollar || row['GM$'] || row.GM) || null,
+            f_sav: parseFloat(row.f_sav || row['F SAV'] || row.FSAV) || null,
+            ptam: parseFloat(row.ptam || row.PTAM) || null,
+            cfp: parseFloat(row.cfp || row.CFP) || null,
+            ptaf: parseFloat(row.ptaf || row.PTAF) || null,
+            ptaf_pct: parseFloat(row.ptaf_pct || row['PTAF%'] || row.PTAF_PCT) || null,
+            ptap: parseFloat(row.ptap || row.PTAP) || null,
+            ptap_pct: parseFloat(row.ptap_pct || row['PTAP%'] || row.PTAP_PCT) || null,
+            pl: parseFloat(row.pl || row.PL) || null,
+            dpr: parseFloat(row.dpr || row.DPR) || null,
+            liv: parseFloat(row.liv || row.LIV) || null,
+            scs: parseFloat(row.scs || row.SCS) || null,
+            mast: parseFloat(row.mast || row.MAST) || null,
+            met: parseFloat(row.met || row.MET) || null,
+            rp: parseFloat(row.rp || row.RP) || null,
+            da: parseFloat(row.da || row.DA) || null,
+            ket: parseFloat(row.ket || row.KET) || null,
+            mf: parseFloat(row.mf || row.MF) || null,
+            ptat: parseFloat(row.ptat || row.PTAT) || null,
+            udc: parseFloat(row.udc || row.UDC) || null,
+            flc: parseFloat(row.flc || row.FLC) || null,
+            sce: parseFloat(row.sce || row.SCE) || null,
+            dce: parseFloat(row.dce || row.DCE) || null,
+            ssb: parseFloat(row.ssb || row.SSB) || null,
+            dsb: parseFloat(row.dsb || row.DSB) || null,
+            h_liv: parseFloat(row.h_liv || row['H LIV'] || row.HLIV) || null,
+            ccr: parseFloat(row.ccr || row.CCR) || null,
+            hcr: parseFloat(row.hcr || row.HCR) || null,
+            fi: parseFloat(row.fi || row.FI) || null,
+            bwc: parseFloat(row.bwc || row.BWC) || null,
+            sta: parseFloat(row.sta || row.STA) || null,
+            str: parseFloat(row.str || row.STR) || null,
+            dfm: parseFloat(row.dfm || row.DFM) || null,
+            rua: parseFloat(row.rua || row.RUA) || null,
+            rls: parseFloat(row.rls || row.RLS) || null,
+            rtp: parseFloat(row.rtp || row.RTP) || null,
+            ftl: parseFloat(row.ftl || row.FTL) || null,
+            rw: parseFloat(row.rw || row.RW) || null,
+            rlr: parseFloat(row.rlr || row.RLR) || null,
+            fta: parseFloat(row.fta || row.FTA) || null,
+            fls: parseFloat(row.fls || row.FLS) || null,
+            fua: parseFloat(row.fua || row.FUA) || null,
+            ruh: parseFloat(row.ruh || row.RUH) || null,
+            ruw: parseFloat(row.ruw || row.RUW) || null,
+            ucl: parseFloat(row.ucl || row.UCL) || null,
+            udp: parseFloat(row.udp || row.UDP) || null,
+            ftp: parseFloat(row.ftp || row.FTP) || null,
+            rfi: parseFloat(row.rfi || row.RFI) || null,
+            gfi: parseFloat(row.gfi || row.GFI) || null,
+          };
+
+          // Remove id field completely to let Supabase generate UUID
+          if (bullData.id !== undefined) {
+            delete bullData.id;
+          }
+
+          // Skip rows without required code field
+          if (!bullData.code) {
+            errors.push(`Linha ignorada: código (NAAB) não encontrado`);
+            errorCount++;
+            continue;
+          }
+
+          // UPSERT: Insert or update on conflict
+          const { error } = await supabase
+            .from('bulls')
+            .upsert(bullData, {
+              onConflict: 'code',
+              ignoreDuplicates: false
+            });
+
+          if (error) {
+            console.error('Error inserting bull:', error);
+            errors.push(`Erro no touro ${bullData.code}: ${error.message}`);
+            errorCount++;
+          } else {
+            successCount++;
+          }
+        } catch (rowError) {
+          console.error('Error processing row:', rowError);
+          errors.push(`Erro na linha: ${rowError}`);
+          errorCount++;
+        }
+      }
+
+      // Show results
+      if (successCount > 0) {
+        toast({
+          title: "Import concluído",
+          description: `${successCount} touros importados com sucesso${errorCount > 0 ? `. ${errorCount} erros encontrados.` : '.'}`,
+        });
+        
+        // Reload bulls data
+        await loadBulls();
+      }
+
+      if (errors.length > 0 && errors.length <= 5) {
+        // Show first few errors
+        toast({
+          title: "Erros encontrados",
+          description: errors.slice(0, 3).join('; '),
+          variant: "destructive",
+        });
+      } else if (errors.length > 5) {
+        toast({
+          title: `Múltiplos erros (${errors.length})`,
+          description: "Verifique o formato do arquivo CSV",
+          variant: "destructive",
+        });
+      }
+
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Erro no upload",
+        description: "Falha ao processar o arquivo CSV",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+      // Clear file input
+      e.target.value = '';
+    }
     setTimeout(() => {
       toast({
         title: "Touros importados",
@@ -741,8 +906,6 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
                     <th className="px-2 py-1 bg-foreground text-background text-xs">CCR</th>
                     <th className="px-2 py-1 bg-foreground text-background text-xs">HCR</th>
                     <th className="px-2 py-1 bg-foreground text-background text-xs">FI</th>
-                    <th className="px-2 py-1 bg-foreground text-background text-xs">GL</th>
-                    <th className="px-2 py-1 bg-foreground text-background text-xs">EFC</th>
                     <th className="px-2 py-1 bg-foreground text-background text-xs">BWC</th>
                     <th className="px-2 py-1 bg-foreground text-background text-xs">STA</th>
                     <th className="px-2 py-1 bg-foreground text-background text-xs">STR</th>
@@ -817,8 +980,6 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
                         <td className="px-2 py-1 text-center text-xs">{bull.ccr}</td>
                         <td className="px-2 py-1 text-center text-xs">{bull.hcr}</td>
                         <td className="px-2 py-1 text-center text-xs">{bull.fi}</td>
-                        <td className="px-2 py-1 text-center text-xs">{bull.gl}</td>
-                        <td className="px-2 py-1 text-center text-xs">{bull.efc}</td>
                         <td className="px-2 py-1 text-center text-xs">{bull.bwc}</td>
                         <td className="px-2 py-1 text-center text-xs">{bull.sta}</td>
                         <td className="px-2 py-1 text-center text-xs">{bull.str}</td>
