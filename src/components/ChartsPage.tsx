@@ -112,6 +112,13 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
     }
   }, [farm]);
 
+  // Recalcular estatísticas quando PTAs selecionados mudarem
+  useEffect(() => {
+    if (females.length > 0) {
+      calculateStatistics(females);
+    }
+  }, [selectedPTAs, females]);
+
   const loadFemalesData = async () => {
     if (!farm?.farm_id) return;
     
@@ -648,27 +655,27 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
                           <CardTitle className="text-sm">{ptaInfo?.label || pta}</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-2">
-                          <div className="grid grid-cols-2 gap-2 text-sm">
-                            <div>
-                              <span className="text-muted-foreground">Média:</span>
-                              <div className="font-medium">{stats.mean.toFixed(2)}</div>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Mediana:</span>
-                              <div className="font-medium">{stats.median.toFixed(2)}</div>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Mín:</span>
-                              <div className="font-medium">{stats.min.toFixed(2)}</div>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Máx:</span>
-                              <div className="font-medium">{stats.max.toFixed(2)}</div>
-                            </div>
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            Desvio Padrão: {stats.std.toFixed(2)} | {stats.count} animais
-                          </div>
+                           <div className="grid grid-cols-2 gap-2 text-sm">
+                             <div>
+                               <span className="text-muted-foreground">Média:</span>
+                               <div className="font-medium">{stats.mean?.toFixed(2) || 'N/A'}</div>
+                             </div>
+                             <div>
+                               <span className="text-muted-foreground">Mediana:</span>
+                               <div className="font-medium">{stats.median?.toFixed(2) || 'N/A'}</div>
+                             </div>
+                             <div>
+                               <span className="text-muted-foreground">Mín:</span>
+                               <div className="font-medium">{stats.min?.toFixed(2) || 'N/A'}</div>
+                             </div>
+                             <div>
+                               <span className="text-muted-foreground">Máx:</span>
+                               <div className="font-medium">{stats.max?.toFixed(2) || 'N/A'}</div>
+                             </div>
+                           </div>
+                           <div className="text-xs text-muted-foreground">
+                             Desvio Padrão: {stats.std?.toFixed(2) || 'N/A'} | {stats.count || 0} animais
+                           </div>
                         </CardContent>
                       </Card>
                     );
