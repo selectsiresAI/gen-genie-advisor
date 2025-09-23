@@ -251,27 +251,9 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
                         <Users className="w-5 h-5 text-primary" />
                         Rebanho
                       </CardTitle>
-                      <CardDescription className="flex items-center justify-between">
-                        <span>{selectedFarm.total_females} fêmeas cadastradas</span>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setShowUploadModal(true);
-                              }}
-                            >
-                              <Plus className="w-3 h-3 mr-1" />
-                              Importar
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Importar planilha com dados das fêmeas do rebanho</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </CardDescription>
+                       <CardDescription>
+                         <span>{selectedFarm.total_females} fêmeas cadastradas</span>
+                       </CardDescription>
                     </CardHeader>
                   </Card>
                 </TooltipTrigger>
