@@ -1017,8 +1017,7 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
         console.log('🔍 Carregando touros do Supabase...');
         
         const { data: bulls, error } = await supabase
-          .from('bulls_denorm')
-          .select('*')
+          .rpc('get_bulls_denorm')
           .order('tpi', { ascending: false })
           .limit(100); // Limit to avoid too many bulls
         

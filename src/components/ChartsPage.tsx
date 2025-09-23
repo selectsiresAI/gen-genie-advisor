@@ -161,9 +161,7 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('females_denorm')
-        .select('*')
-        .eq('farm_id', farm.farm_id)
+        .rpc('get_females_denorm', { target_farm_id: farm.farm_id })
         .order('birth_date', { ascending: true });
 
       if (error) throw error;

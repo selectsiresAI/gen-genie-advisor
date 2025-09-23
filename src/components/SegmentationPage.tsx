@@ -313,9 +313,7 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
     setError("");
     try {
       const { data, error: err } = await supabase
-        .from('females_denorm')
-        .select('*')
-        .eq('farm_id', farm.farm_id)
+        .rpc('get_females_denorm', { target_farm_id: farm.farm_id })
         .limit(1000);
 
       if (err) throw err;
@@ -333,7 +331,7 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
       setAnimals(mapped);
     } catch (e: any) {
       console.error(e);
-      setError(e.message || 'Erro ao carregar females_denorm');
+      setError(e.message || 'Erro ao carregar dados do rebanho');
       setAnimals(DEMO_ANIMALS);
     } finally {
       setLoading(false);
@@ -680,7 +678,7 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
         {/* Status de dados */}
         <div className="rounded-2xl shadow p-4 flex items-center justify-between" style={{ background: SS.white }}>
           <div className="text-sm" style={{ color: SS.black }}>
-            Fonte: <span className="font-semibold">females_denorm</span> {animals && animals.length ? `— ${animals.length} registros` : ""}
+            Fonte: <span className="font-semibold">Rebanho</span> {animals && animals.length ? `— ${animals.length} registros` : ""}
             {error && <span className="ml-2 text-red-600">(erro: {error})</span>}
           </div>
           <button onClick={fetchAnimals} className="px-3 py-2 rounded-xl border text-sm flex items-center gap-2" style={{ borderColor: SS.gray, color: SS.black }}>
@@ -1299,7 +1297,7 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
           )}
         </div>
 
-        <div className="text-xs text-center pb-8" style={{ color: SS.black }}>MVP demonstrativo — conectado a females_denorm via Supabase.</div>
+        <div className="text-xs text-center pb-8" style={{ color: SS.black }}>MVP demonstrativo — dados seguros via RLS</div>
       </div>
     </div>
   );

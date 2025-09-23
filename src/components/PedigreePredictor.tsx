@@ -64,8 +64,7 @@ const fetchBullFromDatabase = async (naab: string): Promise<Bull | null> => {
   
   try {
     const { data, error } = await supabase
-      .from('bulls_denorm')
-      .select('*')
+      .rpc('get_bulls_denorm')
       .eq('code', cleanNaab)
       .single();
 

@@ -149,8 +149,7 @@ function BotijaoVirtualPage({ client, farm, bulls: propBulls, selectedBulls = []
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('bulls_denorm')
-        .select('*')
+        .rpc('get_bulls_denorm')
         .order('tpi', { ascending: false });
 
       if (error) throw error;
