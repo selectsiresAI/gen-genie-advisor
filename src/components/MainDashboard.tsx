@@ -46,6 +46,8 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
   const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
   const [currentView, setCurrentView] = useState<'dashboard' | 'farm' | 'herd' | 'segmentation' | 'bulls' | 'nexus' | 'charts' | 'botijao' | 'sms' | 'metas' | 'plano' | 'arquivos'>('dashboard');
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [totalFarms, setTotalFarms] = useState(0);
+  const [totalAnimals, setTotalAnimals] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -81,6 +83,11 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
         });
       } else {
         setFarms(farmsData || []);
+        
+        // Calcular totais
+        setTotalFarms(farmsData?.length || 0);
+        const totalFemales = farmsData?.reduce((sum: number, farm: Farm) => sum + (farm.total_females || 0), 0) || 0;
+        setTotalAnimals(totalFemales);
       }
     } catch (error: any) {
       console.error('Error loading data:', error);
@@ -862,105 +869,43 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
             )}
           </div>
 
-          {/* Quick Actions */}
+          {/* Account Totals */}
           <div className="space-y-6">
-            <h3 className="text-xl font-semibold">Acesso Rápido</h3>
+            <h3 className="text-xl font-semibold">Resumo da Conta</h3>
             
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleQuickAction('herd')}>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Building2 className="w-5 h-5 text-primary" />
+                    Total de Fazendas
+                  </CardTitle>
+                  <CardDescription>
+                    Fazendas cadastradas na sua conta
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-primary">
+                    {totalFarms}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Users className="w-5 h-5 text-primary" />
-                    Rebanho
+                    Total de Animais
                   </CardTitle>
                   <CardDescription>
-                    Gerenciar fêmeas da fazenda
+                    Fêmeas cadastradas em todas as fazendas
                   </CardDescription>
                 </CardHeader>
-              </Card>
-
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleQuickAction('nexus')}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Zap className="w-5 h-5 text-primary" />
-                    Nexus
-                  </CardTitle>
-                  <CardDescription>
-                    Predições genéticas e acasalamentos
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleQuickAction('botijao')}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Beaker className="w-5 h-5 text-primary" />
-                    Botijão Virtual
-                  </CardTitle>
-                  <CardDescription>
-                    Gerenciamento de doses de sêmen
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleQuickAction('metas')}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Target className="w-5 h-5 text-primary" />
-                    Metas
-                  </CardTitle>
-                  <CardDescription>
-                    Definir objetivos genéticos
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleQuickAction('plano')}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Calculator className="w-5 h-5 text-primary" />
-                    Plano Genético
-                  </CardTitle>
-                  <CardDescription>
-                    Calcular índices e projeções
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleQuickAction('charts')}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <TrendingUp className="w-5 h-5 text-primary" />
-                    Gráficos
-                  </CardTitle>
-                  <CardDescription>
-                    Análises e estatísticas
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleQuickAction('sms')}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <MessageSquare className="w-5 h-5 text-primary" />
-                    SMS
-                  </CardTitle>
-                  <CardDescription>
-                    Comunicação e notificações
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleQuickAction('arquivos')}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <FolderOpen className="w-5 h-5 text-primary" />
-                    Arquivos
-                  </CardTitle>
-                  <CardDescription>
-                    Gerenciamento de documentos
-                  </CardDescription>
-                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-primary">
+                    {totalAnimals.toLocaleString()}
+                  </div>
+                </CardContent>
               </Card>
             </div>
           </div>
