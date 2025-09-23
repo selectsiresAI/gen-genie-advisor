@@ -3,6 +3,7 @@ import { usePlanStore, AVAILABLE_PTAS, getFemalesByFarm, countFromCategoria, cal
 import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
 import EstruturalPopulacional from './EstruturalPopulacional';
+import PTAMothersTable from './PTAMothersTable';
 
 /**
  * Projeção Genética MVP – Select Sires (Frontend Only, Single File)
@@ -813,57 +814,10 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
         </div>
 
         {/* PTA das mães */}
-        <div style={{ marginTop: 16 }}>
-          <h3 style={{ fontWeight: 700, marginBottom: 8 }}>PTA Média das Mães (por categoria)</h3>
-          {selectedFarm ? (
-            <div style={{ padding: 10, background: "#f0f9ff", borderRadius: 8, fontSize: 12, marginBottom: 8 }}>
-              <strong>📊 Valores calculados automaticamente baseados no rebanho selecionado</strong><br/>
-              Rebanho: {selectedFarm.nome} ({selectedFarm.females?.length || 0} fêmeas)
-            </div>
-          ) : (
-            <div style={{ padding: 10, background: "#fef3c7", borderRadius: 8, fontSize: 12, marginBottom: 8 }}>
-              ⚠️ Selecione um rebanho acima para cálculo automático ou insira valores manualmente
-            </div>
-          )}
-          
-          {planStore.selectedPTAList.length > 0 && (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-              <thead>
-                <tr style={{ background: COLORS.gray }}>
-                  <th style={{ textAlign: "left", padding: 6 }}>Categoria</th>
-                  {planStore.selectedPTAList.map((ptaLabel) => (
-                    <th key={ptaLabel} style={{ textAlign: "left", padding: 6 }}>{ptaLabel}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(CATEGORY_MAP).map(([oldKey, newKey]) => (
-                  <tr key={oldKey}>
-                    <td style={{ padding: 6 }}>{CATEGORIES.find(c => c.key === oldKey)?.label}</td>
-                    {planStore.selectedPTAList.map((ptaLabel) => (
-                      <td key={ptaLabel} style={{ padding: 6 }}>
-                        <Input
-                          type="number"
-                          value={planStore.motherAverages[newKey]?.[ptaLabel] || 0}
-                          onChange={(v) => {
-                            const newAverages = {
-                              ...planStore.motherAverages,
-                              [newKey]: {
-                                ...planStore.motherAverages[newKey],
-                                [ptaLabel]: v === "" ? 0 : v
-                              }
-                            };
-                            planStore.setMotherAverages(newAverages);
-                          }}
-                        />
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+        <PTAMothersTable 
+          selectedPTAs={planStore.selectedPTAList} 
+          className="mt-4"
+        />
       </Section>
     </div>
   );
