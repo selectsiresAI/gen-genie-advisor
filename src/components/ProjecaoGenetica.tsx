@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { usePlanStore, AVAILABLE_PTAS, getFemalesByFarm, countFromCategoria, calculateMotherAverages, getBullPTAValue, calculatePopulationStructure } from "../hooks/usePlanStore";
 import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
+import EstruturalPopulacional from './EstruturalPopulacional';
 
 /**
  * Projeção Genética MVP – Select Sires (Frontend Only, Single File)
@@ -753,146 +754,7 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
       <Section title="📋 Premissas Reprodutivas da Fazenda">
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           {/* Estrutura populacional */}
-          <div>
-            <h3 style={{ fontWeight: 700, marginBottom: 8 }}>Estrutura Populacional</h3>
-            
-            {/* Auto/Manual Toggle */}
-            <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <button
-                  onClick={() => planStore.setPopulationMode('auto')}
-                  style={{
-                    padding: "4px 8px",
-                    fontSize: "11px",
-                    fontWeight: "bold",
-                    borderRadius: "4px",
-                    border: "1px solid #d1d5db",
-                    backgroundColor: planStore.populationMode === 'auto' ? "#16a34a" : "#f3f4f6",
-                    color: planStore.populationMode === 'auto' ? "white" : "#374151",
-                    cursor: "pointer"
-                  }}
-                >
-                  Automático
-                </button>
-                <button
-                  onClick={() => planStore.setPopulationMode('manual')}
-                  style={{
-                    padding: "4px 8px",
-                    fontSize: "11px",
-                    fontWeight: "bold",
-                    borderRadius: "4px",
-                    border: "1px solid #d1d5db",
-                    backgroundColor: planStore.populationMode === 'manual' ? "#16a34a" : "#f3f4f6",
-                    color: planStore.populationMode === 'manual' ? "white" : "#374151",
-                    cursor: "pointer"
-                  }}
-                >
-                  Manual
-                </button>
-              </div>
-              
-              {planStore.populationMode === 'auto' && (
-                <>
-                  {!planStore.selectedFarmId && (
-                    <div style={{ fontSize: 11, color: COLORS.red }}>
-                      ⚠️ Banco de fêmeas não disponível para esta fazenda
-                    </div>
-                  )}
-                  {planStore.selectedFarmId && (
-                    <button
-                      onClick={handleRecalculate}
-                      style={{
-                        padding: "2px 6px",
-                        fontSize: "10px",
-                        backgroundColor: "#f3f4f6",
-                        border: "1px solid #d1d5db",
-                        borderRadius: "3px",
-                        cursor: "pointer"
-                      }}
-                    >
-                      Recalcular
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-            
-            {planStore.populationMode === 'auto' && planStore.populationCounts.total > 0 && (
-              <div style={{ fontSize: 11, color: "#16a34a", marginBottom: 8, padding: "8px", backgroundColor: "#f0f9ff", borderRadius: "4px", border: "1px solid #16a34a" }}>
-                ✅ Estrutura calculada automaticamente: {planStore.populationCounts.total} fêmeas<br/>
-                📊 Novilhas: {planStore.populationCounts.heifers} | Primíparas: {planStore.populationCounts.primiparous} | Secundíparas: {planStore.populationCounts.secundiparous} | Multíparas: {planStore.populationCounts.multiparous}
-              </div>
-            )}
-            
-            {planStore.populationMode === 'auto' && planStore.populationCounts.total === 0 && planStore.selectedFarmId && (
-              <div style={{ fontSize: 11, color: "#d97706", marginBottom: 8, padding: "8px", backgroundColor: "#fef3c7", borderRadius: "4px", border: "1px solid #d97706" }}>
-                ⚠️ Nenhuma fêmea encontrada no rebanho selecionado. Verifique se os dados estão carregados na página Rebanho.
-              </div>
-            )}
-            
-            {planStore.populationMode === 'auto' && !planStore.selectedFarmId && (
-              <div style={{ fontSize: 11, color: "#dc2626", marginBottom: 8, padding: "8px", backgroundColor: "#fef2f2", borderRadius: "4px", border: "1px solid #dc2626" }}>
-                ❌ Selecione um rebanho acima para calcular automaticamente a estrutura populacional
-              </div>
-            )}
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              {/* Total de fêmeas aptas */}
-              <div>
-                <Label>Total de fêmeas aptas</Label>
-                <Input
-                  type="number"
-                  value={total}
-                  onChange={() => {}}
-                  disabled={true}
-                />
-              </div>
-              
-              {/* Novilhas */}
-              <div>
-                <Label>Novilhas (paridade = 0)</Label>
-                <Input
-                  type="number"
-                  value={planStore.populationCounts.heifers}
-                  onChange={(v) => updatePopulationCount('heifers', v)}
-                  disabled={planStore.populationMode === 'auto'}
-                />
-              </div>
-              
-              {/* Primíparas */}
-              <div>
-                <Label>Primíparas (paridade = 1)</Label>
-                <Input
-                  type="number"
-                  value={planStore.populationCounts.primiparous}
-                  onChange={(v) => updatePopulationCount('primiparous', v)}
-                  disabled={planStore.populationMode === 'auto'}
-                />
-              </div>
-              
-              {/* Secundíparas */}
-              <div>
-                <Label>Secundíparas (paridade = 2)</Label>
-                <Input
-                  type="number"
-                  value={planStore.populationCounts.secundiparous}
-                  onChange={(v) => updatePopulationCount('secundiparous', v)}
-                  disabled={planStore.populationMode === 'auto'}
-                />
-              </div>
-              
-              {/* Multíparas */}
-              <div>
-                <Label>Multíparas (paridade ≥ 3)</Label>
-                <Input
-                  type="number"
-                  value={planStore.populationCounts.multiparous}
-                  onChange={(v) => updatePopulationCount('multiparous', v)}
-                  disabled={planStore.populationMode === 'auto'}
-                />
-              </div>
-            </div>
-          </div>
+          <EstruturalPopulacional />
 
           {/* Parâmetros reprodutivos */}
           <div>

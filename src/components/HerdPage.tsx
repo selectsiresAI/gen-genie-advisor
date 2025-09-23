@@ -8,6 +8,7 @@ import { ArrowLeft, Users, Search, Plus, Upload, Download, Filter, TrendingUp } 
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import FemaleUploadModal from './FemaleUploadModal';
+import { useHerdStore } from '@/hooks/useHerdStore';
 
 interface Farm {
   farm_id: string;
@@ -103,6 +104,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
   const [searchTerm, setSearchTerm] = useState('');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const { toast } = useToast();
+  const { setSelectedHerdId, setDashboardCounts } = useHerdStore();
 
   useEffect(() => {
     loadFemales();
@@ -218,6 +220,19 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
           break;
       }
     });
+
+    // Update the herd store with dashboard counts
+    const dashboardCounts = {
+      "Total de Fêmeas": counts.total,
+      "Bezerra": counts.bezerras,
+      "Novilhas": counts.novilhas,
+      "Primíparas": counts.primiparas,
+      "Secundíparas": counts.secundiparas,
+      "Multíparas": counts.multiparas,
+    };
+    
+    setSelectedHerdId(farm.farm_id);
+    setDashboardCounts(dashboardCounts);
 
     return counts;
   };
@@ -435,7 +450,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
         <div className="space-y-6">
           {/* Header with Category Stats */}
           <div className="grid gap-4 md:grid-cols-6">
-            <Card>
+            <Card data-testid="card-total-femeas">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Users className="w-5 h-5 text-primary" />
@@ -447,7 +462,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
               </CardContent>
             </Card>
 
-            <Card>
+            <Card data-testid="card-bezerras">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <div className="w-3 h-3 rounded-full bg-blue-500"></div>
@@ -459,7 +474,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
               </CardContent>
             </Card>
 
-            <Card>
+            <Card data-testid="card-novilhas">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <div className="w-3 h-3 rounded-full bg-green-500"></div>
@@ -471,7 +486,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
               </CardContent>
             </Card>
 
-            <Card>
+            <Card data-testid="card-primiparas">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <div className="w-3 h-3 rounded-full bg-purple-500"></div>
@@ -483,7 +498,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
               </CardContent>
             </Card>
 
-            <Card>
+            <Card data-testid="card-secundiparas">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <div className="w-3 h-3 rounded-full bg-orange-500"></div>
@@ -495,7 +510,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
               </CardContent>
             </Card>
 
-            <Card>
+            <Card data-testid="card-multiparas">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <div className="w-3 h-3 rounded-full bg-red-500"></div>
