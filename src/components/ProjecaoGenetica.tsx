@@ -1029,31 +1029,34 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
         
         if (bulls && bulls.length > 0) {
           // Convert Supabase bulls to ToolSS format for compatibility
-          const convertedBulls = bulls.map((bull: any) => ({
-            naab: bull.code,
-            nome: bull.name,
-            empresa: bull.company || 'N/A',
-            TPI: bull.tpi || 0,
-            "NM$": bull.nm_dollar || 0,
-            "HHP$": bull.hhp_dollar || 0,
-            "FM$": bull.fm_dollar || 0,
-            "GM$": bull.gm_dollar || 0,
-            "CM$": bull.cm_dollar || 0,
-            Milk: bull.ptam || 0,
-            Fat: bull.ptaf || 0,
-            Protein: bull.ptap || 0,
-            "Fat%": bull.ptaf_pct || 0,
-            "Protein%": bull.ptap_pct || 0,
-            PL: bull.pl || 0,
-            DPR: bull.dpr || 0,
-            LIV: bull.liv || 0,
-            SCS: bull.scs || 0,
-            PTAT: bull.ptat || 0,
-            // Add other PTAs as needed...
-          }));
+          // Filter out bulls without HHP$ as requested by user
+          const convertedBulls = bulls
+            .filter((bull: any) => bull.hhp_dollar && bull.hhp_dollar !== null)
+            .map((bull: any) => ({
+              naab: bull.code,
+              nome: bull.name,
+              empresa: bull.company || 'N/A',
+              TPI: bull.tpi || 0,
+              "NM$": bull.nm_dollar || 0,
+              "HHP$": bull.hhp_dollar, // No fallback to 0 since we filtered
+              "FM$": bull.fm_dollar || 0,
+              "GM$": bull.gm_dollar || 0,
+              "CM$": bull.cm_dollar || 0,
+              Milk: bull.ptam || 0,
+              Fat: bull.ptaf || 0,
+              Protein: bull.ptap || 0,
+              "Fat%": bull.ptaf_pct || 0,
+              "Protein%": bull.ptap_pct || 0,
+              PL: bull.pl || 0,
+              DPR: bull.dpr || 0,
+              LIV: bull.liv || 0,
+              SCS: bull.scs || 0,
+              PTAT: bull.ptat || 0,
+              // Add other PTAs as needed...
+            }));
           
-          console.log(`🐂 Loaded ${convertedBulls.length} bulls from Supabase`);
-          console.log('📋 Sample bulls:', convertedBulls.slice(0, 3).map((b: any) => ({ naab: b.naab, nome: b.nome, empresa: b.empresa })));
+          console.log(`🐂 Loaded ${convertedBulls.length} bulls from Supabase (filtered: only with HHP$)`);
+          console.log('📋 Sample bulls with HHP$:', convertedBulls.slice(0, 3).map((b: any) => ({ naab: b.naab, nome: b.nome, empresa: b.empresa, hhp: b["HHP$"] })));
           setToolssBulls(convertedBulls);
         }
       } catch (e) {
@@ -1155,9 +1158,11 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
                         // Use getBullPTAValue function to get the value with proper mapping
                         const value = getBullPTAValue(selectedBull, ptaLabel);
                         updatedPTA[ptaLabel] = value;
+                        console.log(`🔍 Bull ${selectedBull.naab}: ${ptaLabel} = ${value} (from field: ${ptaLabel === "HHP$®" ? "HHP$" : ptaLabel})`);
                       });
                       
                       console.log('📊 PTAs carregadas:', planStore.selectedPTAList.map(k => `${k}:${updatedPTA[k] === null ? '—' : updatedPTA[k]}`));
+                      console.log('🐂 Selected Bull raw data:', selectedBull);
                       
                       setSt(s => ({ 
                         ...s, 

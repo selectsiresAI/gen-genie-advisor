@@ -436,12 +436,18 @@ const calculateMotherAverages = (farm: any, ptaLabels: string[]): Record<string,
 // Export utility functions
 export { getFemalesByFarm, normalizeCategoria, countFromCategoria, calculateMotherAverages };
 export const getBullPTAValue = (bull: any, ptaLabel: string): number | null => {
-  const fieldName = LABEL_TO_FIELD[ptaLabel] || ptaLabel;
+  let fieldName = LABEL_TO_FIELD[ptaLabel] || ptaLabel;
+  
+  // Special mapping for HHP$® to match Supabase data format
+  if (ptaLabel === "HHP$®") {
+    fieldName = "HHP$"; // Look for HHP$ in the bull data (from Supabase conversion)
+  }
+  
   const value = bull[fieldName];
-  if (typeof value === 'number') {
+  if (typeof value === 'number' && value !== 0) {
     console.log(`PTA ${ptaLabel}: ${value} (from bull ${bull.nome || bull.naab})`);
     return value;
   }
-  console.log(`PTA ${ptaLabel}: — (Sem valor para ${ptaLabel})`);
+  console.log(`PTA ${ptaLabel}: — (field: ${fieldName}, value: ${value}, type: ${typeof value})`);
   return null; // Return null instead of 0 to show "—"
 };
