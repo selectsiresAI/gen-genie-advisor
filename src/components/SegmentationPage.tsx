@@ -1125,8 +1125,9 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
                     <th className="border px-2 py-1 text-left text-xs">Pedigre Pai/Avô Materno/BisaAvô Materno</th>
                     <th className="border px-2 py-1 text-left text-xs">Data de Nascimento</th>
                     <th className="border px-2 py-1 text-left text-xs">Ordem de Parto</th>
-                    <th className="border px-2 py-1 text-left text-xs">Categoria</th>
-                    <th className="border px-2 py-1 text-left text-xs">HHP$®</th>
+                     <th className="border px-2 py-1 text-left text-xs">Categoria</th>
+                     {segmentationEnabled && <th className="border px-2 py-1 text-left text-xs">Classificação</th>}
+                     <th className="border px-2 py-1 text-left text-xs">HHP$®</th>
                     <th className="border px-2 py-1 text-left text-xs">TPI</th>
                     <th className="border px-2 py-1 text-left text-xs">NM$</th>
                     <th className="border px-2 py-1 text-left text-xs">CM$</th>
@@ -1184,8 +1185,7 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
                     <th className="border px-2 py-1 text-left text-xs">Beta-Casein</th>
                     <th className="border px-2 py-1 text-left text-xs">Kappa-Casein</th>
                     <th className="border px-2 py-1 text-left text-xs">GFI</th>
-                    <th className="border px-2 py-1 text-left text-xs">CustomScore</th>
-                    {segmentationEnabled && <th className="border px-2 py-1 text-left text-xs">Classificação</th>}
+                     <th className="border px-2 py-1 text-left text-xs">CustomScore</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1215,8 +1215,23 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
                         )}
                       </td>
                       <td className="border px-2 py-1 text-xs">{(a as any).parity_order || '-'}</td>
-                      <td className="border px-2 py-1 text-xs">{(a as any).category || '-'}</td>
-                      <td className="border px-2 py-1 text-xs">{(a as any).hhp_dollar || '-'}</td>
+                       <td className="border px-2 py-1 text-xs">{(a as any).category || '-'}</td>
+                       {segmentationEnabled && (
+                         <td className="border px-2 py-1 text-xs">
+                           {a.Classification && (
+                             <span 
+                               className="px-2 py-1 rounded-full text-xs font-medium"
+                               style={{ 
+                                 backgroundColor: classificationColor,
+                                 color: 'white'
+                               }}
+                             >
+                               {a.Classification}
+                             </span>
+                           )}
+                         </td>
+                       )}
+                       <td className="border px-2 py-1 text-xs">{(a as any).hhp_dollar || '-'}</td>
                       <td className="border px-2 py-1 text-xs">{(a as any).tpi || '-'}</td>
                       <td className="border px-2 py-1 text-xs">{(a as any).nm_dollar || '-'}</td>
                       <td className="border px-2 py-1 text-xs">{(a as any).cm_dollar || '-'}</td>
@@ -1274,22 +1289,7 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
                       <td className="border px-2 py-1 text-xs">{(a as any).beta_casein || '-'}</td>
                       <td className="border px-2 py-1 text-xs">{(a as any).kappa_casein || '-'}</td>
                       <td className="border px-2 py-1 text-xs">{(a as any).gfi || '-'}</td>
-                      <td className="border px-2 py-1 text-xs font-semibold">{Number(a.CustomScore).toFixed(3)}</td>
-                      {segmentationEnabled && (
-                        <td className="border px-2 py-1 text-xs">
-                          {a.Classification && (
-                            <span 
-                              className="px-2 py-1 rounded-full text-xs font-medium"
-                              style={{ 
-                                backgroundColor: classificationColor,
-                                color: 'white'
-                              }}
-                            >
-                              {a.Classification}
-                            </span>
-                          )}
-                        </td>
-                      )}
+                       <td className="border px-2 py-1 text-xs font-semibold">{Number(a.CustomScore).toFixed(3)}</td>
                     </tr>
                     );
                   })}
