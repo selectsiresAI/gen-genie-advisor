@@ -25,6 +25,9 @@ interface FileStore {
   clearReports: () => void;
 }
 
+// Create a separate store for blobs that doesn't persist
+const blobStore = new Map<string, Blob>();
+
 export const useFileStore = create<FileStore>()(
   persist(
     (set, get) => ({
@@ -36,34 +39,64 @@ export const useFileStore = create<FileStore>()(
           id: `${report.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         };
         
+        // Store blob separately if provided
+        if (report.fileBlob) {
+          blobStore.set(newReport.id, report.fileBlob);
+          // Add a getter for the blob
+          Object.defineProperty(newReport, 'fileBlob', {
+            get: () => blobStore.get(newReport.id),
+            enumerable: false,
+            configurable: true
+          });
+        }
+        
         set((state) => ({
           reports: [...state.reports, newReport]
         }));
+        
+        console.log('📄 Relatório salvo:', newReport.name, 'com blob:', !!report.fileBlob);
       },
       
       removeReport: (id) => {
+        // Remove blob from memory store
+        blobStore.delete(id);
+        
         set((state) => ({
           reports: state.reports.filter(report => report.id !== id)
         }));
       },
       
       getReportsByType: (type) => {
-        return get().reports.filter(report => report.type === type);
+        const reports = get().reports.filter(report => report.type === type);
+        // Restore blob references
+        return reports.map(report => {
+          const blob = blobStore.get(report.id);
+          if (blob) {
+            Object.defineProperty(report, 'fileBlob', {
+              get: () => blob,
+              enumerable: false,
+              configurable: true
+            });
+          }
+          return report;
+        });
       },
       
       clearReports: () => {
+        // Clear all blobs
+        blobStore.clear();
         set({ reports: [] });
       }
     }),
     {
       name: 'file-store',
-      // Don't persist blobs to avoid storage issues
+      // Only persist the report metadata, not blobs
       partialize: (state) => ({
         reports: state.reports.map(report => ({
           ...report,
           fileBlob: undefined
         }))
-      }),
+      })
     }
   )
 );

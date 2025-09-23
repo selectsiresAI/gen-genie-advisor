@@ -21,6 +21,8 @@ import BullSearchPage from './BullSearchPage';
 import FemaleUploadModal from './FemaleUploadModal';
 import SegmentationPage from './SegmentationPage';
 import { usePlanStore } from '@/hooks/usePlanStore';
+import { useHerdStore } from '@/hooks/useHerdStore';
+
 interface MainDashboardProps {
   user: User;
   onLogout: () => void;
@@ -49,9 +51,8 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   const [totalFarms, setTotalFarms] = useState(0);
   const [totalAnimals, setTotalAnimals] = useState(0);
   const [totalBulls, setTotalBulls] = useState(0);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
+  const { setSelectedHerdId, refreshFromSupabase } = useHerdStore();
   useEffect(() => {
     loadUserData();
   }, []);
@@ -167,9 +168,15 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
       });
     }
   };
-  const handleFarmSelect = (farm: Farm) => {
+  const handleFarmSelect = async (farm: Farm) => {
     setSelectedFarm(farm);
     setCurrentView('farm');
+    
+    // Automatically load herd data when entering farm
+    setSelectedHerdId(farm.farm_id);
+    await refreshFromSupabase(farm.farm_id);
+    
+    console.log('🏠 Entrando na fazenda e carregando rebanho automaticamente:', farm.farm_name);
   };
   const handleBackToDashboard = () => {
     setCurrentView('dashboard');
