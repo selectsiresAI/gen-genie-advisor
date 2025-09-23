@@ -621,9 +621,11 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
             gfi: parseFloat(row.gfi || row.GFI) || null,
           };
 
-          // Remove id field completely to let Supabase generate UUID
-          if (bullData.id !== undefined) {
-            delete bullData.id;
+          // Handle id field: convert empty strings to null, keep valid UUIDs
+          if (row.id && row.id.trim() !== '') {
+            bullData.id = row.id.trim();
+          } else {
+            bullData.id = null; // Let Supabase generate UUID
           }
 
           // Skip rows without required code field
