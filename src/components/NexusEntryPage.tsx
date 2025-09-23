@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dna, Calculator, ArrowRight, TrendingUp, FileSpreadsheet } from 'lucide-react';
+import { Dna, Calendar, ArrowRight, TrendingUp, FileSpreadsheet } from 'lucide-react';
 
 interface NexusEntryPageProps {
   onSelectMethod: (method: 'nexus1' | 'nexus2') => void;
@@ -24,8 +24,8 @@ const NexusEntryPage: React.FC<NexusEntryPageProps> = ({ onSelectMethod }) => {
         {/* Nexus 1 - Predição Genômica */}
         <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/50">
           <CardHeader className="text-center pb-4">
-            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-              <Dna className="w-8 h-8 text-primary" />
+            <div className="mx-auto w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
+              <Dna className="w-8 h-8 text-red-500" />
             </div>
             <CardTitle className="text-xl">Nexus 1: Predição Genômica</CardTitle>
             <p className="text-sm text-muted-foreground">
@@ -43,14 +43,14 @@ const NexusEntryPage: React.FC<NexusEntryPageProps> = ({ onSelectMethod }) => {
                 <li>• Análise de todos os PTAs disponíveis</li>
               </ul>
             </div>
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <p className="text-xs text-blue-700 font-medium">
+            <div className="bg-yellow-50 p-3 rounded-lg">
+              <p className="text-xs text-yellow-700 font-medium">
                 💡 Ideal quando você possui dados genômicos completos das fêmeas
               </p>
             </div>
             <Button 
               onClick={() => onSelectMethod('nexus1')} 
-              className="w-full"
+              className="w-full bg-red-500 hover:bg-red-600 text-white"
               size="lg"
             >
               <FileSpreadsheet className="w-4 h-4 mr-2" />
@@ -64,7 +64,7 @@ const NexusEntryPage: React.FC<NexusEntryPageProps> = ({ onSelectMethod }) => {
         <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/50">
           <CardHeader className="text-center pb-4">
             <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-              <Calculator className="w-8 h-8 text-green-600" />
+              <Calendar className="w-8 h-8 text-green-600" />
             </div>
             <CardTitle className="text-xl">Nexus 2: Predição por Pedigrê</CardTitle>
             <p className="text-sm text-muted-foreground">
@@ -93,7 +93,7 @@ const NexusEntryPage: React.FC<NexusEntryPageProps> = ({ onSelectMethod }) => {
               size="lg"
               variant="secondary"
             >
-              <Calculator className="w-4 h-4 mr-2" />
+              <Calendar className="w-4 h-4 mr-2" />
               Usar Nexus 2
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
