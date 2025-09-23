@@ -1316,7 +1316,7 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredAnimals.slice(0, 10).map((a, idx) => {
+                    {filteredAnimals.map((a, idx) => {
                       const classificationColor = a.Classification === "Superior" ? "#10B981" : 
                                                  a.Classification === "Intermediário" ? "#F59E0B" : 
                                                  a.Classification === "Inferior" ? "#EF4444" : "transparent";
