@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { usePlanStore, AVAILABLE_PTAS, getFemalesByFarm, countFromCategoria, calculateMotherAverages, getBullPTAValue, calculatePopulationStructure } from "../hooks/usePlanStore";
+import { useHerdStore } from "../hooks/useHerdStore";
 import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
 import EstruturalPopulacional from './EstruturalPopulacional';
@@ -108,10 +109,17 @@ const BRL = (v: number) =>
     isFinite(v) ? v : 0
   );
 
-const NUM = (v: number, digits = 2) =>
-  new Intl.NumberFormat("pt-BR", { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(
-    isFinite(v) ? v : 0
-  );
+const NUM = (v: number, digits = 0) =>
+  new Intl.NumberFormat("pt-BR", { 
+    minimumFractionDigits: digits, 
+    maximumFractionDigits: digits 
+  }).format(isFinite(v) ? Math.round(v * Math.pow(10, digits)) / Math.pow(10, digits) : 0);
+
+const PTA_NUM = (v: number) => 
+  new Intl.NumberFormat("pt-BR", { 
+    minimumFractionDigits: 1, 
+    maximumFractionDigits: 1 
+  }).format(isFinite(v) ? Math.round(v * 10) / 10 : 0);
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
@@ -301,9 +309,48 @@ function useAppState() {
     console.log('🔄 ProjecaoGenetica usando dados direto do Supabase');
   }, []);
 
-  // Hydrate store from localStorage once on load
+  // Auto-load herd data on page load
   useEffect(() => {
-    console.log('selectedFarmId=', state.selectedFarm?.id || null, '(from localStorage)');
+    const loadHerdData = async () => {
+      try {
+        const { selectedFarmId } = usePlanStore.getState();
+        const { selectedHerdId } = useHerdStore.getState();
+        
+        const farmId = selectedFarmId || selectedHerdId;
+        if (farmId) {
+          console.log('🔄 Carregando rebanho automaticamente:', farmId);
+          const populationStructure = await calculatePopulationStructure(farmId);
+          const motherAverages = await calculateMotherAverages(farmId, usePlanStore.getState().selectedPTAList);
+          
+          setState(prev => ({
+            ...prev,
+            structure: {
+              total: populationStructure.total,
+              novilhas: populationStructure.heifers || 0,
+              primiparas: populationStructure.primiparous || 0,
+              secundiparas: populationStructure.secundiparous || 0,
+              multiparas: populationStructure.multiparous || 0
+            },
+            mothers: {
+              values: {
+                novilhas: motherAverages.heifers || {},
+                primiparas: motherAverages.primiparous || {},
+                secundiparas: motherAverages.secundiparous || {},
+                multiparas: motherAverages.multiparous || {}
+              }
+            },
+            autoCalculatePopulation: true
+          }));
+          
+          console.log('✅ Rebanho carregado automaticamente');
+          toast.success('Rebanho carregado automaticamente');
+        }
+      } catch (error) {
+        console.error('❌ Erro ao carregar rebanho:', error);
+      }
+    };
+    
+    loadHerdData();
   }, []);
 
   const loadTestData = () => {
@@ -1133,7 +1180,7 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
       }
     });
 
-    const labelsBulls = calc.byBull.map((r) => `${r.bull.name || `Touro ${r.bull.id}`} (${r.bull.naab})`);
+    const labelsBulls = calc.byBull.map((r) => r.bull.name || `Touro ${r.bull.id}`);
 
     // 1) Barras: Bezerras por categoria e por touro (stacked)
     const datasetsBar = CATEGORIES.map(({ key, label }) => ({
@@ -1158,7 +1205,7 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
     // 3) Radar: PTAs médias das filhas (ponderadas) – PTAs selecionadas
     const radarLabels = planStore.selectedPTAList.map((ptaLabel) => `PTA ${ptaLabel}`);
     const radarDatasets = calc.byBull.map((r) => ({ 
-      label: `${r.bull.name || `Touro ${r.bull.id}`}`, 
+      label: r.bull.name || `Touro ${r.bull.id}`, 
       data: planStore.selectedPTAList.map((ptaLabel) => r.ptaPond[ptaLabel] || 0) 
     }));
     radarRef.current = createChart("chart-radar", {
@@ -1167,25 +1214,35 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
       options: { responsive: true, elements: { line: { borderWidth: 2 } } },
     });
 
-    // 4) Linha: Custo por bezerra × NM$ por touro
-    const lineLabels = labelsBulls;
-    const seriesCusto = calc.byBull.map((r) => r.custoPorBezerra);
-    const nmDollarLabel = planStore.selectedPTAList.find(l => l === "NM$");
-    const seriesNM = calc.byBull.map((r) => r.ptaPond[nmDollarLabel || ""] || 0);
+    // 4) Barras: ROI por touro
+    const roiData = calc.byBull.map((r) => r.roi);
+    const roiColors = calc.byBull.map((r) => r.roi >= 0 ? '#16a34a' : '#dc2626');
     lineRef.current = createChart("chart-line", {
-      type: "line",
+      type: "bar",
       data: {
-        labels: lineLabels,
-        datasets: [
-          { label: "Custo por Bezerra (R$)", data: seriesCusto, yAxisID: "y" },
-          { label: "NM$ (PTA média)", data: seriesNM, yAxisID: "y1" },
-        ],
+        labels: labelsBulls,
+        datasets: [{
+          label: "ROI (R$)",
+          data: roiData,
+          backgroundColor: roiColors,
+          borderColor: roiColors,
+          borderWidth: 1
+        }]
       },
       options: {
         responsive: true,
-        interaction: { mode: "index", intersect: false },
-        stacked: false,
-        scales: { y: { type: "linear", position: "left" }, y1: { type: "linear", position: "right" } },
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'ROI (R$)'
+            }
+          }
+        }
       },
     });
   };
@@ -1206,7 +1263,7 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
         title="Resumo da Simulação"
         right={
           <div style={{ display: "flex", gap: 12 }}>
-            <div><strong>Total bezerras:</strong> {NUM(calc.totalBez, 2)}</div>
+            <div><strong>Total bezerras:</strong> {NUM(calc.totalBez, 0)}</div>
             <div><strong>Custo total:</strong> {BRL(calc.totalValor)}</div>
             <div><strong>Custo médio/bezerra:</strong> {BRL(calc.custoMedioBezerra)}</div>
           </div>
@@ -1216,7 +1273,7 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
           {planStore.selectedPTAList.map((ptaLabel) => (
             <div key={ptaLabel} style={{ background: COLORS.white, border: `1px dashed ${COLORS.gray}`, borderRadius: 10, padding: 10 }}>
               <div style={{ fontSize: 12, color: COLORS.black }}>PTA média geral – {ptaLabel}</div>
-              <div style={{ fontSize: 22, fontWeight: 800 }}>{NUM(calc.ptaPondGeral[ptaLabel] || 0, 2)}</div>
+              <div style={{ fontSize: 22, fontWeight: 800 }}>{PTA_NUM(calc.ptaPondGeral[ptaLabel] || 0)}</div>
             </div>
           ))}
         </div>
@@ -1228,7 +1285,6 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
             <thead>
               <tr style={{ background: COLORS.gray }}>
                 <th style={{ textAlign: "left", padding: 6 }}>Touro</th>
-                <th style={{ textAlign: "left", padding: 6 }}>NAAB</th>
                 <th style={{ textAlign: "left", padding: 6 }}>Empresa</th>
                 <th style={{ textAlign: "left", padding: 6 }}>Tipo</th>
                 <th style={{ textAlign: "right", padding: 6 }}>Doses Totais</th>
@@ -1238,26 +1294,43 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
                   <th key={ptaLabel} style={{ textAlign: "right", padding: 6 }}>PTA {ptaLabel}</th>
                 ))}
                 <th style={{ textAlign: "right", padding: 6 }}>R$/Bezerra</th>
-                <th style={{ textAlign: "right", padding: 6 }}>ROI (R$)</th>
+                <th style={{ textAlign: "right", padding: 6 }}>ROI (R$/bezerra)</th>
               </tr>
             </thead>
             <tbody>
-              {calc.byBull.map((r) => (
-                <tr key={r.bull.id}>
-                  <td style={{ padding: 6 }}>{r.bull.name || `Touro ${r.bull.id}`}</td>
-                  <td style={{ padding: 6 }}>{r.bull.naab}</td>
-                  <td style={{ padding: 6 }}>{r.bull.empresa || "–"}</td>
-                  <td style={{ padding: 6 }}>{r.bull.semen}</td>
-                  <td style={{ textAlign: "right", padding: 6 }}>{NUM(r.dosesTotal, 0)}</td>
-                  <td style={{ textAlign: "right", padding: 6 }}>{BRL(r.valorTotal)}</td>
-                  <td style={{ textAlign: "right", padding: 6 }}>{NUM(r.bezerrasTotais, 2)}</td>
-                  {planStore.selectedPTAList.map((ptaLabel) => (
-                    <td key={ptaLabel} style={{ textAlign: "right", padding: 6 }}>{NUM(r.ptaPond[ptaLabel] || 0, 2)}</td>
-                  ))}
-                  <td style={{ textAlign: "right", padding: 6 }}>{BRL(r.custoPorBezerra)}</td>
-                  <td style={{ textAlign: "right", padding: 6, fontWeight: 800, color: r.roi >= 0 ? "#167C2B" : COLORS.red }}>{BRL(r.roi)}</td>
-                </tr>
-              ))}
+              {calc.byBull
+                .sort((a, b) => b.roi - a.roi) // Ordenar por maior ROI
+                .map((r, index) => {
+                  const isHighestROI = index === 0;
+                  const isLowestROI = index === calc.byBull.length - 1;
+                  const roiPerCalf = r.bezerrasTotais > 0 ? r.roi / r.bezerrasTotais : 0;
+                  
+                  return (
+                    <tr key={r.bull.id} style={{
+                      backgroundColor: isHighestROI ? "#d4f4dd" : isLowestROI ? "#fdd4d4" : "transparent"
+                    }}>
+                      <td style={{ padding: 6, fontWeight: isHighestROI ? 700 : 400 }}>{r.bull.name || `Touro ${r.bull.id}`}</td>
+                      <td style={{ padding: 6 }}>{r.bull.empresa || "–"}</td>
+                      <td style={{ padding: 6 }}>{r.bull.semen}</td>
+                      <td style={{ textAlign: "right", padding: 6 }}>{NUM(r.dosesTotal, 0)}</td>
+                      <td style={{ textAlign: "right", padding: 6 }}>{BRL(r.valorTotal)}</td>
+                      <td style={{ textAlign: "right", padding: 6 }}>{NUM(r.bezerrasTotais, 0)}</td>
+                      {planStore.selectedPTAList.map((ptaLabel) => (
+                        <td key={ptaLabel} style={{ textAlign: "right", padding: 6 }}>{PTA_NUM(r.ptaPond[ptaLabel] || 0)}</td>
+                      ))}
+                      <td style={{ textAlign: "right", padding: 6 }}>{BRL(r.custoPorBezerra)}</td>
+                      <td style={{ 
+                        textAlign: "right", 
+                        padding: 6, 
+                        fontWeight: 800, 
+                        color: r.roi >= 0 ? "#167C2B" : COLORS.red,
+                        backgroundColor: isHighestROI ? "#d4f4dd" : isLowestROI ? "#fdd4d4" : "transparent"
+                      }}>
+                        {BRL(roiPerCalf)} ({(roiPerCalf / (r.custoPorBezerra || 1) * 100).toFixed(1)}%)
+                      </td>
+                    </tr>
+                  );
+                })}
             </tbody>
           </table>
         </div>
@@ -1280,7 +1353,7 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
               <ChartCanvas id="chart-radar" />
             </div>
             <div>
-              <h4 style={{ marginBottom: 6 }}>Linha (Custo por bezerra × NM$)</h4>
+              <h4 style={{ marginBottom: 6 }}>Barras (ROI por touro)</h4>
               <ChartCanvas id="chart-line" />
             </div>
           </div>
@@ -1293,7 +1366,7 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
       </Section>
 
       <Section title="Insights">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: 12 }}>
           {/* Maior NM$ */}
           {(() => {
             const nmDollarLabel = planStore.selectedPTAList.find(l => l === "NM$");
@@ -1301,30 +1374,84 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
             return (
               <div style={{ border: `1px solid ${COLORS.gray}`, borderRadius: 10, padding: 10 }}>
                 <div style={{ fontSize: 12, color: COLORS.black }}>Maior NM$ médio</div>
-                <div style={{ fontSize: 18, fontWeight: 800 }}>
-                  {bestNM && nmDollarLabel ? `${bestNM.bull.name || bestNM.bull.id} (${NUM(bestNM.ptaPond[nmDollarLabel] || 0, 2)})` : "–"}
+                <div style={{ fontSize: 16, fontWeight: 800 }}>
+                  {bestNM && nmDollarLabel ? `${bestNM.bull.name || bestNM.bull.id}` : "–"}
+                </div>
+                <div style={{ fontSize: 14, color: "#16a34a" }}>
+                  {bestNM && nmDollarLabel ? `${PTA_NUM(bestNM.ptaPond[nmDollarLabel] || 0)}` : "–"}
                 </div>
               </div>
             );
           })()}
+          
           {/* Menor custo por bezerra */}
           {(() => {
             const bestCost = [...calc.byBull].filter((x) => x.bezerrasTotais > 0).sort((a, b) => a.custoPorBezerra - b.custoPorBezerra)[0];
             return (
               <div style={{ border: `1px solid ${COLORS.gray}`, borderRadius: 10, padding: 10 }}>
                 <div style={{ fontSize: 12, color: COLORS.black }}>Menor custo por bezerra</div>
-                <div style={{ fontSize: 18, fontWeight: 800 }}>{bestCost ? `${bestCost.bull.name || bestCost.bull.id} (${BRL(bestCost.custoPorBezerra)})` : "–"}</div>
+                <div style={{ fontSize: 16, fontWeight: 800 }}>
+                  {bestCost ? `${bestCost.bull.name || bestCost.bull.id}` : "–"}
+                </div>
+                <div style={{ fontSize: 14, color: "#16a34a" }}>
+                  {bestCost ? `${BRL(bestCost.custoPorBezerra)}` : "–"}
+                </div>
               </div>
             );
           })()}
-          {/* Maior ROI */}
+          
+          {/* Touro Mais Rentável */}
           {(() => {
             const bestROI = [...calc.byBull].sort((a, b) => b.roi - a.roi)[0];
             return (
+              <div style={{ 
+                border: `2px solid #16a34a`, 
+                borderRadius: 10, 
+                padding: 10, 
+                backgroundColor: "#d4f4dd" 
+              }}>
+                <div style={{ fontSize: 12, color: COLORS.black, fontWeight: 600 }}>🏆 Touro Mais Rentável</div>
+                <div style={{ fontSize: 16, fontWeight: 800 }}>
+                  {bestROI ? `${bestROI.bull.name || bestROI.bull.id}` : "–"}
+                </div>
+                <div style={{ fontSize: 14, color: "#16a34a", fontWeight: 600 }}>
+                  {bestROI ? `ROI: ${BRL(bestROI.roi)}` : "–"}
+                </div>
+              </div>
+            );
+          })()}
+          
+          {/* Touro Menos Rentável */}
+          {(() => {
+            const worstROI = [...calc.byBull].sort((a, b) => a.roi - b.roi)[0];
+            return (
+              <div style={{ 
+                border: `2px solid ${COLORS.red}`, 
+                borderRadius: 10, 
+                padding: 10, 
+                backgroundColor: "#fdd4d4" 
+              }}>
+                <div style={{ fontSize: 12, color: COLORS.black, fontWeight: 600 }}>⚠️ Touro Menos Rentável</div>
+                <div style={{ fontSize: 16, fontWeight: 800 }}>
+                  {worstROI ? `${worstROI.bull.name || worstROI.bull.id}` : "–"}
+                </div>
+                <div style={{ fontSize: 14, color: COLORS.red, fontWeight: 600 }}>
+                  {worstROI ? `ROI: ${BRL(worstROI.roi)}` : "–"}
+                </div>
+              </div>
+            );
+          })()}
+          
+          {/* Total de Bezerras */}
+          {(() => {
+            return (
               <div style={{ border: `1px solid ${COLORS.gray}`, borderRadius: 10, padding: 10 }}>
-                <div style={{ fontSize: 12, color: COLORS.black }}>Maior ROI (R$)</div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: bestROI && bestROI.roi >= 0 ? "#167C2B" : COLORS.red }}>
-                  {bestROI ? `${bestROI.bull.name || bestROI.bull.id} (${BRL(bestROI.roi)})` : "–"}
+                <div style={{ fontSize: 12, color: COLORS.black }}>Total de Bezerras</div>
+                <div style={{ fontSize: 18, fontWeight: 800 }}>
+                  {NUM(calc.totalBez, 0)}
+                </div>
+                <div style={{ fontSize: 12, color: COLORS.black }}>
+                  Custo médio: {BRL(calc.custoMedioBezerra)}
                 </div>
               </div>
             );
