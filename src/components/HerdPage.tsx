@@ -188,6 +188,40 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
     return 'Indefinida';
   };
 
+  const getCategoryCounts = () => {
+    const counts = {
+      total: females.length,
+      bezerras: 0,
+      novilhas: 0,
+      primiparas: 0,
+      secundiparas: 0,
+      multiparas: 0
+    };
+
+    females.forEach(female => {
+      const category = getAutomaticCategory(female.birth_date, female.parity_order);
+      switch (category) {
+        case 'Bezerra':
+          counts.bezerras++;
+          break;
+        case 'Novilha':
+          counts.novilhas++;
+          break;
+        case 'Primípara':
+          counts.primiparas++;
+          break;
+        case 'Secundípara':
+          counts.secundiparas++;
+          break;
+        case 'Multípara':
+          counts.multiparas++;
+          break;
+      }
+    });
+
+    return counts;
+  };
+
   const handleExport = () => {
     if (filteredFemales.length === 0) {
       toast({
@@ -399,8 +433,8 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
 
       <div className="container mx-auto px-4 py-8">
         <div className="space-y-6">
-          {/* Header with Stats */}
-          <div className="grid gap-4 md:grid-cols-4">
+          {/* Header with Category Stats */}
+          <div className="grid gap-4 md:grid-cols-6">
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
@@ -409,43 +443,67 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{females.length}</div>
+                <div className="text-2xl font-bold">{getCategoryCounts().total}</div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Filter className="w-5 h-5 text-primary" />
-                  Filtradas
+                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                  Bezerras
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{filteredFemales.length}</div>
+                <div className="text-2xl font-bold text-blue-700">{getCategoryCounts().bezerras}</div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Adicionadas Hoje</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                  Novilhas
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {females.filter(f => 
-                    new Date(f.created_at).toDateString() === new Date().toDateString()
-                  ).length}
-                </div>
+                <div className="text-2xl font-bold text-green-700">{getCategoryCounts().novilhas}</div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Última Adição</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                  Primíparas
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-sm">
-                  {females.length > 0 ? formatDate(females[0].created_at) : 'N/A'}
-                </div>
+                <div className="text-2xl font-bold text-purple-700">{getCategoryCounts().primiparas}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                  Secundíparas
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-orange-700">{getCategoryCounts().secundiparas}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  Multíparas
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-700">{getCategoryCounts().multiparas}</div>
               </CardContent>
             </Card>
           </div>
