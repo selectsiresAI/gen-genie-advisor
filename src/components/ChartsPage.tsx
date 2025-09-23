@@ -257,7 +257,7 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
         });
         
         return result;
-      }).filter(d => d.count > 0);
+      }).filter(d => d && typeof d === 'object' && (d.count || 0) > 0);
     }
     
     else if (groupBy === 'category') {
@@ -290,7 +290,7 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
           result[pta] = values.length > 0 ? mean(values) : null;
         });
         return result;
-      }).filter(d => d.count > 0);
+      }).filter(d => d && typeof d === 'object' && (d.count || 0) > 0);
     }
     
     else if (groupBy === 'parity') {
@@ -323,7 +323,7 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
           result[pta] = values.length > 0 ? mean(values) : null;
         });
         return result;
-      }).filter(d => d.count > 0);
+      }).filter(d => d && typeof d === 'object' && (d.count || 0) > 0);
     }
     
     return processedData;
@@ -353,7 +353,9 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
     
     values.forEach(value => {
       const bucketIndex = Math.min(Math.floor((value - min) / bucketSize), bucketCount - 1);
-      buckets[bucketIndex].count++;
+      if (buckets[bucketIndex]) {
+        buckets[bucketIndex].count++;
+      }
     });
     
     buckets.forEach(bucket => {
@@ -700,29 +702,29 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
                         <CardHeader className="pb-2">
                           <CardTitle className="text-sm">{ptaInfo?.label || pta}</CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-2">
-                           <div className="grid grid-cols-2 gap-2 text-sm">
-                             <div>
-                               <span className="text-muted-foreground">Média:</span>
-                               <div className="font-medium">{stats.mean?.toFixed(2) || 'N/A'}</div>
-                             </div>
-                             <div>
-                               <span className="text-muted-foreground">Mediana:</span>
-                               <div className="font-medium">{stats.median?.toFixed(2) || 'N/A'}</div>
-                             </div>
-                             <div>
-                               <span className="text-muted-foreground">Mín:</span>
-                               <div className="font-medium">{stats.min?.toFixed(2) || 'N/A'}</div>
-                             </div>
-                             <div>
-                               <span className="text-muted-foreground">Máx:</span>
-                               <div className="font-medium">{stats.max?.toFixed(2) || 'N/A'}</div>
-                             </div>
-                           </div>
-                           <div className="text-xs text-muted-foreground">
-                             Desvio Padrão: {stats.std?.toFixed(2) || 'N/A'} | {stats.count || 0} animais
-                           </div>
-                        </CardContent>
+                          <CardContent className="space-y-2">
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              <div>
+                                <span className="text-muted-foreground">Média:</span>
+                                <div className="font-medium">{stats?.mean?.toFixed(2) || 'N/A'}</div>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Mediana:</span>
+                                <div className="font-medium">{stats?.median?.toFixed(2) || 'N/A'}</div>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Mín:</span>
+                                <div className="font-medium">{stats?.min?.toFixed(2) || 'N/A'}</div>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Máx:</span>
+                                <div className="font-medium">{stats?.max?.toFixed(2) || 'N/A'}</div>
+                              </div>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Desvio Padrão: {stats?.std?.toFixed(2) || 'N/A'} | {stats?.count || 0} animais
+                            </div>
+                         </CardContent>
                       </Card>
                     );
                   }).filter(Boolean)}
@@ -1076,12 +1078,13 @@ function TraitCard({
             <Tooltip
               content={({ active, payload, label }) => {
                 if (!active || !payload || !payload.length) return null;
-                const p = payload[0].payload as any;
+                const p = payload[0]?.payload as any;
+                if (!p) return null;
                 return (
                   <div className="bg-white/95 shadow rounded-md px-3 py-2 text-xs text-gray-800">
                     <div className="font-semibold">Ano: {label}</div>
-                    <div>N: {Math.round(p.n)}</div>
-                    <div>Ganho: {Math.round(p.delta)}</div>
+                    <div>N: {Math.round(p.n || 0)}</div>
+                    <div>Ganho: {Math.round(p.delta || 0)}</div>
                   </div>
                 );
               }}
