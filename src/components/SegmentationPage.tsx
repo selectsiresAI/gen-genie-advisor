@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Download, Settings, Filter, Check, X, RefreshCw, ArrowLeft, TrendingUp, PieChart, BarChart3, Sliders } from "lucide-react";
+import { Download, Settings, Filter, Check, X, RefreshCw, ArrowLeft, TrendingUp, PieChart, BarChart3, Sliders, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -642,6 +642,63 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
     const csv = toCSV(rows);
     downloadText("segmentacao_custom_index.csv", csv);
   }
+
+  const saveSegmentationToDatabase = async () => {
+    if (!segmentationEnabled || !segmentationTriggered) {
+      alert("Execute a segmentação antes de salvar.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Primeiro, limpar segmentações antigas desta fazenda
+      await supabase
+        .from('female_segmentations')
+        .delete()
+        .eq('farm_id', farm.farm_id);
+
+      // Preparar dados para inserção
+      const segmentationData = segmentedAnimals
+        .filter(animal => animal.Classification)
+        .map(animal => ({
+          female_id: animal.id,
+          farm_id: farm.farm_id,
+          class: (animal.Classification === 'Superior' ? 'donor' : 
+                 animal.Classification === 'Intermediário' ? 'inter' : 'recipient') as 'donor' | 'inter' | 'recipient',
+          score: animal.CustomScore || 0,
+          parameters: {
+            index_type: indexSelection,
+            selected_traits: selectedTraits,
+            weights: weights,
+            segmentation_percentages: {
+              superior: superiorPercent[0],
+              intermediario: intermediarioPercent[0], 
+              inferior: inferiorPercent[0]
+            }
+          }
+        }));
+
+      if (segmentationData.length === 0) {
+        alert("Nenhuma fêmea classificada para salvar.");
+        return;
+      }
+
+      // Inserir novos dados de segmentação
+      const { error } = await supabase
+        .from('female_segmentations')
+        .insert(segmentationData);
+
+      if (error) throw error;
+
+      alert(`Segmentação salva! ${segmentationData.length} fêmeas classificadas foram salvas no banco de dados.`);
+      
+    } catch (error: any) {
+      console.error('Erro ao salvar segmentação:', error);
+      alert(`Erro ao salvar segmentação: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const saveReportToFiles = async () => {
     try {
@@ -1342,6 +1399,22 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
               </TooltipContent>
             </Tooltip>
             
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button 
+                  onClick={saveSegmentationToDatabase} 
+                  className="px-4 py-2 rounded-xl border text-sm flex items-center gap-2" 
+                  style={{ borderColor: SS.green, backgroundColor: SS.green, color: SS.white }}
+                  disabled={!segmentationEnabled || !segmentationTriggered || loading}
+                >
+                  <Database size={18}/> Salvar Segmentação
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Salvar classificações no banco de dados para usar no Nexus</p>
+              </TooltipContent>
+            </Tooltip>
+
             <Tooltip>
               <TooltipTrigger asChild>
                 <button onClick={saveReportToFiles} className="px-4 py-2 rounded-xl border text-sm flex items-center gap-2" style={{ borderColor: SS.gray, color: SS.black }}>

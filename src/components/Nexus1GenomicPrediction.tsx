@@ -450,18 +450,38 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
 
     setLoadingDatabase(true);
     try {
+      // Buscar fazenda do usuário atual
+      const { data: userFarms, error: userError } = await supabase
+        .from('user_farms')
+        .select('farm_id')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+
+      if (userError) throw userError;
+      
+      if (!userFarms || userFarms.length === 0) {
+        toast({
+          title: 'Nenhuma fazenda encontrada',
+          description: 'Você precisa estar associado a uma fazenda',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      const farmIds = userFarms.map(f => f.farm_id);
+
       const { data, error } = await supabase
         .from('females_denorm')
         .select('*')
         .in('segmentation_class', selectedClassifications as ('donor' | 'inter' | 'recipient')[])
-        .not('segmentation_class', 'is', null);
+        .not('segmentation_class', 'is', null)
+        .in('farm_id', farmIds);
 
       if (error) throw error;
 
       if (!data || data.length === 0) {
         toast({
           title: 'Nenhuma fêmea encontrada',
-          description: 'Não há fêmeas segmentadas com os filtros selecionados',
+          description: 'Não há fêmeas segmentadas com os filtros selecionados. Execute a segmentação primeiro na página de Segmentação.',
           variant: 'destructive'
         });
         setFemales([]);
