@@ -295,21 +295,34 @@ const PedigreePredictor: React.FC = () => {
       const data = await batchFile.arrayBuffer();
       const workbook = read(data);
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      
+      // Get both header-based and position-based data
       const jsonData = utils.sheet_to_json(worksheet) as any[];
+      const jsonDataWithoutHeaders = utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
       
       console.log(`🔄 Processando ${jsonData.length} linhas do arquivo em lote`);
+      console.log('📋 Primeiras linhas dos dados:', jsonDataWithoutHeaders.slice(0, 3));
       
       const results: BatchResult[] = [];
       
-      for (const row of jsonData) {
+      for (let i = 0; i < jsonData.length; i++) {
+        const row = jsonData[i];
+        const rowArray = jsonDataWithoutHeaders[i + 1]; // +1 because first row is headers
+        
+        // Try multiple ways to get the data
         const input: BatchInput = {
-          idFazenda: row.idFazenda || '',
-          nome: row.nome || '',
-          dataNascimento: row.dataNascimento || '',
-          naabPai: row.naabPai || '',
-          naabAvoMaterno: row.naabAvoMaterno || '',
-          naabBisavoMaterno: row.naabBisavoMaterno || ''
+          idFazenda: row.idFazenda || row['idFazenda'] || (rowArray ? rowArray[0] : '') || '',
+          nome: row.Nome || row.nome || row['Nome'] || (rowArray ? rowArray[1] : '') || '',
+          dataNascimento: row.dataNascimento || row['dataNascimento'] || (rowArray ? rowArray[2] : '') || '',
+          naabPai: row.naabPai || row['naabPai'] || (rowArray ? rowArray[3] : '') || '',
+          naabAvoMaterno: row.naabAvoMaterno || row['naabAvoMaterno'] || (rowArray ? rowArray[4] : '') || '',
+          naabBisavoMaterno: row.naabBisavoMaterno || row['naabBisavoMaterno'] || (rowArray ? rowArray[5] : '') || ''
         };
+        
+        // Clean up NAAB codes (remove any extra spaces and ensure they're valid)
+        input.naabPai = input.naabPai?.toString().trim() || '';
+        input.naabAvoMaterno = input.naabAvoMaterno?.toString().trim() || '';
+        input.naabBisavoMaterno = input.naabBisavoMaterno?.toString().trim() || '';
 
         console.log(`📋 Processando linha: ${input.nome} - Pai: ${input.naabPai}`);
 
