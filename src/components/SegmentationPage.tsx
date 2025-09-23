@@ -351,9 +351,10 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
     setLoading(true); 
     setError("");
     try {
+      // Use high limit to ensure all records are loaded (same as HerdPage and ChartsPage)
       const { data, error: err } = await supabase
         .rpc('get_females_denorm', { target_farm_id: farm.farm_id })
-        .limit(1000);
+        .limit(10000);
 
       if (err) throw err;
       if (!data || !data.length) { 
