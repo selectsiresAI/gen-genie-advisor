@@ -149,6 +149,7 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
           identifier: row.identifier || null,
           cdcb_id: row.cdcb_id || null,
           birth_date: row.birth_date || null,
+          parity_order: row.parity_order ? parseInt(row.parity_order) : null,
           sire_naab: row.sire_naab || null,
           mgs_naab: row.mgs_naab || null,
           mmgs_naab: row.mmgs_naab || null,
