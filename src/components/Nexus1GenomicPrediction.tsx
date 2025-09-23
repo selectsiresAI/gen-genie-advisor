@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, Download, Calculator, ArrowLeft, Users, Target, Database, FileUp } from 'lucide-react';
+import { Upload, Download, Calculator, ArrowLeft, Users, Target, Database, FileUp, Search, Plus, X, ChevronRight, ChevronLeft } from 'lucide-react';
 import { read, utils, writeFileXLSX } from 'xlsx';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -47,8 +47,10 @@ interface Nexus1GenomicPredictionProps {
 const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBack }) => {
   const { toast } = useToast();
   
-  // Estados
+  // Estados principais
+  const [currentStep, setCurrentStep] = useState(1);
   const [dataSource, setDataSource] = useState<'upload' | 'database'>('upload');
+  const [bullSource, setBullSource] = useState<'upload' | 'search'>('upload');
   const [females, setFemales] = useState<Female[]>([]);
   const [bulls, setBulls] = useState<Bull[]>([]);
   const [selectedBulls, setSelectedBulls] = useState<number>(1); // 1, 2 ou 3 touros
@@ -56,6 +58,12 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
   const [predictions, setPredictions] = useState<PredictionResult[]>([]);
   const [isCalculating, setIsCalculating] = useState(false);
   const [loadingDatabase, setLoadingDatabase] = useState(false);
+  
+  // Estados para busca de touros
+  const [naabSearch, setNaabSearch] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchingBulls, setSearchingBulls] = useState(false);
+  const [selectedBullsFromSearch, setSelectedBullsFromSearch] = useState<any[]>([]);
   
   // Filtros para fêmeas do banco
   const [selectedClassifications, setSelectedClassifications] = useState<string[]>(['donor', 'inter', 'recipient']);
@@ -156,25 +164,48 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
     e.target.value = '';
   };
 
-  // Calcular predições
+  // Calcular predições (atualizado para trabalhar com os dois tipos de touros)
   const calculatePredictions = () => {
-    if (females.length === 0 || bulls.length === 0) {
+    if (females.length === 0) {
       toast({
         title: 'Dados insuficientes',
-        description: 'Carregue fêmeas e touros antes de calcular',
+        description: 'Carregue fêmeas antes de calcular',
         variant: 'destructive'
       });
       return;
     }
 
-    const validBullIds = selectedBullIds.filter(id => id.trim() !== '');
-    if (validBullIds.length === 0) {
-      toast({
-        title: 'Touros não selecionados',
-        description: 'Selecione pelo menos um touro para acasalamento',
-        variant: 'destructive'
-      });
-      return;
+    let bullsToUse: Bull[] = [];
+    
+    if (bullSource === 'upload') {
+      if (bulls.length === 0) {
+        toast({
+          title: 'Dados insuficientes',
+          description: 'Carregue touros antes de calcular',
+          variant: 'destructive'
+        });
+        return;
+      }
+      const validBullIds = selectedBullIds.filter(id => id.trim() !== '');
+      if (validBullIds.length === 0) {
+        toast({
+          title: 'Touros não selecionados',
+          description: 'Selecione pelo menos um touro para acasalamento',
+          variant: 'destructive'
+        });
+        return;
+      }
+      bullsToUse = bulls;
+    } else {
+      if (selectedBullsFromSearch.length === 0) {
+        toast({
+          title: 'Touros não selecionados',
+          description: 'Selecione pelo menos um touro para acasalamento',
+          variant: 'destructive'
+        });
+        return;
+      }
+      bullsToUse = convertSelectedBulls();
     }
 
     setIsCalculating(true);
@@ -183,33 +214,62 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
       const results: PredictionResult[] = [];
 
       females.forEach(female => {
-        validBullIds.forEach((bullId, index) => {
-          const bull = bulls.find(b => b['ID Fazenda'] === bullId || b['Nome'] === bullId);
-          
-          if (!bull) {
-            console.warn(`Touro ${bullId} não encontrado`);
-            return;
-          }
-
-          const predictions: Record<string, number> = {};
-          
-          // Calcular predições para cada PTA
-          PTA_COLUMNS.forEach(pta => {
-            const femalePTA = parseFloat(female[pta]) || 0;
-            const bullPTA = parseFloat(bull[pta]) || 0;
+        if (bullSource === 'upload') {
+          const validBullIds = selectedBullIds.filter(id => id.trim() !== '');
+          validBullIds.forEach((bullId, index) => {
+            const bull = bullsToUse.find(b => b['ID Fazenda'] === bullId || b['Nome'] === bullId);
             
-            if (!isNaN(femalePTA) && !isNaN(bullPTA)) {
-              predictions[pta] = calculateGenomicPrediction(femalePTA, bullPTA);
+            if (!bull) {
+              console.warn(`Touro ${bullId} não encontrado`);
+              return;
             }
-          });
 
-          results.push({
-            female,
-            bull,
-            predictions,
-            bullNumber: index + 1
+            const predictions: Record<string, number> = {};
+            
+            // Calcular predições para cada PTA
+            PTA_COLUMNS.forEach(pta => {
+              const femalePTA = parseFloat(female[pta]) || 0;
+              const bullPTA = parseFloat(bull[pta]) || 0;
+              
+              if (!isNaN(femalePTA) && !isNaN(bullPTA)) {
+                predictions[pta] = calculateGenomicPrediction(femalePTA, bullPTA);
+              }
+            });
+
+            results.push({
+              female,
+              bull,
+              predictions,
+              bullNumber: index + 1
+            });
           });
-        });
+        } else {
+          // Usar touros da busca
+          selectedBullsFromSearch.forEach((searchBull, index) => {
+            const bull = convertSelectedBulls().find(b => b['ID Fazenda'] === searchBull.code);
+            
+            if (!bull) return;
+
+            const predictions: Record<string, number> = {};
+            
+            // Calcular predições para cada PTA
+            PTA_COLUMNS.forEach(pta => {
+              const femalePTA = parseFloat(female[pta]) || 0;
+              const bullPTA = parseFloat(bull[pta]) || 0;
+              
+              if (!isNaN(femalePTA) && !isNaN(bullPTA)) {
+                predictions[pta] = calculateGenomicPrediction(femalePTA, bullPTA);
+              }
+            });
+
+            results.push({
+              female,
+              bull,
+              predictions,
+              bullNumber: index + 1
+            });
+          });
+        }
       });
 
       setPredictions(results);
@@ -253,7 +313,131 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
     });
   };
 
-  // Carregar fêmeas do banco de dados
+  // Buscar touros por NAAB
+  const searchBullsByNAAB = async () => {
+    if (!naabSearch.trim()) {
+      toast({
+        title: 'Digite um NAAB',
+        description: 'Digite o código NAAB para buscar touros',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setSearchingBulls(true);
+    try {
+      const { data, error } = await supabase
+        .rpc('search_bulls', { 
+          q: naabSearch.trim(),
+          limit_count: 20 
+        });
+
+      if (error) throw error;
+
+      setSearchResults(data || []);
+      
+      if (!data || data.length === 0) {
+        toast({
+          title: 'Nenhum touro encontrado',
+          description: 'Não foi encontrado nenhum touro com esse NAAB',
+          variant: 'destructive'  
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao buscar touros:', error);
+      toast({
+        title: 'Erro na busca',
+        description: 'Erro ao buscar touros no banco de dados',
+        variant: 'destructive'
+      });
+    } finally {
+      setSearchingBulls(false);
+    }
+  };
+
+  // Adicionar touro selecionado da busca
+  const addBullFromSearch = (bull: any) => {
+    if (selectedBullsFromSearch.find(b => b.bull_id === bull.bull_id)) {
+      toast({
+        title: 'Touro já selecionado',
+        description: 'Este touro já foi adicionado à seleção',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setSelectedBullsFromSearch(prev => [...prev, bull]);
+    toast({
+      title: 'Touro adicionado',
+      description: `${bull.name} foi adicionado à seleção`
+    });
+  };
+
+  // Remover touro da seleção
+  const removeBullFromSearch = (bullId: string) => {
+    setSelectedBullsFromSearch(prev => prev.filter(b => b.bull_id !== bullId));
+  };
+
+  // Converter touros selecionados para formato esperado
+  const convertSelectedBulls = () => {
+    return selectedBullsFromSearch.map(bull => ({
+      'ID Fazenda': bull.code,
+      'Nome': bull.name,
+      'HHP$®': bull.ptas?.hhp_dollar || 0,
+      'TPI': bull.ptas?.tpi || 0,
+      'NM$': bull.ptas?.nm_dollar || 0,
+      'CM$': bull.ptas?.cm_dollar || 0,
+      'FM$': bull.ptas?.fm_dollar || 0,
+      'GM$': bull.ptas?.gm_dollar || 0,
+      'F SAV': bull.ptas?.f_sav || 0,
+      'PTAM': bull.ptas?.ptam || 0,
+      'CFP': bull.ptas?.cfp || 0,
+      'PTAF': bull.ptas?.ptaf || 0,
+      'PTAF%': bull.ptas?.ptaf_pct || 0,
+      'PTAP': bull.ptas?.ptap || 0,
+      'PTAP%': bull.ptas?.ptap_pct || 0,
+      'PL': bull.ptas?.pl || 0,
+      'DPR': bull.ptas?.dpr || 0,
+      'LIV': bull.ptas?.liv || 0,
+      'SCS': bull.ptas?.scs || 0,
+      'MAST': bull.ptas?.mast || 0,
+      'MET': bull.ptas?.met || 0,
+      'RP': bull.ptas?.rp || 0,
+      'DA': bull.ptas?.da || 0,
+      'KET': bull.ptas?.ket || 0,
+      'MF': bull.ptas?.mf || 0,
+      'PTAT': bull.ptas?.ptat || 0,
+      'UDC': bull.ptas?.udc || 0,
+      'FLC': bull.ptas?.flc || 0,
+      'SCE': bull.ptas?.sce || 0,
+      'DCE': bull.ptas?.dce || 0,
+      'SSB': bull.ptas?.ssb || 0,
+      'DSB': bull.ptas?.dsb || 0,
+      'H LIV': bull.ptas?.h_liv || 0,
+      'CCR': bull.ptas?.ccr || 0,
+      'HCR': bull.ptas?.hcr || 0,
+      'FI': bull.ptas?.fi || 0,
+      'BWC': bull.ptas?.bwc || 0,
+      'STA': bull.ptas?.sta || 0,
+      'STR': bull.ptas?.str || 0,
+      'DFM': bull.ptas?.dfm || 0,
+      'RUA': bull.ptas?.rua || 0,
+      'RLS': bull.ptas?.rls || 0,
+      'RTP': bull.ptas?.rtp || 0,
+      'FTL': bull.ptas?.ftl || 0,
+      'RW': bull.ptas?.rw || 0,
+      'RLR': bull.ptas?.rlr || 0,
+      'FTA': bull.ptas?.fta || 0,
+      'FLS': bull.ptas?.fls || 0,
+      'FUA': bull.ptas?.fua || 0,
+      'RUH': bull.ptas?.ruh || 0,
+      'RUW': bull.ptas?.ruw || 0,
+      'UCL': bull.ptas?.ucl || 0,
+      'UDP': bull.ptas?.udp || 0,
+      'FTP': bull.ptas?.ftp || 0,
+      'RFI': bull.ptas?.rfi || 0
+    }));
+  };
   const loadFemalesFromDatabase = async () => {
     if (selectedClassifications.length === 0 || selectedCategories.length === 0) {
       toast({
@@ -384,7 +568,49 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
     }
   };
 
-  // Atualizar seleção de touros
+  // Navegação entre passos
+  const canProceedToStep2 = females.length > 0;
+  const canProceedToStep3 = (bullSource === 'upload' ? bulls.length > 0 : selectedBullsFromSearch.length > 0);
+
+  const nextStep = () => {
+    if (currentStep === 1 && canProceedToStep2) {
+      setCurrentStep(2);
+    } else if (currentStep === 2 && canProceedToStep3) {
+      setCurrentStep(3);
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  // Renderizar indicador de passos
+  const renderStepIndicator = () => (
+    <div className="flex items-center justify-center mb-6">
+      <div className="flex items-center space-x-4">
+        <div className={`flex items-center justify-center w-8 h-8 rounded-full ${currentStep >= 1 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+          1
+        </div>
+        <div className={`h-px w-16 ${currentStep > 1 ? 'bg-primary' : 'bg-muted'}`} />
+        <div className={`flex items-center justify-center w-8 h-8 rounded-full ${currentStep >= 2 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+          2
+        </div>
+        <div className={`h-px w-16 ${currentStep > 2 ? 'bg-primary' : 'bg-muted'}`} />
+        <div className={`flex items-center justify-center w-8 h-8 rounded-full ${currentStep >= 3 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+          3
+        </div>
+      </div>
+      <div className="ml-6 text-sm text-muted-foreground">
+        Passo {currentStep} de 3: {
+          currentStep === 1 ? 'Escolher Fêmeas' :
+          currentStep === 2 ? 'Escolher Touros' :
+          'Calcular Predições'
+        }
+      </div>
+    </div>
+  );
   const updateSelectedBulls = (count: number) => {
     setSelectedBulls(count);
     const newSelection = Array(count).fill('').map((_, i) => selectedBullIds[i] || '');
@@ -423,161 +649,175 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
         </div>
       </div>
 
-      <Tabs defaultValue="data" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="data">Dados</TabsTrigger>
-          <TabsTrigger value="setup">Configuração</TabsTrigger>
-          <TabsTrigger value="results">Resultados</TabsTrigger>
-        </TabsList>
+      {/* Indicador de Passos */}
+      {renderStepIndicator()}
 
-        {/* Aba de Dados */}
-        <TabsContent value="data" className="space-y-4">
-          {/* Seletor de Fonte de Dados */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Fonte dos Dados das Fêmeas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-4">
-                <Button
-                  variant={dataSource === 'upload' ? 'default' : 'outline'}
-                  onClick={() => setDataSource('upload')}
-                  className="flex-1"
-                >
-                  <FileUp className="w-4 h-4 mr-2" />
-                  Upload de Arquivo
-                </Button>
-                <Button
-                  variant={dataSource === 'database' ? 'default' : 'outline'}
-                  onClick={() => setDataSource('database')}
-                  className="flex-1"
+      {/* Passo 1: Escolher Fêmeas */}
+      {currentStep === 1 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Passo 1: Escolher Fêmeas
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Seletor de Fonte de Dados */}
+            <div className="flex gap-4">
+              <Button
+                variant={dataSource === 'upload' ? 'default' : 'outline'}
+                onClick={() => setDataSource('upload')}
+                className="flex-1"
+              >
+                <FileUp className="w-4 h-4 mr-2" />
+                Upload de Arquivo
+              </Button>
+              <Button
+                variant={dataSource === 'database' ? 'default' : 'outline'}
+                onClick={() => setDataSource('database')}
+                className="flex-1"
+              >
+                <Database className="w-4 h-4 mr-2" />
+                Fêmeas Segmentadas
+              </Button>
+            </div>
+
+            {dataSource === 'upload' ? (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="female-upload">Carregar arquivo (.xlsx, .csv)</Label>
+                  <Input
+                    id="female-upload"
+                    type="file"
+                    accept=".xlsx,.csv"
+                    onChange={handleFemaleUpload}
+                    className="mt-1"
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Arquivo deve conter as colunas: ID Fazenda, Nome e todos os PTAs necessários
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm font-medium">Classificações</Label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {[
+                      { value: 'donor', label: 'Doadora' },
+                      { value: 'inter', label: 'Intermediária' },
+                      { value: 'recipient', label: 'Receptora' }
+                    ].map(({ value, label }) => (
+                      <div key={value} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`class-${value}`}
+                          checked={selectedClassifications.includes(value)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedClassifications([...selectedClassifications, value]);
+                            } else {
+                              setSelectedClassifications(selectedClassifications.filter(c => c !== value));
+                            }
+                          }}
+                        />
+                        <Label htmlFor={`class-${value}`} className="text-sm">
+                          {label}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium">Categorias</Label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {[
+                      { value: 'bezerra', label: 'Bezerra' },
+                      { value: 'novilha', label: 'Novilha' },
+                      { value: 'primipara', label: 'Primípara' },
+                      { value: 'secundipara', label: 'Secundípara' },
+                      { value: 'multipara', label: 'Multípara' }
+                    ].map(({ value, label }) => (
+                      <div key={value} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`cat-${value}`}
+                          checked={selectedCategories.includes(value)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedCategories([...selectedCategories, value]);
+                            } else {
+                              setSelectedCategories(selectedCategories.filter(c => c !== value));
+                            }
+                          }}
+                        />
+                        <Label htmlFor={`cat-${value}`} className="text-sm">
+                          {label}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={loadFemalesFromDatabase} 
+                  disabled={loadingDatabase}
+                  className="w-full"
                 >
                   <Database className="w-4 h-4 mr-2" />
-                  Fêmeas Segmentadas
+                  {loadingDatabase ? 'Carregando...' : 'Carregar Fêmeas'}
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+            )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Fonte de Fêmeas */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="w-5 h-5" />
-                  {dataSource === 'upload' ? 'Upload de Fêmeas' : 'Fêmeas do Banco'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {dataSource === 'upload' ? (
-                  <>
-                    <div>
-                      <Label htmlFor="female-upload">Carregar arquivo (.xlsx, .csv)</Label>
-                      <Input
-                        id="female-upload"
-                        type="file"
-                        accept=".xlsx,.csv"
-                        onChange={handleFemaleUpload}
-                        className="mt-1"
-                      />
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Arquivo deve conter as colunas: ID Fazenda, Nome e todos os PTAs necessários
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <div className="space-y-3">
-                      <div>
-                        <Label className="text-sm font-medium">Classificações</Label>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {[
-                            { value: 'donor', label: 'Doadora' },
-                            { value: 'inter', label: 'Intermediária' },
-                            { value: 'recipient', label: 'Receptora' }
-                          ].map(({ value, label }) => (
-                            <div key={value} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`class-${value}`}
-                                checked={selectedClassifications.includes(value)}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    setSelectedClassifications([...selectedClassifications, value]);
-                                  } else {
-                                    setSelectedClassifications(selectedClassifications.filter(c => c !== value));
-                                  }
-                                }}
-                              />
-                              <Label htmlFor={`class-${value}`} className="text-sm">
-                                {label}
-                              </Label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+            {females.length > 0 && (
+              <div className="space-y-2">
+                <Badge variant="secondary">
+                  {females.length} fêmeas carregadas
+                </Badge>
+                <div className="flex justify-end">
+                  <Button onClick={nextStep} disabled={!canProceedToStep2}>
+                    Próximo Passo
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
-                      <div>
-                        <Label className="text-sm font-medium">Categorias</Label>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {[
-                            { value: 'bezerra', label: 'Bezerra' },
-                            { value: 'novilha', label: 'Novilha' },
-                            { value: 'primipara', label: 'Primípara' },
-                            { value: 'secundipara', label: 'Secundípara' },
-                            { value: 'multipara', label: 'Multípara' }
-                          ].map(({ value, label }) => (
-                            <div key={value} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`cat-${value}`}
-                                checked={selectedCategories.includes(value)}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    setSelectedCategories([...selectedCategories, value]);
-                                  } else {
-                                    setSelectedCategories(selectedCategories.filter(c => c !== value));
-                                  }
-                                }}
-                              />
-                              <Label htmlFor={`cat-${value}`} className="text-sm">
-                                {label}
-                              </Label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+      {/* Passo 2: Escolher Touros */}
+      {currentStep === 2 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="w-5 h-5" />
+              Passo 2: Escolher Touros
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Seletor de Fonte de Touros */}
+            <div className="flex gap-4">
+              <Button
+                variant={bullSource === 'upload' ? 'default' : 'outline'}
+                onClick={() => setBullSource('upload')}
+                className="flex-1"
+              >
+                <FileUp className="w-4 h-4 mr-2" />
+                Upload de Arquivo
+              </Button>
+              <Button
+                variant={bullSource === 'search' ? 'default' : 'outline'}
+                onClick={() => setBullSource('search')}
+                className="flex-1"
+              >
+                <Search className="w-4 h-4 mr-2" />
+                Buscar por NAAB
+              </Button>
+            </div>
 
-                      <Button 
-                        onClick={loadFemalesFromDatabase} 
-                        disabled={loadingDatabase}
-                        className="w-full"
-                      >
-                        <Database className="w-4 h-4 mr-2" />
-                        {loadingDatabase ? 'Carregando...' : 'Carregar Fêmeas'}
-                      </Button>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Carrega fêmeas já segmentadas do banco de dados com base nos filtros selecionados
-                    </p>
-                  </>
-                )}
-                
-                {females.length > 0 && (
-                  <Badge variant="secondary">
-                    {females.length} fêmeas carregadas
-                  </Badge>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Upload de Touros */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Upload className="w-5 h-5" />
-                  Banco de Touros
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+            {bullSource === 'upload' ? (
+              <div className="space-y-4">
                 <div>
                   <Label htmlFor="bull-upload">Carregar arquivo (.xlsx, .csv)</Label>
                   <Input
@@ -596,92 +836,196 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
                 <p className="text-sm text-muted-foreground">
                   Arquivo deve conter as colunas: ID Fazenda, Nome e todos os PTAs necessários
                 </p>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
 
-        {/* Aba de Configuração */}
-        <TabsContent value="setup" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Configurar Acasalamentos</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="bull-count">Número de touros por fêmea</Label>
-                <Select value={selectedBulls.toString()} onValueChange={(value) => updateSelectedBulls(parseInt(value))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">1 touro</SelectItem>
-                    <SelectItem value="2">2 touros</SelectItem>
-                    <SelectItem value="3">3 touros</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                {bulls.length > 0 && (
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="bull-count">Número de touros por fêmea</Label>
+                      <Select value={selectedBulls.toString()} onValueChange={(value) => updateSelectedBulls(parseInt(value))}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1 touro</SelectItem>
+                          <SelectItem value="2">2 touros</SelectItem>
+                          <SelectItem value="3">3 touros</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-              <div className="space-y-2">
-                <Label>Selecionar Touros</Label>
-                {selectedBullIds.map((bullId, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <Label className="min-w-[80px]">Touro {index + 1}:</Label>
-                    <Select 
-                      value={bullId} 
-                      onValueChange={(value) => {
-                        const newIds = [...selectedBullIds];
-                        newIds[index] = value;
-                        setSelectedBullIds(newIds);
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um touro" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {bulls.map((bull, bullIndex) => (
-                          <SelectItem key={bullIndex} value={bull['ID Fazenda'] || bull['Nome']}>
-                            {bull['Nome']} - {bull['ID Fazenda']}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="space-y-2">
+                      <Label>Selecionar Touros</Label>
+                      {selectedBullIds.map((bullId, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <Label className="min-w-[80px]">Touro {index + 1}:</Label>
+                          <Select 
+                            value={bullId} 
+                            onValueChange={(value) => {
+                              const newIds = [...selectedBullIds];
+                              newIds[index] = value;
+                              setSelectedBullIds(newIds);
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione um touro" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {bulls.map((bull, bullIndex) => (
+                                <SelectItem key={bullIndex} value={bull['ID Fazenda'] || bull['Nome']}>
+                                  {bull['Nome']} - {bull['ID Fazenda']}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
+                )}
               </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Busca por NAAB */}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Digite o código NAAB do touro"
+                    value={naabSearch}
+                    onChange={(e) => setNaabSearch(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && searchBullsByNAAB()}
+                  />
+                  <Button onClick={searchBullsByNAAB} disabled={searchingBulls}>
+                    <Search className="w-4 h-4 mr-2" />
+                    {searchingBulls ? 'Buscando...' : 'Buscar'}
+                  </Button>
+                </div>
 
-              <Button 
-                onClick={calculatePredictions} 
-                disabled={isCalculating || females.length === 0 || bulls.length === 0}
-                className="w-full"
-              >
-                <Calculator className="w-4 h-4 mr-2" />
-                {isCalculating ? 'Calculando...' : 'Calcular Predições'}
+                {/* Resultados da busca */}
+                {searchResults.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Resultados da Busca:</Label>
+                    <div className="max-h-60 overflow-y-auto space-y-2">
+                      {searchResults.map((bull) => (
+                        <div key={bull.bull_id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div>
+                            <p className="font-medium">{bull.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {bull.code} | TPI: {bull.ptas?.tpi || 'N/A'} | NM$: {bull.ptas?.nm_dollar || 'N/A'}
+                            </p>
+                          </div>
+                          <Button 
+                            size="sm" 
+                            onClick={() => addBullFromSearch(bull)}
+                            disabled={selectedBullsFromSearch.find(b => b.bull_id === bull.bull_id)}
+                          >
+                            <Plus className="w-4 h-4 mr-1" />
+                            Adicionar
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Touros selecionados */}
+                {selectedBullsFromSearch.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Touros Selecionados ({selectedBullsFromSearch.length}):</Label>
+                    <div className="space-y-2">
+                      {selectedBullsFromSearch.map((bull) => (
+                        <div key={bull.bull_id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                          <div>
+                            <p className="font-medium">{bull.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {bull.code} | TPI: {bull.ptas?.tpi || 'N/A'} | NM$: {bull.ptas?.nm_dollar || 'N/A'}
+                            </p>
+                          </div>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => removeBullFromSearch(bull.bull_id)}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Navegação */}
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={prevStep}>
+                <ChevronLeft className="w-4 h-4 mr-2" />
+                Passo Anterior
               </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
+              <Button onClick={nextStep} disabled={!canProceedToStep3}>
+                Próximo Passo
+                <ChevronRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-        {/* Aba de Resultados */}
-        <TabsContent value="results" className="space-y-4">
-          {predictions.length > 0 && (
-            <Card>
-              <CardHeader>
+      {/* Passo 3: Calcular Predições */}
+      {currentStep === 3 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calculator className="w-5 h-5" />
+              Passo 3: Calcular Predições
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Resumo */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <h4 className="font-medium mb-2">Fêmeas</h4>
+                <p className="text-sm text-muted-foreground">
+                  {females.length} fêmeas carregadas via {dataSource === 'upload' ? 'arquivo' : 'banco segmentado'}
+                </p>
+              </div>
+              <div className="p-4 bg-muted rounded-lg">
+                <h4 className="font-medium mb-2">Touros</h4>
+                <p className="text-sm text-muted-foreground">
+                  {bullSource === 'upload' 
+                    ? `${bulls.length} touros carregados via arquivo` 
+                    : `${selectedBullsFromSearch.length} touros selecionados por NAAB`
+                  }
+                </p>
+              </div>
+            </div>
+
+            {/* Botão de cálculo */}
+            <Button 
+              onClick={calculatePredictions} 
+              disabled={isCalculating}
+              className="w-full"
+              size="lg"
+            >
+              <Calculator className="w-4 h-4 mr-2" />
+              {isCalculating ? 'Calculando...' : 'Calcular Predições Genômicas'}
+            </Button>
+
+            {/* Resultados */}
+            {predictions.length > 0 && (
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <CardTitle>Resultados das Predições</CardTitle>
+                  <h4 className="font-medium">Resultados das Predições</h4>
                   <Button onClick={exportResults} variant="outline">
                     <Download className="w-4 h-4 mr-2" />
                     Exportar
                   </Button>
                 </div>
-              </CardHeader>
-              <CardContent>
+                
                 <div className="space-y-6">
                   {Object.entries(groupedPredictions).map(([femaleKey, femalePredictions]) => (
                     <div key={femaleKey} className="space-y-2">
-                      <h4 className="font-semibold">
+                      <h5 className="font-semibold">
                         Fêmea: {femalePredictions[0].female['Nome']} ({femaleKey})
-                      </h4>
+                      </h5>
                       <div className="overflow-x-auto">
                         <Table>
                           <TableHeader>
@@ -719,11 +1063,19 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
+              </div>
+            )}
+
+            {/* Navegação */}
+            <div className="flex justify-start">
+              <Button variant="outline" onClick={prevStep}>
+                <ChevronLeft className="w-4 h-4 mr-2" />
+                Passo Anterior
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
