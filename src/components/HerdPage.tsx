@@ -238,7 +238,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
     const matchesSearch = female.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (female.identifier && female.identifier.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    const matchesYear = !selectedYear || (female.birth_date && 
+    const matchesYear = !selectedYear || selectedYear === "all-years" || (female.birth_date && 
       new Date(female.birth_date).getFullYear().toString() === selectedYear);
     
     return matchesSearch && matchesYear;
@@ -563,7 +563,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
                 <SelectValue placeholder="Ano nascimento" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os anos</SelectItem>
+                <SelectItem value="all-years">Todos os anos</SelectItem>
                 {availableYears.map(year => (
                   <SelectItem key={year} value={year}>{year}</SelectItem>
                 ))}

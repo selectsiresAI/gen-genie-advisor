@@ -481,7 +481,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
         const matchesCompany = !selectedEmpresa || selectedEmpresa === "todas" || selectedEmpresa === "Todas" ||
                               (bull.company && bull.company.toLowerCase().includes(selectedEmpresa.toLowerCase()));
         
-        const matchesYear = !selectedYear || (bull.birth_date && 
+        const matchesYear = !selectedYear || selectedYear === "all-years" || (bull.birth_date && 
           new Date(bull.birth_date).getFullYear().toString() === selectedYear);
                               
         return matchesSearch && matchesCompany && matchesYear;
@@ -839,7 +839,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
                 <SelectValue placeholder="Ano nascimento" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os anos</SelectItem>
+                <SelectItem value="all-years">Todos os anos</SelectItem>
                 {availableYears.map(year => (
                   <SelectItem key={year} value={year}>{year}</SelectItem>
                 ))}
