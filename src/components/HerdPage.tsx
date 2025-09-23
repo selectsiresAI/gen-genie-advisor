@@ -110,11 +110,13 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack }) => {
   const loadFemales = async () => {
     try {
       setLoading(true);
+      // Load all females by using a high limit to override any default limits
       const { data, error } = await supabase
         .from('females_denorm')
         .select('*')
         .eq('farm_id', farm.farm_id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(10000); // Set high limit to ensure all records are loaded
 
       if (error) throw error;
       setFemales(data || []);
@@ -550,7 +552,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack }) => {
                           </td>
                           <td className="border px-2 py-1 text-xs">{female.parity_order || '-'}</td>
                           <td className="border px-2 py-1 text-xs">{female.category || '-'}</td>
-                          <td className="border px-2 py-1 text-xs">{female.hhp_dollar || '-'}</td>
+                          <td className="border px-2 py-1 text-xs">{female.hhp_dollar ? Number(female.hhp_dollar).toFixed(0) : '-'}</td>
                           <td className="border px-2 py-1 text-xs">{female.tpi || '-'}</td>
                           <td className="border px-2 py-1 text-xs">{female.nm_dollar || '-'}</td>
                           <td className="border px-2 py-1 text-xs">{female.cm_dollar || '-'}</td>
