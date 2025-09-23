@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { usePlanStore, AVAILABLE_PTAS, getFemalesByFarm, countFromCategoria, calculateMotherAverages, getBullPTAValue, calculatePopulationStructure } from "../hooks/usePlanStore";
 import { toast } from "sonner";
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Projeção Genética MVP – Select Sires (Frontend Only, Single File)
@@ -290,23 +291,11 @@ function useAppState() {
     }
   }, [state.farm, state.structure, state.repro, state.mothers, state.bulls, state.selectedPTAs, state.numberOfBulls, state.autoCalculatePopulation]);
 
-  // Carrega dados do ToolSSApp do localStorage
+  // Carrega dados do Supabase (não mais do localStorage)
   useEffect(() => {
-    try {
-      // Try v3 first (150 bulls), fallback to v2
-      let toolssData = localStorage.getItem("toolss_clients_v3_with_150_bulls");
-      if (!toolssData) {
-        toolssData = localStorage.getItem("toolss_clients_v2_with_500_females");
-      }
-      
-      if (toolssData) {
-        const clients = JSON.parse(toolssData);
-        console.log(`📊 Loaded ${clients.length} clients for Plano Genético`);
-        setState(prev => ({ ...prev, toolssClients: clients }));
-      }
-    } catch (e) {
-      console.warn("Erro ao carregar dados do ToolSSApp:", e);
-    }
+    // No longer loading from localStorage since we're using Supabase directly
+    // State will be managed by individual components that need bull data
+    console.log('🔄 ProjecaoGenetica usando dados direto do Supabase');
   }, []);
 
   // Hydrate store from localStorage once on load
@@ -562,28 +551,8 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
   const prevHashRef = useRef<string>('');
   
   useEffect(() => {
-    try {
-      // Try v3 first (150 bulls), fallback to v2
-      let toolssData = localStorage.getItem("toolss_clients_v3_with_150_bulls");
-      if (!toolssData) {
-        toolssData = localStorage.getItem("toolss_clients_v2_with_500_females");
-      }
-      
-      if (toolssData) {
-        const clients = JSON.parse(toolssData);
-        setToolssClients(clients);
-        
-        // Restore selected farm from store
-        if (planStore.selectedFarmId) {
-          const farm = clients.flatMap((c: any) => c.farms).find((f: any) => f.id.toString() === planStore.selectedFarmId);
-          if (farm) {
-            setSelectedFarm(farm);
-          }
-        }
-      }
-    } catch (e) {
-      console.warn("Erro ao carregar dados do ToolSSApp:", e);
-    }
+    // No longer loading from localStorage - using Supabase directly
+    console.log('🔄 PagePlano usando dados direto do Supabase');
   }, [planStore.selectedFarmId]);
   
   // ÚNICO efeito anti-loop para população (Item 4)
@@ -1043,25 +1012,56 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
   const [toolssBulls, setToolssBulls] = useState<any[]>([]);
   
   useEffect(() => {
-    try {
-      // Try v3 first (150 bulls), fallback to v2
-      let toolssData = localStorage.getItem("toolss_clients_v3_with_150_bulls");
-      if (!toolssData) {
-        toolssData = localStorage.getItem("toolss_clients_v2_with_500_females");
+    const loadBullsFromSupabase = async () => {
+      try {
+        console.log('🔍 Carregando touros do Supabase...');
+        
+        const { data: bulls, error } = await supabase
+          .from('bulls_denorm')
+          .select('*')
+          .order('tpi', { ascending: false })
+          .limit(100); // Limit to avoid too many bulls
+        
+        if (error) {
+          console.error('Erro ao carregar touros:', error);
+          return;
+        }
+        
+        if (bulls && bulls.length > 0) {
+          // Convert Supabase bulls to ToolSS format for compatibility
+          const convertedBulls = bulls.map((bull: any) => ({
+            naab: bull.code,
+            nome: bull.name,
+            empresa: bull.company || 'N/A',
+            TPI: bull.tpi || 0,
+            "NM$": bull.nm_dollar || 0,
+            "HHP$": bull.hhp_dollar || 0,
+            "FM$": bull.fm_dollar || 0,
+            "GM$": bull.gm_dollar || 0,
+            "CM$": bull.cm_dollar || 0,
+            Milk: bull.ptam || 0,
+            Fat: bull.ptaf || 0,
+            Protein: bull.ptap || 0,
+            "Fat%": bull.ptaf_pct || 0,
+            "Protein%": bull.ptap_pct || 0,
+            PL: bull.pl || 0,
+            DPR: bull.dpr || 0,
+            LIV: bull.liv || 0,
+            SCS: bull.scs || 0,
+            PTAT: bull.ptat || 0,
+            // Add other PTAs as needed...
+          }));
+          
+          console.log(`🐂 Loaded ${convertedBulls.length} bulls from Supabase`);
+          console.log('📋 Sample bulls:', convertedBulls.slice(0, 3).map((b: any) => ({ naab: b.naab, nome: b.nome, empresa: b.empresa })));
+          setToolssBulls(convertedBulls);
+        }
+      } catch (e) {
+        console.warn("Erro ao carregar touros do Supabase:", e);
       }
-      
-      if (toolssData) {
-        const clients = JSON.parse(toolssData);
-        const allBulls = clients.flatMap((c: any) => 
-          c.farms.flatMap((f: any) => f.bulls || [])
-        );
-        console.log(`🐂 Loaded ${allBulls.length} bulls from ToolSSApp for selection`);
-        console.log('📋 Sample bulls:', allBulls.slice(0, 3).map((b: any) => ({ naab: b.naab, nome: b.nome, empresa: b.empresa })));
-        setToolssBulls(allBulls);
-      }
-    } catch (e) {
-      console.warn("Erro ao carregar touros do ToolSSApp:", e);
-    }
+    };
+    
+    loadBullsFromSupabase();
   }, []);
 
   // Inicializa touros se necessário - sem loops

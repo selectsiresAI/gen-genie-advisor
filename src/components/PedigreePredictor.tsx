@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { usePedigreeStore, PTA_MAPPING, PTA_LABELS, formatPTAValue, predictFromPedigree, validateNaabs, getBullFromCache, Bull, BatchInput, BatchResult } from '@/hooks/usePedigreeStore';
 import { Calculator, Upload, Download, Search } from 'lucide-react';
 import { read, utils, writeFileXLSX } from 'xlsx';
+import { supabase } from '@/integrations/supabase/client';
 
 // Estado para armazenar dados do ToolSSApp - idêntico ao ProjecaoGenetica
 interface ToolSSBull {
@@ -38,169 +39,131 @@ interface ToolSSClient {
   }>;
 }
 
-// Estado global para dados do ToolSS
-let toolssClients: ToolSSClient[] = [];
+// Estado global para dados do ToolSS (não mais necessário com Supabase)
+// let toolssClients: ToolSSClient[] = [];
 
-// Função para carregar dados do ToolSSApp - idêntica ao ProjecaoGenetica
-const loadToolSSData = () => {
-  try {
-    // Try v3 first (150 bulls), fallback to v2
-    let toolssData = localStorage.getItem("toolss_clients_v3_with_150_bulls");
-    if (!toolssData) {
-      toolssData = localStorage.getItem("toolss_clients_v2_with_500_females");
-    }
-    
-    if (toolssData) {
-      const clients = JSON.parse(toolssData);
-      console.log(`🐂 Nexus 2: Carregados ${clients.length} clientes com dados de touros`);
-      toolssClients = clients;
-      return clients;
-    }
-  } catch (e) {
-    console.warn("❌ Nexus 2: Erro ao carregar dados do ToolSSApp:", e);
-  }
-  
-  console.log('🚫 Nexus 2: Banco de touros não encontrado. Acesse "Busca Touros" primeiro.');
-  return [];
-};
+// Função anterior que carregava do localStorage (não mais necessária)
+// const loadToolSSData = () => {
+//   // Replaced by direct Supabase queries in fetchBullFromDatabase
+//   console.log('🔄 loadToolSSData não é mais necessária - usando Supabase diretamente');
+//   return [];
+// };
 
 // Function to clear localStorage and force reload
+// Função para limpar cache antigo (não mais necessária com Supabase)
 const clearAndReloadData = () => {
-  console.log('🧹 Clearing localStorage...');
-  const keysToRemove = Object.keys(localStorage).filter(k => k.includes('toolss'));
-  keysToRemove.forEach(key => localStorage.removeItem(key));
-  console.log('✅ Cleared keys:', keysToRemove);
-  alert('localStorage limpo! Por favor, vá para a página "Busca Touros" para carregar o banco de dados atualizado.');
+  console.log('🧹 Cache não é mais necessário - usando Supabase diretamente');
+  alert('Agora usando dados direto do Supabase! Dados sempre atualizados.');
 };
 
-// Função de busca de touro como PROCV - busca direta nos dados carregados
+// Função de busca de touro via Supabase bulls_denorm
 const fetchBullFromDatabase = async (naab: string): Promise<Bull | null> => {
   const cleanNaab = naab.toUpperCase().trim();
   
-  console.log(`🔍 Procurando touro com NAAB: "${cleanNaab}"`);
+  console.log(`🔍 Procurando touro com NAAB: "${cleanNaab}" no Supabase`);
   
-  // Se não há dados carregados, tenta carregar
-  if (toolssClients.length === 0) {
-    console.log('📦 Carregando dados do banco...');
-    loadToolSSData();
-  }
-  
-  if (toolssClients.length === 0) {
-    console.log('❌ Nenhum cliente carregado');
-    return null;
-  }
+  try {
+    const { data, error } = await supabase
+      .from('bulls_denorm')
+      .select('*')
+      .eq('code', cleanNaab)
+      .single();
 
-  console.log(`🏢 Procurando em ${toolssClients.length} clientes...`);
-
-  // Busca direta em todos os touros de todas as fazendas
-  for (const client of toolssClients) {
-    console.log(`🏢 Cliente: ${client.nome || client.id}, Fazendas: ${client.farms?.length || 0}`);
-    for (const farm of client.farms) {
-      if (farm.bulls && Array.isArray(farm.bulls)) {
-        console.log(`🚜 Fazenda: ${farm.nome}, Touros: ${farm.bulls.length}`);
-        
-        // Log some example NABs to see the format
-        if (farm.bulls.length > 0) {
-          console.log(`🐂 Exemplo de NABs: ${farm.bulls.slice(0, 3).map(b => `"${b.naab}"`).join(', ')}`);
-        }
-        
-        const bull = farm.bulls.find((b: ToolSSBull) => {
-          const bullNaab = String(b.naab || '').toUpperCase().trim();
-          console.log(`🔍 Comparando "${bullNaab}" === "${cleanNaab}"`);
-          return bullNaab === cleanNaab;
-        });
-        
-        if (bull) {
-          console.log(`✅ Touro encontrado: ${bull.nome} (${bull.empresa})`);
-          
-          // Converter ToolSSBull para Bull (formato do PedigreePredictor)
-          const convertedBull: Bull = {
-            naab: bull.naab,
-            name: bull.nome || 'Nome não informado',
-            company: bull.empresa || 'Empresa não informada',
-            ptas: {
-              // Índices Econômicos
-              ihhp_dollar: bull["HHP$"] || 0,
-              tpi: bull.TPI || 0,
-              nm_dollar: bull["NM$"] || 0,
-              cm_dollar: bull["CM$"] || 0,
-              fm_dollar: bull["FM$"] || 0,
-              gm_dollar: bull["GM$"] || 0,
-              f_sav: bull["F SAV"] || 0,
-              
-              // Produção de Leite
-              milk: bull.Milk || 0,
-              fat: bull.Fat || 0,
-              protein: bull.Protein || 0,
-              ptam: bull.PTAM || 0,
-              cfp: bull.CFP || 0,
-              ptaf: bull.PTAF || 0,
-              ptaf_pct: bull["PTAF%"] || 0,
-              ptap: bull.PTAP || 0,
-              ptap_pct: bull["PTAP%"] || 0,
-              pl: bull.PL || 0,
-              
-              // Fertilidade
-              dpr: bull.DPR || 0,
-              
-              // Saúde e Longevidade
-              liv: bull.LIV || 0,
-              scs: bull.SCS || 0,
-              mast: bull.MAST || 0,
-              met: bull.MET || 0,
-              rp: bull.RP || 0,
-              da: bull.DA || 0,
-              ket: bull.KET || 0,
-              mf: bull.MF || 0,
-              
-              // Conformação
-              ptat: bull.PTAT || 0,
-              udc: bull.UDC || 0,
-              flc: bull.FLC || 0,
-              sce: bull.SCE || 0,
-              dce: bull.DCE || 0,
-              ssb: bull.SSB || 0,
-              dsb: bull.DSB || 0,
-              h_liv: bull["H LIV"] || 0,
-              
-              // Reprodução
-              ccr: bull.CCR || 0,
-              hcr: bull.HCR || 0,
-              
-              // Outras características
-              fi: bull.FI || 0,
-              gl: bull.GL || 0,
-              efc: bull.EFC || 0,
-              bwc: bull.BWC || 0,
-              
-              // Conformação Detalhada
-              sta: bull.STA || 0,
-              str: bull.STR || 0,
-              dfm: bull.DFM || 0,
-              rua: bull.RUA || 0,
-              rls: bull.RLS || 0,
-              rtp: bull.RTP || 0,
-              ftl: bull.FTL || 0,
-              rw: bull.RW || 0,
-              rlr: bull.RLR || 0,
-              fta: bull.FTA || 0,
-              fls: bull.FLS || 0,
-              fua: bull.FUA || 0,
-              ruh: bull.RUH || 0,
-              ruw: bull.RUW || 0,
-              ucl: bull.UCL || 0,
-              udp: bull.UDP || 0,
-              ftp: bull.FTP || 0,
-              
-              // Eficiência Alimentar
-              rfi: bull.RFI || 0
-            }
-          };
-          
-          return convertedBull;
-        }
-      }
+    if (error) {
+      console.log(`❌ Touro não encontrado: ${cleanNaab}`);
+      return null;
     }
+
+    if (data) {
+      console.log(`✅ Touro encontrado: ${data.name}`);
+      
+      // Converter dados do Supabase para o formato Bull
+      const convertedBull: Bull = {
+        naab: data.code,
+        name: data.name || 'Nome não informado',
+        company: data.company || 'Empresa não informada',
+        ptas: {
+          // Índices Econômicos
+          hhp_dollar: data.hhp_dollar || 0,
+          tpi: data.tpi || 0,
+          nm_dollar: data.nm_dollar || 0,
+          cm_dollar: data.cm_dollar || 0,
+          fm_dollar: data.fm_dollar || 0,
+          gm_dollar: data.gm_dollar || 0,
+          f_sav: data.f_sav || 0,
+          
+          // Produção de Leite
+          milk: data.ptam || 0, // PTAM = Milk in Supabase
+          fat: data.ptaf || 0,
+          protein: data.ptap || 0,
+          ptam: data.ptam || 0,
+          cfp: data.cfp || 0,
+          ptaf: data.ptaf || 0,
+          ptaf_pct: data.ptaf_pct || 0,
+          ptap: data.ptap || 0,
+          ptap_pct: data.ptap_pct || 0,
+          pl: data.pl || 0,
+          
+          // Fertilidade
+          dpr: data.dpr || 0,
+          
+          // Saúde e Longevidade
+          liv: data.liv || 0,
+          scs: data.scs || 0,
+          mast: data.mast || 0,
+          met: data.met || 0,
+          rp: data.rp || 0,
+          da: data.da || 0,
+          ket: data.ket || 0,
+          mf: data.mf || 0,
+          
+          // Conformação
+          ptat: data.ptat || 0,
+          udc: data.udc || 0,
+          flc: data.flc || 0,
+          sce: data.sce || 0,
+          dce: data.dce || 0,
+          ssb: data.ssb || 0,
+          dsb: data.dsb || 0,
+          h_liv: data.h_liv || 0,
+          
+          // Reprodução
+          ccr: data.ccr || 0,
+          hcr: data.hcr || 0,
+          
+          // Outras características
+          fi: data.fi || 0,
+          bwc: data.bwc || 0,
+          
+          // Conformação Detalhada
+          sta: data.sta || 0,
+          str: data.str || 0,
+          dfm: data.dfm || 0,
+          rua: data.rua || 0,
+          rls: data.rls || 0,
+          rtp: data.rtp || 0,
+          ftl: data.ftl || 0,
+          rw: data.rw || 0,
+          rlr: data.rlr || 0,
+          fta: data.fta || 0,
+          fls: data.fls || 0,
+          fua: data.fua || 0,
+          ruh: data.ruh || 0,
+          ruw: data.ruw || 0,
+          ucl: data.ucl || 0,
+          udp: data.udp || 0,
+          ftp: data.ftp || 0,
+          
+          // Eficiência Alimentar
+          rfi: data.rfi || 0,
+          gfi: data.gfi || 0
+        }
+      };
+      
+      return convertedBull;
+    }
+  } catch (error) {
+    console.error('Erro ao buscar touro no Supabase:', error);
   }
   
   return null;
@@ -220,9 +183,9 @@ const PedigreePredictor: React.FC = () => {
     clearPrediction
   } = usePedigreeStore();
 
-  // Carrega dados do ToolSSApp ao montar o componente
+  // Remove carregamento do localStorage - usando Supabase diretamente
   useEffect(() => {
-    loadToolSSData();
+    console.log('🔄 PedigreePredictor usando dados direto do Supabase');
   }, []);
 
   // Handle NAAB input changes with automatic PTA loading (PROCV functionality)
