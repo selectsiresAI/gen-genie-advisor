@@ -293,8 +293,9 @@ type Gate = {
 export default function SegmentationPage({ farm, onBack }: SegmentationPageProps) {
   const [indexSelection, setIndexSelection] = useState<"HHP$" | "TPI" | "NM$" | "Custom">("Custom");
 
-  // Custom state
-  const [search, setSearch] = useState("");
+  // Custom state - separated search terms for different purposes
+  const [ptaSearch, setPtaSearch] = useState(""); // For filtering PTAs in selection
+  const [animalSearch, setAnimalSearch] = useState(""); // For filtering animals in table
   const [selectedYear, setSelectedYear] = useState<string>('');
   const [selectedTraits, setSelectedTraits] = useState(["PTAM", "PTAF", "SCS"]);
   const [weights, setWeights] = useState<Record<string, number>>({ PTAM: 0.4, PTAF: 0.4, SCS: -0.2 });
@@ -508,13 +509,36 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
     };
   }, [segmentedAnimals]);
 
-  // Filter animals by classification
+  // Filter animals by search, year and classification
   const filteredAnimals = useMemo(() => {
-    if (classificationFilter === "all") {
-      return segmentedAnimals;
+    let result = segmentedAnimals;
+    
+    // Apply search filter (name or identifier)
+    if (animalSearch.trim()) {
+      const searchTerm = animalSearch.trim().toLowerCase();
+      result = result.filter(animal => 
+        (animal.name && animal.name.toLowerCase().includes(searchTerm)) ||
+        ((animal as any).identifier && (animal as any).identifier.toLowerCase().includes(searchTerm)) ||
+        ((animal as any).cdcb_id && (animal as any).cdcb_id.toLowerCase().includes(searchTerm))
+      );
     }
-    return segmentedAnimals.filter(a => a.Classification === classificationFilter);
-  }, [segmentedAnimals, classificationFilter]);
+    
+    // Apply year filter
+    if (selectedYear && selectedYear !== "all-years") {
+      result = result.filter(animal => {
+        if (!(animal as any).birth_date) return false;
+        const animalYear = new Date((animal as any).birth_date).getFullYear().toString();
+        return animalYear === selectedYear;
+      });
+    }
+    
+    // Apply classification filter
+    if (classificationFilter !== "all") {
+      result = result.filter(a => a.Classification === classificationFilter);
+    }
+    
+    return result;
+  }, [segmentedAnimals, animalSearch, selectedYear, classificationFilter]);
 
   // Chart data
   const chartData = useMemo(() => [
@@ -676,10 +700,10 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
 
   const weightSum = useMemo(() => Object.values(weights).reduce((s, v) => s + (Number(v) || 0), 0), [weights]);
   const filteredPTAs = useMemo(() => { 
-    const s = search.trim().toLowerCase(); 
+    const s = ptaSearch.trim().toLowerCase(); 
     if (!s) return ALL_PTAS; 
     return ALL_PTAS.filter(p => p.toLowerCase().includes(s)); 
-  }, [search]);
+  }, [ptaSearch]);
 
   // ────────────────────────────────────────────────────────────────────
   // UI
@@ -744,8 +768,8 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
                 <input
                   className="border rounded-lg px-3 py-2 text-sm w-64"
                   placeholder="Buscar PTA…"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
+                  value={ptaSearch}
+                  onChange={e => setPtaSearch(e.target.value)}
                   style={{ borderColor: SS.gray, color: SS.black, background: SS.white }}
                 />
               </div>
@@ -1113,6 +1137,32 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
               <Download size={18}/> Exportar CSV
             </button>
             
+            {/* Filtros de Classificação e Status */}
+            <div className="flex items-center gap-4">
+              {segmentationEnabled && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium" style={{ color: SS.black }}>Filtrar por grupo:</span>
+                  <select 
+                    value={classificationFilter} 
+                    onChange={e => setClassificationFilter(e.target.value as any)}
+                    className="border rounded-lg px-3 py-2 text-sm"
+                    style={{ borderColor: SS.gray, color: SS.black, background: SS.white }}
+                  >
+                    <option value="all">Todos os Grupos</option>
+                    <option value="Superior">Superior</option>
+                    <option value="Intermediário">Intermediário</option>
+                    <option value="Inferior">Inferior</option>
+                  </select>
+                </div>
+              )}
+              
+              <div className="text-sm" style={{ color: SS.black }}>
+                <span className="font-medium">Resultados: {filteredAnimals.length} animais</span>
+                {animalSearch.trim() && <span className="ml-2">(filtrado por: "{animalSearch.trim()}")</span>}
+                {selectedYear && selectedYear !== "all-years" && <span className="ml-2">(ano: {selectedYear})</span>}
+              </div>
+            </div>
+            
             {/* Filtros de Classificação */}
             {segmentationEnabled && (
               <div className="flex items-center gap-2">
@@ -1153,11 +1203,39 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
         <div className="rounded-2xl shadow p-4" style={{ background: SS.white }}>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-semibold" style={{ color: SS.black }}>📊 Grade de Fêmeas</h3>
-            {segmentationEnabled && (
-              <div className="text-sm" style={{ color: SS.black }}>
-                Exibindo: {filteredAnimals.length} de {segmentedAnimals.length} animais
+            <div className="flex items-center gap-4">
+              {/* Search Input */}
+              <div className="flex items-center gap-2">
+                <input
+                  className="border rounded-lg px-3 py-2 text-sm w-64"
+                  placeholder="Buscar por nome ou identificação..."
+                  value={animalSearch}
+                  onChange={e => setAnimalSearch(e.target.value)}
+                  style={{ borderColor: SS.gray, color: SS.black, background: SS.white }}
+                />
               </div>
-            )}
+              
+              {/* Year Filter */}
+              <div className="flex items-center gap-2">
+                <Select value={selectedYear} onValueChange={setSelectedYear}>
+                  <SelectTrigger className="w-[150px]" style={{ borderColor: SS.gray }}>
+                    <SelectValue placeholder="Ano nascimento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all-years">Todos os anos</SelectItem>
+                    {availableYears.map(year => (
+                      <SelectItem key={year} value={year}>{year}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {segmentationEnabled && (
+                <div className="text-sm" style={{ color: SS.black }}>
+                  Exibindo: {filteredAnimals.length} de {segmentedAnimals.length} animais
+                </div>
+              )}
+            </div>
           </div>
           {loading ? (
             <div className="text-sm" style={{ color: SS.black }}>Carregando…</div>
