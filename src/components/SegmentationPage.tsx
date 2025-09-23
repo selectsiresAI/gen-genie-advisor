@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Download, Settings, Filter, Check, X, RefreshCw, ArrowLeft } from "lucide-react";
+import { Download, Settings, Filter, Check, X, RefreshCw, ArrowLeft, TrendingUp, PieChart, BarChart3, Sliders } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Farm {
@@ -80,8 +82,22 @@ type Female = {
   rfi?: number;
   gfi?: number;
   CustomScore?: number;
+  Classification?: "Superior" | "Intermediário" | "Inferior";
   __idKey?: string;
   __nameKey?: string;
+};
+
+type SegmentationPreset = {
+  name: string;
+  superior: number;
+  intermediario: number;
+  inferior: number;
+};
+
+type DistributionStats = {
+  superior: { count: number; percentage: number };
+  intermediario: { count: number; percentage: number };
+  inferior: { count: number; percentage: number };
 };
 
 // ────────────────────────────────────────────────────────────────────
@@ -246,6 +262,20 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
   const [weights, setWeights] = useState<Record<string, number>>({ PTAM: 0.4, PTAF: 0.4, SCS: -0.2 });
   const [standardize, setStandardize] = useState(true);
 
+  // Segmentation state
+  const [segmentationEnabled, setSegmentationEnabled] = useState(false);
+  const [superiorPercent, setSuperiorPercent] = useState([20]);
+  const [intermediarioPercent, setIntermediarioPercent] = useState([60]);
+  const [inferiorPercent, setInferiorPercent] = useState([20]);
+  const [segmentationPresets, setSegmentationPresets] = useState<SegmentationPreset[]>([
+    { name: "Padrão 20/60/20", superior: 20, intermediario: 60, inferior: 20 },
+    { name: "Equilibrado 33/34/33", superior: 33, intermediario: 34, inferior: 33 },
+    { name: "Quartis 25/50/25", superior: 25, intermediario: 50, inferior: 25 }
+  ]);
+  const [newPresetName, setNewPresetName] = useState("");
+  const [classificationFilter, setClassificationFilter] = useState<"all" | "Superior" | "Intermediário" | "Inferior">("all");
+  const [showChart, setShowChart] = useState(false);
+
   const [gates, setGates] = useState<Gate[]>([
     { trait: "SCS", op: "<=", value: 2.75, enabled: true },
     { trait: "PTAF", op: ">=", value: 40, enabled: true },
@@ -386,6 +416,66 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
     return copy.sort((a, b) => (Number(b.CustomScore) || 0) - (Number(a.CustomScore) || 0));
   }, [calc]);
 
+  // Segmentation calculation
+  const segmentedAnimals = useMemo(() => {
+    if (!segmentationEnabled) {
+      return sorted;
+    }
+
+    const totalPercent = superiorPercent[0] + intermediarioPercent[0] + inferiorPercent[0];
+    if (totalPercent !== 100) {
+      // If percentages don't add up to 100, return unsegmented
+      return sorted.map(animal => ({ ...animal, Classification: undefined }));
+    }
+
+    const total = sorted.length;
+    const superiorCount = Math.floor((superiorPercent[0] / 100) * total);
+    const intermediarioCount = Math.floor((intermediarioPercent[0] / 100) * total);
+    
+    return sorted.map((animal, index) => {
+      let classification: "Superior" | "Intermediário" | "Inferior";
+      
+      if (index < superiorCount) {
+        classification = "Superior";
+      } else if (index < superiorCount + intermediarioCount) {
+        classification = "Intermediário";
+      } else {
+        classification = "Inferior";
+      }
+      
+      return { ...animal, Classification: classification };
+    });
+  }, [sorted, segmentationEnabled, superiorPercent, intermediarioPercent, inferiorPercent]);
+
+  // Distribution statistics
+  const distributionStats: DistributionStats = useMemo(() => {
+    const total = segmentedAnimals.length;
+    const superior = segmentedAnimals.filter(a => a.Classification === "Superior").length;
+    const intermediario = segmentedAnimals.filter(a => a.Classification === "Intermediário").length;
+    const inferior = segmentedAnimals.filter(a => a.Classification === "Inferior").length;
+    
+    return {
+      superior: { count: superior, percentage: total > 0 ? (superior / total) * 100 : 0 },
+      intermediario: { count: intermediario, percentage: total > 0 ? (intermediario / total) * 100 : 0 },
+      inferior: { count: inferior, percentage: total > 0 ? (inferior / total) * 100 : 0 }
+    };
+  }, [segmentedAnimals]);
+
+  // Filter animals by classification
+  const filteredAnimals = useMemo(() => {
+    if (classificationFilter === "all") {
+      return segmentedAnimals;
+    }
+    return segmentedAnimals.filter(a => a.Classification === classificationFilter);
+  }, [segmentedAnimals, classificationFilter]);
+
+  // Chart data
+  const chartData = useMemo(() => [
+    { name: 'Superior', value: distributionStats.superior.count, color: '#10B981' },
+    { name: 'Intermediário', value: distributionStats.intermediario.count, color: '#F59E0B' },
+    { name: 'Inferior', value: distributionStats.inferior.count, color: '#EF4444' }
+  ], [distributionStats]);
+
   const approvedCountDisplay = calc.approved || 0;
   const rejectedCountDisplay = calc.rejected || 0;
 
@@ -420,7 +510,7 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
   }
 
   function exportCSV() {
-    const rows = sorted.map(a => ({
+    const rows = filteredAnimals.map(a => ({
       id: a.__idKey ? (a as any)[a.__idKey] : (a.id ?? ""),
       nome: a.__nameKey ? (a as any)[a.__nameKey] : (a.name ?? ""),
       "HHP$": a.hhp_dollar ?? "",
@@ -431,6 +521,7 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
       SCS: a.scs ?? "",
       DPR: a.dpr ?? "",
       CustomScore: a.CustomScore,
+      Classificacao: a.Classification ?? "",
     }));
     const csv = toCSV(rows);
     downloadText("segmentacao_custom_index.csv", csv);
@@ -469,6 +560,71 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
   
   function deletePreset(name: string) { 
     setPresets(prev => prev.filter(p => p.name !== name)); 
+  }
+
+  // Segmentation functions
+  function updateSuperiorPercent(value: number[]) {
+    setSuperiorPercent(value);
+    const remaining = 100 - value[0];
+    const currentInter = intermediarioPercent[0];
+    const currentInf = inferiorPercent[0];
+    const total = currentInter + currentInf;
+    
+    if (total > 0) {
+      setIntermediarioPercent([Math.round((currentInter / total) * remaining)]);
+      setInferiorPercent([Math.round((currentInf / total) * remaining)]);
+    }
+  }
+
+  function updateIntermediarioPercent(value: number[]) {
+    setIntermediarioPercent(value);
+    const remaining = 100 - value[0];
+    const currentSup = superiorPercent[0];
+    const currentInf = inferiorPercent[0];
+    const total = currentSup + currentInf;
+    
+    if (total > 0) {
+      setSuperiorPercent([Math.round((currentSup / total) * remaining)]);
+      setInferiorPercent([Math.round((currentInf / total) * remaining)]);
+    }
+  }
+
+  function updateInferiorPercent(value: number[]) {
+    setInferiorPercent(value);
+    const remaining = 100 - value[0];
+    const currentSup = superiorPercent[0];
+    const currentInter = intermediarioPercent[0];
+    const total = currentSup + currentInter;
+    
+    if (total > 0) {
+      setSuperiorPercent([Math.round((currentSup / total) * remaining)]);
+      setIntermediarioPercent([Math.round((currentInter / total) * remaining)]);
+    }
+  }
+
+  function applySegmentationPreset(preset: SegmentationPreset) {
+    setSuperiorPercent([preset.superior]);
+    setIntermediarioPercent([preset.intermediario]);
+    setInferiorPercent([preset.inferior]);
+  }
+
+  function saveSegmentationPreset() {
+    if (!newPresetName.trim()) {
+      alert("Dê um nome ao preset de segmentação.");
+      return;
+    }
+    const newPreset: SegmentationPreset = {
+      name: newPresetName.trim(),
+      superior: superiorPercent[0],
+      intermediario: intermediarioPercent[0],
+      inferior: inferiorPercent[0]
+    };
+    setSegmentationPresets(prev => [newPreset, ...prev.filter(p => p.name !== newPreset.name)]);
+    setNewPresetName("");
+  }
+
+  function deleteSegmentationPreset(name: string) {
+    setSegmentationPresets(prev => prev.filter(p => p.name !== name));
   }
 
   const weightSum = useMemo(() => Object.values(weights).reduce((s, v) => s + (Number(v) || 0), 0), [weights]);
@@ -682,6 +838,224 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
           </>
         )}
 
+        {/* Segmentação */}
+        <div className="rounded-2xl shadow p-4" style={{ background: SS.white }}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold flex items-center gap-2" style={{ color: SS.black }}>
+              <TrendingUp size={20} />
+              Segmentação Automática
+            </h3>
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2" style={{ color: SS.black }}>
+                <input 
+                  type="checkbox" 
+                  className="accent-black" 
+                  checked={segmentationEnabled} 
+                  onChange={e => setSegmentationEnabled(e.target.checked)} 
+                />
+                Ativar Segmentação
+              </label>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowChart(!showChart)}
+                className="flex items-center gap-2"
+              >
+                <BarChart3 size={16} />
+                {showChart ? "Ocultar" : "Mostrar"} Gráfico
+              </Button>
+            </div>
+          </div>
+
+          {segmentationEnabled && (
+            <>
+              {/* Controles de Distribuição */}
+              <div className="grid md:grid-cols-2 gap-6 mb-6">
+                <div>
+                  <h4 className="text-md font-medium mb-3" style={{ color: SS.black }}>Distribuição dos Grupos</h4>
+                  
+                  {/* Superior */}
+                  <div className="mb-4 p-3 rounded-lg border-2" style={{ borderColor: '#10B981', backgroundColor: '#ECFDF5' }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium" style={{ color: '#065F46' }}>Superior</span>
+                      <span className="font-semibold" style={{ color: '#065F46' }}>{superiorPercent[0]}%</span>
+                    </div>
+                    <Slider
+                      value={superiorPercent}
+                      onValueChange={updateSuperiorPercent}
+                      max={100}
+                      step={1}
+                      className="w-full"
+                    />
+                  </div>
+
+                  {/* Intermediário */}
+                  <div className="mb-4 p-3 rounded-lg border-2" style={{ borderColor: '#F59E0B', backgroundColor: '#FFFBEB' }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium" style={{ color: '#92400E' }}>Intermediário</span>
+                      <span className="font-semibold" style={{ color: '#92400E' }}>{intermediarioPercent[0]}%</span>
+                    </div>
+                    <Slider
+                      value={intermediarioPercent}
+                      onValueChange={updateIntermediarioPercent}
+                      max={100}
+                      step={1}
+                      className="w-full"
+                    />
+                  </div>
+
+                  {/* Inferior */}
+                  <div className="mb-4 p-3 rounded-lg border-2" style={{ borderColor: '#EF4444', backgroundColor: '#FEF2F2' }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium" style={{ color: '#991B1B' }}>Inferior</span>
+                      <span className="font-semibold" style={{ color: '#991B1B' }}>{inferiorPercent[0]}%</span>
+                    </div>
+                    <Slider
+                      value={inferiorPercent}
+                      onValueChange={updateInferiorPercent}
+                      max={100}
+                      step={1}
+                      className="w-full"
+                    />
+                  </div>
+
+                  {/* Validação da soma */}
+                  <div className="text-sm text-center p-2 rounded-lg" 
+                       style={{ 
+                         backgroundColor: (superiorPercent[0] + intermediarioPercent[0] + inferiorPercent[0]) === 100 ? '#ECFDF5' : '#FEF2F2',
+                         color: (superiorPercent[0] + intermediarioPercent[0] + inferiorPercent[0]) === 100 ? '#065F46' : '#991B1B'
+                       }}>
+                    Total: {superiorPercent[0] + intermediarioPercent[0] + inferiorPercent[0]}% 
+                    {(superiorPercent[0] + intermediarioPercent[0] + inferiorPercent[0]) === 100 ? ' ✓' : ' (deve ser 100%)'}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-md font-medium mb-3" style={{ color: SS.black }}>Presets e Estatísticas</h4>
+                  
+                  {/* Presets rápidos */}
+                  <div className="mb-4">
+                    <label className="text-sm font-medium" style={{ color: SS.black }}>Presets Rápidos:</label>
+                    <div className="grid grid-cols-1 gap-2 mt-2">
+                      {segmentationPresets.map(preset => (
+                        <div key={preset.name} className="flex items-center justify-between p-2 border rounded-lg" style={{ borderColor: SS.gray }}>
+                          <span className="text-sm" style={{ color: SS.black }}>{preset.name}</span>
+                          <div className="flex items-center gap-2">
+                            <button 
+                              onClick={() => applySegmentationPreset(preset)}
+                              className="px-2 py-1 text-xs rounded border" 
+                              style={{ borderColor: SS.gray, color: SS.black }}
+                            >
+                              Aplicar
+                            </button>
+                            {!["Padrão 20/60/20", "Equilibrado 33/34/33", "Quartis 25/50/25"].includes(preset.name) && (
+                              <button 
+                                onClick={() => deleteSegmentationPreset(preset.name)}
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                <X size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Salvar novo preset */}
+                  <div className="mb-4">
+                    <div className="flex gap-2">
+                      <input
+                        className="flex-1 border rounded-lg px-3 py-2 text-sm"
+                        placeholder="Nome do novo preset..."
+                        value={newPresetName}
+                        onChange={e => setNewPresetName(e.target.value)}
+                        style={{ borderColor: SS.gray, color: SS.black, background: SS.white }}
+                      />
+                      <button 
+                        onClick={saveSegmentationPreset}
+                        className="px-3 py-2 rounded-lg border text-sm"
+                        style={{ borderColor: SS.gray, color: SS.black }}
+                      >
+                        Salvar
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Estatísticas */}
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <h5 className="text-sm font-medium mb-2" style={{ color: SS.black }}>Distribuição Atual:</h5>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span style={{ color: '#10B981' }}>Superior:</span>
+                        <span style={{ color: SS.black }}>{distributionStats.superior.count} animais ({distributionStats.superior.percentage.toFixed(1)}%)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span style={{ color: '#F59E0B' }}>Intermediário:</span>
+                        <span style={{ color: SS.black }}>{distributionStats.intermediario.count} animais ({distributionStats.intermediario.percentage.toFixed(1)}%)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span style={{ color: '#EF4444' }}>Inferior:</span>
+                        <span style={{ color: SS.black }}>{distributionStats.inferior.count} animais ({distributionStats.inferior.percentage.toFixed(1)}%)</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Gráfico */}
+              {showChart && (
+                <div className="mb-6 p-4 border rounded-lg" style={{ borderColor: SS.gray, backgroundColor: '#FAFAFA' }}>
+                  <h4 className="text-md font-medium mb-3" style={{ color: SS.black }}>Distribuição Visual</h4>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {/* Gráfico de Pizza */}
+                    <div>
+                      <h5 className="text-sm font-medium mb-2 text-center" style={{ color: SS.black }}>Distribuição por Grupos</h5>
+                      <ResponsiveContainer width="100%" height={200}>
+                        <RechartsPieChart>
+                          <Pie
+                            data={chartData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={40}
+                            outerRadius={80}
+                            paddingAngle={5}
+                            dataKey="value"
+                          >
+                            {chartData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                          <Legend />
+                        </RechartsPieChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    {/* Gráfico de Barras */}
+                    <div>
+                      <h5 className="text-sm font-medium mb-2 text-center" style={{ color: SS.black }}>Quantidade por Grupo</h5>
+                      <ResponsiveContainer width="100%" height={200}>
+                        <BarChart data={chartData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="name" />
+                          <YAxis />
+                          <Tooltip />
+                          <Bar dataKey="value" fill="#8884d8">
+                            {chartData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
         {/* Ações + Resumo */}
         <div className="rounded-2xl shadow p-4" style={{ background: SS.white }}>
           <div className="flex flex-wrap items-center gap-3">
@@ -691,6 +1065,25 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
             <button onClick={exportCSV} className="px-4 py-2 rounded-xl border text-sm flex items-center gap-2" style={{ borderColor: SS.gray, color: SS.black }}>
               <Download size={18}/> Exportar CSV
             </button>
+            
+            {/* Filtros de Classificação */}
+            {segmentationEnabled && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium" style={{ color: SS.black }}>Filtrar:</span>
+                <select 
+                  value={classificationFilter} 
+                  onChange={e => setClassificationFilter(e.target.value as any)}
+                  className="border rounded-lg px-3 py-2 text-sm"
+                  style={{ borderColor: SS.gray, color: SS.black, background: SS.white }}
+                >
+                  <option value="all">Todos os Grupos</option>
+                  <option value="Superior">Superior</option>
+                  <option value="Intermediário">Intermediário</option>
+                  <option value="Inferior">Inferior</option>
+                </select>
+              </div>
+            )}
+            
             <div className="ml-auto text-sm" style={{ color: SS.black }}>
               <div className="font-semibold">Resumo</div>
               {indexSelection === "Custom" ? (
@@ -700,6 +1093,7 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
                   Gates ({gatesPhase}): {gates.map(g => `${g.trait} ${g.op === ">=" ? "≥" : g.op === "<=" ? "≤" : g.op === "=" ? "=" : "entre"} ${g.op === "between" ? `${g.min ?? "-∞"}–${g.max ?? "+∞"}` : (g.value ?? "—")}`).join("; ")}
                   <br/>
                   Aprovadas: {approvedCountDisplay} | Reprovadas: {rejectedCountDisplay}
+                  {segmentationEnabled && <><br/>Segmentação: Superior {superiorPercent[0]}% | Intermediário {intermediarioPercent[0]}% | Inferior {inferiorPercent[0]}%</>}
                 </div>
               ) : (
                 <div>Índice padrão: {indexSelection}</div>
@@ -710,7 +1104,14 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
 
         {/* Grade de fêmeas */}
         <div className="rounded-2xl shadow p-4" style={{ background: SS.white }}>
-          <h3 className="text-lg font-semibold mb-3" style={{ color: SS.black }}>📊 Grade de Fêmeas</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-semibold" style={{ color: SS.black }}>📊 Grade de Fêmeas</h3>
+            {segmentationEnabled && (
+              <div className="text-sm" style={{ color: SS.black }}>
+                Exibindo: {filteredAnimals.length} de {segmentedAnimals.length} animais
+              </div>
+            )}
+          </div>
           {loading ? (
             <div className="text-sm" style={{ color: SS.black }}>Carregando…</div>
           ) : (
@@ -784,11 +1185,23 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
                     <th className="border px-2 py-1 text-left text-xs">Kappa-Casein</th>
                     <th className="border px-2 py-1 text-left text-xs">GFI</th>
                     <th className="border px-2 py-1 text-left text-xs">CustomScore</th>
+                    {segmentationEnabled && <th className="border px-2 py-1 text-left text-xs">Classificação</th>}
                   </tr>
                 </thead>
                 <tbody>
-                  {sorted.map((a, idx) => (
-                    <tr key={(a.__idKey ? (a as any)[a.__idKey] : (a.id ?? idx))} className="border-b hover:opacity-90" style={{ borderColor: SS.gray, color: SS.black }}>
+                  {filteredAnimals.map((a, idx) => {
+                    const classificationColor = a.Classification === "Superior" ? "#10B981" : 
+                                               a.Classification === "Intermediário" ? "#F59E0B" : 
+                                               a.Classification === "Inferior" ? "#EF4444" : "transparent";
+                    
+                    return (
+                    <tr key={(a.__idKey ? (a as any)[a.__idKey] : (a.id ?? idx))} 
+                        className="border-b hover:opacity-90" 
+                        style={{ 
+                          borderColor: SS.gray, 
+                          color: SS.black,
+                          backgroundColor: segmentationEnabled && a.Classification ? `${classificationColor}10` : "transparent"
+                        }}>
                       <td className="border px-2 py-1 text-xs">{(a as any).farm_id || '-'}</td>
                       <td className="border px-2 py-1 text-xs font-medium">{a.__nameKey ? (a as any)[a.__nameKey] : ((a as any).name ?? '')}</td>
                       <td className="border px-2 py-1 text-xs">{(a as any).cdcb_id || (a as any).identifier || '-'}</td>
@@ -862,8 +1275,24 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
                       <td className="border px-2 py-1 text-xs">{(a as any).kappa_casein || '-'}</td>
                       <td className="border px-2 py-1 text-xs">{(a as any).gfi || '-'}</td>
                       <td className="border px-2 py-1 text-xs font-semibold">{Number(a.CustomScore).toFixed(3)}</td>
+                      {segmentationEnabled && (
+                        <td className="border px-2 py-1 text-xs">
+                          {a.Classification && (
+                            <span 
+                              className="px-2 py-1 rounded-full text-xs font-medium"
+                              style={{ 
+                                backgroundColor: classificationColor,
+                                color: 'white'
+                              }}
+                            >
+                              {a.Classification}
+                            </span>
+                          )}
+                        </td>
+                      )}
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
