@@ -35,26 +35,73 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack }) => {
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [chartType, setChartType] = useState<'line' | 'bar' | 'area'>('line');
   const [showTrend, setShowTrend] = useState(true);
-  const [activeView, setActiveView] = useState<'trends' | 'comparison' | 'distribution'>('trends');
+  const [activeView, setActiveView] = useState<'trends' | 'comparison' | 'distribution' | 'panorama'>('trends');
   const [groupBy, setGroupBy] = useState<'year' | 'category' | 'parity'>('year');
   const [statisticsData, setStatisticsData] = useState<any>({});
+  const [showFarmAverage, setShowFarmAverage] = useState(true);
+  const [showTrendLine, setShowTrendLine] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   
   const { toast } = useToast();
 
-  // Lista de PTAs disponíveis
+  // Lista completa de PTAs disponíveis
   const availablePTAs = [
-    { key: 'tpi', label: 'TPI', description: 'Total Performance Index' },
     { key: 'hhp_dollar', label: 'HHP$®', description: 'Lifetime Net Merit' },
+    { key: 'tpi', label: 'TPI', description: 'Total Performance Index' },
     { key: 'nm_dollar', label: 'NM$', description: 'Net Merit' },
     { key: 'cm_dollar', label: 'CM$', description: 'Cheese Merit' },
     { key: 'fm_dollar', label: 'FM$', description: 'Fluid Merit' },
+    { key: 'gm_dollar', label: 'GM$', description: 'Grazing Merit' },
+    { key: 'f_sav', label: 'F SAV', description: 'Feed Saved' },
     { key: 'ptam', label: 'PTAM', description: 'PTA Milk' },
+    { key: 'cfp', label: 'CFP', description: 'Calf Survival' },
     { key: 'ptaf', label: 'PTAF', description: 'PTA Fat' },
+    { key: 'ptaf_pct', label: 'PTAF%', description: 'PTA Fat Percentage' },
     { key: 'ptap', label: 'PTAP', description: 'PTA Protein' },
-    { key: 'scs', label: 'SCS', description: 'Somatic Cell Score' },
+    { key: 'ptap_pct', label: 'PTAP%', description: 'PTA Protein Percentage' },
     { key: 'pl', label: 'PL', description: 'Productive Life' },
     { key: 'dpr', label: 'DPR', description: 'Daughter Pregnancy Rate' },
-    { key: 'liv', label: 'LIV', description: 'Livability' }
+    { key: 'liv', label: 'LIV', description: 'Livability' },
+    { key: 'scs', label: 'SCS', description: 'Somatic Cell Score' },
+    { key: 'mast', label: 'MAST', description: 'Mastitis Resistance' },
+    { key: 'met', label: 'MET', description: 'Metritis Resistance' },
+    { key: 'rp', label: 'RP', description: 'Retained Placenta' },
+    { key: 'da', label: 'DA', description: 'Displaced Abomasum' },
+    { key: 'ket', label: 'KET', description: 'Ketosis Resistance' },
+    { key: 'mf', label: 'MF', description: 'Milking Speed' },
+    { key: 'ptat', label: 'PTAT', description: 'Type' },
+    { key: 'udc', label: 'UDC', description: 'Udder Composite' },
+    { key: 'flc', label: 'FLC', description: 'Foot and Leg Composite' },
+    { key: 'sce', label: 'SCE', description: 'Sire Calving Ease' },
+    { key: 'dce', label: 'DCE', description: 'Daughter Calving Ease' },
+    { key: 'ssb', label: 'SSB', description: 'Sire Stillbirth' },
+    { key: 'dsb', label: 'DSB', description: 'Daughter Stillbirth' },
+    { key: 'h_liv', label: 'H LIV', description: 'Heifer Livability' },
+    { key: 'ccr', label: 'CCR', description: 'Cow Conception Rate' },
+    { key: 'hcr', label: 'HCR', description: 'Heifer Conception Rate' },
+    { key: 'fi', label: 'FI', description: 'Feed Intake' },
+    { key: 'gl', label: 'GL', description: 'Gestation Length' },
+    { key: 'efc', label: 'EFC', description: 'Early First Calving' },
+    { key: 'bwc', label: 'BWC', description: 'Body Weight Composite' },
+    { key: 'sta', label: 'STA', description: 'Stature' },
+    { key: 'str', label: 'STR', description: 'Strength' },
+    { key: 'dfm', label: 'DFM', description: 'Dairy Form' },
+    { key: 'rua', label: 'RUA', description: 'Rear Udder Attachment' },
+    { key: 'rls', label: 'RLS', description: 'Rear Leg Side View' },
+    { key: 'rtp', label: 'RTP', description: 'Rear Teat Placement' },
+    { key: 'ftl', label: 'FTL', description: 'Front Teat Length' },
+    { key: 'rw', label: 'RW', description: 'Rump Width' },
+    { key: 'rlr', label: 'RLR', description: 'Rear Leg Rear View' },
+    { key: 'fta', label: 'FTA', description: 'Front Teat Attachment' },
+    { key: 'fls', label: 'FLS', description: 'Foot Angle' },
+    { key: 'fua', label: 'FUA', description: 'Fore Udder Attachment' },
+    { key: 'ruh', label: 'RUH', description: 'Rear Udder Height' },
+    { key: 'ruw', label: 'RUW', description: 'Rear Udder Width' },
+    { key: 'ucl', label: 'UCL', description: 'Udder Cleft' },
+    { key: 'udp', label: 'UDP', description: 'Udder Depth' },
+    { key: 'ftp', label: 'FTP', description: 'Front Teat Placement' },
+    { key: 'rfi', label: 'RFI', description: 'Residual Feed Intake' },
+    { key: 'gfi', label: 'GFI', description: 'Gross Feed Efficiency' }
   ];
 
   // Carregar dados das fêmeas
@@ -548,7 +595,7 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack }) => {
 
           {/* Main Charts */}
           <Tabs value={activeView} onValueChange={(value: any) => setActiveView(value)}>
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="trends" className="flex items-center gap-2">
                 <LineChartIcon className="w-4 h-4" />
                 Tendências
@@ -560,6 +607,10 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack }) => {
               <TabsTrigger value="distribution" className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4" />
                 Distribuição
+              </TabsTrigger>
+              <TabsTrigger value="panorama" className="flex items-center gap-2">
+                <Eye className="w-4 h-4" />
+                Panorama
               </TabsTrigger>
             </TabsList>
 
@@ -780,9 +831,466 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack }) => {
                 </Card>
               )}
             </TabsContent>
+
+            {/* Panorama View */}
+            <TabsContent value="panorama" className="space-y-4">
+              <PanoramaRebanhoView 
+                females={females} 
+                selectedPTAs={selectedPTAs}
+                setSelectedPTAs={setSelectedPTAs}
+                availablePTAs={availablePTAs}
+                showFarmAverage={showFarmAverage}
+                setShowFarmAverage={setShowFarmAverage}
+                showTrendLine={showTrendLine}
+                setShowTrendLine={setShowTrendLine}
+                loading={loading}
+                farmName={farm?.farm_name}
+              />
+            </TabsContent>
           </Tabs>
         </div>
       </div>
+    </div>
+  );
+};
+
+// Componente para a visualização Panorama do Rebanho
+const PanoramaRebanhoView: React.FC<{
+  females: any[];
+  selectedPTAs: string[];
+  setSelectedPTAs: (ptas: string[]) => void;
+  availablePTAs: any[];
+  showFarmAverage: boolean;
+  setShowFarmAverage: (show: boolean) => void;
+  showTrendLine: boolean;
+  setShowTrendLine: (show: boolean) => void;
+  loading: boolean;
+  farmName?: string;
+}> = ({ 
+  females, 
+  selectedPTAs, 
+  setSelectedPTAs, 
+  availablePTAs, 
+  showFarmAverage, 
+  setShowFarmAverage,
+  showTrendLine,
+  setShowTrendLine,
+  loading,
+  farmName 
+}) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const { toast } = useToast();
+
+  // Filtrar PTAs disponíveis baseado na busca
+  const filteredPTAs = useMemo(() => {
+    return availablePTAs.filter(pta => 
+      pta.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      pta.description.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [availablePTAs, searchTerm]);
+
+  // Processar dados por ano (2021-2025) para cada PTA
+  const processedPanoramaData = useMemo(() => {
+    if (!females.length || !selectedPTAs.length) return {};
+
+    const dataByPTA: any = {};
+    const years = [2021, 2022, 2023, 2024, 2025];
+
+    selectedPTAs.forEach(pta => {
+      const yearData: any = {};
+      let allValues: number[] = [];
+
+      years.forEach(year => {
+        const yearFemales = females.filter(f => {
+          if (!f.birth_date) return false;
+          const femaleYear = new Date(f.birth_date).getFullYear();
+          return femaleYear === year;
+        });
+
+        const values = yearFemales
+          .map(f => Number(f[pta]))
+          .filter(v => !isNaN(v) && v !== null && v !== undefined);
+
+        const mean = values.length > 0 ? values.reduce((sum, val) => sum + val, 0) / values.length : null;
+        
+        yearData[year] = {
+          year,
+          n: values.length,
+          mean: mean ? Math.round(mean) : null,
+          values
+        };
+
+        allValues = allValues.concat(values);
+      });
+
+      // Calcular ganho (delta) entre anos
+      years.forEach((year, index) => {
+        if (index === 0) {
+          yearData[year].ganho = 0;
+        } else {
+          const prevYear = years[index - 1];
+          const currentMean = yearData[year].mean;
+          const prevMean = yearData[prevYear].mean;
+          
+          if (currentMean !== null && prevMean !== null) {
+            yearData[year].ganho = Math.round(currentMean - prevMean);
+          } else {
+            yearData[year].ganho = 0;
+          }
+        }
+      });
+
+      // Calcular tendência linear
+      const validYearData = years
+        .map(year => ({ year, mean: yearData[year].mean }))
+        .filter(d => d.mean !== null);
+
+      let trend = 0;
+      if (validYearData.length >= 2) {
+        const n = validYearData.length;
+        const sumX = validYearData.reduce((sum, d) => sum + d.year, 0);
+        const sumY = validYearData.reduce((sum, d) => sum + d.mean!, 0);
+        const sumXY = validYearData.reduce((sum, d) => sum + d.year * d.mean!, 0);
+        const sumX2 = validYearData.reduce((sum, d) => sum + d.year * d.year, 0);
+        
+        const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+        trend = Math.round(slope);
+      }
+
+      // Calcular estatísticas descritivas
+      const stats = allValues.length > 0 ? {
+        std: Math.round(Math.sqrt(allValues.reduce((sum, val) => sum + Math.pow(val - (allValues.reduce((s, v) => s + v, 0) / allValues.length), 2), 0) / allValues.length)),
+        max: Math.round(Math.max(...allValues)),
+        mean: Math.round(allValues.reduce((sum, val) => sum + val, 0) / allValues.length),
+        min: Math.round(Math.min(...allValues)),
+        belowMean: Math.round((allValues.filter(v => v < (allValues.reduce((s, v) => s + v, 0) / allValues.length)).length / allValues.length) * 100),
+        heritability: getHeritability(pta)
+      } : null;
+
+      dataByPTA[pta] = {
+        years: years.map(year => yearData[year]),
+        trend,
+        stats,
+        farmMean: stats?.mean || 0
+      };
+    });
+
+    return dataByPTA;
+  }, [females, selectedPTAs]);
+
+  // Função para obter herdabilidade (fallback 0,30)
+  const getHeritability = (pta: string): string => {
+    const heritabilities: { [key: string]: number } = {
+      'hhp_dollar': 0.25,
+      'tpi': 0.25,
+      'nm_dollar': 0.25,
+      'cm_dollar': 0.25,
+      'fm_dollar': 0.25,
+      'ptam': 0.30,
+      'ptaf': 0.25,
+      'ptap': 0.25,
+      'scs': 0.12,
+      'pl': 0.10,
+      'dpr': 0.04
+    };
+    
+    const h2 = heritabilities[pta] || 0.30;
+    return h2.toFixed(2).replace('.', ',');
+  };
+
+  // Exportar CSV para uma PTA específica
+  const handleExportPTA = (pta: string) => {
+    const data = processedPanoramaData[pta];
+    if (!data) return;
+
+    const csvContent = [
+      'year,n,mean,ganho',
+      ...data.years.map((yearData: any) => 
+        `${yearData.year},${yearData.n},${yearData.mean || ''},${yearData.ganho}`
+      )
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `panorama-${pta}-${farmName || 'fazenda'}-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Exportação concluída",
+      description: `Dados de ${availablePTAs.find(p => p.key === pta)?.label} exportados com sucesso!`
+    });
+  };
+
+  // Renderizar gráfico personalizado para cada PTA
+  const renderPTAChart = (pta: string) => {
+    const data = processedPanoramaData[pta];
+    if (!data) return null;
+
+    const ptaInfo = availablePTAs.find(p => p.key === pta);
+    const chartData = data.years.filter((y: any) => y.mean !== null);
+
+    if (chartData.length === 0) {
+      return (
+        <Card key={pta}>
+          <CardContent className="p-4">
+            <div className="text-center py-8 text-muted-foreground">
+              <p>Sem dados disponíveis para {ptaInfo?.label}</p>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    // Calcular linha de tendência
+    const trendLineData = chartData.length >= 2 ? chartData.map((d: any, index: number) => ({
+      year: d.year,
+      trend: data.stats.mean + data.trend * (d.year - 2023) // Usar 2023 como referência
+    })) : [];
+
+    const CustomTooltip = ({ active, payload, label }: any) => {
+      if (active && payload && payload.length) {
+        const yearData = data.years.find((y: any) => y.year === label);
+        return (
+          <div className="bg-white p-3 border rounded-lg shadow-lg">
+            <p className="font-medium">{label}</p>
+            {yearData && (
+              <p className="text-sm text-muted-foreground">
+                Ganho: {yearData.ganho > 0 ? '+' : ''}{yearData.ganho}
+              </p>
+            )}
+          </div>
+        );
+      }
+      return null;
+    };
+
+    return (
+      <Card key={pta} className="space-y-4">
+        {/* Cabeçalho preto */}
+        <div className="bg-black text-white px-4 py-2 flex justify-between items-center">
+          <h3 className="font-medium">{ptaInfo?.label}</h3>
+          <span className="text-sm">Tendência: {data.trend > 0 ? '+' : ''}{data.trend}/ano</span>
+        </div>
+
+        <CardContent className="p-4">
+          {/* Gráfico */}
+          <div className="h-64 mb-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                <XAxis 
+                  dataKey="year" 
+                  domain={[2021, 2025]}
+                  ticks={[2021, 2022, 2023, 2024, 2025]}
+                  type="number"
+                  scale="linear"
+                />
+                <YAxis />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+                
+                {/* Área sombreada */}
+                <Area
+                  type="monotone"
+                  dataKey="mean"
+                  stroke="none"
+                  fill="#f3f4f6"
+                  fillOpacity={0.3}
+                />
+                
+                {/* Linha principal */}
+                <Line
+                  type="monotone"
+                  dataKey="mean"
+                  stroke="#1f2937"
+                  strokeWidth={2}
+                  dot={{ fill: "#1f2937", strokeWidth: 2, r: 4 }}
+                  name="Média Anual"
+                />
+
+                {/* Linha de referência - média da fazenda */}
+                {showFarmAverage && (
+                  <ReferenceLine 
+                    y={data.farmMean} 
+                    stroke="#3b82f6" 
+                    strokeDasharray="5 5"
+                    label={{ value: `Média ${data.farmMean}`, position: "left" }}
+                  />
+                )}
+
+                {/* Linha de tendência */}
+                {showTrendLine && trendLineData.length > 0 && (
+                  <Line
+                    type="monotone"
+                    dataKey="trend"
+                    data={trendLineData}
+                    stroke="#22c55e"
+                    strokeWidth={2}
+                    dot={false}
+                    name={`Tendência (${data.trend}/ano)`}
+                  />
+                )}
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Estatísticas descritivas */}
+          {data.stats && (
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <div className="grid grid-cols-6 gap-4 text-sm">
+                <div className="text-center">
+                  <p className="font-medium text-gray-600">STD</p>
+                  <p className="font-semibold">{data.stats.std}</p>
+                </div>
+                <div className="text-center">
+                  <p className="font-medium text-gray-600">Max</p>
+                  <p className="font-semibold">{data.stats.max}</p>
+                </div>
+                <div className="text-center">
+                  <p className="font-medium text-gray-600">Média</p>
+                  <p className="font-semibold">{data.stats.mean}</p>
+                </div>
+                <div className="text-center">
+                  <p className="font-medium text-gray-600">Min</p>
+                  <p className="font-semibold">{data.stats.min}</p>
+                </div>
+                <div className="text-center">
+                  <p className="font-medium text-gray-600">% &lt; Média</p>
+                  <p className="font-semibold">{data.stats.belowMean}%</p>
+                </div>
+                <div className="text-center">
+                  <p className="font-medium text-gray-600">Herdabilidade</p>
+                  <p className="font-semibold">{data.stats.heritability}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Botão de exportar */}
+          <div className="mt-4 flex justify-end">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => handleExportPTA(pta)}
+              className="text-xs"
+            >
+              <Download className="w-3 h-3 mr-1" />
+              Exportar CSV
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Controles de seleção de PTAs */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Seleção de Características (PTAs)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Campo de busca */}
+          <Input
+            placeholder="Buscar características..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-md"
+          />
+
+          {/* PTAs selecionáveis */}
+          <div className="space-y-3">
+            <div className="flex gap-2 flex-wrap">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setSelectedPTAs(availablePTAs.map(p => p.key))}
+              >
+                Selecionar Todas
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setSelectedPTAs([])}
+              >
+                Limpar
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-60 overflow-y-auto">
+              {filteredPTAs.map(pta => (
+                <Badge
+                  key={pta.key}
+                  variant={selectedPTAs.includes(pta.key) ? "default" : "outline"}
+                  className="cursor-pointer justify-center text-xs py-1"
+                  onClick={() => {
+                    if (selectedPTAs.includes(pta.key)) {
+                      setSelectedPTAs(selectedPTAs.filter(p => p !== pta.key));
+                    } else {
+                      setSelectedPTAs([...selectedPTAs, pta.key]);
+                    }
+                  }}
+                >
+                  {pta.label}
+                </Badge>
+              ))}
+            </div>
+          </div>
+
+          {/* Controles de visualização */}
+          <div className="flex gap-4 items-center pt-2 border-t">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="farm-average"
+                checked={showFarmAverage}
+                onCheckedChange={setShowFarmAverage}
+              />
+              <Label htmlFor="farm-average" className="text-sm">Mostrar média da fazenda</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="trend-line"
+                checked={showTrendLine}
+                onCheckedChange={setShowTrendLine}
+              />
+              <Label htmlFor="trend-line" className="text-sm">Mostrar tendência</Label>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Gráficos por PTA */}
+      {loading ? (
+        <div className="grid gap-4">
+          {[1, 2, 3].map(i => (
+            <Card key={i}>
+              <CardContent className="p-4">
+                <div className="animate-pulse space-y-4">
+                  <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                  <div className="h-64 bg-gray-200 rounded"></div>
+                  <div className="h-12 bg-gray-200 rounded"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : selectedPTAs.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center text-muted-foreground">
+            <p>Selecione ao menos uma característica (PTA) para visualizar os gráficos</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4">
+          {selectedPTAs.map(renderPTAChart)}
+        </div>
+      )}
     </div>
   );
 };
