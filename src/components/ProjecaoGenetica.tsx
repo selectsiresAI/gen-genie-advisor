@@ -816,7 +816,40 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
 
           {/* Parâmetros reprodutivos */}
           <div>
-            <h3 style={{ fontWeight: 700, marginBottom: 8 }}>Parâmetros Reprodutivos por Categoria</h3>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <h3 style={{ fontWeight: 700 }}>Parâmetros Reprodutivos por Categoria</h3>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setSt(s => ({
+                    ...s,
+                    repro: {
+                      ...s.repro,
+                      service: {
+                        novilhas: 65,
+                        primiparas: 60,
+                        secundiparas: 60,
+                        multiparas: 55
+                      },
+                      conception: {
+                        novilhas: 55,
+                        primiparas: 37.5,
+                        secundiparas: 32.5,
+                        multiparas: 30.5
+                      },
+                      preex: {
+                        novilhas: 35,
+                        primiparas: 22.5,
+                        secundiparas: 20,
+                        multiparas: 17.5
+                      }
+                    }
+                  }));
+                }}
+              >
+                📋 Dados de Referência
+              </Button>
+            </div>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
               <thead>
                 <tr style={{ background: COLORS.gray }}>
