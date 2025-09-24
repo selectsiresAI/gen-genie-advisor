@@ -372,7 +372,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                         Metas
                       </CardTitle>
                       <CardDescription>
-                        Definir objetivos genéticos
+                        Defina os objetivos
                       </CardDescription>
                     </CardHeader>
                   </Card>
