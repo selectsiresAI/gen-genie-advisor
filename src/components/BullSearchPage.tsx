@@ -974,8 +974,8 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
                       <th className="px-2 py-1 bg-foreground text-background text-xs">GFI</th>
                     </tr>
                   </thead>
-                  <tbody>
-                     {rankedBulls.slice(0, 10).map((bull, index) => (
+                   <tbody>
+                      {rankedBulls.map((bull, index) => (
                        <tr key={bull.code} className={index % 2 === 0 ? "bg-muted/50" : ""}>
                          <td className="px-2 py-1 text-center">
                            <input
