@@ -100,7 +100,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
   const [selectedBulls, setSelectedBulls] = useState<string[]>([]);
   const [selectedEmpresa, setSelectedEmpresa] = useState("");
   const [selectedYear, setSelectedYear] = useState<string>('');
-  const [empresas] = useState<string[]>(["Todas", "ABS", "SELECT", "SEMEX"]);
+  const [empresas, setEmpresas] = useState<string[]>(["Todas"]);
   const [weights, setWeights] = useState({
     TPI: 0.3,
     NM_dollar: 0.25,
@@ -444,6 +444,16 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
       }));
 
       setBulls(transformedBulls);
+      
+      // Extract unique companies from loaded bulls
+      const uniqueCompanies = new Set<string>();
+      transformedBulls.forEach(bull => {
+        if (bull.company && bull.company.trim()) {
+          uniqueCompanies.add(bull.company.trim());
+        }
+      });
+      setEmpresas(["Todas", ...Array.from(uniqueCompanies).sort()]);
+      
     } catch (error) {
       console.error('Error loading bulls:', error);
       toast({

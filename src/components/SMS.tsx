@@ -28,7 +28,7 @@ interface AcasalamentoItem {
     TPI: number;
   };
   categoria: "Novilha" | "Primípara" | "Secundípara" | "Multípara";
-  subcategoria?: "Doadora" | "Intermediária" | "Receptora";
+  classificacao?: "Superior" | "Intermediária" | "Inferior";
   femeaSelecionada?: {
     id: string;
     brinco: string;
@@ -45,17 +45,17 @@ const categorias = [
   { value: "Multípara", label: "Multípara" }
 ];
 
-const subcategorias = [
-  { value: "Doadora", label: "Doadora" },
+const classificacoes = [
+  { value: "Superior", label: "Superior" },
   { value: "Intermediária", label: "Intermediária" },
-  { value: "Receptora", label: "Receptora" }
+  { value: "Inferior", label: "Inferior" }
 ];
 
 export default function SMSPage({ farm, onBack }: SMSPageProps) {
   const [acasalamentos, setAcasalamentos] = useState<AcasalamentoItem[]>([]);
   const [selectedTouro, setSelectedTouro] = useState<string>("");
   const [selectedCategoria, setSelectedCategoria] = useState<string>("");
-  const [selectedSubcategoria, setSelectedSubcategoria] = useState<string>("");
+  const [selectedClassificacao, setSelectedClassificacao] = useState<string>("");
   const [quantidade, setQuantidade] = useState<number>(1);
   const [observacoes, setObservacoes] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -147,19 +147,19 @@ export default function SMSPage({ farm, onBack }: SMSPageProps) {
             });
           }
 
-          // Por segmentação
-          if (item.distribuicao.Doadoras > 0) {
+          // Por classificação (segmentação)
+          if (item.distribuicao.Superiores > 0) {
             novosAcasalamentos.push({
-              id: `${Date.now()}-doad-${item.touro.naab}`,
+              id: `${Date.now()}-sup-${item.touro.naab}`,
               touro: {
                 naab: item.touro.naab,
                 nome: item.touro.nome,
                 TPI: item.touro.TPI
               },
               categoria: "Novilha", // categoria padrão
-              subcategoria: "Doadora",
-              quantidade: item.distribuicao.Doadoras,
-              observacoes: `Importado do Botijão Virtual - ${item.tipo} - Doadoras`
+              classificacao: "Superior",
+              quantidade: item.distribuicao.Superiores,
+              observacoes: `Importado do Botijão Virtual - ${item.tipo} - Superiores`
             });
           }
 
@@ -172,24 +172,24 @@ export default function SMSPage({ farm, onBack }: SMSPageProps) {
                 TPI: item.touro.TPI
               },
               categoria: "Novilha", // categoria padrão
-              subcategoria: "Intermediária",
+              classificacao: "Intermediária",
               quantidade: item.distribuicao.Intermediarias,
               observacoes: `Importado do Botijão Virtual - ${item.tipo} - Intermediárias`
             });
           }
 
-          if (item.distribuicao.Receptoras > 0) {
+          if (item.distribuicao.Inferiores > 0) {
             novosAcasalamentos.push({
-              id: `${Date.now()}-recep-${item.touro.naab}`,
+              id: `${Date.now()}-inf-${item.touro.naab}`,
               touro: {
                 naab: item.touro.naab,
                 nome: item.touro.nome,
                 TPI: item.touro.TPI
               },
               categoria: "Novilha", // categoria padrão
-              subcategoria: "Receptora",
-              quantidade: item.distribuicao.Receptoras,
-              observacoes: `Importado do Botijão Virtual - ${item.tipo} - Receptoras`
+              classificacao: "Inferior",
+              quantidade: item.distribuicao.Inferiores,
+              observacoes: `Importado do Botijão Virtual - ${item.tipo} - Inferiores`
             });
           }
         });
@@ -243,7 +243,7 @@ export default function SMSPage({ farm, onBack }: SMSPageProps) {
         TPI: touro.TPI
       },
       categoria: selectedCategoria as any,
-      subcategoria: selectedSubcategoria as any,
+      classificacao: selectedClassificacao as any,
       quantidade,
       observacoes
     };
@@ -253,7 +253,7 @@ export default function SMSPage({ farm, onBack }: SMSPageProps) {
     // Limpar formulário
     setSelectedTouro("");
     setSelectedCategoria("");
-    setSelectedSubcategoria("");
+    setSelectedClassificacao("");
     setQuantidade(1);
     setObservacoes("");
 
@@ -291,13 +291,13 @@ export default function SMSPage({ farm, onBack }: SMSPageProps) {
     }
 
     const csvContent = [
-      ['Touro NAAB', 'Nome do Touro', 'TPI', 'Categoria', 'Subcategoria', 'Quantidade', 'Observações'].join(','),
+      ['Touro NAAB', 'Nome do Touro', 'TPI', 'Categoria', 'Classificação', 'Quantidade', 'Observações'].join(','),
       ...acasalamentos.map(a => [
         a.touro.naab,
         a.touro.nome,
         a.touro.TPI,
         a.categoria,
-        a.subcategoria || '',
+        a.classificacao || '',
         a.quantidade,
         a.observacoes || ''
       ].join(','))
@@ -321,7 +321,7 @@ export default function SMSPage({ farm, onBack }: SMSPageProps) {
   );
 
   const resumoPorCategoria = acasalamentos.reduce((acc, item) => {
-    const key = item.subcategoria ? `${item.categoria} - ${item.subcategoria}` : item.categoria;
+    const key = item.classificacao ? `${item.categoria} - ${item.classificacao}` : item.categoria;
     acc[key] = (acc[key] || 0) + item.quantidade;
     return acc;
   }, {} as Record<string, number>);
@@ -366,9 +366,9 @@ export default function SMSPage({ farm, onBack }: SMSPageProps) {
               <CardContent className="space-y-4">
                 {/* Busca de touros */}
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Buscar Touro</label>
+                  <label className="text-sm font-medium mb-2 block">Buscar Touro (Nome ou NAAB)</label>
                   <Input
-                    placeholder="Buscar por nome ou NAAB..."
+                    placeholder="Digite o nome ou NAAB do touro..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="mb-2"
@@ -405,17 +405,17 @@ export default function SMSPage({ farm, onBack }: SMSPageProps) {
                     </Select>
                   </div>
 
-                  {/* Subcategoria */}
+                  {/* Classificação */}
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Subcategoria (Opcional)</label>
-                    <Select value={selectedSubcategoria} onValueChange={setSelectedSubcategoria}>
+                    <label className="text-sm font-medium mb-2 block">Classificação (Opcional)</label>
+                    <Select value={selectedClassificacao} onValueChange={setSelectedClassificacao}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione uma subcategoria" />
+                        <SelectValue placeholder="Selecione uma classificação" />
                       </SelectTrigger>
                       <SelectContent>
-                        {subcategorias.map((sub) => (
-                          <SelectItem key={sub.value} value={sub.value}>
-                            {sub.label}
+                        {classificacoes.map((clas) => (
+                          <SelectItem key={clas.value} value={clas.value}>
+                            {clas.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -492,8 +492,8 @@ export default function SMSPage({ farm, onBack }: SMSPageProps) {
                           </div>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Badge>{acasalamento.categoria}</Badge>
-                            {acasalamento.subcategoria && (
-                              <Badge variant="outline">{acasalamento.subcategoria}</Badge>
+                            {acasalamento.classificacao && (
+                              <Badge variant="outline">{acasalamento.classificacao}</Badge>
                             )}
                             <span>• {acasalamento.quantidade} doses</span>
                             {acasalamento.observacoes && (
