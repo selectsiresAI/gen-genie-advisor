@@ -361,11 +361,27 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
   const loadBulls = async () => {
     try {
       setLoading(true);
+      
+      // Check if user is authenticated
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Erro de Autenticação",
+          description: "Usuário não autenticado para visualizar touros",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .rpc('get_bulls_denorm')
         .order('tpi', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error from RPC get_bulls_denorm:', error);
+        throw error;
+      }
       
       // Transform data to match expected format
       const transformedBulls: Bull[] = (data || []).map(bull => ({
