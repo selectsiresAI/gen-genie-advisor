@@ -11,19 +11,14 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Settings, Download, RefreshCw, Users, TrendingUp, BarChart3, PieChart as PieChartIcon, Activity, LineChart as LineChartIcon, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useHerdStore } from "@/hooks/useHerdStore";
 import { computeLinearTrend } from "@/lib/linear-trend";
 import type { LinearTrendModel } from "@/lib/linear-trend";
 
 // Constants
-const YEARS_FIXED = [2021, 2022, 2023, 2024, 2025];
 const YEARS = [2021, 2022, 2023, 2024, 2025];
 
 type RawRow = Record<string, any>;
-
-function coerceYear(v: any): number | null {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-}
 
 function pickNumber(row: RawRow, keys: string[], fallback = 0): number {
   for (const k of keys) {
@@ -37,6 +32,98 @@ function pickNumber(row: RawRow, keys: string[], fallback = 0): number {
 function mean(arr: number[]): number {
   if (!arr.length) return 0;
   return arr.reduce((sum, val) => sum + val, 0) / arr.length;
+}
+
+interface YearlySeriesPoint {
+  year: number;
+  value: number;
+  count: number;
+}
+
+interface YearlySeriesOptions {
+  dateField?: string;
+  fallbackDateField?: string;
+}
+
+function resolveYearFromRow(row: RawRow, fields: string[]): number | null {
+  for (const field of fields) {
+    if (!field) continue;
+    const value = row?.[field];
+    if (!value) continue;
+
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) {
+      const year = date.getFullYear();
+      if (Number.isFinite(year)) {
+        return year;
+      }
+    }
+  }
+
+  return null;
+}
+
+function buildYearlySeriesFromFemales(
+  rows: RawRow[],
+  ptaKeys: string[],
+  options: YearlySeriesOptions = {}
+): Record<string, YearlySeriesPoint[]> {
+  const result: Record<string, YearlySeriesPoint[]> = {};
+
+  ptaKeys.forEach((key) => {
+    result[key] = [];
+  });
+
+  if (!Array.isArray(rows) || rows.length === 0 || ptaKeys.length === 0) {
+    return result;
+  }
+
+  const dateFields = [options.dateField ?? "pta_date", options.fallbackDateField ?? "created_at", "updated_at"];
+  const aggregated: Record<number, Record<string, { sum: number; count: number }>> = {};
+
+  rows.forEach((row) => {
+    if (!row) return;
+
+    const year = resolveYearFromRow(row, dateFields);
+    if (year === null) return;
+
+    aggregated[year] ||= {};
+
+    ptaKeys.forEach((ptaKey) => {
+      const rawValue = row?.[ptaKey];
+      const value = Number(rawValue);
+      if (!Number.isFinite(value)) return;
+
+      const bucket = aggregated[year][ptaKey] || { sum: 0, count: 0 };
+      bucket.sum += value;
+      bucket.count += 1;
+      aggregated[year][ptaKey] = bucket;
+    });
+  });
+
+  const sortedYears = Object.keys(aggregated)
+    .map((year) => Number(year))
+    .filter((year) => Number.isFinite(year))
+    .sort((a, b) => a - b);
+
+  ptaKeys.forEach((ptaKey) => {
+    const series: YearlySeriesPoint[] = [];
+
+    sortedYears.forEach((year) => {
+      const bucket = aggregated[year]?.[ptaKey];
+      if (!bucket || bucket.count === 0) return;
+
+      series.push({
+        year,
+        value: bucket.sum / bucket.count,
+        count: bucket.count,
+      });
+    });
+
+    result[ptaKey] = series;
+  });
+
+  return result;
 }
 
 function linearRegression(xs: number[], ys: number[]) {
@@ -115,6 +202,7 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
   const [searchTerm, setSearchTerm] = useState('');
 
   const { toast } = useToast();
+  const { selectedHerdId } = useHerdStore();
 
   const showObservedInTooltip = false;
 
@@ -180,10 +268,10 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
 
   // Carregar dados das fêmeas
   useEffect(() => {
-    if (farm) {
+    if (farm || selectedHerdId) {
       loadFemalesData();
     }
-  }, [farm]);
+  }, [farm, selectedHerdId]);
 
   // Recalcular estatísticas quando PTAs selecionados mudarem
   useEffect(() => {
@@ -193,20 +281,50 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
   }, [selectedPTAs, females]);
 
   const loadFemalesData = async () => {
-    if (!farm?.farm_id) return;
-    
+    const targetFarmId = farm?.farm_id ?? selectedHerdId;
+    if (!targetFarmId) return;
+
     try {
       setLoading(true);
-      // Use same approach as HerdPage - load all females with high limit
+
+      const baseColumns = [
+        'id',
+        'farm_id',
+        'birth_date',
+        'category',
+        'parity_order',
+        'created_at',
+        'updated_at',
+      ];
+
+      const traitColumns = Array.from(new Set([
+        ...availablePTAs.map((pta) => pta.key),
+        'beta_casein',
+        'kappa_casein',
+      ]));
+
+      const columns = [...baseColumns, ...traitColumns].join(',');
+
       const { data, error } = await supabase
-        .rpc('get_females_denorm', { target_farm_id: farm.farm_id })
-        .order('birth_date', { ascending: true })
-        .limit(10000); // Set high limit to ensure all records are loaded
+        .from('females_denorm')
+        .select(columns)
+        .eq('farm_id', targetFarmId)
+        .order('created_at', { ascending: true })
+        .limit(10000);
 
       if (error) throw error;
-      
-      setFemales(data || []);
-      calculateStatistics(data || []);
+
+      const scopedData = Array.isArray(data)
+        ? data.filter((row: any) => {
+            if (!selectedHerdId || !(row && 'herd_id' in row)) {
+              return true;
+            }
+            return row.herd_id === selectedHerdId;
+          })
+        : [];
+
+      setFemales(scopedData);
+      calculateStatistics(scopedData);
     } catch (error) {
       console.error('Error loading females data:', error);
       toast({
@@ -251,54 +369,59 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
     setStatisticsData(stats);
   };
 
+  const yearlyTrendSeriesByPta = useMemo(() => {
+    if (!Array.isArray(females) || females.length === 0 || selectedPTAs.length === 0) {
+      return {} as Record<string, YearlySeriesPoint[]>;
+    }
+
+    const hasPtaDate = females.some((female) => Boolean(female?.pta_date));
+
+    return buildYearlySeriesFromFemales(females, selectedPTAs, {
+      dateField: hasPtaDate ? 'pta_date' : 'created_at',
+      fallbackDateField: hasPtaDate ? 'created_at' : 'updated_at',
+    });
+  }, [females, selectedPTAs]);
+
   // Processar dados para gráficos de tendência - VERSÃO DEFENSIVA
   const processedTrendData = useMemo(() => {
     if (!females || !Array.isArray(females) || females.length === 0) return [];
 
     let processedData: any[] = [];
-    
+
     if (groupBy === 'year') {
-      // Normaliza dados por ano com segurança
-      const byYear = new Map<number, { year: number; n: number; values: number[] }>();
-      
-      females.forEach(female => {
-        if (!female) return;
-        
-        const birthYear = coerceYear(female.birth_date ? new Date(female.birth_date).getFullYear() : null);
-        if (!birthYear) return;
-        
-        if (!byYear.has(birthYear)) {
-          byYear.set(birthYear, { year: birthYear, n: 0, values: [] });
-        }
-        
-        const yearData = byYear.get(birthYear)!;
-        yearData.n++;
-        
-        selectedPTAs.forEach(pta => {
-          const value = pickNumber(female, [pta], NaN);
-          if (Number.isFinite(value)) {
-            yearData.values.push(value);
+      const yearsSet = new Set<number>();
+
+      selectedPTAs.forEach((pta) => {
+        const series = yearlyTrendSeriesByPta[pta] || [];
+        series.forEach(({ year }) => {
+          if (Number.isFinite(year)) {
+            yearsSet.add(year);
           }
         });
       });
-      
-      // Constrói array final para o range fixo
-      processedData = YEARS_FIXED.map(year => {
-        const entry = byYear.get(year);
-        const count = entry?.n || 0;
-        const values = entry?.values || [];
-        const meanVal = values.length > 0 ? mean(values) : 0;
-        
-        const result: any = { year, count };
-        selectedPTAs.forEach(pta => {
-          const ptaValues = values.length > 0 ? values : [];
-          result[pta] = ptaValues.length > 0 ? meanVal : null;
-        });
-        
-        return result;
-      }).filter(d => d && typeof d === 'object' && (d.count || 0) > 0);
+
+      const sortedYears = Array.from(yearsSet).sort((a, b) => a - b);
+
+      processedData = sortedYears
+        .map((year) => {
+          const result: Record<string, number | null> & { year: number } = { year };
+
+          selectedPTAs.forEach((pta) => {
+            const series = yearlyTrendSeriesByPta[pta] || [];
+            const point = series.find((entry) => entry.year === year);
+            result[pta] = point ? point.value : null;
+          });
+
+          return result;
+        })
+        .filter((row) =>
+          selectedPTAs.some((pta) => {
+            const value = row[pta];
+            return typeof value === 'number' && Number.isFinite(value);
+          })
+        );
     }
-    
+
     else if (groupBy === 'category') {
       const byCategory = new Map<string, { category: string; n: number; values: number[] }>();
       
@@ -366,34 +489,26 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
     }
     
     return processedData;
-  }, [females, selectedPTAs, groupBy]);
+  }, [females, selectedPTAs, groupBy, yearlyTrendSeriesByPta]);
 
   const trendModelsByPta = useMemo(() => {
-    if (groupBy !== 'year' || !processedTrendData.length) {
+    if (groupBy !== 'year' || selectedPTAs.length === 0) {
       return {} as Record<string, LinearTrendModel | null>;
     }
 
     const models: Record<string, LinearTrendModel | null> = {};
 
     selectedPTAs.forEach((pta) => {
-      const points = processedTrendData
-        .map((row: any) => {
-          const year = coerceYear(row?.year);
-          const value = Number(row?.[pta]);
-
-          if (year === null || !Number.isFinite(value)) {
-            return null;
-          }
-
-          return { x: year, y: value };
-        })
-        .filter((point): point is { x: number; y: number } => Boolean(point));
+      const series = yearlyTrendSeriesByPta[pta] || [];
+      const points = series
+        .map(({ year, value }) => ({ x: year, y: value }))
+        .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
 
       models[pta] = computeLinearTrend(points);
     });
 
     return models;
-  }, [groupBy, processedTrendData, selectedPTAs]);
+  }, [groupBy, selectedPTAs, yearlyTrendSeriesByPta]);
 
   const TrendTooltipContent = ({ active, payload, label }: TooltipProps<number, string>) => {
     if (!active || !payload || !payload.length) {
