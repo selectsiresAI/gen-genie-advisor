@@ -37,6 +37,10 @@ interface Farm {
   selected_bulls: number;
   created_at: string;
 }
+
+type SupabaseFarm = Omit<Farm, 'total_females'> & {
+  total_females: number | null;
+};
 const MainDashboard: React.FC<MainDashboardProps> = ({
   user,
   onLogout
@@ -84,11 +88,20 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
           variant: "destructive"
         });
       } else {
-        setFarms(farmsData || []);
+        const rawFarms = (farmsData as SupabaseFarm[]) ?? [];
+        const normalizedFarms: Farm[] = rawFarms.map(farm => {
+          const normalizedCount = Number(farm.total_females ?? 0);
+          return {
+            ...farm,
+            total_females: Number.isFinite(normalizedCount) ? normalizedCount : 0
+          };
+        });
+
+        setFarms(normalizedFarms);
 
         // Calcular totais
-        setTotalFarms(farmsData?.length || 0);
-        const totalFemales = farmsData?.reduce((sum: number, farm: Farm) => sum + (farm.total_females || 0), 0) || 0;
+        setTotalFarms(normalizedFarms.length);
+        const totalFemales = normalizedFarms.reduce((sum, farm) => sum + farm.total_females, 0);
         setTotalAnimals(totalFemales);
       }
 
@@ -258,7 +271,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                         Rebanho
                       </CardTitle>
                        <CardDescription>
-                         <span>{selectedFarm.total_females} fêmeas cadastradas</span>
+                         <span>{(selectedFarm.total_females ?? 0)} fêmeas cadastradas</span>
                        </CardDescription>
                     </CardHeader>
                   </Card>
@@ -772,7 +785,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                       <div className="flex justify-between text-sm">
                         <div className="flex items-center gap-1">
                           <Users className="w-4 h-4 text-muted-foreground" />
-                          <span>{farm.total_females} fêmeas</span>
+                          <span>{(farm.total_females ?? 0)} fêmeas</span>
                         </div>
                         <div className="flex items-center gap-1">
                           
