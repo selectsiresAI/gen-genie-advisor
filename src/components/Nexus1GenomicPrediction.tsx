@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,7 +36,7 @@ interface Bull {
 interface PredictionResult {
   female: Female;
   bull: Bull;
-  predictions: Record<string, number>;
+  predictions: Record<string, number | null>;
   bullNumber: number; // 1, 2, ou 3
 }
 
@@ -72,6 +72,30 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
   // Função para calcular predições genômicas
   const calculateGenomicPrediction = (femalePTA: number, bullPTA: number): number => {
     return ((femalePTA + bullPTA) / 2) * 0.93;
+  };
+
+  const parsePTAValue = (value: any): number | null => {
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+
+    const normalizedValue = typeof value === 'string'
+      ? value.replace(',', '.').trim()
+      : value;
+
+    const numericValue = typeof normalizedValue === 'number'
+      ? normalizedValue
+      : parseFloat(normalizedValue);
+
+    return Number.isFinite(numericValue) ? numericValue : null;
+  };
+
+  const formatPredictionValue = (value: number | null | undefined): string => {
+    if (value === null || value === undefined) {
+      return '—';
+    }
+
+    return value.toFixed(2);
   };
 
   // Parse de arquivos
@@ -165,47 +189,101 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
   };
 
   // Calcular predições (atualizado para trabalhar com os dois tipos de touros)
-  const calculatePredictions = () => {
+  const hasCalculatedRef = useRef(false);
+
+  const clearPredictions = useCallback(() => {
+    setPredictions([]);
+    hasCalculatedRef.current = false;
+  }, []);
+
+  const calculatePredictions = useCallback((showFeedback = true) => {
     if (females.length === 0) {
-      toast({
-        title: 'Dados insuficientes',
-        description: 'Carregue fêmeas antes de calcular',
-        variant: 'destructive'
-      });
+      clearPredictions();
+      if (showFeedback) {
+        toast({
+          title: 'Dados insuficientes',
+          description: 'Carregue fêmeas antes de calcular',
+          variant: 'destructive'
+        });
+      }
       return;
     }
 
-    let bullsToUse: Bull[] = [];
-    
+    let bullEntries: { bull: Bull; bullNumber: number }[] = [];
+
     if (bullSource === 'upload') {
       if (bulls.length === 0) {
-        toast({
-          title: 'Dados insuficientes',
-          description: 'Carregue touros antes de calcular',
-          variant: 'destructive'
-        });
+        clearPredictions();
+        if (showFeedback) {
+          toast({
+            title: 'Dados insuficientes',
+            description: 'Carregue touros antes de calcular',
+            variant: 'destructive'
+          });
+        }
         return;
       }
-      const validBullIds = selectedBullIds.filter(id => id.trim() !== '');
+
+      const validBullIds = selectedBullIds.map(id => id.trim()).filter(Boolean);
+
       if (validBullIds.length === 0) {
-        toast({
-          title: 'Touros não selecionados',
-          description: 'Selecione pelo menos um touro para acasalamento',
-          variant: 'destructive'
-        });
+        clearPredictions();
+        if (showFeedback) {
+          toast({
+            title: 'Touros não selecionados',
+            description: 'Selecione pelo menos um touro para acasalamento',
+            variant: 'destructive'
+          });
+        }
         return;
       }
-      bullsToUse = bulls;
+
+      bullEntries = validBullIds
+        .map((bullId, index) => {
+          const bull = bulls.find(b => b['ID Fazenda'] === bullId || b['Nome'] === bullId);
+          if (!bull) {
+            if (showFeedback) {
+              toast({
+                title: 'Touro não encontrado',
+                description: `Não foi possível localizar o touro ${bullId} no arquivo carregado`,
+                variant: 'destructive'
+              });
+            }
+            return null;
+          }
+
+          return { bull, bullNumber: index + 1 };
+        })
+        .filter((entry): entry is { bull: Bull; bullNumber: number } => entry !== null);
+
+      if (bullEntries.length === 0) {
+        clearPredictions();
+        return;
+      }
     } else {
       if (selectedBullsFromSearch.length === 0) {
-        toast({
-          title: 'Touros não selecionados',
-          description: 'Selecione pelo menos um touro para acasalamento',
-          variant: 'destructive'
-        });
+        clearPredictions();
+        if (showFeedback) {
+          toast({
+            title: 'Touros não selecionados',
+            description: 'Selecione pelo menos um touro para acasalamento',
+            variant: 'destructive'
+          });
+        }
         return;
       }
-      bullsToUse = convertSelectedBulls();
+
+      const convertedBulls = convertSelectedBulls();
+
+      bullEntries = convertedBulls.map((bull, index) => ({
+        bull,
+        bullNumber: index + 1
+      }));
+
+      if (bullEntries.length === 0) {
+        clearPredictions();
+        return;
+      }
     }
 
     setIsCalculating(true);
@@ -214,93 +292,79 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
       const results: PredictionResult[] = [];
 
       females.forEach(female => {
-        if (bullSource === 'upload') {
-          const validBullIds = selectedBullIds.filter(id => id.trim() !== '');
-          validBullIds.forEach((bullId, index) => {
-            const bull = bullsToUse.find(b => b['ID Fazenda'] === bullId || b['Nome'] === bullId);
-            
-            if (!bull) {
-              console.warn(`Touro ${bullId} não encontrado`);
-              return;
+        bullEntries.forEach(({ bull, bullNumber }) => {
+          const predictions: Record<string, number | null> = {};
+
+          PTA_COLUMNS.forEach(pta => {
+            const femalePTA = parsePTAValue(female[pta]);
+            const bullPTA = parsePTAValue(bull[pta]);
+
+            if (femalePTA !== null && bullPTA !== null) {
+              predictions[pta] = calculateGenomicPrediction(femalePTA, bullPTA);
+            } else {
+              predictions[pta] = null;
             }
-
-            const predictions: Record<string, number> = {};
-            
-            // Calcular predições para cada PTA
-            PTA_COLUMNS.forEach(pta => {
-              const femalePTA = parseFloat(female[pta]) || 0;
-              const bullPTA = parseFloat(bull[pta]) || 0;
-              
-              if (!isNaN(femalePTA) && !isNaN(bullPTA)) {
-                predictions[pta] = calculateGenomicPrediction(femalePTA, bullPTA);
-              }
-            });
-
-            results.push({
-              female,
-              bull,
-              predictions,
-              bullNumber: index + 1
-            });
           });
-        } else {
-          // Usar touros da busca
-          selectedBullsFromSearch.forEach((searchBull, index) => {
-            const bull = convertSelectedBulls().find(b => b['ID Fazenda'] === searchBull.code);
-            
-            if (!bull) return;
 
-            const predictions: Record<string, number> = {};
-            
-            // Calcular predições para cada PTA
-            PTA_COLUMNS.forEach(pta => {
-              const femalePTA = parseFloat(female[pta]) || 0;
-              const bullPTA = parseFloat(bull[pta]) || 0;
-              
-              if (!isNaN(femalePTA) && !isNaN(bullPTA)) {
-                predictions[pta] = calculateGenomicPrediction(femalePTA, bullPTA);
-              }
-            });
-
-            results.push({
-              female,
-              bull,
-              predictions,
-              bullNumber: index + 1
-            });
+          results.push({
+            female,
+            bull,
+            predictions,
+            bullNumber
           });
-        }
+        });
       });
 
       setPredictions(results);
-      
-      toast({
-        title: 'Predições calculadas',
-        description: `${results.length} predições geradas com sucesso`
-      });
+      hasCalculatedRef.current = true;
+
+      if (showFeedback) {
+        toast({
+          title: 'Predições calculadas',
+          description: `${results.length} predições geradas com sucesso`
+        });
+      }
     } catch (error) {
-      toast({
-        title: 'Erro no cálculo',
-        description: 'Erro ao calcular predições',
-        variant: 'destructive'
-      });
+      console.error('Erro ao calcular predições:', error);
+      clearPredictions();
+      if (showFeedback) {
+        toast({
+          title: 'Erro no cálculo',
+          description: 'Erro ao calcular predições',
+          variant: 'destructive'
+        });
+      }
     } finally {
       setIsCalculating(false);
     }
-  };
+  }, [bullSource, bulls, clearPredictions, convertSelectedBulls, females, selectedBullIds, selectedBullsFromSearch, toast]);
+
+  useEffect(() => {
+    if (!hasCalculatedRef.current) return;
+    calculatePredictions(false);
+  }, [calculatePredictions, females, bulls, selectedBullIds, selectedBullsFromSearch, bullSource]);
 
   // Exportar resultados
   const exportResults = () => {
     if (predictions.length === 0) return;
 
-    const exportData = predictions.map(result => ({
-      'ID Fazenda Fêmea': result.female['ID Fazenda'] || result.female['Nome'],
-      'Nome Fêmea': result.female['Nome'],
-      'ID Touro': result.bull['ID Fazenda'] || result.bull['Nome'],
-      'Nome Touro': result.bull['Nome'],
-      'Acasalamento': `Touro ${result.bullNumber}`,
-      ...result.predictions
-    }));
+    const exportData = predictions.map(result => {
+      const row: Record<string, string | number> = {
+        'ID Fazenda Fêmea': result.female['ID Fazenda'] || result.female['Nome'] || '',
+        'Nome Fêmea': result.female['Nome'] || '',
+        'Classificação Fêmea': result.female['Classificação'] || '',
+        'ID Touro': result.bull['ID Fazenda'] || result.bull['Nome'] || '',
+        'Nome Touro': result.bull['Nome'] || '',
+        'Acasalamento': `Touro ${result.bullNumber}`
+      };
+
+      PTA_COLUMNS.forEach(pta => {
+        const value = result.predictions[pta];
+        row[pta] = value === null || value === undefined ? '—' : Number(value.toFixed(2));
+      });
+
+      return row;
+    });
 
     const ws = utils.json_to_sheet(exportData);
     const wb = utils.book_new();
@@ -379,65 +443,67 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
   };
 
   // Converter touros selecionados para formato esperado
-  const convertSelectedBulls = () => {
+  const convertSelectedBulls = useCallback(() => {
     return selectedBullsFromSearch.map(bull => ({
-      'ID Fazenda': bull.code,
-      'Nome': bull.name,
-      'HHP$®': bull.ptas?.hhp_dollar || 0,
-      'TPI': bull.ptas?.tpi || 0,
-      'NM$': bull.ptas?.nm_dollar || 0,
-      'CM$': bull.ptas?.cm_dollar || 0,
-      'FM$': bull.ptas?.fm_dollar || 0,
-      'GM$': bull.ptas?.gm_dollar || 0,
-      'F SAV': bull.ptas?.f_sav || 0,
-      'PTAM': bull.ptas?.ptam || 0,
-      'CFP': bull.ptas?.cfp || 0,
-      'PTAF': bull.ptas?.ptaf || 0,
-      'PTAF%': bull.ptas?.ptaf_pct || 0,
-      'PTAP': bull.ptas?.ptap || 0,
-      'PTAP%': bull.ptas?.ptap_pct || 0,
-      'PL': bull.ptas?.pl || 0,
-      'DPR': bull.ptas?.dpr || 0,
-      'LIV': bull.ptas?.liv || 0,
-      'SCS': bull.ptas?.scs || 0,
-      'MAST': bull.ptas?.mast || 0,
-      'MET': bull.ptas?.met || 0,
-      'RP': bull.ptas?.rp || 0,
-      'DA': bull.ptas?.da || 0,
-      'KET': bull.ptas?.ket || 0,
-      'MF': bull.ptas?.mf || 0,
-      'PTAT': bull.ptas?.ptat || 0,
-      'UDC': bull.ptas?.udc || 0,
-      'FLC': bull.ptas?.flc || 0,
-      'SCE': bull.ptas?.sce || 0,
-      'DCE': bull.ptas?.dce || 0,
-      'SSB': bull.ptas?.ssb || 0,
-      'DSB': bull.ptas?.dsb || 0,
-      'H LIV': bull.ptas?.h_liv || 0,
-      'CCR': bull.ptas?.ccr || 0,
-      'HCR': bull.ptas?.hcr || 0,
-      'FI': bull.ptas?.fi || 0,
-      'BWC': bull.ptas?.bwc || 0,
-      'STA': bull.ptas?.sta || 0,
-      'STR': bull.ptas?.str || 0,
-      'DFM': bull.ptas?.dfm || 0,
-      'RUA': bull.ptas?.rua || 0,
-      'RLS': bull.ptas?.rls || 0,
-      'RTP': bull.ptas?.rtp || 0,
-      'FTL': bull.ptas?.ftl || 0,
-      'RW': bull.ptas?.rw || 0,
-      'RLR': bull.ptas?.rlr || 0,
-      'FTA': bull.ptas?.fta || 0,
-      'FLS': bull.ptas?.fls || 0,
-      'FUA': bull.ptas?.fua || 0,
-      'RUH': bull.ptas?.ruh || 0,
-      'RUW': bull.ptas?.ruw || 0,
-      'UCL': bull.ptas?.ucl || 0,
-      'UDP': bull.ptas?.udp || 0,
-      'FTP': bull.ptas?.ftp || 0,
-      'RFI': bull.ptas?.rfi || 0
+      'ID Fazenda': bull.code ?? null,
+      'Nome': bull.name ?? '',
+      'HHP$®': bull.ptas?.hhp_dollar ?? null,
+      'TPI': bull.ptas?.tpi ?? null,
+      'NM$': bull.ptas?.nm_dollar ?? null,
+      'CM$': bull.ptas?.cm_dollar ?? null,
+      'FM$': bull.ptas?.fm_dollar ?? null,
+      'GM$': bull.ptas?.gm_dollar ?? null,
+      'F SAV': bull.ptas?.f_sav ?? null,
+      'PTAM': bull.ptas?.ptam ?? null,
+      'CFP': bull.ptas?.cfp ?? null,
+      'PTAF': bull.ptas?.ptaf ?? null,
+      'PTAF%': bull.ptas?.ptaf_pct ?? null,
+      'PTAP': bull.ptas?.ptap ?? null,
+      'PTAP%': bull.ptas?.ptap_pct ?? null,
+      'PL': bull.ptas?.pl ?? null,
+      'DPR': bull.ptas?.dpr ?? null,
+      'LIV': bull.ptas?.liv ?? null,
+      'SCS': bull.ptas?.scs ?? null,
+      'MAST': bull.ptas?.mast ?? null,
+      'MET': bull.ptas?.met ?? null,
+      'RP': bull.ptas?.rp ?? null,
+      'DA': bull.ptas?.da ?? null,
+      'KET': bull.ptas?.ket ?? null,
+      'MF': bull.ptas?.mf ?? null,
+      'PTAT': bull.ptas?.ptat ?? null,
+      'UDC': bull.ptas?.udc ?? null,
+      'FLC': bull.ptas?.flc ?? null,
+      'SCE': bull.ptas?.sce ?? null,
+      'DCE': bull.ptas?.dce ?? null,
+      'SSB': bull.ptas?.ssb ?? null,
+      'DSB': bull.ptas?.dsb ?? null,
+      'H LIV': bull.ptas?.h_liv ?? null,
+      'CCR': bull.ptas?.ccr ?? null,
+      'HCR': bull.ptas?.hcr ?? null,
+      'FI': bull.ptas?.fi ?? null,
+      'GL': bull.ptas?.gl ?? null,
+      'EFC': bull.ptas?.efc ?? null,
+      'BWC': bull.ptas?.bwc ?? null,
+      'STA': bull.ptas?.sta ?? null,
+      'STR': bull.ptas?.str ?? null,
+      'DFM': bull.ptas?.dfm ?? null,
+      'RUA': bull.ptas?.rua ?? null,
+      'RLS': bull.ptas?.rls ?? null,
+      'RTP': bull.ptas?.rtp ?? null,
+      'FTL': bull.ptas?.ftl ?? null,
+      'RW': bull.ptas?.rw ?? null,
+      'RLR': bull.ptas?.rlr ?? null,
+      'FTA': bull.ptas?.fta ?? null,
+      'FLS': bull.ptas?.fls ?? null,
+      'FUA': bull.ptas?.fua ?? null,
+      'RUH': bull.ptas?.ruh ?? null,
+      'RUW': bull.ptas?.ruw ?? null,
+      'UCL': bull.ptas?.ucl ?? null,
+      'UDP': bull.ptas?.udp ?? null,
+      'FTP': bull.ptas?.ftp ?? null,
+      'RFI': bull.ptas?.rfi ?? null
     }));
-  };
+  }, [selectedBullsFromSearch]);
   const loadFemalesFromDatabase = async () => {
     if (selectedClassifications.length === 0 || selectedCategories.length === 0) {
       toast({
@@ -470,10 +536,12 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
       const farmIds = userFarms.map(f => f.farm_id);
 
       const { data, error } = await supabase
-        .from('females_denorm')
-        .select('*')
-        .in('segmentation_class', selectedClassifications as ('donor' | 'inter' | 'recipient')[])
-        .not('segmentation_class', 'is', null)
+        .from('female_segmentations')
+        .select(`
+          *,
+          female:females_denorm(*)
+        `)
+        .in('class', selectedClassifications as ('donor' | 'inter' | 'recipient')[])
         .in('farm_id', farmIds);
 
       if (error) throw error;
@@ -504,71 +572,89 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
         return 'multipara';
       };
 
-      const filteredFemales = data.filter(female => {
+      const filteredFemales = (data || []).filter(segmentation => {
+        const female = (segmentation as any).female;
+        if (!female) return false;
+
         const category = getAutomaticCategory(female.birth_date, female.parity_order);
         return selectedCategories.includes(category);
       });
 
+      if (filteredFemales.length === 0) {
+        toast({
+          title: 'Nenhuma fêmea encontrada',
+          description: 'Não há fêmeas segmentadas com os filtros selecionados.',
+          variant: 'destructive'
+        });
+        setFemales([]);
+        return;
+      }
+
       // Converter para formato esperado pelo Nexus
-      const convertedFemales = filteredFemales.map(female => ({
-        'ID Fazenda': female.identifier || female.name,
-        'Nome': female.name,
-        'HHP$®': female.hhp_dollar || 0,
-        'TPI': female.tpi || 0,
-        'NM$': female.nm_dollar || 0,
-        'CM$': female.cm_dollar || 0,
-        'FM$': female.fm_dollar || 0,
-        'GM$': female.gm_dollar || 0,
-        'F SAV': female.f_sav || 0,
-        'PTAM': female.ptam || 0,
-        'CFP': female.cfp || 0,
-        'PTAF': female.ptaf || 0,
-        'PTAF%': female.ptaf_pct || 0,
-        'PTAP': female.ptap || 0,
-        'PTAP%': female.ptap_pct || 0,
-        'PL': female.pl || 0,
-        'DPR': female.dpr || 0,
-        'LIV': female.liv || 0,
-        'SCS': female.scs || 0,
-        'MAST': female.mast || 0,
-        'MET': female.met || 0,
-        'RP': female.rp || 0,
-        'DA': female.da || 0,
-        'KET': female.ket || 0,
-        'MF': female.mf || 0,
-        'PTAT': female.ptat || 0,
-        'UDC': female.udc || 0,
-        'FLC': female.flc || 0,
-        'SCE': female.sce || 0,
-        'DCE': female.dce || 0,
-        'SSB': female.ssb || 0,
-        'DSB': female.dsb || 0,
-        'H LIV': female.h_liv || 0,
-        'CCR': female.ccr || 0,
-        'HCR': female.hcr || 0,
-        'FI': female.fi || 0,
-        'GL': female.gl || 0,
-        'EFC': female.efc || 0,
-        'BWC': female.bwc || 0,
-        'STA': female.sta || 0,
-        'STR': female.str || 0,
-        'DFM': female.dfm || 0,
-        'RUA': female.rua || 0,
-        'RLS': female.rls || 0,
-        'RTP': female.rtp || 0,
-        'FTL': female.ftl || 0,
-        'RW': female.rw || 0,
-        'RLR': female.rlr || 0,
-        'FTA': female.fta || 0,
-        'FLS': female.fls || 0,
-        'FUA': female.fua || 0,
-        'RUH': female.ruh || 0,
-        'RUW': female.ruw || 0,
-        'UCL': female.ucl || 0,
-        'UDP': female.udp || 0,
-        'FTP': female.ftp || 0,
-        'RFI': female.rfi || 0
-      }));
+      const convertedFemales = filteredFemales.map(segmentation => {
+        const female = (segmentation as any).female || {};
+
+        return {
+          'ID Fazenda': female.identifier || female.name || '',
+          'Nome': female.name || '',
+          'Classificação': segmentation.class,
+          'HHP$®': female.hhp_dollar ?? null,
+          'TPI': female.tpi ?? null,
+          'NM$': female.nm_dollar ?? null,
+          'CM$': female.cm_dollar ?? null,
+          'FM$': female.fm_dollar ?? null,
+          'GM$': female.gm_dollar ?? null,
+          'F SAV': female.f_sav ?? null,
+          'PTAM': female.ptam ?? null,
+          'CFP': female.cfp ?? null,
+          'PTAF': female.ptaf ?? null,
+          'PTAF%': female.ptaf_pct ?? null,
+          'PTAP': female.ptap ?? null,
+          'PTAP%': female.ptap_pct ?? null,
+          'PL': female.pl ?? null,
+          'DPR': female.dpr ?? null,
+          'LIV': female.liv ?? null,
+          'SCS': female.scs ?? null,
+          'MAST': female.mast ?? null,
+          'MET': female.met ?? null,
+          'RP': female.rp ?? null,
+          'DA': female.da ?? null,
+          'KET': female.ket ?? null,
+          'MF': female.mf ?? null,
+          'PTAT': female.ptat ?? null,
+          'UDC': female.udc ?? null,
+          'FLC': female.flc ?? null,
+          'SCE': female.sce ?? null,
+          'DCE': female.dce ?? null,
+          'SSB': female.ssb ?? null,
+          'DSB': female.dsb ?? null,
+          'H LIV': female.h_liv ?? null,
+          'CCR': female.ccr ?? null,
+          'HCR': female.hcr ?? null,
+          'FI': female.fi ?? null,
+          'GL': female.gl ?? null,
+          'EFC': female.efc ?? null,
+          'BWC': female.bwc ?? null,
+          'STA': female.sta ?? null,
+          'STR': female.str ?? null,
+          'DFM': female.dfm ?? null,
+          'RUA': female.rua ?? null,
+          'RLS': female.rls ?? null,
+          'RTP': female.rtp ?? null,
+          'FTL': female.ftl ?? null,
+          'RW': female.rw ?? null,
+          'RLR': female.rlr ?? null,
+          'FTA': female.fta ?? null,
+          'FLS': female.fls ?? null,
+          'FUA': female.fua ?? null,
+          'RUH': female.ruh ?? null,
+          'RUW': female.ruw ?? null,
+          'UCL': female.ucl ?? null,
+          'UDP': female.udp ?? null,
+          'FTP': female.ftp ?? null,
+          'RFI': female.rfi ?? null
+        };
+      });
 
       setFemales(convertedFemales);
       
@@ -636,19 +722,6 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
     const newSelection = Array(count).fill('').map((_, i) => selectedBullIds[i] || '');
     setSelectedBullIds(newSelection);
   };
-
-  // Filtrar resultados por fêmea para exibição
-  const groupedPredictions = useMemo(() => {
-    const groups: Record<string, PredictionResult[]> = {};
-    
-    predictions.forEach(pred => {
-      const key = pred.female['ID Fazenda'] || pred.female['Nome'];
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(pred);
-    });
-    
-    return groups;
-  }, [predictions]);
 
   return (
     <div className="space-y-6">
@@ -1019,8 +1092,8 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
             </div>
 
             {/* Botão de cálculo */}
-            <Button 
-              onClick={calculatePredictions} 
+            <Button
+              onClick={() => calculatePredictions()}
               disabled={isCalculating}
               className="w-full"
               size="lg"
@@ -1040,48 +1113,39 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
                   </Button>
                 </div>
                 
-                <div className="space-y-6">
-                  {Object.entries(groupedPredictions).map(([femaleKey, femalePredictions]) => (
-                    <div key={femaleKey} className="space-y-2">
-                      <h5 className="font-semibold">
-                        Fêmea: {femalePredictions[0].female['Nome']} ({femaleKey})
-                      </h5>
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Touro</TableHead>
-                              <TableHead>Acasalamento</TableHead>
-                              {PTA_COLUMNS.slice(0, 5).map(pta => (
-                                <TableHead key={pta}>{pta}</TableHead>
-                              ))}
-                              <TableHead>...</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {femalePredictions.map((pred, index) => (
-                              <TableRow key={index}>
-                                <TableCell>{pred.bull['Nome']}</TableCell>
-                                <TableCell>
-                                  <Badge variant="outline">Touro {pred.bullNumber}</Badge>
-                                </TableCell>
-                                {PTA_COLUMNS.slice(0, 5).map(pta => (
-                                  <TableCell key={pta}>
-                                    {pred.predictions[pta]?.toFixed(2) || '—'}
-                                  </TableCell>
-                                ))}
-                                <TableCell>
-                                  <span className="text-xs text-muted-foreground">
-                                    +{PTA_COLUMNS.length - 5} PTAs
-                                  </span>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </div>
-                  ))}
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Fêmea</TableHead>
+                        <TableHead>ID Fêmea</TableHead>
+                        <TableHead>Classificação</TableHead>
+                        <TableHead>Touro</TableHead>
+                        <TableHead>Acasalamento</TableHead>
+                        {PTA_COLUMNS.map(pta => (
+                          <TableHead key={pta}>{pta}</TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {predictions.map((pred, index) => (
+                        <TableRow
+                          key={`${pred.female['ID Fazenda'] || pred.female['Nome'] || index}-${pred.bull['ID Fazenda'] || pred.bull['Nome'] || index}-${index}`}
+                        >
+                          <TableCell>{pred.female['Nome'] || '—'}</TableCell>
+                          <TableCell>{pred.female['ID Fazenda'] || '—'}</TableCell>
+                          <TableCell>{pred.female['Classificação'] || '—'}</TableCell>
+                          <TableCell>{pred.bull['Nome'] || '—'}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">Touro {pred.bullNumber}</Badge>
+                          </TableCell>
+                          {PTA_COLUMNS.map(pta => (
+                            <TableCell key={pta}>{formatPredictionValue(pred.predictions[pta])}</TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
             )}
