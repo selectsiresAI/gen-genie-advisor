@@ -260,10 +260,11 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
           });
         } else {
           // Usar touros da busca
-          selectedBullsFromSearch.forEach((searchBull, index) => {
-            const bull = convertSelectedBulls().find(b => b['ID Fazenda'] === searchBull.code);
-            
-            if (!bull) return;
+          const convertedBulls = convertSelectedBulls();
+          console.log('Touros convertidos para cálculo:', convertedBulls);
+          
+          convertedBulls.forEach((bull, index) => {
+            console.log(`Calculando predições para fêmea ${female['Nome']} x touro ${bull['Nome']}`);
 
             const predictions: Record<string, number> = {};
             
@@ -271,6 +272,8 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
             PTA_COLUMNS.forEach(pta => {
               const femalePTA = parseFloat(female[pta]) || 0;
               const bullPTA = parseFloat(bull[pta]) || 0;
+              
+              console.log(`${pta}: Fêmea=${femalePTA}, Touro=${bullPTA}`);
               
               if (!isNaN(femalePTA) && !isNaN(bullPTA)) {
                 predictions[pta] = calculateGenomicPrediction(femalePTA, bullPTA);
@@ -341,14 +344,16 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
 
     setSearchingBulls(true);
     try {
+      // Buscar diretamente na view bulls_denorm que contém todos os dados necessários
       const { data, error } = await supabase
-        .rpc('search_bulls', { 
-          q: naabSearch.trim(),
-          limit_count: 20 
-        });
+        .from('bulls_denorm')
+        .select('*')
+        .or(`code.ilike.%${naabSearch.trim()}%,name.ilike.%${naabSearch.trim()}%`)
+        .limit(20);
 
       if (error) throw error;
 
+      console.log('Touros encontrados no banco:', data);
       setSearchResults(data || []);
       
       if (!data || data.length === 0) {
@@ -356,6 +361,11 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
           title: 'Nenhum touro encontrado',
           description: 'Não foi encontrado nenhum touro com esse NAAB',
           variant: 'destructive'  
+        });
+      } else {
+        toast({
+          title: 'Touros encontrados',
+          description: `${data.length} touros encontrados`
         });
       }
     } catch (error) {
@@ -372,7 +382,7 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
 
   // Adicionar touro selecionado da busca
   const addBullFromSearch = (bull: any) => {
-    if (selectedBullsFromSearch.find(b => b.bull_id === bull.bull_id)) {
+    if (selectedBullsFromSearch.find(b => b.id === bull.id)) {
       toast({
         title: 'Touro já selecionado',
         description: 'Este touro já foi adicionado à seleção',
@@ -381,6 +391,7 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
       return;
     }
 
+    console.log('Adicionando touro à seleção:', bull);
     setSelectedBullsFromSearch(prev => [...prev, bull]);
     toast({
       title: 'Touro adicionado',
@@ -390,68 +401,75 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
 
   // Remover touro da seleção
   const removeBullFromSearch = (bullId: string) => {
-    setSelectedBullsFromSearch(prev => prev.filter(b => b.bull_id !== bullId));
+    setSelectedBullsFromSearch(prev => prev.filter(b => b.id !== bullId));
   };
 
   // Converter touros selecionados para formato esperado
   const convertSelectedBulls = () => {
-    return selectedBullsFromSearch.map(bull => ({
-      'ID Fazenda': bull.code,
-      'Nome': bull.name,
-      'HHP$®': bull.ptas?.hhp_dollar || 0,
-      'TPI': bull.ptas?.tpi || 0,
-      'NM$': bull.ptas?.nm_dollar || 0,
-      'CM$': bull.ptas?.cm_dollar || 0,
-      'FM$': bull.ptas?.fm_dollar || 0,
-      'GM$': bull.ptas?.gm_dollar || 0,
-      'F SAV': bull.ptas?.f_sav || 0,
-      'PTAM': bull.ptas?.ptam || 0,
-      'CFP': bull.ptas?.cfp || 0,
-      'PTAF': bull.ptas?.ptaf || 0,
-      'PTAF%': bull.ptas?.ptaf_pct || 0,
-      'PTAP': bull.ptas?.ptap || 0,
-      'PTAP%': bull.ptas?.ptap_pct || 0,
-      'PL': bull.ptas?.pl || 0,
-      'DPR': bull.ptas?.dpr || 0,
-      'LIV': bull.ptas?.liv || 0,
-      'SCS': bull.ptas?.scs || 0,
-      'MAST': bull.ptas?.mast || 0,
-      'MET': bull.ptas?.met || 0,
-      'RP': bull.ptas?.rp || 0,
-      'DA': bull.ptas?.da || 0,
-      'KET': bull.ptas?.ket || 0,
-      'MF': bull.ptas?.mf || 0,
-      'PTAT': bull.ptas?.ptat || 0,
-      'UDC': bull.ptas?.udc || 0,
-      'FLC': bull.ptas?.flc || 0,
-      'SCE': bull.ptas?.sce || 0,
-      'DCE': bull.ptas?.dce || 0,
-      'SSB': bull.ptas?.ssb || 0,
-      'DSB': bull.ptas?.dsb || 0,
-      'H LIV': bull.ptas?.h_liv || 0,
-      'CCR': bull.ptas?.ccr || 0,
-      'HCR': bull.ptas?.hcr || 0,
-      'FI': bull.ptas?.fi || 0,
-      'BWC': bull.ptas?.bwc || 0,
-      'STA': bull.ptas?.sta || 0,
-      'STR': bull.ptas?.str || 0,
-      'DFM': bull.ptas?.dfm || 0,
-      'RUA': bull.ptas?.rua || 0,
-      'RLS': bull.ptas?.rls || 0,
-      'RTP': bull.ptas?.rtp || 0,
-      'FTL': bull.ptas?.ftl || 0,
-      'RW': bull.ptas?.rw || 0,
-      'RLR': bull.ptas?.rlr || 0,
-      'FTA': bull.ptas?.fta || 0,
-      'FLS': bull.ptas?.fls || 0,
-      'FUA': bull.ptas?.fua || 0,
-      'RUH': bull.ptas?.ruh || 0,
-      'RUW': bull.ptas?.ruw || 0,
-      'UCL': bull.ptas?.ucl || 0,
-      'UDP': bull.ptas?.udp || 0,
-      'FTP': bull.ptas?.ftp || 0,
-      'RFI': bull.ptas?.rfi || 0
-    }));
+    console.log('Convertendo touros selecionados:', selectedBullsFromSearch);
+    
+    return selectedBullsFromSearch.map(bull => {
+      const converted = {
+        'ID Fazenda': bull.code,
+        'Nome': bull.name,
+        'HHP$®': bull.hhp_dollar || 0,
+        'TPI': bull.tpi || 0,
+        'NM$': bull.nm_dollar || 0,
+        'CM$': bull.cm_dollar || 0,
+        'FM$': bull.fm_dollar || 0,
+        'GM$': bull.gm_dollar || 0,
+        'F SAV': bull.f_sav || 0,
+        'PTAM': bull.ptam || 0,
+        'CFP': bull.cfp || 0,
+        'PTAF': bull.ptaf || 0,
+        'PTAF%': bull.ptaf_pct || 0,
+        'PTAP': bull.ptap || 0,
+        'PTAP%': bull.ptap_pct || 0,
+        'PL': bull.pl || 0,
+        'DPR': bull.dpr || 0,
+        'LIV': bull.liv || 0,
+        'SCS': bull.scs || 0,
+        'MAST': bull.mast || 0,
+        'MET': bull.met || 0,
+        'RP': bull.rp || 0,
+        'DA': bull.da || 0,
+        'KET': bull.ket || 0,
+        'MF': bull.mf || 0,
+        'PTAT': bull.ptat || 0,
+        'UDC': bull.udc || 0,
+        'FLC': bull.flc || 0,
+        'SCE': bull.sce || 0,
+        'DCE': bull.dce || 0,
+        'SSB': bull.ssb || 0,
+        'DSB': bull.dsb || 0,
+        'H LIV': bull.h_liv || 0,
+        'CCR': bull.ccr || 0,
+        'HCR': bull.hcr || 0,
+        'FI': bull.fi || 0,
+        'BWC': bull.bwc || 0,
+        'STA': bull.sta || 0,
+        'STR': bull.str || 0,
+        'DFM': bull.dfm || 0,
+        'RUA': bull.rua || 0,
+        'RLS': bull.rls || 0,
+        'RTP': bull.rtp || 0,
+        'FTL': bull.ftl || 0,
+        'RW': bull.rw || 0,
+        'RLR': bull.rlr || 0,
+        'FTA': bull.fta || 0,
+        'FLS': bull.fls || 0,
+        'FUA': bull.fua || 0,
+        'RUH': bull.ruh || 0,
+        'RUW': bull.ruw || 0,
+        'UCL': bull.ucl || 0,
+        'UDP': bull.udp || 0,
+        'FTP': bull.ftp || 0,
+        'RFI': bull.rfi || 0
+      };
+      
+      console.log(`Touro convertido: ${bull.name} - TPI: ${converted.TPI}, NM$: ${converted['NM$']}`);
+      return converted;
+    });
   };
   const loadFemalesFromDatabase = async () => {
     if (selectedClassifications.length === 0 || selectedCategories.length === 0) {
@@ -1008,18 +1026,18 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
                   <div className="space-y-2">
                     <Label>Resultados da Busca:</Label>
                     <div className="max-h-60 overflow-y-auto space-y-2">
-                      {searchResults.map((bull) => (
-                        <div key={bull.bull_id} className="flex items-center justify-between p-3 border rounded-lg">
+                       {searchResults.map((bull) => (
+                        <div key={bull.id} className="flex items-center justify-between p-3 border rounded-lg">
                           <div>
                             <p className="font-medium">{bull.name}</p>
                             <p className="text-sm text-muted-foreground">
-                              {bull.code} | TPI: {bull.ptas?.tpi || 'N/A'} | NM$: {bull.ptas?.nm_dollar || 'N/A'}
+                              {bull.code} | TPI: {bull.tpi || 'N/A'} | NM$: {bull.nm_dollar || 'N/A'}
                             </p>
                           </div>
                           <Button 
                             size="sm" 
                             onClick={() => addBullFromSearch(bull)}
-                            disabled={selectedBullsFromSearch.find(b => b.bull_id === bull.bull_id)}
+                            disabled={selectedBullsFromSearch.find(b => b.id === bull.id)}
                           >
                             <Plus className="w-4 h-4 mr-1" />
                             Adicionar
@@ -1036,17 +1054,17 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
                     <Label>Touros Selecionados ({selectedBullsFromSearch.length}):</Label>
                     <div className="space-y-2">
                       {selectedBullsFromSearch.map((bull) => (
-                        <div key={bull.bull_id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                        <div key={bull.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                           <div>
                             <p className="font-medium">{bull.name}</p>
                             <p className="text-sm text-muted-foreground">
-                              {bull.code} | TPI: {bull.ptas?.tpi || 'N/A'} | NM$: {bull.ptas?.nm_dollar || 'N/A'}
+                              {bull.code} | TPI: {bull.tpi || 'N/A'} | NM$: {bull.nm_dollar || 'N/A'}
                             </p>
                           </div>
                           <Button 
                             size="sm" 
                             variant="outline"
-                            onClick={() => removeBullFromSearch(bull.bull_id)}
+                            onClick={() => removeBullFromSearch(bull.id)}
                           >
                             <X className="w-4 h-4" />
                           </Button>
