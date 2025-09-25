@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Upload, Download, Calculator, ArrowLeft, Users, Target, Database, FileUp, Search, Plus, X, ChevronRight, ChevronLeft } from 'lucide-react';
 import { read, utils, writeFileXLSX } from 'xlsx';
 import { supabase } from '@/integrations/supabase/client';
+import { useHerdStore } from '@/hooks/useHerdStore';
 
 // Colunas específicas para Nexus 1
 const NEXUS1_COLUMNS = [
@@ -46,6 +47,7 @@ interface Nexus1GenomicPredictionProps {
 
 const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBack }) => {
   const { toast } = useToast();
+  const currentFarmId = useHerdStore(state => state.selectedHerdId);
   
   // Estados principais
   const [currentStep, setCurrentStep] = useState(1);
@@ -58,6 +60,7 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
   const [predictions, setPredictions] = useState<PredictionResult[]>([]);
   const [isCalculating, setIsCalculating] = useState(false);
   const [loadingDatabase, setLoadingDatabase] = useState(false);
+  const [lastFarmId, setLastFarmId] = useState<string | null>(null);
   
   // Estados para busca de touros
   const [naabSearch, setNaabSearch] = useState('');
@@ -471,6 +474,37 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
       return converted;
     });
   };
+  const resetStateForFarmChange = useCallback(() => {
+    setFemales([]);
+    setPredictions([]);
+    setCurrentStep(1);
+    setSelectedBulls(1);
+    setSelectedBullIds(['']);
+    setSelectedBullsFromSearch([]);
+  }, []);
+
+  useEffect(() => {
+    if (!currentFarmId) {
+      if (lastFarmId !== null) {
+        setLastFarmId(null);
+      }
+      resetStateForFarmChange();
+      return;
+    }
+
+    if (lastFarmId && lastFarmId !== currentFarmId) {
+      resetStateForFarmChange();
+      toast({
+        title: 'Seleção de rebanho atualizada',
+        description: 'As seleções anteriores foram limpas porque você alterou o rebanho.'
+      });
+    }
+
+    if (lastFarmId !== currentFarmId) {
+      setLastFarmId(currentFarmId);
+    }
+  }, [currentFarmId, lastFarmId, resetStateForFarmChange, toast]);
+
   const loadFemalesFromDatabase = async () => {
     if (selectedClassifications.length === 0 || selectedCategories.length === 0) {
       toast({
@@ -481,27 +515,17 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
       return;
     }
 
+    if (!currentFarmId) {
+      toast({
+        title: 'Selecione um rebanho',
+        description: 'Escolha um rebanho no dashboard antes de carregar as fêmeas segmentadas.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     setLoadingDatabase(true);
     try {
-      // Buscar fazenda do usuário atual
-      const { data: userFarms, error: userError } = await supabase
-        .from('user_farms')
-        .select('farm_id')
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
-
-      if (userError) throw userError;
-      
-      if (!userFarms || userFarms.length === 0) {
-        toast({
-          title: 'Nenhuma fazenda encontrada',
-          description: 'Você precisa estar associado a uma fazenda',
-          variant: 'destructive'
-        });
-        return;
-      }
-
-      const farmIds = userFarms.map(f => f.farm_id);
-
       // Buscar fêmeas com segmentação através de join
       const { data, error } = await supabase
         .from('female_segmentations')
@@ -511,6 +535,7 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
             id,
             name,
             identifier,
+            farm_id,
             birth_date,
             parity_order,
             hhp_dollar,
@@ -572,7 +597,7 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
           )
         `)
         .in('class', selectedClassifications as ('donor' | 'inter' | 'recipient')[])
-        .in('farm_id', farmIds);
+        .eq('farm_id', currentFarmId);
 
       if (error) throw error;
 
@@ -586,15 +611,38 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
         return;
       }
 
+      const sanitizedSegmentations = (data ?? []).filter(segmentation => {
+        const segmentationFarmMatches = segmentation?.farm_id === currentFarmId;
+        const femaleFarmMatches = segmentation?.females?.farm_id ? segmentation.females.farm_id === currentFarmId : true;
+        return segmentationFarmMatches && femaleFarmMatches;
+      });
+
+      if (sanitizedSegmentations.length === 0) {
+        toast({
+          title: 'Nenhuma fêmea disponível',
+          description: 'As fêmeas segmentadas encontradas não pertencem ao rebanho selecionado.',
+          variant: 'destructive'
+        });
+        setFemales([]);
+        return;
+      }
+
+      if ((data?.length ?? 0) > sanitizedSegmentations.length) {
+        toast({
+          title: 'Fêmeas ajustadas',
+          description: 'Algumas fêmeas foram desconsideradas por pertencerem a outro rebanho.'
+        });
+      }
+
       // Filtrar por categoria usando a categoria automática
       const getAutomaticCategory = (birthDate: string | null, parityOrder: number | null) => {
         if (!birthDate) return 'indefinida';
-        
+
         const birth = new Date(birthDate);
         const today = new Date();
-        const ageInMonths = (today.getFullYear() - birth.getFullYear()) * 12 + 
+        const ageInMonths = (today.getFullYear() - birth.getFullYear()) * 12 +
                            (today.getMonth() - birth.getMonth());
-        
+
         if (ageInMonths < 12) return 'bezerra';
         if (ageInMonths < 24 || !parityOrder || parityOrder === 0) return 'novilha';
         if (parityOrder === 1) return 'primipara';
@@ -602,7 +650,7 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
         return 'multipara';
       };
 
-      const filteredFemales = data.filter(segmentation => {
+      const filteredFemales = sanitizedSegmentations.filter(segmentation => {
         const femaleData = segmentation.females;
         if (!femaleData) return false;
         const category = getAutomaticCategory(femaleData.birth_date, femaleData.parity_order);
@@ -673,7 +721,7 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
         };
       });
       setFemales(convertedFemales);
-      
+
       toast({
         title: 'Fêmeas carregadas',
         description: `${convertedFemales.length} fêmeas carregadas do banco de dados`
@@ -823,6 +871,15 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
             ) : (
               <div className="space-y-4">
                 <div>
+                  {currentFarmId ? (
+                    <Badge variant="outline">Rebanho ativo: {currentFarmId}</Badge>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Selecione um rebanho no dashboard para habilitar a listagem de fêmeas segmentadas.
+                    </p>
+                  )}
+                </div>
+                <div>
                   <Label className="text-sm font-medium">Classificações</Label>
                   <div className="flex flex-wrap gap-2 mt-2">
                     {[
@@ -880,9 +937,9 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
                   </div>
                 </div>
 
-                <Button 
-                  onClick={loadFemalesFromDatabase} 
-                  disabled={loadingDatabase}
+                <Button
+                  onClick={loadFemalesFromDatabase}
+                  disabled={loadingDatabase || !currentFarmId}
                   className="w-full"
                 >
                   <Database className="w-4 h-4 mr-2" />
