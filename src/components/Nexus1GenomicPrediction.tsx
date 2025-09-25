@@ -74,6 +74,28 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
     return ((femalePTA + bullPTA) / 2) * 0.93;
   };
 
+  const parsePTAValue = (value: unknown): number | null => {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : null;
+    }
+
+    if (typeof value === 'string') {
+      const normalized = value.replace(',', '.').trim();
+      if (normalized === '') {
+        return null;
+      }
+
+      const parsed = Number(normalized);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    return null;
+  };
+
   // Parse de arquivos
   const parseFile = useCallback(async (file: File): Promise<any[]> => {
     return new Promise((resolve, reject) => {
@@ -176,7 +198,10 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
     }
 
     let bullsToUse: Bull[] = [];
-    
+    const validBullIds = bullSource === 'upload'
+      ? selectedBullIds.filter(id => id.trim() !== '')
+      : [];
+
     if (bullSource === 'upload') {
       if (bulls.length === 0) {
         toast({
@@ -186,7 +211,6 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
         });
         return;
       }
-      const validBullIds = selectedBullIds.filter(id => id.trim() !== '');
       if (validBullIds.length === 0) {
         toast({
           title: 'Touros não selecionados',
@@ -214,66 +238,51 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
       const results: PredictionResult[] = [];
 
       females.forEach(female => {
+        const femalePTAValues: Record<string, number | null> = {};
+        PTA_COLUMNS.forEach(pta => {
+          femalePTAValues[pta] = parsePTAValue(female[pta]);
+        });
+
+        const handlePredictionForBull = (bull: Bull, bullIndex: number) => {
+          const predictions: Record<string, number> = {};
+
+          PTA_COLUMNS.forEach(pta => {
+            const femalePTA = femalePTAValues[pta];
+            const bullPTA = parsePTAValue(bull[pta]);
+
+            if (femalePTA !== null && bullPTA !== null) {
+              predictions[pta] = calculateGenomicPrediction(femalePTA, bullPTA);
+            }
+          });
+
+          results.push({
+            female,
+            bull,
+            predictions,
+            bullNumber: bullIndex + 1
+          });
+        };
+
         if (bullSource === 'upload') {
-          const validBullIds = selectedBullIds.filter(id => id.trim() !== '');
           validBullIds.forEach((bullId, index) => {
             const bull = bullsToUse.find(b => b['ID Fazenda'] === bullId || b['Nome'] === bullId);
-            
+
             if (!bull) {
               console.warn(`Touro ${bullId} não encontrado`);
               return;
             }
 
-            const predictions: Record<string, number> = {};
-            
-            // Calcular predições para cada PTA
-            PTA_COLUMNS.forEach(pta => {
-              const femalePTA = parseFloat(female[pta]) || 0;
-              const bullPTA = parseFloat(bull[pta]) || 0;
-              
-              if (!isNaN(femalePTA) && !isNaN(bullPTA)) {
-                predictions[pta] = calculateGenomicPrediction(femalePTA, bullPTA);
-              }
-            });
-
-            results.push({
-              female,
-              bull,
-              predictions,
-              bullNumber: index + 1
-            });
+            handlePredictionForBull(bull, index);
           });
         } else {
-          // Usar touros da busca
-          selectedBullsFromSearch.forEach((searchBull, index) => {
-            const bull = convertSelectedBulls().find(b => b['ID Fazenda'] === searchBull.code);
-            
-            if (!bull) return;
-
-            const predictions: Record<string, number> = {};
-            
-            // Calcular predições para cada PTA
-            PTA_COLUMNS.forEach(pta => {
-              const femalePTA = parseFloat(female[pta]) || 0;
-              const bullPTA = parseFloat(bull[pta]) || 0;
-              
-              if (!isNaN(femalePTA) && !isNaN(bullPTA)) {
-                predictions[pta] = calculateGenomicPrediction(femalePTA, bullPTA);
-              }
-            });
-
-            results.push({
-              female,
-              bull,
-              predictions,
-              bullNumber: index + 1
-            });
+          bullsToUse.forEach((bull, index) => {
+            handlePredictionForBull(bull, index);
           });
         }
       });
 
       setPredictions(results);
-      
+
       toast({
         title: 'Predições calculadas',
         description: `${results.length} predições geradas com sucesso`
@@ -293,14 +302,22 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
   const exportResults = () => {
     if (predictions.length === 0) return;
 
-    const exportData = predictions.map(result => ({
-      'ID Fazenda Fêmea': result.female['ID Fazenda'] || result.female['Nome'],
-      'Nome Fêmea': result.female['Nome'],
-      'ID Touro': result.bull['ID Fazenda'] || result.bull['Nome'],
-      'Nome Touro': result.bull['Nome'],
-      'Acasalamento': `Touro ${result.bullNumber}`,
-      ...result.predictions
-    }));
+    const exportData = predictions.map(result => {
+      const row: Record<string, string> = {
+        'ID Fazenda Fêmea': String(result.female['ID Fazenda'] || result.female['Nome'] || ''),
+        'Nome Fêmea': String(result.female['Nome'] || ''),
+        'ID Touro': String(result.bull['ID Fazenda'] || result.bull['Nome'] || ''),
+        'Nome Touro': String(result.bull['Nome'] || ''),
+        'Acasalamento': `Touro ${result.bullNumber}`
+      };
+
+      PTA_COLUMNS.forEach(pta => {
+        const value = result.predictions[pta];
+        row[pta] = typeof value === 'number' ? value.toFixed(2) : '—';
+      });
+
+      return row;
+    });
 
     const ws = utils.json_to_sheet(exportData);
     const wb = utils.book_new();
@@ -383,59 +400,61 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
     return selectedBullsFromSearch.map(bull => ({
       'ID Fazenda': bull.code,
       'Nome': bull.name,
-      'HHP$®': bull.ptas?.hhp_dollar || 0,
-      'TPI': bull.ptas?.tpi || 0,
-      'NM$': bull.ptas?.nm_dollar || 0,
-      'CM$': bull.ptas?.cm_dollar || 0,
-      'FM$': bull.ptas?.fm_dollar || 0,
-      'GM$': bull.ptas?.gm_dollar || 0,
-      'F SAV': bull.ptas?.f_sav || 0,
-      'PTAM': bull.ptas?.ptam || 0,
-      'CFP': bull.ptas?.cfp || 0,
-      'PTAF': bull.ptas?.ptaf || 0,
-      'PTAF%': bull.ptas?.ptaf_pct || 0,
-      'PTAP': bull.ptas?.ptap || 0,
-      'PTAP%': bull.ptas?.ptap_pct || 0,
-      'PL': bull.ptas?.pl || 0,
-      'DPR': bull.ptas?.dpr || 0,
-      'LIV': bull.ptas?.liv || 0,
-      'SCS': bull.ptas?.scs || 0,
-      'MAST': bull.ptas?.mast || 0,
-      'MET': bull.ptas?.met || 0,
-      'RP': bull.ptas?.rp || 0,
-      'DA': bull.ptas?.da || 0,
-      'KET': bull.ptas?.ket || 0,
-      'MF': bull.ptas?.mf || 0,
-      'PTAT': bull.ptas?.ptat || 0,
-      'UDC': bull.ptas?.udc || 0,
-      'FLC': bull.ptas?.flc || 0,
-      'SCE': bull.ptas?.sce || 0,
-      'DCE': bull.ptas?.dce || 0,
-      'SSB': bull.ptas?.ssb || 0,
-      'DSB': bull.ptas?.dsb || 0,
-      'H LIV': bull.ptas?.h_liv || 0,
-      'CCR': bull.ptas?.ccr || 0,
-      'HCR': bull.ptas?.hcr || 0,
-      'FI': bull.ptas?.fi || 0,
-      'BWC': bull.ptas?.bwc || 0,
-      'STA': bull.ptas?.sta || 0,
-      'STR': bull.ptas?.str || 0,
-      'DFM': bull.ptas?.dfm || 0,
-      'RUA': bull.ptas?.rua || 0,
-      'RLS': bull.ptas?.rls || 0,
-      'RTP': bull.ptas?.rtp || 0,
-      'FTL': bull.ptas?.ftl || 0,
-      'RW': bull.ptas?.rw || 0,
-      'RLR': bull.ptas?.rlr || 0,
-      'FTA': bull.ptas?.fta || 0,
-      'FLS': bull.ptas?.fls || 0,
-      'FUA': bull.ptas?.fua || 0,
-      'RUH': bull.ptas?.ruh || 0,
-      'RUW': bull.ptas?.ruw || 0,
-      'UCL': bull.ptas?.ucl || 0,
-      'UDP': bull.ptas?.udp || 0,
-      'FTP': bull.ptas?.ftp || 0,
-      'RFI': bull.ptas?.rfi || 0
+      'HHP$®': parsePTAValue(bull.ptas?.hhp_dollar),
+      'TPI': parsePTAValue(bull.ptas?.tpi),
+      'NM$': parsePTAValue(bull.ptas?.nm_dollar),
+      'CM$': parsePTAValue(bull.ptas?.cm_dollar),
+      'FM$': parsePTAValue(bull.ptas?.fm_dollar),
+      'GM$': parsePTAValue(bull.ptas?.gm_dollar),
+      'F SAV': parsePTAValue(bull.ptas?.f_sav),
+      'PTAM': parsePTAValue(bull.ptas?.ptam),
+      'CFP': parsePTAValue(bull.ptas?.cfp),
+      'PTAF': parsePTAValue(bull.ptas?.ptaf),
+      'PTAF%': parsePTAValue(bull.ptas?.ptaf_pct),
+      'PTAP': parsePTAValue(bull.ptas?.ptap),
+      'PTAP%': parsePTAValue(bull.ptas?.ptap_pct),
+      'PL': parsePTAValue(bull.ptas?.pl),
+      'DPR': parsePTAValue(bull.ptas?.dpr),
+      'LIV': parsePTAValue(bull.ptas?.liv),
+      'SCS': parsePTAValue(bull.ptas?.scs),
+      'MAST': parsePTAValue(bull.ptas?.mast),
+      'MET': parsePTAValue(bull.ptas?.met),
+      'RP': parsePTAValue(bull.ptas?.rp),
+      'DA': parsePTAValue(bull.ptas?.da),
+      'KET': parsePTAValue(bull.ptas?.ket),
+      'MF': parsePTAValue(bull.ptas?.mf),
+      'PTAT': parsePTAValue(bull.ptas?.ptat),
+      'UDC': parsePTAValue(bull.ptas?.udc),
+      'FLC': parsePTAValue(bull.ptas?.flc),
+      'SCE': parsePTAValue(bull.ptas?.sce),
+      'DCE': parsePTAValue(bull.ptas?.dce),
+      'SSB': parsePTAValue(bull.ptas?.ssb),
+      'DSB': parsePTAValue(bull.ptas?.dsb),
+      'H LIV': parsePTAValue(bull.ptas?.h_liv),
+      'CCR': parsePTAValue(bull.ptas?.ccr),
+      'HCR': parsePTAValue(bull.ptas?.hcr),
+      'FI': parsePTAValue(bull.ptas?.fi),
+      'GL': parsePTAValue(bull.ptas?.gl),
+      'EFC': parsePTAValue(bull.ptas?.efc),
+      'BWC': parsePTAValue(bull.ptas?.bwc),
+      'STA': parsePTAValue(bull.ptas?.sta),
+      'STR': parsePTAValue(bull.ptas?.str),
+      'DFM': parsePTAValue(bull.ptas?.dfm),
+      'RUA': parsePTAValue(bull.ptas?.rua),
+      'RLS': parsePTAValue(bull.ptas?.rls),
+      'RTP': parsePTAValue(bull.ptas?.rtp),
+      'FTL': parsePTAValue(bull.ptas?.ftl),
+      'RW': parsePTAValue(bull.ptas?.rw),
+      'RLR': parsePTAValue(bull.ptas?.rlr),
+      'FTA': parsePTAValue(bull.ptas?.fta),
+      'FLS': parsePTAValue(bull.ptas?.fls),
+      'FUA': parsePTAValue(bull.ptas?.fua),
+      'RUH': parsePTAValue(bull.ptas?.ruh),
+      'RUW': parsePTAValue(bull.ptas?.ruw),
+      'UCL': parsePTAValue(bull.ptas?.ucl),
+      'UDP': parsePTAValue(bull.ptas?.udp),
+      'FTP': parsePTAValue(bull.ptas?.ftp),
+      'RFI': parsePTAValue(bull.ptas?.rfi)
     }));
   };
   const loadFemalesFromDatabase = async () => {
@@ -513,61 +532,61 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
       const convertedFemales = filteredFemales.map(female => ({
         'ID Fazenda': female.identifier || female.name,
         'Nome': female.name,
-        'HHP$®': female.hhp_dollar || 0,
-        'TPI': female.tpi || 0,
-        'NM$': female.nm_dollar || 0,
-        'CM$': female.cm_dollar || 0,
-        'FM$': female.fm_dollar || 0,
-        'GM$': female.gm_dollar || 0,
-        'F SAV': female.f_sav || 0,
-        'PTAM': female.ptam || 0,
-        'CFP': female.cfp || 0,
-        'PTAF': female.ptaf || 0,
-        'PTAF%': female.ptaf_pct || 0,
-        'PTAP': female.ptap || 0,
-        'PTAP%': female.ptap_pct || 0,
-        'PL': female.pl || 0,
-        'DPR': female.dpr || 0,
-        'LIV': female.liv || 0,
-        'SCS': female.scs || 0,
-        'MAST': female.mast || 0,
-        'MET': female.met || 0,
-        'RP': female.rp || 0,
-        'DA': female.da || 0,
-        'KET': female.ket || 0,
-        'MF': female.mf || 0,
-        'PTAT': female.ptat || 0,
-        'UDC': female.udc || 0,
-        'FLC': female.flc || 0,
-        'SCE': female.sce || 0,
-        'DCE': female.dce || 0,
-        'SSB': female.ssb || 0,
-        'DSB': female.dsb || 0,
-        'H LIV': female.h_liv || 0,
-        'CCR': female.ccr || 0,
-        'HCR': female.hcr || 0,
-        'FI': female.fi || 0,
-        'GL': female.gl || 0,
-        'EFC': female.efc || 0,
-        'BWC': female.bwc || 0,
-        'STA': female.sta || 0,
-        'STR': female.str || 0,
-        'DFM': female.dfm || 0,
-        'RUA': female.rua || 0,
-        'RLS': female.rls || 0,
-        'RTP': female.rtp || 0,
-        'FTL': female.ftl || 0,
-        'RW': female.rw || 0,
-        'RLR': female.rlr || 0,
-        'FTA': female.fta || 0,
-        'FLS': female.fls || 0,
-        'FUA': female.fua || 0,
-        'RUH': female.ruh || 0,
-        'RUW': female.ruw || 0,
-        'UCL': female.ucl || 0,
-        'UDP': female.udp || 0,
-        'FTP': female.ftp || 0,
-        'RFI': female.rfi || 0
+        'HHP$®': parsePTAValue(female.hhp_dollar),
+        'TPI': parsePTAValue(female.tpi),
+        'NM$': parsePTAValue(female.nm_dollar),
+        'CM$': parsePTAValue(female.cm_dollar),
+        'FM$': parsePTAValue(female.fm_dollar),
+        'GM$': parsePTAValue(female.gm_dollar),
+        'F SAV': parsePTAValue(female.f_sav),
+        'PTAM': parsePTAValue(female.ptam),
+        'CFP': parsePTAValue(female.cfp),
+        'PTAF': parsePTAValue(female.ptaf),
+        'PTAF%': parsePTAValue(female.ptaf_pct),
+        'PTAP': parsePTAValue(female.ptap),
+        'PTAP%': parsePTAValue(female.ptap_pct),
+        'PL': parsePTAValue(female.pl),
+        'DPR': parsePTAValue(female.dpr),
+        'LIV': parsePTAValue(female.liv),
+        'SCS': parsePTAValue(female.scs),
+        'MAST': parsePTAValue(female.mast),
+        'MET': parsePTAValue(female.met),
+        'RP': parsePTAValue(female.rp),
+        'DA': parsePTAValue(female.da),
+        'KET': parsePTAValue(female.ket),
+        'MF': parsePTAValue(female.mf),
+        'PTAT': parsePTAValue(female.ptat),
+        'UDC': parsePTAValue(female.udc),
+        'FLC': parsePTAValue(female.flc),
+        'SCE': parsePTAValue(female.sce),
+        'DCE': parsePTAValue(female.dce),
+        'SSB': parsePTAValue(female.ssb),
+        'DSB': parsePTAValue(female.dsb),
+        'H LIV': parsePTAValue(female.h_liv),
+        'CCR': parsePTAValue(female.ccr),
+        'HCR': parsePTAValue(female.hcr),
+        'FI': parsePTAValue(female.fi),
+        'GL': parsePTAValue(female.gl),
+        'EFC': parsePTAValue(female.efc),
+        'BWC': parsePTAValue(female.bwc),
+        'STA': parsePTAValue(female.sta),
+        'STR': parsePTAValue(female.str),
+        'DFM': parsePTAValue(female.dfm),
+        'RUA': parsePTAValue(female.rua),
+        'RLS': parsePTAValue(female.rls),
+        'RTP': parsePTAValue(female.rtp),
+        'FTL': parsePTAValue(female.ftl),
+        'RW': parsePTAValue(female.rw),
+        'RLR': parsePTAValue(female.rlr),
+        'FTA': parsePTAValue(female.fta),
+        'FLS': parsePTAValue(female.fls),
+        'FUA': parsePTAValue(female.fua),
+        'RUH': parsePTAValue(female.ruh),
+        'RUW': parsePTAValue(female.ruw),
+        'UCL': parsePTAValue(female.ucl),
+        'UDP': parsePTAValue(female.udp),
+        'FTP': parsePTAValue(female.ftp),
+        'RFI': parsePTAValue(female.rfi)
       }));
 
       setFemales(convertedFemales);
