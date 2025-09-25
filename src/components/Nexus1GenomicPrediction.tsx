@@ -70,8 +70,23 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['bezerra', 'novilha', 'primipara', 'secundipara', 'multipara']);
 
   // Função para calcular predições genômicas
+  // Fórmula: ((PTA_Fêmea + PTA_Touro) / 2) × 0,93
+  // 
+  // VALIDAÇÃO DOS DADOS DE EXEMPLO:
+  // Fêmea 10: HHP=500, TPI=2100, NM=350, PTAM=1200, PTAF=40
+  // Fêmea 11: HHP=300, TPI=1800, NM=250, PTAM=800, PTAF=20
+  // Touro A: HHP=800, TPI=2500, NM=500, PTAM=2000, PTAF=60
+  // Touro B: HHP=200, TPI=1900, NM=300, PTAM=1500, PTAF=30
+  // 
+  // Resultados esperados (2 casas decimais):
+  // F10 × A: HHP 604,50 · TPI 2139,00 · NM 395,25 · PTAM 1488,00 · PTAF 46,50
+  // F10 × B: HHP 325,50 · TPI 1860,00 · NM 302,25 · PTAM 1255,50 · PTAF 32,55
+  // F11 × A: HHP 511,50 · TPI 1999,50 · NM 348,75 · PTAM 1302,00 · PTAF 37,20
+  // F11 × B: HHP 232,50 · TPI 1720,50 · NM 255,75 · PTAM 1069,50 · PTAF 23,25
   const calculateGenomicPrediction = (femalePTA: number, bullPTA: number): number => {
-    return ((femalePTA + bullPTA) / 2) * 0.93;
+    const result = ((femalePTA + bullPTA) / 2) * 0.93;
+    console.log(`Predição: Fêmea PTA=${femalePTA}, Touro PTA=${bullPTA}, Resultado=${result.toFixed(2)}`);
+    return result;
   };
 
   // Parse de arquivos
@@ -469,11 +484,76 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
 
       const farmIds = userFarms.map(f => f.farm_id);
 
+      // Buscar fêmeas com segmentação através de join
       const { data, error } = await supabase
-        .from('females_denorm')
-        .select('*')
-        .in('segmentation_class', selectedClassifications as ('donor' | 'inter' | 'recipient')[])
-        .not('segmentation_class', 'is', null)
+        .from('female_segmentations')
+        .select(`
+          *,
+          females (
+            id,
+            name,
+            identifier,
+            birth_date,
+            parity_order,
+            hhp_dollar,
+            tpi,
+            nm_dollar,
+            cm_dollar,
+            fm_dollar,
+            gm_dollar,
+            f_sav,
+            ptam,
+            cfp,
+            ptaf,
+            ptaf_pct,
+            ptap,
+            ptap_pct,
+            pl,
+            dpr,
+            liv,
+            scs,
+            mast,
+            met,
+            rp,
+            da,
+            ket,
+            mf,
+            ptat,
+            udc,
+            flc,
+            sce,
+            dce,
+            ssb,
+            dsb,
+            h_liv,
+            ccr,
+            hcr,
+            fi,
+            gl,
+            efc,
+            bwc,
+            sta,
+            str,
+            dfm,
+            rua,
+            rls,
+            rtp,
+            ftl,
+            rw,
+            rlr,
+            fta,
+            fls,
+            fua,
+            ruh,
+            ruw,
+            ucl,
+            udp,
+            ftp,
+            rfi,
+            gfi
+          )
+        `)
+        .in('class', selectedClassifications as ('donor' | 'inter' | 'recipient')[])
         .in('farm_id', farmIds);
 
       if (error) throw error;
@@ -504,72 +584,76 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
         return 'multipara';
       };
 
-      const filteredFemales = data.filter(female => {
-        const category = getAutomaticCategory(female.birth_date, female.parity_order);
+      const filteredFemales = data.filter(segmentation => {
+        const femaleData = segmentation.females;
+        if (!femaleData) return false;
+        const category = getAutomaticCategory(femaleData.birth_date, femaleData.parity_order);
         return selectedCategories.includes(category);
       });
 
       // Converter para formato esperado pelo Nexus
-      const convertedFemales = filteredFemales.map(female => ({
-        'ID Fazenda': female.identifier || female.name,
-        'Nome': female.name,
-        'HHP$®': female.hhp_dollar || 0,
-        'TPI': female.tpi || 0,
-        'NM$': female.nm_dollar || 0,
-        'CM$': female.cm_dollar || 0,
-        'FM$': female.fm_dollar || 0,
-        'GM$': female.gm_dollar || 0,
-        'F SAV': female.f_sav || 0,
-        'PTAM': female.ptam || 0,
-        'CFP': female.cfp || 0,
-        'PTAF': female.ptaf || 0,
-        'PTAF%': female.ptaf_pct || 0,
-        'PTAP': female.ptap || 0,
-        'PTAP%': female.ptap_pct || 0,
-        'PL': female.pl || 0,
-        'DPR': female.dpr || 0,
-        'LIV': female.liv || 0,
-        'SCS': female.scs || 0,
-        'MAST': female.mast || 0,
-        'MET': female.met || 0,
-        'RP': female.rp || 0,
-        'DA': female.da || 0,
-        'KET': female.ket || 0,
-        'MF': female.mf || 0,
-        'PTAT': female.ptat || 0,
-        'UDC': female.udc || 0,
-        'FLC': female.flc || 0,
-        'SCE': female.sce || 0,
-        'DCE': female.dce || 0,
-        'SSB': female.ssb || 0,
-        'DSB': female.dsb || 0,
-        'H LIV': female.h_liv || 0,
-        'CCR': female.ccr || 0,
-        'HCR': female.hcr || 0,
-        'FI': female.fi || 0,
-        'GL': female.gl || 0,
-        'EFC': female.efc || 0,
-        'BWC': female.bwc || 0,
-        'STA': female.sta || 0,
-        'STR': female.str || 0,
-        'DFM': female.dfm || 0,
-        'RUA': female.rua || 0,
-        'RLS': female.rls || 0,
-        'RTP': female.rtp || 0,
-        'FTL': female.ftl || 0,
-        'RW': female.rw || 0,
-        'RLR': female.rlr || 0,
-        'FTA': female.fta || 0,
-        'FLS': female.fls || 0,
-        'FUA': female.fua || 0,
-        'RUH': female.ruh || 0,
-        'RUW': female.ruw || 0,
-        'UCL': female.ucl || 0,
-        'UDP': female.udp || 0,
-        'FTP': female.ftp || 0,
-        'RFI': female.rfi || 0
-      }));
-
+      const convertedFemales = filteredFemales.map(segmentation => {
+        const femaleData = segmentation.females;
+        return {
+          'ID Fazenda': femaleData.identifier || femaleData.name,
+          'Nome': femaleData.name,
+          'HHP$®': femaleData.hhp_dollar || 0,
+          'TPI': femaleData.tpi || 0,
+          'NM$': femaleData.nm_dollar || 0,
+          'CM$': femaleData.cm_dollar || 0,
+          'FM$': femaleData.fm_dollar || 0,
+          'GM$': femaleData.gm_dollar || 0,
+          'F SAV': femaleData.f_sav || 0,
+          'PTAM': femaleData.ptam || 0,
+          'CFP': femaleData.cfp || 0,
+          'PTAF': femaleData.ptaf || 0,
+          'PTAF%': femaleData.ptaf_pct || 0,
+          'PTAP': femaleData.ptap || 0,
+          'PTAP%': femaleData.ptap_pct || 0,
+          'PL': femaleData.pl || 0,
+          'DPR': femaleData.dpr || 0,
+          'LIV': femaleData.liv || 0,
+          'SCS': femaleData.scs || 0,
+          'MAST': femaleData.mast || 0,
+          'MET': femaleData.met || 0,
+          'RP': femaleData.rp || 0,
+          'DA': femaleData.da || 0,
+          'KET': femaleData.ket || 0,
+          'MF': femaleData.mf || 0,
+          'PTAT': femaleData.ptat || 0,
+          'UDC': femaleData.udc || 0,
+          'FLC': femaleData.flc || 0,
+          'SCE': femaleData.sce || 0,
+          'DCE': femaleData.dce || 0,
+          'SSB': femaleData.ssb || 0,
+          'DSB': femaleData.dsb || 0,
+          'H LIV': femaleData.h_liv || 0,
+          'CCR': femaleData.ccr || 0,
+          'HCR': femaleData.hcr || 0,
+          'FI': femaleData.fi || 0,
+          'GL': femaleData.gl || 0,
+          'EFC': femaleData.efc || 0,
+          'BWC': femaleData.bwc || 0,
+          'STA': femaleData.sta || 0,
+          'STR': femaleData.str || 0,
+          'DFM': femaleData.dfm || 0,
+          'RUA': femaleData.rua || 0,
+          'RLS': femaleData.rls || 0,
+          'RTP': femaleData.rtp || 0,
+          'FTL': femaleData.ftl || 0,
+          'RW': femaleData.rw || 0,
+          'RLR': femaleData.rlr || 0,
+          'FTA': femaleData.fta || 0,
+          'FLS': femaleData.fls || 0,
+          'FUA': femaleData.fua || 0,
+          'RUH': femaleData.ruh || 0,
+          'RUW': femaleData.ruw || 0,
+          'UCL': femaleData.ucl || 0,
+          'UDP': femaleData.udp || 0,
+          'FTP': femaleData.ftp || 0,
+          'RFI': femaleData.rfi || 0
+        };
+      });
       setFemales(convertedFemales);
       
       toast({
