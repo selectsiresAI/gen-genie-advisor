@@ -586,13 +586,39 @@ function Select({ value, onChange, options }: { value: any; onChange: (v: any) =
   );
 }
 
-function Button({ onClick, children, variant = "primary" as const }: { onClick?: () => void; children: React.ReactNode; variant?: "primary" | "ghost" }) {
+function Button({
+  onClick,
+  children,
+  variant = "primary" as const,
+  ariaLabel
+}: {
+  onClick?: () => void;
+  children: React.ReactNode;
+  variant?: "primary" | "ghost";
+  ariaLabel?: string;
+}) {
   const styles =
     variant === "primary"
       ? { background: COLORS.red, color: "#fff", border: "none" }
       : { background: "transparent", color: COLORS.black, border: `1px solid ${COLORS.gray}` };
   return (
-    <button onClick={onClick} style={{ padding: "10px 14px", borderRadius: 10, fontWeight: 700, cursor: "pointer", ...styles }}>
+    <button
+      onClick={onClick}
+      aria-label={ariaLabel}
+      style={{
+        padding: "8px 12px",
+        minHeight: 36,
+        borderRadius: 8,
+        fontWeight: 700,
+        fontSize: 14,
+        lineHeight: "20px",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        cursor: "pointer",
+        ...styles
+      }}
+    >
       {children}
     </button>
   );
@@ -816,10 +842,20 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
 
           {/* Parâmetros reprodutivos */}
           <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: 8,
+                marginBottom: 8
+              }}
+            >
               <h3 style={{ fontWeight: 700 }}>Parâmetros Reprodutivos por Categoria</h3>
               <Button
                 variant="primary"
+                ariaLabel="Incluir dados de referência"
                 onClick={() => {
                   setSt(s => ({
                     ...s,
@@ -847,7 +883,7 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
                   }));
                 }}
               >
-                📋 Dados de Referência
+                📋 Incluir dados de referência
               </Button>
             </div>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
