@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,11 +6,23 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Users, Search, Plus, Upload, Download, Filter, TrendingUp, Beaker } from "lucide-react";
+import { ArrowLeft, Users, Search, Plus, Upload, Download, TrendingUp, Trash2, Loader2 } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import FemaleUploadModal from './FemaleUploadModal';
 import { useHerdStore } from '@/hooks/useHerdStore';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { t } from '@/lib/i18n';
 
 interface Farm {
   farm_id: string;
@@ -107,8 +119,12 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
   const [selectedYear, setSelectedYear] = useState<string>('');
   const [selectedFemales, setSelectedFemales] = useState<string[]>([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   const { setSelectedHerdId, setDashboardCounts } = useHerdStore();
+  const tableRegionRef = useRef<HTMLDivElement | null>(null);
+  const selectAllCheckboxRef = useRef<HTMLInputElement | null>(null);
 
   const getAutomaticCategory = (birthDate?: string, parityOrder?: number) => {
     if (!birthDate) return 'Indefinida';
@@ -197,13 +213,11 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
     }
   }, [categoryCounts, farm.farm_id, setSelectedHerdId, setDashboardCounts]);
 
-  useEffect(() => {
-    loadFemales();
-  }, [farm.farm_id]);
-
-  const loadFemales = async () => {
+  const loadFemales = useCallback(async (showSpinner = true) => {
     try {
-      setLoading(true);
+      if (showSpinner) {
+        setLoading(true);
+      }
       // Load all females by using a high limit to override any default limits
       const { data, error } = await supabase
         .rpc('get_females_denorm', { target_farm_id: farm.farm_id })
@@ -220,9 +234,19 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      if (showSpinner) {
+        setLoading(false);
+      }
     }
-  };
+  }, [farm.farm_id, toast]);
+
+  useEffect(() => {
+    loadFemales();
+  }, [loadFemales]);
+
+  useEffect(() => {
+    setSelectedFemales(prev => prev.filter(id => females.some(female => female.id === id)));
+  }, [females]);
 
   // Get available birth years for filter
   const availableYears = useMemo(() => {
@@ -235,15 +259,36 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
     return Array.from(years).sort((a, b) => b.localeCompare(a));
   }, [females]);
 
-  const filteredFemales = females.filter(female => {
-    const matchesSearch = female.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (female.identifier && female.identifier.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesYear = !selectedYear || selectedYear === "all-years" || (female.birth_date && 
-      new Date(female.birth_date).getFullYear().toString() === selectedYear);
-    
-    return matchesSearch && matchesYear;
-  });
+  const filteredFemales = useMemo(() => {
+    return females.filter(female => {
+      const matchesSearch = female.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (female.identifier && female.identifier.toLowerCase().includes(searchTerm.toLowerCase()));
+
+      const matchesYear = !selectedYear || selectedYear === "all-years" || (female.birth_date &&
+        new Date(female.birth_date).getFullYear().toString() === selectedYear);
+
+      return matchesSearch && matchesYear;
+    });
+  }, [females, searchTerm, selectedYear]);
+
+  const visibleFemaleIds = useMemo(
+    () => filteredFemales.map(female => female.id),
+    [filteredFemales]
+  );
+
+  const selectedVisibleCount = useMemo(
+    () => visibleFemaleIds.filter(id => selectedFemales.includes(id)).length,
+    [visibleFemaleIds, selectedFemales]
+  );
+
+  const allVisibleSelected = visibleFemaleIds.length > 0 && selectedVisibleCount === visibleFemaleIds.length;
+  const partiallyVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
+
+  useEffect(() => {
+    if (selectAllCheckboxRef.current) {
+      selectAllCheckboxRef.current.indeterminate = partiallyVisibleSelected;
+    }
+  }, [partiallyVisibleSelected, allVisibleSelected]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR');
@@ -271,10 +316,65 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
   };
 
   const handleSelectAll = () => {
-    if (selectedFemales.length === filteredFemales.length) {
-      setSelectedFemales([]);
+    if (allVisibleSelected) {
+      setSelectedFemales(prev => prev.filter(id => !visibleFemaleIds.includes(id)));
     } else {
-      setSelectedFemales(filteredFemales.map(f => f.id));
+      setSelectedFemales(prev => Array.from(new Set([...prev, ...visibleFemaleIds])));
+    }
+  };
+
+  const handleConfirmDelete = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+
+    if (isDeleting || selectedFemales.length === 0) {
+      return;
+    }
+
+    const idsToDelete = [...selectedFemales];
+
+    try {
+      setIsDeleting(true);
+
+      const chunkSize = 50;
+      for (let i = 0; i < idsToDelete.length; i += chunkSize) {
+        const chunk = idsToDelete.slice(i, i + chunkSize);
+        const { error } = await supabase
+          .from('females')
+          .delete()
+          .in('id', chunk)
+          .eq('farm_id', farm.farm_id);
+
+        if (error) {
+          throw error;
+        }
+      }
+
+      setFemales(prev => prev.filter(female => !idsToDelete.includes(female.id)));
+      setSelectedFemales([]);
+      setIsDeleteDialogOpen(false);
+
+      toast({
+        title: idsToDelete.length === 1 ? 'Animal excluído' : 'Animais excluídos',
+        description: idsToDelete.length === 1
+          ? 'O animal selecionado foi removido do rebanho.'
+          : `${idsToDelete.length} animais foram removidos do rebanho.`,
+      });
+
+      await loadFemales(false);
+
+      setTimeout(() => {
+        tableRegionRef.current?.focus();
+      }, 0);
+    } catch (error) {
+      console.error('Erro ao excluir animais do rebanho:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Não foi possível excluir as fêmeas selecionadas.';
+      toast({
+        title: 'Erro ao excluir',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -631,20 +731,81 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
                   )}
                 </div>
               ) : (
-                <ScrollArea className="h-[500px] w-full">
-                  <div className="min-w-[2000px]">
-                    <table className="w-full border-collapse">
-                      <thead className="sticky top-0 z-10">
-                        <tr className="bg-muted">
-                          <th className="border px-2 py-1 text-left text-xs bg-muted">
-                            <input
-                              type="checkbox"
-                              checked={selectedFemales.length === filteredFemales.length && filteredFemales.length > 0}
-                              onChange={handleSelectAll}
-                              className="mr-1"
-                            />
-                            Selecionar
-                          </th>
+                <div
+                  ref={tableRegionRef}
+                  tabIndex={-1}
+                  role="region"
+                  aria-label="Tabela do rebanho"
+                  className="focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary rounded-md"
+                >
+                  {selectedFemales.length > 0 && (
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-muted/70 px-4 py-3">
+                      <span className="text-sm font-medium">
+                        {t('herd.selected.count', { count: selectedFemales.length })}
+                      </span>
+                      <AlertDialog
+                        open={isDeleteDialogOpen}
+                        onOpenChange={(open) => {
+                          if (!isDeleting) {
+                            setIsDeleteDialogOpen(open);
+                          }
+                        }}
+                      >
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setIsDeleteDialogOpen(true)}
+                            disabled={isDeleting}
+                            aria-label={t('actions.delete')}
+                          >
+                            {isDeleting ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="mr-2 h-4 w-4" />
+                            )}
+                            {t('actions.delete')}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>{t('herd.delete.confirm.title')}</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {t('herd.delete.confirm.message')}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel disabled={isDeleting}>
+                              {t('actions.cancel')}
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={handleConfirmDelete}
+                              disabled={isDeleting}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                              {t('actions.delete')}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  )}
+                  <ScrollArea className="h-[500px] w-full">
+                    <div className="min-w-[2000px]">
+                      <table className="w-full border-collapse">
+                        <thead className="sticky top-0 z-10">
+                          <tr className="bg-muted">
+                            <th className="border px-2 py-1 text-left text-xs bg-muted">
+                              <input
+                                type="checkbox"
+                                ref={selectAllCheckboxRef}
+                                checked={allVisibleSelected}
+                                onChange={handleSelectAll}
+                                className="mr-1"
+                              />
+                              Selecionar
+                            </th>
                           <th className="border px-2 py-1 text-left text-xs bg-muted">ID Fazenda</th>
                           <th className="border px-2 py-1 text-left text-xs bg-muted">Nome</th>
                           <th className="border px-2 py-1 text-left text-xs bg-muted">ID CDCB</th>
@@ -809,9 +970,10 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
                           </tr>
                         ))}
                       </tbody>
-                    </table>
-                  </div>
-                </ScrollArea>
+                      </table>
+                    </div>
+                  </ScrollArea>
+                </div>
               )}
             </CardContent>
           </Card>
