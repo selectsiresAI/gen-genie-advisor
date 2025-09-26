@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, Suspense, lazy } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, AreaChart, Area, BarChart, Bar, ReferenceLine, ScatterChart, Scatter, PieChart, Pie, Cell, Tooltip, ComposedChart } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,12 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Settings, Download, RefreshCw, Users, TrendingUp, BarChart3, PieChart as PieChartIcon, Activity, LineChart as LineChartIcon, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Settings, Download, RefreshCw, Users, TrendingUp, BarChart3, PieChart as PieChartIcon, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { TrendsErrorBoundary } from "./charts/trends/TrendsErrorBoundary";
-
-const TrendsTab = lazy(() => import("./charts/trends/TrendsTab"));
 
 // Constants
 const YEARS_FIXED = [2021, 2022, 2023, 2024, 2025];
@@ -74,19 +71,13 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
   const [selectedPTAs, setSelectedPTAs] = useState<string[]>(['tpi', 'hhp_dollar', 'nm_dollar']);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [chartType, setChartType] = useState<'line' | 'bar' | 'area'>('line');
-  const [showTrend, setShowTrend] = useState(true);
-  const [activeView, setActiveView] = useState<'trends' | 'comparison' | 'distribution' | 'panorama'>('trends');
+  const [activeView, setActiveView] = useState<'comparison' | 'distribution' | 'panorama'>('comparison');
   const [groupBy, setGroupBy] = useState<'year' | 'category' | 'parity'>('year');
   const [showFarmAverage, setShowFarmAverage] = useState(true);
   const [showTrendLine, setShowTrendLine] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isClient, setIsClient] = useState(false);
 
   const { toast } = useToast();
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   // Lista completa de PTAs disponíveis
   const availablePTAs = [
@@ -478,31 +469,13 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
                   </Select>
                 </div>
 
-                {/* Opções */}
-                <div className="space-y-3">
-                  <Label>Opções</Label>
-                  <div className="flex items-center space-x-2">
-                    <input 
-                      type="checkbox" 
-                      id="trend-line" 
-                      checked={showTrend} 
-                      onChange={(e) => setShowTrend(e.target.checked)}
-                      className="rounded"
-                    />
-                    <Label htmlFor="trend-line" className="text-sm">Linha de tendência</Label>
-                  </div>
-                </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Main Charts */}
           <Tabs value={activeView} onValueChange={(value: any) => setActiveView(value)}>
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="trends" className="flex items-center gap-2">
-                <LineChartIcon className="w-4 h-4" />
-                Tendências
-              </TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="comparison" className="flex items-center gap-2">
                 <BarChart3 className="w-4 h-4" />
                 Comparação
@@ -516,33 +489,6 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
                 Panorama do Rebanho
               </TabsTrigger>
             </TabsList>
-
-            {/* Gráficos de Tendência */}
-            <TabsContent value="trends" className="space-y-6">
-              <TrendsErrorBoundary>
-                <Suspense
-                  fallback={
-                    <div className="flex h-[320px] items-center justify-center text-sm text-muted-foreground">
-                      Carregando tendências…
-                    </div>
-                  }
-                >
-                  {isClient ? (
-                    <TrendsTab
-                      farmId={farm?.farm_id}
-                      selectedTraits={selectedPTAs}
-                      availableTraits={availablePTAs}
-                      showTrendLine={showTrend}
-                      colors={CHART_COLORS}
-                    />
-                  ) : (
-                    <div className="flex h-[320px] items-center justify-center text-sm text-muted-foreground">
-                      Preparando gráfico…
-                    </div>
-                  )}
-                </Suspense>
-              </TrendsErrorBoundary>
-            </TabsContent>
 
             {/* Gráfico de Comparação */}
             <TabsContent value="comparison" className="space-y-6">
