@@ -7,10 +7,73 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableHeader, TableRow, TableCell, TableBody, TableHead } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { usePedigreeStore, PTA_MAPPING, PTA_LABELS, formatPTAValue, predictFromPedigree, validateNaabs, getBullFromCache, Bull, BatchInput, BatchResult } from '@/hooks/usePedigreeStore';
-import { Calculator, Upload, Download, Search } from 'lucide-react';
+import {
+  usePedigreeStore,
+  PTA_DEFINITIONS,
+  formatPTAValue,
+  predictFromPedigree,
+  validateNaabs,
+  getBullFromCache,
+  Bull,
+  BatchInput,
+  BatchResult
+} from '@/hooks/usePedigreeStore';
+import { Calculator, Upload, Download } from 'lucide-react';
 import { read, utils, writeFileXLSX } from 'xlsx';
 import { supabase } from '@/integrations/supabase/client';
+
+type BatchResultColumn = {
+  header: string;
+  render: (result: BatchResult) => React.ReactNode;
+  exportValue: (result: BatchResult) => string;
+};
+
+const BATCH_RESULT_BASE_COLUMNS: BatchResultColumn[] = [
+  {
+    header: 'ID_Fazenda',
+    render: (result) => result.idFazenda || '—',
+    exportValue: (result) => result.idFazenda || '—'
+  },
+  {
+    header: 'Nome',
+    render: (result) => result.nome || '—',
+    exportValue: (result) => result.nome || '—'
+  },
+  {
+    header: 'Data_de_Nascimento',
+    render: (result) => result.dataNascimento || '—',
+    exportValue: (result) => result.dataNascimento || '—'
+  },
+  {
+    header: 'naab_pai',
+    render: (result) => result.naabPai || '—',
+    exportValue: (result) => result.naabPai || '—'
+  },
+  {
+    header: 'naab_avo_materno',
+    render: (result) => result.naabAvoMaterno || '—',
+    exportValue: (result) => result.naabAvoMaterno || '—'
+  },
+  {
+    header: 'naab_bisavo_materno',
+    render: (result) => result.naabBisavoMaterno || '—',
+    exportValue: (result) => result.naabBisavoMaterno || '—'
+  },
+  {
+    header: 'Status',
+    render: (result) => (
+      <Badge variant={result.status === 'success' ? 'default' : 'destructive'}>
+        {result.status === 'success' ? 'Válido' : 'Erro'}
+      </Badge>
+    ),
+    exportValue: (result) => (result.status === 'success' ? 'Válido' : 'Erro')
+  },
+  {
+    header: 'Erros',
+    render: (result) => (result.errors?.length ? result.errors.join('; ') : '—'),
+    exportValue: (result) => (result.errors?.length ? result.errors.join('; ') : '—')
+  }
+];
 
 // Estado para armazenar dados do ToolSSApp - idêntico ao ProjecaoGenetica
 interface ToolSSBull {
@@ -83,79 +146,79 @@ const fetchBullFromDatabase = async (naab: string): Promise<Bull | null> => {
         company: data.company || 'Empresa não informada',
         ptas: {
           // Índices Econômicos
-          hhp_dollar: data.hhp_dollar || 0,
-          tpi: data.tpi || 0,
-          nm_dollar: data.nm_dollar || 0,
-          cm_dollar: data.cm_dollar || 0,
-          fm_dollar: data.fm_dollar || 0,
-          gm_dollar: data.gm_dollar || 0,
-          f_sav: data.f_sav || 0,
+          hhp_dollar: data.hhp_dollar ?? null,
+          tpi: data.tpi ?? null,
+          nm_dollar: data.nm_dollar ?? null,
+          cm_dollar: data.cm_dollar ?? null,
+          fm_dollar: data.fm_dollar ?? null,
+          gm_dollar: data.gm_dollar ?? null,
+          f_sav: data.f_sav ?? null,
           
           // Produção de Leite
-          milk: data.ptam || 0, // PTAM = Milk in Supabase
-          fat: data.ptaf || 0,
-          protein: data.ptap || 0,
-          ptam: data.ptam || 0,
-          cfp: data.cfp || 0,
-          ptaf: data.ptaf || 0,
-          ptaf_pct: data.ptaf_pct || 0,
-          ptap: data.ptap || 0,
-          ptap_pct: data.ptap_pct || 0,
-          pl: data.pl || 0,
+          milk: data.ptam ?? null, // PTAM = Milk in Supabase
+          fat: data.ptaf ?? null,
+          protein: data.ptap ?? null,
+          ptam: data.ptam ?? null,
+          cfp: data.cfp ?? null,
+          ptaf: data.ptaf ?? null,
+          ptaf_pct: data.ptaf_pct ?? null,
+          ptap: data.ptap ?? null,
+          ptap_pct: data.ptap_pct ?? null,
+          pl: data.pl ?? null,
           
           // Fertilidade
-          dpr: data.dpr || 0,
+          dpr: data.dpr ?? null,
           
           // Saúde e Longevidade
-          liv: data.liv || 0,
-          scs: data.scs || 0,
-          mast: data.mast || 0,
-          met: data.met || 0,
-          rp: data.rp || 0,
-          da: data.da || 0,
-          ket: data.ket || 0,
-          mf: data.mf || 0,
+          liv: data.liv ?? null,
+          scs: data.scs ?? null,
+          mast: data.mast ?? null,
+          met: data.met ?? null,
+          rp: data.rp ?? null,
+          da: data.da ?? null,
+          ket: data.ket ?? null,
+          mf: data.mf ?? null,
           
           // Conformação
-          ptat: data.ptat || 0,
-          udc: data.udc || 0,
-          flc: data.flc || 0,
-          sce: data.sce || 0,
-          dce: data.dce || 0,
-          ssb: data.ssb || 0,
-          dsb: data.dsb || 0,
-          h_liv: data.h_liv || 0,
+          ptat: data.ptat ?? null,
+          udc: data.udc ?? null,
+          flc: data.flc ?? null,
+          sce: data.sce ?? null,
+          dce: data.dce ?? null,
+          ssb: data.ssb ?? null,
+          dsb: data.dsb ?? null,
+          h_liv: data.h_liv ?? null,
           
           // Reprodução
-          ccr: data.ccr || 0,
-          hcr: data.hcr || 0,
+          ccr: data.ccr ?? null,
+          hcr: data.hcr ?? null,
           
           // Outras características
-          fi: data.fi || 0,
-          bwc: data.bwc || 0,
+          fi: data.fi ?? null,
+          bwc: data.bwc ?? null,
           
           // Conformação Detalhada
-          sta: data.sta || 0,
-          str: data.str || 0,
-          dfm: data.dfm || 0,
-          rua: data.rua || 0,
-          rls: data.rls || 0,
-          rtp: data.rtp || 0,
-          ftl: data.ftl || 0,
-          rw: data.rw || 0,
-          rlr: data.rlr || 0,
-          fta: data.fta || 0,
-          fls: data.fls || 0,
-          fua: data.fua || 0,
-          ruh: data.ruh || 0,
-          ruw: data.ruw || 0,
-          ucl: data.ucl || 0,
-          udp: data.udp || 0,
-          ftp: data.ftp || 0,
+          sta: data.sta ?? null,
+          str: data.str ?? null,
+          dfm: data.dfm ?? null,
+          rua: data.rua ?? null,
+          rls: data.rls ?? null,
+          rtp: data.rtp ?? null,
+          ftl: data.ftl ?? null,
+          rw: data.rw ?? null,
+          rlr: data.rlr ?? null,
+          fta: data.fta ?? null,
+          fls: data.fls ?? null,
+          fua: data.fua ?? null,
+          ruh: data.ruh ?? null,
+          ruw: data.ruw ?? null,
+          ucl: data.ucl ?? null,
+          udp: data.udp ?? null,
+          ftp: data.ftp ?? null,
           
           // Eficiência Alimentar
-          rfi: data.rfi || 0,
-          gfi: data.gfi || 0
+          rfi: data.rfi ?? null,
+          gfi: data.gfi ?? null
         }
       };
       
@@ -416,33 +479,23 @@ const PedigreePredictor: React.FC = () => {
   const exportBatchResults = () => {
     if (batchResults.length === 0) return;
 
-    const exportData = batchResults.map(result => ({
-      // Input data
-      IdFazenda: result.idFazenda,
-      Nome: result.nome,
-      DataNascimento: result.dataNascimento,
-      NaabPai: result.naabPai,
-      NaabAvoMaterno: result.naabAvoMaterno,
-      NaabBisavoMaterno: result.naabBisavoMaterno,
-      
-      // Validation
-      Status: result.status === 'success' ? 'Sucesso' : 'Erro',
-      Errors: result.errors?.join('; ') || '',
-      
-      // Predictions (top PTAs)
-      ...Object.entries(result.predictedPTAs || {}).reduce((acc, [key, value]) => {
-        const ptaLabel = Object.keys(PTA_MAPPING).find(k => PTA_MAPPING[k] === key);
-        if (ptaLabel && value !== null) {
-          acc[ptaLabel] = typeof value === 'number' ? parseFloat(value.toFixed(2)) : value;
-        }
-        return acc;
-      }, {} as Record<string, any>)
-    }));
+    const headers = [
+      ...BATCH_RESULT_BASE_COLUMNS.map((column) => column.header),
+      ...PTA_DEFINITIONS.map(({ label }) => label)
+    ];
 
-    const worksheet = utils.json_to_sheet(exportData);
+    const rows = batchResults.map((result) => ([
+      ...BATCH_RESULT_BASE_COLUMNS.map((column) => column.exportValue(result)),
+      ...PTA_DEFINITIONS.map(({ key }) => formatPTAValue(key, result.predictedPTAs?.[key] ?? null))
+    ]));
+
+    const worksheet = utils.aoa_to_sheet([
+      headers,
+      ...rows
+    ]);
     const workbook = utils.book_new();
     utils.book_append_sheet(workbook, worksheet, 'Predições');
-    
+
     writeFileXLSX(workbook, `predicoes_pedigree_${new Date().toISOString().split('T')[0]}.xlsx`);
     
     toast({
@@ -454,29 +507,15 @@ const PedigreePredictor: React.FC = () => {
   // Calculate the displayed PTAs based on current prediction result
   const displayedPTAs = useMemo(() => {
     if (!predictionResult) return [];
-    
-    const result: Array<{ 
-      label: string; 
-      key: string;
-      sire: number | null; 
-      mgs: number | null; 
-      mmgs: number | null; 
-      daughter: number | null 
-    }> = [];
-    
-    // Create rows for each PTA
-    Object.entries(PTA_MAPPING).forEach(([label, key]) => {
-      result.push({
-        label,
-        key,
-        sire: predictionResult.sire?.ptas?.[key] ?? null,
-        mgs: predictionResult.mgs?.ptas?.[key] ?? null,
-        mmgs: predictionResult.mmgs?.ptas?.[key] ?? null,
-        daughter: predictionResult.predictedPTAs?.[key] ?? null
-      });
-    });
-    
-    return result.slice(0, 20); // Show first 20 PTAs
+
+    return PTA_DEFINITIONS.map(({ label, key }) => ({
+      label,
+      key,
+      sire: predictionResult.sire?.ptas?.[key] ?? null,
+      mgs: predictionResult.mgs?.ptas?.[key] ?? null,
+      mmgs: predictionResult.mmgs?.ptas?.[key] ?? null,
+      daughter: predictionResult.predictedPTAs?.[key] ?? null
+    }));
   }, [predictionResult]);
 
   return (
@@ -647,141 +686,27 @@ const PedigreePredictor: React.FC = () => {
                   <h3 className="font-semibold mb-2">Resultados ({batchResults.length} animais)</h3>
                   <div className="max-h-96 overflow-auto border rounded-lg">
                     <Table>
-                       <TableHeader>
-                         <TableRow>
-                           <TableHead>Nome</TableHead>
-                           <TableHead>Status</TableHead>
-                           <TableHead>HHP$®</TableHead>
-                           <TableHead>TPI</TableHead>
-                           <TableHead>NM$</TableHead>
-                           <TableHead>CM$</TableHead>
-                           <TableHead>FM$</TableHead>
-                           <TableHead>GM$</TableHead>
-                           <TableHead>F SAV</TableHead>
-                           <TableHead>PTAM</TableHead>
-                           <TableHead>CFP</TableHead>
-                           <TableHead>PTAF</TableHead>
-                           <TableHead>PTAF%</TableHead>
-                           <TableHead>PTAP</TableHead>
-                           <TableHead>PTAP%</TableHead>
-                           <TableHead>PL</TableHead>
-                           <TableHead>DPR</TableHead>
-                           <TableHead>LIV</TableHead>
-                           <TableHead>SCS</TableHead>
-                           <TableHead>MAST</TableHead>
-                           <TableHead>MET</TableHead>
-                           <TableHead>RP</TableHead>
-                           <TableHead>DA</TableHead>
-                           <TableHead>KET</TableHead>
-                           <TableHead>MF</TableHead>
-                           <TableHead>PTAT</TableHead>
-                           <TableHead>UDC</TableHead>
-                           <TableHead>FLC</TableHead>
-                           <TableHead>SCE</TableHead>
-                           <TableHead>DCE</TableHead>
-                           <TableHead>SSB</TableHead>
-                           <TableHead>DSB</TableHead>
-                           <TableHead>H LIV</TableHead>
-                           <TableHead>CCR</TableHead>
-                           <TableHead>HCR</TableHead>
-                           <TableHead>FI</TableHead>
-                           <TableHead>GL</TableHead>
-                           <TableHead>EFC</TableHead>
-                           <TableHead>BWC</TableHead>
-                           <TableHead>STA</TableHead>
-                           <TableHead>STR</TableHead>
-                           <TableHead>DFM</TableHead>
-                           <TableHead>RUA</TableHead>
-                           <TableHead>RLS</TableHead>
-                           <TableHead>RTP</TableHead>
-                           <TableHead>FTL</TableHead>
-                           <TableHead>RW</TableHead>
-                           <TableHead>RLR</TableHead>
-                           <TableHead>FTA</TableHead>
-                           <TableHead>FLS</TableHead>
-                           <TableHead>FUA</TableHead>
-                           <TableHead>RUH</TableHead>
-                           <TableHead>RUW</TableHead>
-                           <TableHead>UCL</TableHead>
-                           <TableHead>UDP</TableHead>
-                           <TableHead>FTP</TableHead>
-                           <TableHead>RFI</TableHead>
-                           <TableHead>Beta-Casein</TableHead>
-                           <TableHead>Kappa-Casein</TableHead>
-                           <TableHead>GFI</TableHead>
-                         </TableRow>
-                       </TableHeader>
+                      <TableHeader>
+                        <TableRow>
+                          {BATCH_RESULT_BASE_COLUMNS.map((column) => (
+                            <TableHead key={column.header}>{column.header}</TableHead>
+                          ))}
+                          {PTA_DEFINITIONS.map(({ label }) => (
+                            <TableHead key={label}>{label}</TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
                       <TableBody>
-                         {batchResults.slice(0, 10).map((result, index) => (
-                           <TableRow key={index}>
-                             <TableCell>{result.nome}</TableCell>
-                             <TableCell>
-                               {result.status === 'success' ? (
-                                 <Badge variant="default">Válido</Badge>
-                               ) : (
-                                 <Badge variant="destructive">Erro</Badge>
-                               )}
-                             </TableCell>
-                             <TableCell>{formatPTAValue('hhp_dollar', result.predictedPTAs?.hhp_dollar || null)}</TableCell>
-                             <TableCell>{formatPTAValue('tpi', result.predictedPTAs?.tpi || null)}</TableCell>
-                             <TableCell>{formatPTAValue('nm_dollar', result.predictedPTAs?.nm_dollar || null)}</TableCell>
-                             <TableCell>{formatPTAValue('cm_dollar', result.predictedPTAs?.cm_dollar || null)}</TableCell>
-                             <TableCell>{formatPTAValue('fm_dollar', result.predictedPTAs?.fm_dollar || null)}</TableCell>
-                             <TableCell>{formatPTAValue('gm_dollar', result.predictedPTAs?.gm_dollar || null)}</TableCell>
-                             <TableCell>{formatPTAValue('f_sav', result.predictedPTAs?.f_sav || null)}</TableCell>
-                             <TableCell>{formatPTAValue('ptam', result.predictedPTAs?.ptam || null)}</TableCell>
-                             <TableCell>{formatPTAValue('cfp', result.predictedPTAs?.cfp || null)}</TableCell>
-                             <TableCell>{formatPTAValue('ptaf', result.predictedPTAs?.ptaf || null)}</TableCell>
-                             <TableCell>{formatPTAValue('ptaf_pct', result.predictedPTAs?.ptaf_pct || null)}</TableCell>
-                             <TableCell>{formatPTAValue('ptap', result.predictedPTAs?.ptap || null)}</TableCell>
-                             <TableCell>{formatPTAValue('ptap_pct', result.predictedPTAs?.ptap_pct || null)}</TableCell>
-                             <TableCell>{formatPTAValue('pl', result.predictedPTAs?.pl || null)}</TableCell>
-                             <TableCell>{formatPTAValue('dpr', result.predictedPTAs?.dpr || null)}</TableCell>
-                             <TableCell>{formatPTAValue('liv', result.predictedPTAs?.liv || null)}</TableCell>
-                             <TableCell>{formatPTAValue('scs', result.predictedPTAs?.scs || null)}</TableCell>
-                             <TableCell>{formatPTAValue('mast', result.predictedPTAs?.mast || null)}</TableCell>
-                             <TableCell>{formatPTAValue('met', result.predictedPTAs?.met || null)}</TableCell>
-                             <TableCell>{formatPTAValue('rp', result.predictedPTAs?.rp || null)}</TableCell>
-                             <TableCell>{formatPTAValue('da', result.predictedPTAs?.da || null)}</TableCell>
-                             <TableCell>{formatPTAValue('ket', result.predictedPTAs?.ket || null)}</TableCell>
-                             <TableCell>{formatPTAValue('mf', result.predictedPTAs?.mf || null)}</TableCell>
-                             <TableCell>{formatPTAValue('ptat', result.predictedPTAs?.ptat || null)}</TableCell>
-                             <TableCell>{formatPTAValue('udc', result.predictedPTAs?.udc || null)}</TableCell>
-                             <TableCell>{formatPTAValue('flc', result.predictedPTAs?.flc || null)}</TableCell>
-                             <TableCell>{formatPTAValue('sce', result.predictedPTAs?.sce || null)}</TableCell>
-                             <TableCell>{formatPTAValue('dce', result.predictedPTAs?.dce || null)}</TableCell>
-                             <TableCell>{formatPTAValue('ssb', result.predictedPTAs?.ssb || null)}</TableCell>
-                             <TableCell>{formatPTAValue('dsb', result.predictedPTAs?.dsb || null)}</TableCell>
-                             <TableCell>{formatPTAValue('h_liv', result.predictedPTAs?.h_liv || null)}</TableCell>
-                             <TableCell>{formatPTAValue('ccr', result.predictedPTAs?.ccr || null)}</TableCell>
-                             <TableCell>{formatPTAValue('hcr', result.predictedPTAs?.hcr || null)}</TableCell>
-                             <TableCell>{formatPTAValue('fi', result.predictedPTAs?.fi || null)}</TableCell>
-                             <TableCell>{formatPTAValue('gl', result.predictedPTAs?.gl || null)}</TableCell>
-                             <TableCell>{formatPTAValue('efc', result.predictedPTAs?.efc || null)}</TableCell>
-                             <TableCell>{formatPTAValue('bwc', result.predictedPTAs?.bwc || null)}</TableCell>
-                             <TableCell>{formatPTAValue('sta', result.predictedPTAs?.sta || null)}</TableCell>
-                             <TableCell>{formatPTAValue('str', result.predictedPTAs?.str || null)}</TableCell>
-                             <TableCell>{formatPTAValue('dfm', result.predictedPTAs?.dfm || null)}</TableCell>
-                             <TableCell>{formatPTAValue('rua', result.predictedPTAs?.rua || null)}</TableCell>
-                             <TableCell>{formatPTAValue('rls', result.predictedPTAs?.rls || null)}</TableCell>
-                             <TableCell>{formatPTAValue('rtp', result.predictedPTAs?.rtp || null)}</TableCell>
-                             <TableCell>{formatPTAValue('ftl', result.predictedPTAs?.ftl || null)}</TableCell>
-                             <TableCell>{formatPTAValue('rw', result.predictedPTAs?.rw || null)}</TableCell>
-                             <TableCell>{formatPTAValue('rlr', result.predictedPTAs?.rlr || null)}</TableCell>
-                             <TableCell>{formatPTAValue('fta', result.predictedPTAs?.fta || null)}</TableCell>
-                             <TableCell>{formatPTAValue('fls', result.predictedPTAs?.fls || null)}</TableCell>
-                             <TableCell>{formatPTAValue('fua', result.predictedPTAs?.fua || null)}</TableCell>
-                             <TableCell>{formatPTAValue('ruh', result.predictedPTAs?.ruh || null)}</TableCell>
-                             <TableCell>{formatPTAValue('ruw', result.predictedPTAs?.ruw || null)}</TableCell>
-                             <TableCell>{formatPTAValue('ucl', result.predictedPTAs?.ucl || null)}</TableCell>
-                             <TableCell>{formatPTAValue('udp', result.predictedPTAs?.udp || null)}</TableCell>
-                             <TableCell>{formatPTAValue('ftp', result.predictedPTAs?.ftp || null)}</TableCell>
-                             <TableCell>{formatPTAValue('rfi', result.predictedPTAs?.rfi || null)}</TableCell>
-                             <TableCell>{result.predictedPTAs?.beta_casein || '-'}</TableCell>
-                             <TableCell>{result.predictedPTAs?.kappa_casein || '-'}</TableCell>
-                             <TableCell>{formatPTAValue('gfi', result.predictedPTAs?.gfi || null)}</TableCell>
-                           </TableRow>
-                         ))}
+                        {batchResults.slice(0, 10).map((result, index) => (
+                          <TableRow key={index}>
+                            {BATCH_RESULT_BASE_COLUMNS.map((column) => (
+                              <TableCell key={column.header}>{column.render(result)}</TableCell>
+                            ))}
+                            {PTA_DEFINITIONS.map(({ key, label }) => (
+                              <TableCell key={key}>{formatPTAValue(key, result.predictedPTAs?.[key] ?? null)}</TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
                       </TableBody>
                     </Table>
                   </div>

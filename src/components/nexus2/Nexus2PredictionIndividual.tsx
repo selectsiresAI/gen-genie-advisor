@@ -506,7 +506,7 @@ const Nexus2PredictionIndividual: React.FC = () => {
                               {summaryTraitLabels[trait]}
                             </span>
                             <span className="font-medium">
-                              {formatBullValue(bull.ptas[trait])}
+                              {formatBullValue(trait, bull.ptas[trait])}
                             </span>
                           </div>
                         ))}
@@ -545,10 +545,10 @@ const Nexus2PredictionIndividual: React.FC = () => {
                 {PREDICTION_TRAITS.map((trait) => (
                   <TableRow key={trait.key}>
                     <TableCell className="font-medium">{trait.label}</TableCell>
-                    <TableCell>{formatBullValue(sireField.selected?.ptas[trait.key])}</TableCell>
-                    <TableCell>{formatBullValue(mgsField.selected?.ptas[trait.key])}</TableCell>
-                    <TableCell>{formatBullValue(mmgsField.selected?.ptas[trait.key])}</TableCell>
-                    <TableCell>{formatPredictionValue(prediction?.[trait.key] ?? null)}</TableCell>
+                    <TableCell>{formatBullValue(trait.key, sireField.selected?.ptas[trait.key])}</TableCell>
+                    <TableCell>{formatBullValue(trait.key, mgsField.selected?.ptas[trait.key])}</TableCell>
+                    <TableCell>{formatBullValue(trait.key, mmgsField.selected?.ptas[trait.key])}</TableCell>
+                    <TableCell>{formatPredictionValue(trait.key, prediction?.[trait.key] ?? null)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
