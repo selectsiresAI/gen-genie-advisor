@@ -23,8 +23,28 @@ const REQUIRED_HEADERS = ['naab_pai', 'naab_avo_materno', 'naab_bisavo_materno']
 
 const normalizeNaab = (value: string) => value.trim().toUpperCase();
 
+const normalizeHeaderName = (value: unknown) => {
+  const stringValue = String(value ?? '').trim();
+
+  if (!stringValue) {
+    return '';
+  }
+
+  return stringValue
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/([a-z])([A-Z])/g, '$1_$2')
+    .replace(/[^\w]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '')
+    .toLowerCase();
+};
+
 interface BatchRow {
   lineNumber: number;
+  idFazenda: string;
+  nome: string;
+  dataNascimento: string;
   naabPai: string;
   naabAvoMaterno: string;
   naabBisavoMaterno: string;
@@ -48,6 +68,9 @@ const buildErrorExportRows = (rows: BatchRow[]) =>
     .filter((row) => row.status === 'invalid')
     .map((row) => ({
       linha: row.lineNumber,
+      id_fazenda: row.idFazenda,
+      nome: row.nome,
+      data_de_nascimento: row.dataNascimento,
       naab_pai: row.naabPai,
       naab_avo_materno: row.naabAvoMaterno,
       naab_bisavo_materno: row.naabBisavoMaterno,
@@ -61,6 +84,9 @@ const buildResultExportRows = (rows: BatchRow[]) =>
     .filter((row) => row.status === 'valid' && row.prediction)
     .map((row) => ({
       linha: row.lineNumber,
+      id_fazenda: row.idFazenda,
+      nome: row.nome,
+      data_de_nascimento: row.dataNascimento,
       naab_pai: row.naabPai,
       nome_pai: row.bulls.sire?.name ?? '',
       naab_avo_materno: row.naabAvoMaterno,
@@ -112,8 +138,11 @@ const Nexus2PredictionBatch: React.FC = () => {
   );
 
   const parseFile = async (file: File) => {
-    const buffer = await file.arrayBuffer();
-    const workbook = read(buffer, { type: 'array' });
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    const workbook =
+      extension === 'csv'
+        ? read(await file.text(), { type: 'string' })
+        : read(await file.arrayBuffer(), { type: 'array' });
 
     if (!workbook.SheetNames.length) {
       throw new Error('emptyWorkbook');
@@ -130,23 +159,56 @@ const Nexus2PredictionBatch: React.FC = () => {
       throw new Error('emptyWorkbook');
     }
 
-    const header = headerRows[0]?.map((value) => (value ?? '').toString().trim().toLowerCase()) ?? [];
+    const header = headerRows[0]?.map((value) => normalizeHeaderName(value)) ?? [];
     const missingHeaders = REQUIRED_HEADERS.filter((column) => !header.includes(column));
 
     if (missingHeaders.length) {
       throw new Error('invalidHeader');
     }
 
-    const sheetRows = utils.sheet_to_json<Record<(typeof REQUIRED_HEADERS)[number], string>>(worksheet, {
-      header: REQUIRED_HEADERS as unknown as string[],
-      range: 1,
-      defval: ''
-    });
+    const findHeaderIndex = (candidates: string[]) => {
+      for (const candidate of candidates) {
+        const normalized = normalizeHeaderName(candidate);
+        const index = header.indexOf(normalized);
+        if (index !== -1) {
+          return index;
+        }
+      }
+      return -1;
+    };
 
-    const normalizedRows: BatchRow[] = sheetRows.map((row, index) => {
-      const naabPai = normalizeNaab(String(row.naab_pai ?? ''));
-      const naabAvoMaterno = normalizeNaab(String(row.naab_avo_materno ?? ''));
-      const naabBisavoMaterno = normalizeNaab(String(row.naab_bisavo_materno ?? ''));
+    const indexMap = {
+      idFazenda: findHeaderIndex(['id_fazenda', 'idfazenda']),
+      nome: findHeaderIndex(['nome', 'name']),
+      dataNascimento: findHeaderIndex(['data_de_nascimento', 'data_nascimento', 'datanascimento']),
+      naabPai: findHeaderIndex(['naab_pai', 'naabpai']),
+      naabAvoMaterno: findHeaderIndex(['naab_avo_materno', 'naabavomaterno']),
+      naabBisavoMaterno: findHeaderIndex(['naab_bisavo_materno', 'naabbisavomaterno'])
+    };
+
+    const dataRows = headerRows.slice(1);
+
+    const getCellValue = (row: (string | number | null | undefined)[], index: number) => {
+      if (index === -1) {
+        return '';
+      }
+
+      const value = row?.[index];
+
+      if (value === undefined || value === null) {
+        return '';
+      }
+
+      return String(value).trim();
+    };
+
+    const normalizedRows: BatchRow[] = dataRows.map((row, index) => {
+      const idFazenda = getCellValue(row, indexMap.idFazenda);
+      const nome = getCellValue(row, indexMap.nome);
+      const dataNascimento = getCellValue(row, indexMap.dataNascimento);
+      const naabPai = normalizeNaab(getCellValue(row, indexMap.naabPai));
+      const naabAvoMaterno = normalizeNaab(getCellValue(row, indexMap.naabAvoMaterno));
+      const naabBisavoMaterno = normalizeNaab(getCellValue(row, indexMap.naabBisavoMaterno));
       const lineNumber = index + 2;
       const errors: string[] = [];
       const fieldErrors: BatchRow['fieldErrors'] = {};
@@ -176,6 +238,9 @@ const Nexus2PredictionBatch: React.FC = () => {
 
       return {
         lineNumber,
+        idFazenda,
+        nome,
+        dataNascimento,
         naabPai,
         naabAvoMaterno,
         naabBisavoMaterno,
@@ -444,6 +509,9 @@ const Nexus2PredictionBatch: React.FC = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t('nexus2.batch.preview.line')}</TableHead>
+                    <TableHead>{t('nexus2.batch.preview.farmId')}</TableHead>
+                    <TableHead>{t('nexus2.batch.preview.name')}</TableHead>
+                    <TableHead>{t('nexus2.batch.preview.birthDate')}</TableHead>
                     <TableHead>{t('nexus2.results.sire')}</TableHead>
                     <TableHead>{t('nexus2.results.mgs')}</TableHead>
                     <TableHead>{t('nexus2.results.mmgs')}</TableHead>
@@ -455,6 +523,9 @@ const Nexus2PredictionBatch: React.FC = () => {
                   {rows.map((row) => (
                     <TableRow key={row.lineNumber}>
                       <TableCell>{row.lineNumber}</TableCell>
+                      <TableCell>{row.idFazenda || '—'}</TableCell>
+                      <TableCell>{row.nome || '—'}</TableCell>
+                      <TableCell>{row.dataNascimento || '—'}</TableCell>
                       <TableCell className={cn(row.fieldErrors.sire ? 'text-destructive' : '')}>
                         <div className="flex flex-col">
                           <span className="font-medium">{row.naabPai || '—'}</span>
@@ -577,6 +648,9 @@ const Nexus2PredictionBatch: React.FC = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead>{t('nexus2.batch.preview.line')}</TableHead>
+                        <TableHead>{t('nexus2.batch.preview.farmId')}</TableHead>
+                        <TableHead>{t('nexus2.batch.preview.name')}</TableHead>
+                        <TableHead>{t('nexus2.batch.preview.birthDate')}</TableHead>
                         <TableHead>{t('nexus2.results.sire')}</TableHead>
                         <TableHead>{t('nexus2.results.mgs')}</TableHead>
                         <TableHead>{t('nexus2.results.mmgs')}</TableHead>
@@ -591,6 +665,9 @@ const Nexus2PredictionBatch: React.FC = () => {
                         .map((row) => (
                           <TableRow key={`prediction-row-${row.lineNumber}`}>
                             <TableCell>{row.lineNumber}</TableCell>
+                            <TableCell>{row.idFazenda || '—'}</TableCell>
+                            <TableCell>{row.nome || '—'}</TableCell>
+                            <TableCell>{row.dataNascimento || '—'}</TableCell>
                             <TableCell>
                               <div className="flex flex-col">
                                 <span className="font-medium">{row.bulls.sire?.naab}</span>
