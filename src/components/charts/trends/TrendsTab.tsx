@@ -198,13 +198,25 @@ export const TrendsTab: React.FC<TrendsTabProps> = ({
 
         const safeRows = Array.isArray(data) ? data : [];
         const sanitized = safeRows
-          .map((row: Record<string, unknown>) => ({
-            trait: typeof row?.trait === 'string' ? row.trait : null,
-            column_name: typeof row?.column_name === 'string' ? row.column_name : (typeof row?.trait === 'string' ? mapTraitKey(row.trait) : null),
-            yearly: Array.isArray(row?.yearly) ? row.yearly : [],
-            stats: row?.stats && typeof row.stats === 'object' ? row.stats : null,
-          }))
-          .filter((row): row is RpcRow => Boolean(row.column_name));
+          .map((row: Record<string, unknown>) => {
+            const rawTrait = typeof row?.trait === 'string' ? row.trait : null;
+            const normalizedTrait = mapTraitKey(rawTrait) ?? rawTrait;
+
+            const rawColumnName = typeof row?.column_name === 'string' ? row.column_name : null;
+            const normalizedColumnName = mapTraitKey(rawColumnName) ?? rawColumnName ?? normalizedTrait;
+
+            if (!normalizedColumnName) {
+              return null;
+            }
+
+            return {
+              trait: normalizedTrait,
+              column_name: normalizedColumnName,
+              yearly: Array.isArray(row?.yearly) ? row.yearly : [],
+              stats: row?.stats && typeof row.stats === 'object' ? row.stats : null,
+            } satisfies RpcRow;
+          })
+          .filter((row): row is RpcRow => Boolean(row));
 
         if (isCancelled) return;
 
