@@ -11,12 +11,15 @@ import { ArrowLeft, Settings, Download, RefreshCw, Users, TrendingUp, BarChart3,
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { TrendsErrorBoundary } from "./charts/trends/TrendsErrorBoundary";
+import { computeLinearTrend } from "@/lib/linear-trend";
 
 const TrendsTab = lazy(() => import("./charts/trends/TrendsTab"));
 
-// Constants
-const YEARS_FIXED = [2021, 2022, 2023, 2024, 2025];
-const YEARS = [2021, 2022, 2023, 2024, 2025];
+// Helpers
+const uniqueSorted = (values: number[]) => {
+  return Array.from(new Set(values.filter((value) => Number.isFinite(value))))
+    .sort((a, b) => a - b);
+};
 
 type RawRow = Record<string, any>;
 
@@ -39,17 +42,13 @@ function mean(arr: number[]): number {
   return arr.reduce((sum, val) => sum + val, 0) / arr.length;
 }
 
-function linearRegression(xs: number[], ys: number[]) {
-  if (xs.length !== ys.length || xs.length < 2) return { a: 0, b: 0 };
-  const meanFn = (a: number[]) => a.reduce((s, v) => s + v, 0) / a.length;
-  const mx = meanFn(xs), my = meanFn(ys);
-  const vxx = xs.reduce((s, x) => s + (x - mx) * (x - mx), 0) / xs.length;
-  if (vxx === 0) return { a: my, b: 0 };
-  const cov = xs.reduce((s, x, i) => s + (x - mx) * (ys[i] - my), 0) / xs.length;
-  const b = cov / vxx;
-  const a = my - b * mx;
-  return { a, b };
-}
+const getTrendModel = (points: Array<{ year: number; mean: number }>) => {
+  if (!points.length) return null;
+  const validPoints = points
+    .map((point) => ({ x: point.year, y: point.mean }))
+    .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
+  return computeLinearTrend(validPoints);
+};
 
 interface ChartsPageProps {
   farm?: any;
@@ -160,15 +159,16 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
 
     try {
       setLoading(true);
-      // Use same approach as HerdPage - load all females with high limit
       const { data, error } = await supabase
-        .rpc('get_females_denorm', { target_farm_id: farm.farm_id })
+        .from('females_denorm')
+        .select('*')
+        .eq('farm_id', farm.farm_id)
         .order('birth_date', { ascending: true })
-        .limit(10000); // Set high limit to ensure all records are loaded
+        .limit(10000);
 
       if (error) throw error;
-      
-      setFemales(data || []);
+
+      setFemales(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error loading females data:', error);
       toast({
@@ -188,45 +188,67 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
     let processedData: any[] = [];
     
     if (groupBy === 'year') {
-      // Normaliza dados por ano com segurança
-      const byYear = new Map<number, { year: number; n: number; values: number[] }>();
-      
-      females.forEach(female => {
-        if (!female) return;
-        
-        const birthYear = coerceYear(female.birth_date ? new Date(female.birth_date).getFullYear() : null);
-        if (!birthYear) return;
-        
-        if (!byYear.has(birthYear)) {
-          byYear.set(birthYear, { year: birthYear, n: 0, values: [] });
+      const byYear = new Map<
+        number,
+        {
+          year: number;
+          n: number;
+          valuesByTrait: Record<string, number[]>;
         }
-        
+      >();
+
+      females.forEach((female) => {
+        if (!female) return;
+
+        const birthYear = coerceYear(
+          female.birth_date ? new Date(female.birth_date).getFullYear() : null
+        );
+        if (!birthYear) return;
+
+        if (!byYear.has(birthYear)) {
+          byYear.set(birthYear, {
+            year: birthYear,
+            n: 0,
+            valuesByTrait: {},
+          });
+        }
+
         const yearData = byYear.get(birthYear)!;
         yearData.n++;
-        
-        selectedPTAs.forEach(pta => {
+
+        selectedPTAs.forEach((pta) => {
           const value = pickNumber(female, [pta], NaN);
-          if (Number.isFinite(value)) {
-            yearData.values.push(value);
+          if (!Number.isFinite(value)) return;
+          if (!yearData.valuesByTrait[pta]) {
+            yearData.valuesByTrait[pta] = [];
           }
+          yearData.valuesByTrait[pta].push(value);
         });
       });
-      
-      // Constrói array final para o range fixo
-      processedData = YEARS_FIXED.map(year => {
-        const entry = byYear.get(year);
-        const count = entry?.n || 0;
-        const values = entry?.values || [];
-        const meanVal = values.length > 0 ? mean(values) : 0;
-        
-        const result: any = { year, count };
-        selectedPTAs.forEach(pta => {
-          const ptaValues = values.length > 0 ? values : [];
-          result[pta] = ptaValues.length > 0 ? meanVal : null;
+
+      const years = uniqueSorted(Array.from(byYear.keys()));
+
+      processedData = years
+        .map((year) => {
+          const entry = byYear.get(year);
+          if (!entry) return null;
+
+          const result: Record<string, number | null> & { year: number; count: number } = {
+            year,
+            count: entry.n,
+          };
+
+          selectedPTAs.forEach((pta) => {
+            const values = entry.valuesByTrait[pta] ?? [];
+            result[pta] = values.length ? mean(values) : null;
+          });
+
+          return result;
+        })
+        .filter((value): value is { year: number; count: number } & Record<string, number | null> => {
+          if (!value) return false;
+          return value.count > 0;
         });
-        
-        return result;
-      }).filter(d => d && typeof d === 'object' && (d.count || 0) > 0);
     }
     
     else if (groupBy === 'category') {
@@ -557,14 +579,19 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
                         <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                         <XAxis dataKey={groupBy === 'year' ? 'year' : 'name'} stroke="#666" fontSize={12} />
                         <YAxis stroke="#666" fontSize={12} />
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: 'rgba(255, 255, 255, 0.95)', 
-                            border: 'none', 
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            border: 'none',
                             borderRadius: '8px',
                             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
                           }}
-                          formatter={(value: any) => [Number(value).toFixed(2), '']}
+                          formatter={(value: any) => [
+                            value === null || value === undefined || Number.isNaN(Number(value))
+                              ? '—'
+                              : Number(value).toFixed(2),
+                            '',
+                          ]}
                         />
                         <Legend />
                         {selectedPTAs.slice(0, 2).map((pta, index) => (
@@ -816,55 +843,62 @@ const H2: Record<string, number> = {
 };
 
 // Componente Card para cada característica
-function TraitCard({ 
-  trait, 
-  data, 
-  showFarmMean, 
-  showTrend 
-}: { 
-  trait: string; 
-  data: Array<{year:number;n:number;mean:number}>; 
-  showFarmMean: boolean; 
-  showTrend: boolean; 
+function TraitCard({
+  trait,
+  data,
+  showFarmMean,
+  showTrend
+}: {
+  trait: string;
+  data: Array<{year:number;n:number;mean:number}>;
+  showFarmMean: boolean;
+  showTrend: boolean;
 }) {
   const colorMean = "#111827"; // preto/cinza-900
   const colorFarmMean = "#22C3EE"; // azul claro para média da fazenda
   const colorTrend = "#10B981"; // verde-emerald
 
-  const farmMeanRaw = useMemo(() => mean(data.map(d => d.mean)), [data]);
-  const farmMean = Math.round(farmMeanRaw);
-
-  const slopeRounded = useMemo(() => {
-    const xs = data.map(d => d.year);
-    const ys = data.map(d => d.mean);
-    const { b } = linearRegression(xs, ys);
-    return Math.round(b);
+  const sortedData = useMemo(() => {
+    return [...data]
+      .filter((entry) => Number.isFinite(entry.year) && Number.isFinite(entry.mean))
+      .sort((a, b) => a.year - b.year);
   }, [data]);
 
+  const farmMeanRaw = useMemo(() => mean(sortedData.map((d) => d.mean)), [sortedData]);
+  const farmMean = Math.round(farmMeanRaw);
+
+  const trendModel = useMemo(() => getTrendModel(sortedData), [sortedData]);
+
+  const slopeRounded = useMemo(() => {
+    if (!trendModel) return 0;
+    return Math.round(trendModel.b);
+  }, [trendModel]);
+
   const chartData = useMemo(() => {
-    return data.map((d, i) => ({
-      year: d.year,
-      n: Math.round(d.n),
-      mean: Math.round(d.mean),
-      delta: Math.round(i === 0 ? 0 : d.mean - data[i - 1].mean),
+    return sortedData.map((entry, index) => ({
+      year: entry.year,
+      n: Math.round(entry.n),
+      mean: entry.mean,
+      delta: index === 0 ? 0 : entry.mean - sortedData[index - 1].mean,
       farmMean,
     }));
-  }, [data, farmMean]);
+  }, [sortedData, farmMean]);
 
   const trendLine = useMemo(() => {
-    if (!showTrend) return [] as Array<{year:number; trend:number}>;
-    const years = data.map(d => d.year);
-    if (years.length < 2) return [];
-    const { a, b } = linearRegression(years, data.map(d => d.mean));
-    const y1 = Math.round(a + b * years[0]);
-    const y2 = Math.round(a + b * years[years.length - 1]);
-    return [
-      { year: years[0], trend: y1 },
-      { year: years[years.length - 1], trend: y2 },
-    ];
-  }, [data, showTrend]);
+    if (!showTrend || !trendModel) return [] as Array<{ year: number; trend: number }>;
+    if (chartData.length < 2) return [];
 
-  const stats = useMemo(() => descriptiveStats(data.map(d => d.mean)), [data]);
+    const firstYear = chartData[0]?.year;
+    const lastYear = chartData[chartData.length - 1]?.year;
+    if (!Number.isFinite(firstYear) || !Number.isFinite(lastYear)) return [];
+
+    return [
+      { year: firstYear, trend: Math.round(trendModel.predict(firstYear)) },
+      { year: lastYear, trend: Math.round(trendModel.predict(lastYear)) },
+    ];
+  }, [chartData, showTrend, trendModel]);
+
+  const stats = useMemo(() => descriptiveStats(sortedData.map((d) => d.mean)), [sortedData]);
   const h2 = H2[trait] ?? 0.30;
 
   return (
@@ -885,18 +919,31 @@ function TraitCard({
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="year" type="number" domain={[2021, 2025]} ticks={[2021,2022,2023,2024,2025]} tickMargin={6} />
+            <XAxis
+              dataKey="year"
+              type="number"
+              domain={["dataMin", "dataMax"]}
+              ticks={uniqueSorted(chartData.map((entry) => entry.year))}
+              tickMargin={6}
+            />
             <YAxis tickMargin={6} />
             <Tooltip
               content={({ active, payload, label }) => {
                 if (!active || !payload || !payload.length) return null;
                 const p = payload[0]?.payload as any;
                 if (!p) return null;
+                const trendValue =
+                  trendModel && Number.isFinite(Number(label))
+                    ? Math.round(trendModel.predict(Number(label)))
+                    : null;
                 return (
                   <div className="bg-white/95 shadow rounded-md px-3 py-2 text-xs text-gray-800">
                     <div className="font-semibold">Ano: {label}</div>
                     <div>N: {Math.round(p.n || 0)}</div>
                     <div>Ganho: {Math.round(p.delta || 0)}</div>
+                    {trendValue !== null && (
+                      <div>ŷ(ano): {trendValue}</div>
+                    )}
                   </div>
                 );
               }}
@@ -927,12 +974,12 @@ function TraitCard({
               />
             )}
             {showTrend && trendLine.length === 2 && (
-              <Line 
-                type="linear" 
-                dataKey="trend" 
-                name={`Tendência (${slopeRounded}/ano)`} 
-                stroke={colorTrend} 
-                dot={false} 
+              <Line
+                type="linear"
+                dataKey="trend"
+                name={`Tendência (${slopeRounded}/ano)`}
+                stroke={colorTrend}
+                dot={false}
                 data={trendLine}
               />
             )}
@@ -954,7 +1001,12 @@ function TraitCard({
       <div className="px-4 pb-3 pt-1 text-right">
         <button
           onClick={() => {
-            const rows = chartData.map(d => ({ year: d.year, n: d.n, mean: d.mean, ganho: d.delta }));
+            const rows = chartData.map((d) => ({
+              year: d.year,
+              n: d.n,
+              mean: Math.round(d.mean),
+              ganho: Math.round(d.delta),
+            }));
             const headers = Object.keys(rows[0] || {});
             const csv = [headers.join(","), ...rows.map(r => headers.map(h => (r as any)[h]).join(","))].join("\n");
             const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -1028,28 +1080,34 @@ const PanoramaRebanhoView: React.FC<{
       if (!dbKey) continue;
       
       // Agrupar dados por ano
-      const dataByYear: { [key: string]: number[] } = {};
-      
-      females.forEach(female => {
+      const dataByYear: Record<number, number[]> = {};
+
+      females.forEach((female) => {
         if (!female || !female.birth_date) return;
-        const year = new Date(female.birth_date).getFullYear();
+        const birthYear = new Date(female.birth_date);
+        if (Number.isNaN(birthYear.getTime())) return;
+        const year = birthYear.getFullYear();
         const value = Number(female[dbKey]);
-        
-        if (!isNaN(value) && value !== null && year >= 2021 && year <= 2025) {
-          if (!dataByYear[year]) dataByYear[year] = [];
-          dataByYear[year].push(value);
+
+        if (!Number.isFinite(value)) return;
+        if (!dataByYear[year]) {
+          dataByYear[year] = [];
         }
+        dataByYear[year].push(value);
       });
-      
-      // Calcular médias por ano
-      const series = YEARS.map(year => {
-        const values = dataByYear[year] || [];
-        return {
-          year,
-          n: values.length,
-          mean: values.length > 0 ? mean(values) : 0
-        };
-      }).filter(d => d.n > 0);
+
+      const years = uniqueSorted(Object.keys(dataByYear).map((key) => Number(key)));
+
+      const series = years
+        .map((year) => {
+          const values = dataByYear[year] || [];
+          return {
+            year,
+            n: values.length,
+            mean: values.length > 0 ? mean(values) : 0,
+          };
+        })
+        .filter((entry) => entry.n > 0);
       
       out[trait] = series;
     }
@@ -1166,7 +1224,7 @@ const PanoramaRebanhoView: React.FC<{
       )}
 
       <div className="text-xs text-gray-500 text-center pb-8">
-        Dados processados do rebanho da fazenda{farmName ? ` ${farmName}` : ''} com agrupamento por ano de nascimento (2021-2025).
+        Dados processados do rebanho da fazenda{farmName ? ` ${farmName}` : ''} com agrupamento por ano de nascimento.
       </div>
     </div>
   );
