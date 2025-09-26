@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import type { TooltipProps } from "recharts";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, AreaChart, Area, BarChart, Bar, ReferenceLine, ScatterChart, Scatter, PieChart, Pie, Cell, Tooltip, ComposedChart } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +15,20 @@ import { computeLinearTrend } from "@/lib/linear-trend";
 import type { LinearTrendModel } from "@/lib/linear-trend";
 
 // Constants
-const YEARS_FIXED = [2021, 2022, 2023, 2024, 2025];
+type TrendYearEntry = {
+  year: number;
+  mean: number | null;
+  n: number;
+};
+
+type TrendStats = {
+  mean: number | null;
+  median: number | null;
+  min: number | null;
+  max: number | null;
+  sd: number | null;
+  n: number;
+};
 const YEARS = [2021, 2022, 2023, 2024, 2025];
 
 type RawRow = Record<string, any>;
@@ -23,6 +36,11 @@ type RawRow = Record<string, any>;
 function coerceYear(v: any): number | null {
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
+}
+
+function toFiniteNumber(value: any): number | null {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
 }
 
 function pickNumber(row: RawRow, keys: string[], fallback = 0): number {
@@ -100,6 +118,10 @@ const formatTrendValue = (ptaKey: string, value: number | null | undefined) => {
   return trendNumberFormatter.format(value);
 };
 
+const formatStatNumber = (value: number | null | undefined) => {
+  return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(2) : 'N/A';
+};
+
 const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd }) => {
   const [females, setFemales] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -110,6 +132,8 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
   const [activeView, setActiveView] = useState<'trends' | 'comparison' | 'distribution' | 'panorama'>('trends');
   const [groupBy, setGroupBy] = useState<'year' | 'category' | 'parity'>('year');
   const [statisticsData, setStatisticsData] = useState<any>({});
+  const [trendSeriesByTrait, setTrendSeriesByTrait] = useState<Record<string, { yearly: TrendYearEntry[]; stats: TrendStats }>>({});
+  const [trendLoading, setTrendLoading] = useState(false);
   const [showFarmAverage, setShowFarmAverage] = useState(true);
   const [showTrendLine, setShowTrendLine] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -117,6 +141,7 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
   const { toast } = useToast();
 
   const showObservedInTooltip = false;
+  const isLoading = loading || trendLoading;
 
   // Lista completa de PTAs disponíveis
   const availablePTAs = [
@@ -185,16 +210,34 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
     }
   }, [farm]);
 
+  useEffect(() => {
+    if (groupBy !== 'year') {
+      return;
+    }
+
+    if (!farm?.farm_id || selectedPTAs.length === 0) {
+      setTrendSeriesByTrait({});
+      setStatisticsData({});
+      return;
+    }
+
+    loadTrendSeries();
+  }, [farm?.farm_id, groupBy, selectedPTAs, loadTrendSeries]);
+
   // Recalcular estatísticas quando PTAs selecionados mudarem
   useEffect(() => {
+    if (groupBy === 'year') {
+      return;
+    }
+
     if (females.length > 0) {
       calculateStatistics(females);
     }
-  }, [selectedPTAs, females]);
+  }, [selectedPTAs, females, groupBy]);
 
   const loadFemalesData = async () => {
     if (!farm?.farm_id) return;
-    
+
     try {
       setLoading(true);
       // Use same approach as HerdPage - load all females with high limit
@@ -219,92 +262,187 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
     }
   };
 
+  const loadTrendSeries = useCallback(async () => {
+    if (!farm?.farm_id || selectedPTAs.length === 0) {
+      setTrendSeriesByTrait({});
+      if (groupBy === 'year') {
+        setStatisticsData({});
+      }
+      return;
+    }
+
+    try {
+      setTrendLoading(true);
+      const { data, error } = await supabase.rpc('get_pta_trend_and_stats', {
+        farm_id: farm.farm_id,
+        trait_keys: selectedPTAs,
+      });
+
+      if (error) throw error;
+
+      const parsed: Record<string, { yearly: TrendYearEntry[]; stats: TrendStats }> = {};
+      const statsRecord: Record<string, TrendStats> = {};
+
+      (data || []).forEach((entry: any) => {
+        const traitKey = entry?.trait;
+        if (!traitKey || typeof traitKey !== 'string') {
+          return;
+        }
+
+        const yearlyRaw = Array.isArray(entry?.yearly) ? entry.yearly : [];
+        const yearly: TrendYearEntry[] = yearlyRaw
+          .map((row: any) => {
+            const year = coerceYear(row?.year);
+            const meanValue = toFiniteNumber(row?.mean);
+            const countValue = toFiniteNumber(row?.n);
+
+            return {
+              year: year ?? NaN,
+              mean: meanValue,
+              n: countValue !== null ? Math.round(countValue) : 0,
+            };
+          })
+          .filter((row) => Number.isFinite(row.year));
+
+        const statsRaw = entry?.stats || {};
+        const stats: TrendStats = {
+          mean: toFiniteNumber(statsRaw?.mean),
+          median: toFiniteNumber(statsRaw?.median),
+          min: toFiniteNumber(statsRaw?.min),
+          max: toFiniteNumber(statsRaw?.max),
+          sd: toFiniteNumber(statsRaw?.sd),
+          n: (() => {
+            const count = toFiniteNumber(statsRaw?.n);
+            return count !== null ? Math.round(count) : 0;
+          })(),
+        };
+
+        parsed[traitKey] = {
+          yearly: yearly.sort((a, b) => a.year - b.year),
+          stats,
+        };
+
+        statsRecord[traitKey] = stats;
+      });
+
+      setTrendSeriesByTrait(parsed);
+      if (groupBy === 'year') {
+        setStatisticsData(statsRecord);
+      }
+    } catch (error) {
+      console.error('Error loading trend series:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar as tendências",
+        variant: "destructive",
+      });
+    } finally {
+      setTrendLoading(false);
+    }
+  }, [farm?.farm_id, selectedPTAs, groupBy, toast]);
+
   // Calcular estatísticas - VERSÃO DEFENSIVA
   const calculateStatistics = (data: any[]) => {
+    if (groupBy === 'year') {
+      return;
+    }
+
     if (!data || !Array.isArray(data) || data.length === 0) {
       setStatisticsData({});
       return;
     }
 
     const stats: any = {};
-    
+
     selectedPTAs.forEach(pta => {
       if (!pta) return;
-      
+
       const values = data
         .map(f => pickNumber(f || {}, [pta], NaN))
         .filter(v => Number.isFinite(v));
-        
+
       if (values.length > 0) {
         const sorted = [...values].sort((a, b) => a - b);
+        const valuesMean = mean(values);
+        const mid = Math.floor(sorted.length / 2);
+        const median = sorted.length % 2 === 0
+          ? (sorted[mid - 1] + sorted[mid]) / 2
+          : sorted[mid];
+        const variance = values.reduce((sum, val) => sum + Math.pow(val - valuesMean, 2), 0) / values.length;
+
         stats[pta] = {
-          mean: mean(values),
-          median: sorted[Math.floor(sorted.length / 2)],
+          mean: valuesMean,
+          median,
           min: Math.min(...values),
           max: Math.max(...values),
-          std: Math.sqrt(values.reduce((sum, val) => sum + Math.pow(val - mean(values), 2), 0) / values.length),
-          count: values.length
+          sd: Math.sqrt(variance),
+          n: values.length
         };
       }
     });
-    
+
     setStatisticsData(stats);
   };
 
   // Processar dados para gráficos de tendência - VERSÃO DEFENSIVA
   const processedTrendData = useMemo(() => {
-    if (!females || !Array.isArray(females) || females.length === 0) return [];
-
-    let processedData: any[] = [];
-    
     if (groupBy === 'year') {
-      // Normaliza dados por ano com segurança
-      const byYear = new Map<number, { year: number; n: number; values: number[] }>();
-      
-      females.forEach(female => {
-        if (!female) return;
-        
-        const birthYear = coerceYear(female.birth_date ? new Date(female.birth_date).getFullYear() : null);
-        if (!birthYear) return;
-        
-        if (!byYear.has(birthYear)) {
-          byYear.set(birthYear, { year: birthYear, n: 0, values: [] });
-        }
-        
-        const yearData = byYear.get(birthYear)!;
-        yearData.n++;
-        
-        selectedPTAs.forEach(pta => {
-          const value = pickNumber(female, [pta], NaN);
-          if (Number.isFinite(value)) {
-            yearData.values.push(value);
+      const years = new Set<number>();
+
+      selectedPTAs.forEach((pta) => {
+        const series = trendSeriesByTrait[pta]?.yearly || [];
+        series.forEach((entry) => {
+          if (Number.isFinite(entry?.year)) {
+            years.add(Number(entry.year));
           }
         });
       });
-      
-      // Constrói array final para o range fixo
-      processedData = YEARS_FIXED.map(year => {
-        const entry = byYear.get(year);
-        const count = entry?.n || 0;
-        const values = entry?.values || [];
-        const meanVal = values.length > 0 ? mean(values) : 0;
-        
-        const result: any = { year, count };
-        selectedPTAs.forEach(pta => {
-          const ptaValues = values.length > 0 ? values : [];
-          result[pta] = ptaValues.length > 0 ? meanVal : null;
+
+      const orderedYears = Array.from(years).sort((a, b) => a - b);
+
+      const data = orderedYears.map((year) => {
+        const row: Record<string, any> = { year };
+
+        selectedPTAs.forEach((pta) => {
+          const traitData = trendSeriesByTrait[pta];
+          const stats = traitData?.stats;
+          const yearlyEntry = traitData?.yearly?.find((entry) => entry.year === year);
+          const originalMean = typeof yearlyEntry?.mean === 'number' ? yearlyEntry.mean : null;
+          const sd = typeof stats?.sd === 'number' ? stats.sd : null;
+          const overallMean = typeof stats?.mean === 'number' ? stats.mean : null;
+
+          let zScore: number | null = null;
+          if (typeof originalMean === 'number') {
+            if (sd && Math.abs(sd) > 1e-9) {
+              zScore = (originalMean - (overallMean ?? 0)) / sd;
+            } else {
+              zScore = 0;
+            }
+          }
+
+          row[pta] = zScore;
+          row[`${pta}__original`] = originalMean;
+          row[`${pta}__count`] = yearlyEntry?.n ?? 0;
         });
-        
-        return result;
-      }).filter(d => d && typeof d === 'object' && (d.count || 0) > 0);
+
+        return row;
+      });
+
+      return data.filter((row) =>
+        selectedPTAs.some((pta) => typeof row[pta] === 'number' && Number.isFinite(row[pta]))
+      );
     }
-    
-    else if (groupBy === 'category') {
+
+    if (!females || !Array.isArray(females) || females.length === 0) return [];
+
+    let processedData: any[] = [];
+
+    if (groupBy === 'category') {
       const byCategory = new Map<string, { category: string; n: number; values: number[] }>();
-      
+
       females.forEach(female => {
         if (!female) return;
-        
+
         const category = female.category || 'Sem Categoria';
         
         if (!byCategory.has(category)) {
@@ -334,10 +472,10 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
     
     else if (groupBy === 'parity') {
       const byParity = new Map<string, { parity: string; n: number; values: number[] }>();
-      
+
       females.forEach(female => {
         if (!female) return;
-        
+
         const parity = String(female.parity_order || 'Primípara');
         
         if (!byParity.has(parity)) {
@@ -364,9 +502,9 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
         return result;
       }).filter(d => d && typeof d === 'object' && (d.count || 0) > 0);
     }
-    
+
     return processedData;
-  }, [females, selectedPTAs, groupBy]);
+  }, [groupBy, selectedPTAs, trendSeriesByTrait, females]);
 
   const trendModelsByPta = useMemo(() => {
     if (groupBy !== 'year' || !processedTrendData.length) {
@@ -395,25 +533,133 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
     return models;
   }, [groupBy, processedTrendData, selectedPTAs]);
 
+  const originalTrendModelsByPta = useMemo(() => {
+    if (groupBy !== 'year') {
+      return {} as Record<string, LinearTrendModel | null>;
+    }
+
+    const models: Record<string, LinearTrendModel | null> = {};
+
+    selectedPTAs.forEach((pta) => {
+      const series = trendSeriesByTrait[pta]?.yearly || [];
+      const points = series
+        .filter((entry) => Number.isFinite(entry.year) && typeof entry.mean === 'number')
+        .map((entry) => ({ x: Number(entry.year), y: entry.mean as number }));
+
+      models[pta] = computeLinearTrend(points);
+    });
+
+    return models;
+  }, [groupBy, selectedPTAs, trendSeriesByTrait]);
+
+  const trendLineSegments = useMemo(() => {
+    if (groupBy !== 'year' || !showTrend) {
+      return {} as Record<string, Array<{ year: number; trend: number }>>;
+    }
+
+    const years = processedTrendData
+      .map((row: any) => coerceYear(row?.year))
+      .filter((year): year is number => year !== null);
+
+    if (years.length < 2) {
+      return {} as Record<string, Array<{ year: number; trend: number }>>;
+    }
+
+    const orderedYears = Array.from(new Set(years)).sort((a, b) => a - b);
+
+    const segments: Record<string, Array<{ year: number; trend: number }>> = {};
+
+    selectedPTAs.forEach((pta) => {
+      const model = trendModelsByPta[pta];
+      if (!model) {
+        segments[pta] = [];
+        return;
+      }
+
+      const firstYear = orderedYears[0];
+      const lastYear = orderedYears[orderedYears.length - 1];
+
+      segments[pta] = [
+        { year: firstYear, trend: model.predict(firstYear) },
+        { year: lastYear, trend: model.predict(lastYear) },
+      ];
+    });
+
+    return segments;
+  }, [groupBy, processedTrendData, selectedPTAs, showTrend, trendModelsByPta]);
+
   const TrendTooltipContent = ({ active, payload, label }: TooltipProps<number, string>) => {
     if (!active || !payload || !payload.length) {
       return null;
     }
 
     const safePayload = Array.isArray(payload) ? payload : [];
-    const hoveredLabel = label ?? '';
-    const hoveredYearCandidate = typeof hoveredLabel === 'number' ? hoveredLabel : Number(hoveredLabel);
-    const isYearGrouping = groupBy === 'year';
-    const hasNumericYear = Number.isFinite(hoveredYearCandidate);
-    const hoveredYear = isYearGrouping && hasNumericYear ? hoveredYearCandidate : null;
-    const hasTrend = isYearGrouping && hoveredYear !== null;
 
-    const tooltipTitle = isYearGrouping ? 'Tendência' : 'Detalhes';
-    const subtitleText = isYearGrouping
-      ? `Ano: ${hoveredYear ?? '—'}`
-      : String(hoveredLabel ?? '');
+    if (groupBy !== 'year') {
+      const hoveredLabel = label ?? '';
+      const tooltipTitle = 'Detalhes';
 
-    const hasUnavailableTrend = hasTrend && selectedPTAs.some((pta) => !trendModelsByPta[pta]);
+      return (
+        <div className="min-w-[220px] space-y-2 text-xs" aria-live="polite">
+          <div>
+            <div className="text-sm font-semibold text-foreground">{tooltipTitle}</div>
+            <div className="text-[11px] text-muted-foreground">{String(hoveredLabel ?? '')}</div>
+          </div>
+          <div className="space-y-2">
+            {selectedPTAs.map((pta) => {
+              const seriesEntry = safePayload.find((item: any) => item?.dataKey === pta);
+              const color = seriesEntry?.color ?? CHART_COLORS[selectedPTAs.indexOf(pta) % CHART_COLORS.length];
+              const ptaInfo = availablePTAs.find((p) => p.key === pta);
+              const labelText = ptaInfo?.label || pta.toUpperCase();
+              const observedValue = seriesEntry && typeof seriesEntry.value === 'number'
+                ? seriesEntry.value
+                : null;
+              const formattedObserved = observedValue !== null ? formatTrendValue(pta, observedValue) : null;
+
+              return (
+                <div key={pta} className="flex items-start gap-2">
+                  <span
+                    aria-hidden="true"
+                    className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: color }}
+                  />
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-medium text-foreground">{labelText}</div>
+                    <div className="text-[11px] text-muted-foreground">
+                      Valor:{' '}
+                      <span className="font-semibold text-foreground">{formattedObserved ?? '—'}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    const hoveredYearCandidate = typeof label === 'number' ? label : Number(label);
+    if (!Number.isFinite(hoveredYearCandidate)) {
+      return null;
+    }
+
+    const hoveredYear = Number(hoveredYearCandidate);
+    const tooltipTitle = 'Tendência';
+    const subtitleText = `Ano: ${hoveredYear}`;
+
+    if (!showTrend) {
+      return (
+        <div className="min-w-[220px] space-y-2 text-xs" aria-live="polite">
+          <div>
+            <div className="text-sm font-semibold text-foreground">{tooltipTitle}</div>
+            <div className="text-[11px] text-muted-foreground">{subtitleText}</div>
+          </div>
+          <div className="text-[11px] text-muted-foreground">Tendência desativada</div>
+        </div>
+      );
+    }
+
+    const seriesPayload = safePayload.filter((item: any) => selectedPTAs.includes(item?.dataKey as string));
 
     return (
       <div className="min-w-[220px] space-y-2 text-xs" aria-live="polite">
@@ -421,62 +667,45 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
           <div className="text-sm font-semibold text-foreground">{tooltipTitle}</div>
           <div className="text-[11px] text-muted-foreground">{subtitleText}</div>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1">
           {selectedPTAs.map((pta) => {
-            const seriesEntry = safePayload.find((item: any) => item?.dataKey === pta);
-            const color = seriesEntry?.color ?? CHART_COLORS[selectedPTAs.indexOf(pta) % CHART_COLORS.length];
+            const payloadEntry = seriesPayload.find((item: any) => item?.dataKey === pta);
+            const color = payloadEntry?.color ?? CHART_COLORS[selectedPTAs.indexOf(pta) % CHART_COLORS.length];
             const ptaInfo = availablePTAs.find((p) => p.key === pta);
             const labelText = ptaInfo?.label || pta.toUpperCase();
-            const trendModel = trendModelsByPta[pta];
-            const predictedValue = hasTrend && trendModel && hoveredYear !== null
-              ? trendModel.predict(hoveredYear)
-              : null;
-            const safePredictedValue = typeof predictedValue === 'number' && Number.isFinite(predictedValue)
-              ? predictedValue
-              : null;
-            const formattedTrend = hasTrend ? formatTrendValue(pta, safePredictedValue) : null;
-            const observedValue = seriesEntry && typeof seriesEntry.value === 'number'
-              ? seriesEntry.value
-              : null;
-            const formattedObserved = observedValue !== null ? formatTrendValue(pta, observedValue) : null;
-            const showObserved = showObservedInTooltip && formattedObserved !== null;
+            const series = trendSeriesByTrait[pta]?.yearly || [];
+            const model = originalTrendModelsByPta[pta];
+            const index = series.findIndex((entry) => entry.year === hoveredYear);
+            let delta: number | null = null;
+
+            if (model && index > 0) {
+              const previousYear = series[index - 1]?.year;
+              if (typeof previousYear === 'number') {
+                const currentValue = model.predict(hoveredYear);
+                const previousValue = model.predict(previousYear);
+                if (Number.isFinite(currentValue) && Number.isFinite(previousValue)) {
+                  delta = currentValue - previousValue;
+                }
+              }
+            }
+
+            const formattedDelta = delta !== null ? formatTrendValue(pta, delta) : '—';
 
             return (
-              <div key={pta} className="flex items-start gap-2">
-                <span
-                  aria-hidden="true"
-                  className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: color }}
-                />
-                <div className="space-y-0.5">
-                  <div className="text-xs font-medium text-foreground">{labelText}</div>
-                  {hasTrend ? (
-                    <div className="text-[11px] text-muted-foreground">
-                      Tendência (ŷ):{' '}
-                      <span className="font-semibold text-foreground">{formattedTrend}</span>
-                      {showObserved && (
-                        <span className="ml-2">
-                          Observado:{' '}
-                          <span className="font-semibold text-foreground">{formattedObserved}</span>
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-[11px] text-muted-foreground">
-                      Valor:{' '}
-                      <span className="font-semibold text-foreground">{formattedObserved ?? '—'}</span>
-                    </div>
-                  )}
+              <div key={pta} className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span
+                    aria-hidden="true"
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: color }}
+                  />
+                  <span className="text-xs font-medium text-foreground">{labelText}</span>
                 </div>
+                <span className="text-[11px] font-semibold text-foreground">ΔGₜ: {formattedDelta}</span>
               </div>
             );
           })}
         </div>
-        {hasUnavailableTrend && (
-          <div className="text-[11px] italic text-muted-foreground">
-            Tendência indisponível (dados insuficientes)
-          </div>
-        )}
       </div>
     );
   };
@@ -569,8 +798,71 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
       );
     }
 
-    const dataKey = groupBy === 'year' ? 'year' : 'name';
-    
+    if (groupBy === 'year') {
+      return (
+        <ResponsiveContainer width="100%" height={400}>
+          <LineChart data={processedTrendData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+            <XAxis
+              dataKey="year"
+              type="number"
+              domain={["dataMin", "dataMax"]}
+              allowDecimals={false}
+              stroke="#666"
+              fontSize={12}
+            />
+            <YAxis stroke="#666" fontSize={12} />
+            <Tooltip
+              content={<TrendTooltipContent />}
+              contentStyle={{
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                border: 'none',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+              }}
+            />
+            <Legend />
+            {selectedPTAs.map((pta, index) => (
+              <Line
+                key={pta}
+                type="monotone"
+                dataKey={pta}
+                stroke={CHART_COLORS[index % CHART_COLORS.length]}
+                strokeWidth={2}
+                dot={{ fill: CHART_COLORS[index % CHART_COLORS.length], strokeWidth: 2, r: 4 }}
+                name={availablePTAs.find(p => p.key === pta)?.label || pta}
+                connectNulls={false}
+                isAnimationActive={false}
+              />
+            ))}
+            {showTrend && selectedPTAs.map((pta, index) => {
+              const segment = trendLineSegments[pta];
+              if (!segment || segment.length < 2) {
+                return null;
+              }
+
+              return (
+                <Line
+                  key={`${pta}-trend`}
+                  type="linear"
+                  dataKey="trend"
+                  data={segment}
+                  stroke={CHART_COLORS[index % CHART_COLORS.length]}
+                  strokeDasharray="5 5"
+                  strokeWidth={2}
+                  dot={false}
+                  isAnimationActive={false}
+                  legendType="none"
+                />
+              );
+            })}
+          </LineChart>
+        </ResponsiveContainer>
+      );
+    }
+
+    const dataKey = 'name';
+
     if (chartType === 'line') {
       return (
         <ResponsiveContainer width="100%" height={400}>
@@ -710,8 +1002,8 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
                 Ver Rebanho
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={loadFemalesData} disabled={loading}>
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <Button variant="outline" size="sm" onClick={loadFemalesData} disabled={isLoading}>
+              <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Atualizar
             </Button>
             <Button variant="outline" size="sm" onClick={handleExport}>
@@ -858,23 +1150,23 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
                             <div className="grid grid-cols-2 gap-2 text-sm">
                               <div>
                                 <span className="text-muted-foreground">Média:</span>
-                                <div className="font-medium">{stats?.mean?.toFixed(2) || 'N/A'}</div>
+                                <div className="font-medium">{formatStatNumber(stats?.mean)}</div>
                               </div>
                               <div>
                                 <span className="text-muted-foreground">Mediana:</span>
-                                <div className="font-medium">{stats?.median?.toFixed(2) || 'N/A'}</div>
+                                <div className="font-medium">{formatStatNumber(stats?.median)}</div>
                               </div>
                               <div>
                                 <span className="text-muted-foreground">Mín:</span>
-                                <div className="font-medium">{stats?.min?.toFixed(2) || 'N/A'}</div>
+                                <div className="font-medium">{formatStatNumber(stats?.min)}</div>
                               </div>
                               <div>
                                 <span className="text-muted-foreground">Máx:</span>
-                                <div className="font-medium">{stats?.max?.toFixed(2) || 'N/A'}</div>
+                                <div className="font-medium">{formatStatNumber(stats?.max)}</div>
                               </div>
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              Desvio Padrão: {stats?.std?.toFixed(2) || 'N/A'} | {stats?.count || 0} animais
+                              Desvio Padrão: {formatStatNumber(stats?.sd)} | {stats?.n ?? 0} animais
                             </div>
                          </CardContent>
                       </Card>
@@ -1057,7 +1349,7 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
                 setShowFarmAverage={setShowFarmAverage}
                 showTrendLine={showTrendLine}
                 setShowTrendLine={setShowTrendLine}
-                loading={loading}
+                loading={isLoading}
                 farmName={farm?.farm_name}
               />
             </TabsContent>
