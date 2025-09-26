@@ -532,7 +532,6 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
                       farmId={farm?.farm_id}
                       selectedTraits={selectedPTAs}
                       availableTraits={availablePTAs}
-                      showTrendLine={showTrend}
                       colors={CHART_COLORS}
                     />
                   ) : (
