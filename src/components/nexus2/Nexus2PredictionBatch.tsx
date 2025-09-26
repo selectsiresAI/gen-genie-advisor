@@ -67,7 +67,7 @@ const buildErrorExportRows = (rows: BatchRow[]) =>
   rows
     .filter((row) => row.status === 'invalid')
     .map((row) => ({
-      linha: row.lineNumber,
+      linha: row.lineNumber.toString(),
       id_fazenda: row.idFazenda,
       nome: row.nome,
       data_de_nascimento: row.dataNascimento,
@@ -89,7 +89,7 @@ const buildResultExportRows = (rows: BatchRow[]) =>
       }, {} as Record<string, string>);
 
       return {
-        linha: row.lineNumber,
+        linha: row.lineNumber.toString(),
         id_fazenda: row.idFazenda,
         nome: row.nome,
         data_de_nascimento: row.dataNascimento,

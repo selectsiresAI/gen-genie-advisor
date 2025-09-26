@@ -14,14 +14,54 @@ const SELECT_COLUMNS = [
   'cm_dollar',
   'fm_dollar',
   'gm_dollar',
+  'f_sav',
   'ptam',
-  'ptaf',
-  'ptap',
   'cfp',
+  'ptaf',
+  'ptaf_pct',
+  'ptap',
+  'ptap_pct',
   'pl',
   'dpr',
+  'liv',
   'scs',
-  'ptat'
+  'mast',
+  'met',
+  'rp',
+  'da',
+  'ket',
+  'mf',
+  'ptat',
+  'udc',
+  'flc',
+  'sce',
+  'dce',
+  'ssb',
+  'dsb',
+  'h_liv',
+  'ccr',
+  'hcr',
+  'fi',
+  'bwc',
+  'sta',
+  'str',
+  'dfm',
+  'rua',
+  'rls',
+  'rtp',
+  'ftl',
+  'rw',
+  'rlr',
+  'fta',
+  'fls',
+  'fua',
+  'ruh',
+  'ruw',
+  'ucl',
+  'udp',
+  'ftp',
+  'rfi',
+  'gfi'
 ] as const;
 
 export type BullsDenormSelection = Pick<BullsDenormRow, typeof SELECT_COLUMNS[number]>;
@@ -51,7 +91,7 @@ export async function getBullByNaab(naab: string): Promise<BullsDenormSelection 
     throw new Error(error.message);
   }
 
-  return (data as BullsDenormSelection | null) ?? null;
+  return data as unknown as BullsDenormSelection | null;
 }
 
 export async function searchBulls(term: string, limit = 10): Promise<BullsDenormSelection[]> {
@@ -78,5 +118,5 @@ export async function searchBulls(term: string, limit = 10): Promise<BullsDenorm
     throw new Error(error.message);
   }
 
-  return (data as BullsDenormSelection[] | null) ?? [];
+  return (data as unknown as BullsDenormSelection[]) ?? [];
 }

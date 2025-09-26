@@ -57,7 +57,7 @@ const buildTooltipContent = (
   showTrendLine: boolean,
   formatValue: TrendsChartProps['formatValue'],
 ) => {
-  const { active, payload, label } = props;
+  const { active, payload, label } = props as any;
 
   if (!active || !payload || payload.length === 0) {
     return null;

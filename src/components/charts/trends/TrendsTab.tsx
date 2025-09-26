@@ -53,9 +53,7 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', {
 const TRAIT_COLUMN_ALIASES: Record<string, string> = {
   'HHP$': 'hhp_dollar',
   'HHP$®': 'hhp_dollar',
-  HHP$: 'hhp_dollar',
   'NM$': 'nm_dollar',
-  NM$: 'nm_dollar',
   TPI: 'tpi',
   PTA_HHPS: 'hhp_dollar',
   PTA_NMS: 'nm_dollar',

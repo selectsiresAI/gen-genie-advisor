@@ -30,14 +30,54 @@ export const PREDICTION_TRAITS = [
   { key: 'cm_dollar', label: FEMALE_PTA_LABELS.cm_dollar },
   { key: 'fm_dollar', label: FEMALE_PTA_LABELS.fm_dollar },
   { key: 'gm_dollar', label: FEMALE_PTA_LABELS.gm_dollar },
+  { key: 'f_sav', label: 'F SAV' },
   { key: 'ptam', label: FEMALE_PTA_LABELS.ptam },
-  { key: 'ptaf', label: FEMALE_PTA_LABELS.ptaf },
-  { key: 'ptap', label: FEMALE_PTA_LABELS.ptap },
   { key: 'cfp', label: FEMALE_PTA_LABELS.cfp },
+  { key: 'ptaf', label: FEMALE_PTA_LABELS.ptaf },
+  { key: 'ptaf_pct', label: 'PTAF%' },
+  { key: 'ptap', label: FEMALE_PTA_LABELS.ptap },
+  { key: 'ptap_pct', label: 'PTAP%' },
   { key: 'pl', label: FEMALE_PTA_LABELS.pl },
   { key: 'dpr', label: FEMALE_PTA_LABELS.dpr },
+  { key: 'liv', label: 'LIV' },
   { key: 'scs', label: FEMALE_PTA_LABELS.scs },
-  { key: 'ptat', label: FEMALE_PTA_LABELS.ptat }
+  { key: 'mast', label: 'MAST' },
+  { key: 'met', label: 'MET' },
+  { key: 'rp', label: 'RP' },
+  { key: 'da', label: 'DA' },
+  { key: 'ket', label: 'KET' },
+  { key: 'mf', label: 'MF' },
+  { key: 'ptat', label: FEMALE_PTA_LABELS.ptat },
+  { key: 'udc', label: 'UDC' },
+  { key: 'flc', label: 'FLC' },
+  { key: 'sce', label: 'SCE' },
+  { key: 'dce', label: 'DCE' },
+  { key: 'ssb', label: 'SSB' },
+  { key: 'dsb', label: 'DSB' },
+  { key: 'h_liv', label: 'H LIV' },
+  { key: 'ccr', label: 'CCR' },
+  { key: 'hcr', label: 'HCR' },
+  { key: 'fi', label: 'FI' },
+  { key: 'bwc', label: 'BWC' },
+  { key: 'sta', label: 'STA' },
+  { key: 'str', label: 'STR' },
+  { key: 'dfm', label: 'DFM' },
+  { key: 'rua', label: 'RUA' },
+  { key: 'rls', label: 'RLS' },
+  { key: 'rtp', label: 'RTP' },
+  { key: 'ftl', label: 'FTL' },
+  { key: 'rw', label: 'RW' },
+  { key: 'rlr', label: 'RLR' },
+  { key: 'fta', label: 'FTA' },
+  { key: 'fls', label: 'FLS' },
+  { key: 'fua', label: 'FUA' },
+  { key: 'ruh', label: 'RUH' },
+  { key: 'ruw', label: 'RUW' },
+  { key: 'ucl', label: 'UCL' },
+  { key: 'udp', label: 'UDP' },
+  { key: 'ftp', label: 'FTP' },
+  { key: 'rfi', label: 'RFI' },
+  { key: 'gfi', label: 'GFI' }
 ] as const;
 
 export const SUMMARY_TRAITS = [
@@ -73,7 +113,7 @@ export function mapBullRecord(record: BullsDenormSelection | null): BullSummary 
 
   for (const trait of PREDICTION_TRAITS) {
     const value = record[trait.key as keyof BullsDenormSelection];
-    ptas[trait.key] = typeof value === 'number' ? value : value ?? null;
+    ptas[trait.key] = typeof value === 'number' ? value : null;
   }
 
   return {
