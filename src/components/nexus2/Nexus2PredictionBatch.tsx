@@ -1,0 +1,635 @@
+import React, { useMemo, useRef, useState } from 'react';
+import { Download, FileSpreadsheet, Loader2, Upload, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useToast } from '@/hooks/use-toast';
+import { t } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
+import { getBullByNaab } from '@/supabase/queries/bulls';
+import {
+  BullSummary,
+  PREDICTION_TRAITS,
+  calculatePedigreePrediction,
+  formatPredictionValue,
+  mapBullRecord,
+  type PredictionResult
+} from '@/services/prediction.service';
+import { read, utils, writeFileXLSX } from 'xlsx';
+
+const ACCEPTED_EXTENSIONS = '.csv,.xlsx,.xls';
+const REQUIRED_HEADERS = ['naab_pai', 'naab_avo_materno', 'naab_bisavo_materno'] as const;
+
+const normalizeNaab = (value: string) => value.trim().toUpperCase();
+
+interface BatchRow {
+  lineNumber: number;
+  naabPai: string;
+  naabAvoMaterno: string;
+  naabBisavoMaterno: string;
+  bulls: {
+    sire: BullSummary | null;
+    mgs: BullSummary | null;
+    mmgs: BullSummary | null;
+  };
+  fieldErrors: {
+    sire?: string | null;
+    mgs?: string | null;
+    mmgs?: string | null;
+  };
+  errors: string[];
+  status: 'valid' | 'invalid';
+  prediction: PredictionResult | null;
+}
+
+const buildErrorExportRows = (rows: BatchRow[]) =>
+  rows
+    .filter((row) => row.status === 'invalid')
+    .map((row) => ({
+      linha: row.lineNumber,
+      naab_pai: row.naabPai,
+      naab_avo_materno: row.naabAvoMaterno,
+      naab_bisavo_materno: row.naabBisavoMaterno,
+      erros: [...row.errors, row.fieldErrors.sire, row.fieldErrors.mgs, row.fieldErrors.mmgs]
+        .filter(Boolean)
+        .join(' | ')
+    }));
+
+const buildResultExportRows = (rows: BatchRow[]) =>
+  rows
+    .filter((row) => row.status === 'valid' && row.prediction)
+    .map((row) => ({
+      linha: row.lineNumber,
+      naab_pai: row.naabPai,
+      nome_pai: row.bulls.sire?.name ?? '',
+      naab_avo_materno: row.naabAvoMaterno,
+      nome_avo_materno: row.bulls.mgs?.name ?? '',
+      naab_bisavo_materno: row.naabBisavoMaterno,
+      nome_bisavo_materno: row.bulls.mmgs?.name ?? '',
+      ...PREDICTION_TRAITS.reduce((acc, trait) => {
+        acc[`predicao_${trait.key}`] = formatPredictionValue(row.prediction?.[trait.key] ?? null);
+        return acc;
+      }, {} as Record<string, string>)
+    }));
+
+const saveSheet = (data: Record<string, string>[], sheetName: string, filename: string, format: 'xlsx' | 'csv') => {
+  const worksheet = utils.json_to_sheet(data);
+  const workbook = utils.book_new();
+  utils.book_append_sheet(workbook, worksheet, sheetName);
+
+  if (format === 'xlsx') {
+    writeFileXLSX(workbook, filename);
+    return;
+  }
+
+  const csv = utils.sheet_to_csv(worksheet);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+const Nexus2PredictionBatch: React.FC = () => {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const { toast } = useToast();
+
+  const [rows, setRows] = useState<BatchRow[]>([]);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [isParsing, setIsParsing] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const validRows = useMemo(() => rows.filter((row) => row.status === 'valid'), [rows]);
+  const invalidRows = useMemo(() => rows.filter((row) => row.status === 'invalid'), [rows]);
+  const hasPredictions = useMemo(
+    () => validRows.some((row) => row.prediction),
+    [validRows]
+  );
+
+  const parseFile = async (file: File) => {
+    const buffer = await file.arrayBuffer();
+    const workbook = read(buffer, { type: 'array' });
+
+    if (!workbook.SheetNames.length) {
+      throw new Error('emptyWorkbook');
+    }
+
+    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+    const headerRows = utils.sheet_to_json<string[]>(worksheet, {
+      header: 1,
+      range: 0,
+      blankrows: false
+    });
+
+    if (!headerRows.length) {
+      throw new Error('emptyWorkbook');
+    }
+
+    const header = headerRows[0]?.map((value) => (value ?? '').toString().trim().toLowerCase()) ?? [];
+    const missingHeaders = REQUIRED_HEADERS.filter((column) => !header.includes(column));
+
+    if (missingHeaders.length) {
+      throw new Error('invalidHeader');
+    }
+
+    const sheetRows = utils.sheet_to_json<Record<(typeof REQUIRED_HEADERS)[number], string>>(worksheet, {
+      header: REQUIRED_HEADERS as unknown as string[],
+      range: 1,
+      defval: ''
+    });
+
+    const normalizedRows: BatchRow[] = sheetRows.map((row, index) => {
+      const naabPai = normalizeNaab(String(row.naab_pai ?? ''));
+      const naabAvoMaterno = normalizeNaab(String(row.naab_avo_materno ?? ''));
+      const naabBisavoMaterno = normalizeNaab(String(row.naab_bisavo_materno ?? ''));
+      const lineNumber = index + 2;
+      const errors: string[] = [];
+      const fieldErrors: BatchRow['fieldErrors'] = {};
+
+      const isEmpty = !naabPai && !naabAvoMaterno && !naabBisavoMaterno;
+
+      if (isEmpty) {
+        errors.push(t('nexus2.batch.error.emptyRow'));
+      }
+
+      if (!naabPai) {
+        fieldErrors.sire = t('nexus2.error.requiredSire');
+      }
+
+      if (!naabAvoMaterno) {
+        fieldErrors.mgs = t('nexus2.error.requiredMgs');
+      }
+
+      if (!naabBisavoMaterno) {
+        fieldErrors.mmgs = t('nexus2.error.requiredMmgs');
+      }
+
+      const filledValues = [naabPai, naabAvoMaterno, naabBisavoMaterno].filter(Boolean);
+      if (filledValues.length > new Set(filledValues).size) {
+        errors.push(t('nexus2.batch.error.duplicateInRow'));
+      }
+
+      return {
+        lineNumber,
+        naabPai,
+        naabAvoMaterno,
+        naabBisavoMaterno,
+        bulls: {
+          sire: null,
+          mgs: null,
+          mmgs: null
+        },
+        fieldErrors,
+        errors,
+        status: 'invalid',
+        prediction: null
+      };
+    });
+
+    const combinationMap = new Map<string, number[]>();
+
+    normalizedRows.forEach((row) => {
+      const key = `${row.naabPai}|${row.naabAvoMaterno}|${row.naabBisavoMaterno}`;
+      if (!key.replace(/\|/g, '')) {
+        return;
+      }
+      const entries = combinationMap.get(key) ?? [];
+      entries.push(row.lineNumber);
+      combinationMap.set(key, entries);
+    });
+
+    const bullCache = new Map<string, BullSummary | null>();
+
+    const resolveBull = async (naab: string): Promise<BullSummary | null> => {
+      if (!naab) {
+        return null;
+      }
+
+      if (bullCache.has(naab)) {
+        return bullCache.get(naab) ?? null;
+      }
+
+      try {
+        const record = await getBullByNaab(naab);
+        const bull = mapBullRecord(record);
+        bullCache.set(naab, bull);
+        return bull;
+      } catch (error) {
+        console.error('Erro ao buscar touro em lote:', error);
+        return null;
+      }
+    };
+
+    for (const row of normalizedRows) {
+      const duplicates = combinationMap.get(`${row.naabPai}|${row.naabAvoMaterno}|${row.naabBisavoMaterno}`);
+      if (duplicates && duplicates.length > 1) {
+        const otherLines = duplicates.filter((line) => line !== row.lineNumber);
+        if (otherLines.length) {
+          row.errors.push(`${t('nexus2.batch.error.duplicateRow')} ${otherLines.join(', ')}`);
+        }
+      }
+
+      const sire = row.fieldErrors.sire ? null : await resolveBull(row.naabPai);
+      const mgs = row.fieldErrors.mgs ? null : await resolveBull(row.naabAvoMaterno);
+      const mmgs = row.fieldErrors.mmgs ? null : await resolveBull(row.naabBisavoMaterno);
+
+      row.bulls = { sire, mgs, mmgs };
+
+      if (row.naabPai && !sire) {
+        row.fieldErrors.sire = t('nexus2.error.sireNotFound');
+        row.errors.push(t('nexus2.error.sireNotFound'));
+      }
+
+      if (row.naabAvoMaterno && !mgs) {
+        row.fieldErrors.mgs = t('nexus2.error.mgsNotFound');
+        row.errors.push(t('nexus2.error.mgsNotFound'));
+      }
+
+      if (row.naabBisavoMaterno && !mmgs) {
+        row.fieldErrors.mmgs = t('nexus2.error.mmgsNotFound');
+        row.errors.push(t('nexus2.error.mmgsNotFound'));
+      }
+
+      const hasFieldErrors = Boolean(row.fieldErrors.sire || row.fieldErrors.mgs || row.fieldErrors.mmgs);
+      row.status = row.errors.length === 0 && !hasFieldErrors ? 'valid' : 'invalid';
+    }
+
+    return normalizedRows;
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    setIsParsing(true);
+
+    try {
+      const parsedRows = await parseFile(file);
+      setRows(parsedRows);
+      setFileName(file.name);
+      toast({
+        title: t('nexus2.batch.toast.uploadSuccess')
+      });
+    } catch (error) {
+      console.error('Erro ao processar arquivo de lote:', error);
+      setRows([]);
+      setFileName(null);
+      toast({
+        variant: 'destructive',
+        title: t('nexus2.batch.toast.uploadError')
+      });
+    } finally {
+      setIsParsing(false);
+      if (event.target) {
+        event.target.value = '';
+      }
+    }
+  };
+
+  const handleProcess = () => {
+    if (!validRows.length) {
+      toast({
+        variant: 'destructive',
+        title: t('nexus2.batch.toast.noValid')
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      const updatedRows = rows.map((row) => {
+        if (row.status !== 'valid') {
+          return { ...row, prediction: null };
+        }
+
+        return {
+          ...row,
+          prediction: calculatePedigreePrediction(row.bulls)
+        };
+      });
+
+      setRows(updatedRows);
+      toast({
+        title: t('nexus2.batch.toast.processSuccess')
+      });
+    } catch (error) {
+      console.error('Erro ao calcular predição em lote:', error);
+      toast({
+        variant: 'destructive',
+        title: t('nexus2.batch.toast.processError')
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleReset = () => {
+    setRows([]);
+    setFileName(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const exportResults = (format: 'xlsx' | 'csv') => {
+    const data = buildResultExportRows(rows);
+
+    if (!data.length) {
+      toast({
+        variant: 'destructive',
+        title: t('nexus2.batch.toast.noResultsToExport')
+      });
+      return;
+    }
+
+    const filename = `nexus2_resultados.${format}`;
+    saveSheet(data, 'Resultados', filename, format);
+    toast({
+      title: t('nexus2.batch.toast.exportSuccess')
+    });
+  };
+
+  const exportErrors = (format: 'xlsx' | 'csv') => {
+    const data = buildErrorExportRows(rows);
+
+    if (!data.length) {
+      toast({
+        variant: 'destructive',
+        title: t('nexus2.batch.toast.noErrorsToExport')
+      });
+      return;
+    }
+
+    const filename = `nexus2_erros.${format}`;
+    saveSheet(data, 'Erros', filename, format);
+    toast({
+      title: t('nexus2.batch.toast.exportSuccess')
+    });
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <FileSpreadsheet className="h-5 w-5" />
+          {t('nexus2.tabs.batch')}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ACCEPTED_EXTENSIONS}
+            className="hidden"
+            onChange={handleFileChange}
+          />
+          <Button type="button" onClick={() => fileInputRef.current?.click()} disabled={isParsing}>
+            {isParsing ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {t('nexus2.batch.upload.loading')}
+              </span>
+            ) : (
+              <span className="flex items-center gap-2">
+                <Upload className="h-4 w-4" />
+                {t('nexus2.batch.upload.button')}
+              </span>
+            )}
+          </Button>
+          {fileName && (
+            <Badge variant="outline" className="flex items-center gap-2">
+              {fileName}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5"
+                onClick={handleReset}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </Badge>
+          )}
+          {rows.length > 0 && (
+            <Button type="button" variant="outline" onClick={handleReset}>
+              {t('nexus2.batch.actions.reset')}
+            </Button>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground">{t('nexus2.batch.upload.helper')}</p>
+
+        {rows.length > 0 ? (
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <Badge variant="outline">
+                {t('nexus2.batch.preview.validCount', { count: validRows.length })}
+              </Badge>
+              <Badge variant={invalidRows.length ? 'destructive' : 'outline'}>
+                {t('nexus2.batch.preview.invalidCount', { count: invalidRows.length })}
+              </Badge>
+            </div>
+
+            <div className="overflow-x-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('nexus2.batch.preview.line')}</TableHead>
+                    <TableHead>{t('nexus2.results.sire')}</TableHead>
+                    <TableHead>{t('nexus2.results.mgs')}</TableHead>
+                    <TableHead>{t('nexus2.results.mmgs')}</TableHead>
+                    <TableHead>{t('nexus2.batch.preview.status')}</TableHead>
+                    <TableHead>{t('nexus2.batch.preview.errors')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((row) => (
+                    <TableRow key={row.lineNumber}>
+                      <TableCell>{row.lineNumber}</TableCell>
+                      <TableCell className={cn(row.fieldErrors.sire ? 'text-destructive' : '')}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{row.naabPai || '—'}</span>
+                          {row.bulls.sire && !row.fieldErrors.sire && (
+                            <span className="text-xs text-muted-foreground">{row.bulls.sire.name}</span>
+                          )}
+                          {row.fieldErrors.sire && (
+                            <span className="text-xs text-destructive">{row.fieldErrors.sire}</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className={cn(row.fieldErrors.mgs ? 'text-destructive' : '')}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{row.naabAvoMaterno || '—'}</span>
+                          {row.bulls.mgs && !row.fieldErrors.mgs && (
+                            <span className="text-xs text-muted-foreground">{row.bulls.mgs.name}</span>
+                          )}
+                          {row.fieldErrors.mgs && (
+                            <span className="text-xs text-destructive">{row.fieldErrors.mgs}</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className={cn(row.fieldErrors.mmgs ? 'text-destructive' : '')}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{row.naabBisavoMaterno || '—'}</span>
+                          {row.bulls.mmgs && !row.fieldErrors.mmgs && (
+                            <span className="text-xs text-muted-foreground">{row.bulls.mmgs.name}</span>
+                          )}
+                          {row.fieldErrors.mmgs && (
+                            <span className="text-xs text-destructive">{row.fieldErrors.mmgs}</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={row.status === 'valid' ? 'outline' : 'destructive'}>
+                          {row.status === 'valid'
+                            ? t('nexus2.batch.status.valid')
+                            : t('nexus2.batch.status.invalid')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {row.errors.length ? (
+                          <ul className="list-disc space-y-1 pl-4 text-sm">
+                            {row.errors.map((errorMessage, index) => (
+                              <li key={`${row.lineNumber}-error-${index}`}>{errorMessage}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <Button type="button" onClick={handleProcess} disabled={isProcessing || !validRows.length}>
+                {isProcessing ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {t('nexus2.batch.actions.processing')}
+                  </span>
+                ) : (
+                  t('nexus2.batch.actions.process')
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => exportResults('xlsx')}
+                disabled={!hasPredictions}
+              >
+                <span className="flex items-center gap-2">
+                  <Download className="h-4 w-4" />
+                  {t('nexus2.batch.actions.exportResultsXlsx')}
+                </span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => exportResults('csv')}
+                disabled={!hasPredictions}
+              >
+                <span className="flex items-center gap-2">
+                  <Download className="h-4 w-4" />
+                  {t('nexus2.batch.actions.exportResultsCsv')}
+                </span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => exportErrors('xlsx')}
+                disabled={!invalidRows.length}
+              >
+                <span className="flex items-center gap-2">
+                  <Download className="h-4 w-4" />
+                  {t('nexus2.batch.actions.exportErrorsXlsx')}
+                </span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => exportErrors('csv')}
+                disabled={!invalidRows.length}
+              >
+                <span className="flex items-center gap-2">
+                  <Download className="h-4 w-4" />
+                  {t('nexus2.batch.actions.exportErrorsCsv')}
+                </span>
+              </Button>
+            </div>
+
+            {hasPredictions && (
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold">{t('nexus2.batch.results.title')}</h3>
+                <div className="overflow-x-auto rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t('nexus2.batch.preview.line')}</TableHead>
+                        <TableHead>{t('nexus2.results.sire')}</TableHead>
+                        <TableHead>{t('nexus2.results.mgs')}</TableHead>
+                        <TableHead>{t('nexus2.results.mmgs')}</TableHead>
+                        {PREDICTION_TRAITS.map((trait) => (
+                          <TableHead key={`prediction-${trait.key}`}>{trait.label}</TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {rows
+                        .filter((row) => row.status === 'valid' && row.prediction)
+                        .map((row) => (
+                          <TableRow key={`prediction-row-${row.lineNumber}`}>
+                            <TableCell>{row.lineNumber}</TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{row.bulls.sire?.naab}</span>
+                                <span className="text-xs text-muted-foreground">{row.bulls.sire?.name}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{row.bulls.mgs?.naab}</span>
+                                <span className="text-xs text-muted-foreground">{row.bulls.mgs?.name}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{row.bulls.mmgs?.naab}</span>
+                                <span className="text-xs text-muted-foreground">{row.bulls.mmgs?.name}</span>
+                              </div>
+                            </TableCell>
+                            {PREDICTION_TRAITS.map((trait) => (
+                              <TableCell key={`prediction-${row.lineNumber}-${trait.key}`}>
+                                {formatPredictionValue(row.prediction?.[trait.key] ?? null)}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
+            {t('nexus2.batch.preview.empty')}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+export default Nexus2PredictionBatch;
