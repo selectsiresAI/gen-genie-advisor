@@ -1691,6 +1691,33 @@ export type Database = {
           updated_at: string | null
         }[]
       }
+      get_pta_trend_and_stats: {
+        Args: {
+          farm_id: string
+          trait_keys: string[]
+        }
+        Returns: {
+          trait: string | null
+          column_name: string | null
+          yearly:
+            | {
+                year: number | null
+                mean: number | null
+                n: number | null
+              }[]
+            | null
+          stats:
+            | {
+                mean: number | null
+                median: number | null
+                min: number | null
+                max: number | null
+                sd: number | null
+                n: number | null
+              }
+            | null
+        }[]
+      }
       get_semen_inventory: {
         Args: { target_farm_id?: string }
         Returns: {
