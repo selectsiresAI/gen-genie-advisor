@@ -1,3 +1,4 @@
+import { NEXUS2_PTA_DEFINITIONS } from '@/constants/nexus2Ptas';
 import type { BullsDenormSelection } from '@/supabase/queries/bulls';
 
 export const GENETIC_WEIGHTS = {
@@ -6,39 +7,9 @@ export const GENETIC_WEIGHTS = {
   mmgs: 0.15
 } as const;
 
-const FEMALE_PTA_LABELS: Record<string, string> = {
-  hhp_dollar: 'HHP$®',
-  tpi: 'TPI',
-  nm_dollar: 'NM$',
-  cm_dollar: 'CM$',
-  fm_dollar: 'FM$',
-  gm_dollar: 'GM$',
-  ptam: 'PTAM',
-  ptaf: 'PTAF',
-  ptap: 'PTAP',
-  cfp: 'CFP',
-  pl: 'PL',
-  dpr: 'DPR',
-  scs: 'SCS',
-  ptat: 'PTAT'
-};
+export const PREDICTION_TRAITS = NEXUS2_PTA_DEFINITIONS;
 
-export const PREDICTION_TRAITS = [
-  { key: 'hhp_dollar', label: FEMALE_PTA_LABELS.hhp_dollar },
-  { key: 'tpi', label: FEMALE_PTA_LABELS.tpi },
-  { key: 'nm_dollar', label: FEMALE_PTA_LABELS.nm_dollar },
-  { key: 'cm_dollar', label: FEMALE_PTA_LABELS.cm_dollar },
-  { key: 'fm_dollar', label: FEMALE_PTA_LABELS.fm_dollar },
-  { key: 'gm_dollar', label: FEMALE_PTA_LABELS.gm_dollar },
-  { key: 'ptam', label: FEMALE_PTA_LABELS.ptam },
-  { key: 'ptaf', label: FEMALE_PTA_LABELS.ptaf },
-  { key: 'ptap', label: FEMALE_PTA_LABELS.ptap },
-  { key: 'cfp', label: FEMALE_PTA_LABELS.cfp },
-  { key: 'pl', label: FEMALE_PTA_LABELS.pl },
-  { key: 'dpr', label: FEMALE_PTA_LABELS.dpr },
-  { key: 'scs', label: FEMALE_PTA_LABELS.scs },
-  { key: 'ptat', label: FEMALE_PTA_LABELS.ptat }
-] as const;
+export type PredictionTraitKey = (typeof PREDICTION_TRAITS)[number]['key'];
 
 export const SUMMARY_TRAITS = [
   'tpi',
@@ -48,14 +19,12 @@ export const SUMMARY_TRAITS = [
   'ptaf'
 ] as const satisfies readonly PredictionTraitKey[];
 
-export type PredictionTraitKey = typeof PREDICTION_TRAITS[number]['key'];
-
 export interface BullSummary {
   id: string;
   naab: string;
   name: string;
   company?: string | null;
-  ptas: Partial<Record<PredictionTraitKey, number | null>>;
+  ptas: Record<PredictionTraitKey, number | null>;
 }
 
 export type PredictionResult = Record<PredictionTraitKey, number | null>;
@@ -69,12 +38,21 @@ export function mapBullRecord(record: BullsDenormSelection | null): BullSummary 
 
   const naab = record.code.toUpperCase();
 
-  const ptas: Partial<Record<PredictionTraitKey, number | null>> = {};
+  const ptas = Object.fromEntries(
+    PREDICTION_TRAITS.map((trait) => {
+      const value = record[trait.key as keyof BullsDenormSelection];
+      if (typeof value === 'number') {
+        return [trait.key, value];
+      }
 
-  for (const trait of PREDICTION_TRAITS) {
-    const value = record[trait.key as keyof BullsDenormSelection];
-    ptas[trait.key] = typeof value === 'number' ? value : value ?? null;
-  }
+      if (typeof value === 'string') {
+        const numericValue = Number(value);
+        return [trait.key, Number.isFinite(numericValue) ? numericValue : null];
+      }
+
+      return [trait.key, value ?? null];
+    })
+  ) as Record<PredictionTraitKey, number | null>;
 
   return {
     id: record.id ?? naab,

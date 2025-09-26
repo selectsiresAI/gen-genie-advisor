@@ -1,28 +1,12 @@
+import { NEXUS2_PTA_KEYS } from '@/constants/nexus2Ptas';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
 export type BullsDenormRow = Database['public']['Views']['bulls_denorm']['Row'];
 
-const SELECT_COLUMNS = [
-  'id',
-  'code',
-  'name',
-  'company',
-  'hhp_dollar',
-  'tpi',
-  'nm_dollar',
-  'cm_dollar',
-  'fm_dollar',
-  'gm_dollar',
-  'ptam',
-  'ptaf',
-  'ptap',
-  'cfp',
-  'pl',
-  'dpr',
-  'scs',
-  'ptat'
-] as const;
+const BASE_SELECT_COLUMNS = ['id', 'code', 'name', 'company'] as const;
+
+const SELECT_COLUMNS = [...BASE_SELECT_COLUMNS, ...NEXUS2_PTA_KEYS] as const;
 
 export type BullsDenormSelection = Pick<BullsDenormRow, typeof SELECT_COLUMNS[number]>;
 

@@ -63,6 +63,16 @@ interface BatchRow {
   prediction: PredictionResult | null;
 }
 
+const buildPedigreeString = (row: Pick<BatchRow, 'naabPai' | 'naabAvoMaterno' | 'naabBisavoMaterno'>) => {
+  const parts = [row.naabPai, row.naabAvoMaterno, row.naabBisavoMaterno].map((value) => value ?? '');
+
+  if (parts.every((part) => !part)) {
+    return '';
+  }
+
+  return parts.join(' / ');
+};
+
 const buildErrorExportRows = (rows: BatchRow[]) =>
   rows
     .filter((row) => row.status === 'invalid')
@@ -83,24 +93,18 @@ const buildResultExportRows = (rows: BatchRow[]) =>
   rows
     .filter((row) => row.status === 'valid' && row.prediction)
     .map((row) => {
-      const predictionColumns = PREDICTION_TRAITS.reduce((acc, trait) => {
-        acc[trait.label] = formatPredictionValue(row.prediction?.[trait.key] ?? null);
-        return acc;
-      }, {} as Record<string, string>);
-
-      return {
-        linha: row.lineNumber,
-        id_fazenda: row.idFazenda,
-        nome: row.nome,
-        data_de_nascimento: row.dataNascimento,
-        naab_pai: row.naabPai,
-        nome_pai: row.bulls.sire?.name ?? '',
-        naab_avo_materno: row.naabAvoMaterno,
-        nome_avo_materno: row.bulls.mgs?.name ?? '',
-        naab_bisavo_materno: row.naabBisavoMaterno,
-        nome_bisavo_materno: row.bulls.mmgs?.name ?? '',
-        ...predictionColumns
+      const resultRow: Record<string, string> = {
+        ID_Fazenda: row.idFazenda ?? '',
+        Nome: row.nome ?? '',
+        Data_de_Nascimento: row.dataNascimento ?? '',
+        'Pedigre Pai/Avô Materno/Bisavô Materno': buildPedigreeString(row)
       };
+
+      for (const trait of PREDICTION_TRAITS) {
+        resultRow[trait.label] = formatPredictionValue(row.prediction?.[trait.key] ?? null);
+      }
+
+      return resultRow;
     });
 
 const saveSheet = (data: Record<string, string>[], sheetName: string, filename: string, format: 'xlsx' | 'csv') => {
@@ -491,9 +495,9 @@ const Nexus2PredictionBatch: React.FC = () => {
                     <TableHead>{t('nexus2.batch.preview.farmId')}</TableHead>
                     <TableHead>{t('nexus2.batch.preview.name')}</TableHead>
                     <TableHead>{t('nexus2.batch.preview.birthDate')}</TableHead>
-                    <TableHead>{t('nexus2.results.sire')}</TableHead>
-                    <TableHead>{t('nexus2.results.mgs')}</TableHead>
-                    <TableHead>{t('nexus2.results.mmgs')}</TableHead>
+                    <TableHead>{t('nexus2.batch.preview.naabSire')}</TableHead>
+                    <TableHead>{t('nexus2.batch.preview.naabMgs')}</TableHead>
+                    <TableHead>{t('nexus2.batch.preview.naabMmgs')}</TableHead>
                     <TableHead>{t('nexus2.batch.preview.status')}</TableHead>
                     <TableHead>{t('nexus2.batch.preview.errors')}</TableHead>
                   </TableRow>
@@ -626,13 +630,10 @@ const Nexus2PredictionBatch: React.FC = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>{t('nexus2.batch.preview.line')}</TableHead>
                         <TableHead>{t('nexus2.batch.preview.farmId')}</TableHead>
                         <TableHead>{t('nexus2.batch.preview.name')}</TableHead>
                         <TableHead>{t('nexus2.batch.preview.birthDate')}</TableHead>
-                        <TableHead>{t('nexus2.results.sire')}</TableHead>
-                        <TableHead>{t('nexus2.results.mgs')}</TableHead>
-                        <TableHead>{t('nexus2.results.mmgs')}</TableHead>
+                        <TableHead>{t('nexus2.batch.results.pedigree')}</TableHead>
                         {PREDICTION_TRAITS.map((trait) => (
                           <TableHead key={`prediction-${trait.key}`}>{trait.label}</TableHead>
                         ))}
@@ -643,28 +644,10 @@ const Nexus2PredictionBatch: React.FC = () => {
                         .filter((row) => row.status === 'valid' && row.prediction)
                         .map((row) => (
                           <TableRow key={`prediction-row-${row.lineNumber}`}>
-                            <TableCell>{row.lineNumber}</TableCell>
                             <TableCell>{row.idFazenda || '—'}</TableCell>
                             <TableCell>{row.nome || '—'}</TableCell>
                             <TableCell>{row.dataNascimento || '—'}</TableCell>
-                            <TableCell>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{row.bulls.sire?.naab}</span>
-                                <span className="text-xs text-muted-foreground">{row.bulls.sire?.name}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{row.bulls.mgs?.naab}</span>
-                                <span className="text-xs text-muted-foreground">{row.bulls.mgs?.name}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{row.bulls.mmgs?.naab}</span>
-                                <span className="text-xs text-muted-foreground">{row.bulls.mmgs?.name}</span>
-                              </div>
-                            </TableCell>
+                            <TableCell>{buildPedigreeString(row)}</TableCell>
                             {PREDICTION_TRAITS.map((trait) => (
                               <TableCell key={`prediction-${row.lineNumber}-${trait.key}`}>
                                 {formatPredictionValue(row.prediction?.[trait.key] ?? null)}
