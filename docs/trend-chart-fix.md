@@ -2,7 +2,7 @@
 
 A correção que garante a exibição dos dados do rebanho selecionado no gráfico de Tendência está concentrada na geração do `processedTrendData` dentro do componente `ChartsPage`.
 
-O trecho chave encontra-se em [`src/components/ChartsPage.tsx`](../src/components/ChartsPage.tsx) nas linhas 256-311. Ele reconstrói as séries anuais a partir do ano real de nascimento das fêmeas carregadas e calcula as médias por PTA apenas com valores numéricos válidos.
+O trecho chave encontra-se em [`src/components/ChartsPage.tsx`](../src/components/ChartsPage.tsx) nas linhas 251-304, logo abaixo do comentário `// Processar dados para gráficos de tendência - VERSÃO DEFENSIVA`. Ele reconstrói as séries anuais a partir do ano real de nascimento das fêmeas carregadas e calcula as médias por PTA apenas com valores numéricos válidos.
 
 ```tsx
 const processedTrendData = useMemo(() => {
