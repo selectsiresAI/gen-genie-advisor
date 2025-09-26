@@ -82,22 +82,26 @@ const buildErrorExportRows = (rows: BatchRow[]) =>
 const buildResultExportRows = (rows: BatchRow[]) =>
   rows
     .filter((row) => row.status === 'valid' && row.prediction)
-    .map((row) => ({
-      linha: row.lineNumber,
-      id_fazenda: row.idFazenda,
-      nome: row.nome,
-      data_de_nascimento: row.dataNascimento,
-      naab_pai: row.naabPai,
-      nome_pai: row.bulls.sire?.name ?? '',
-      naab_avo_materno: row.naabAvoMaterno,
-      nome_avo_materno: row.bulls.mgs?.name ?? '',
-      naab_bisavo_materno: row.naabBisavoMaterno,
-      nome_bisavo_materno: row.bulls.mmgs?.name ?? '',
-      ...PREDICTION_TRAITS.reduce((acc, trait) => {
-        acc[`predicao_${trait.key}`] = formatPredictionValue(row.prediction?.[trait.key] ?? null);
+    .map((row) => {
+      const predictionColumns = PREDICTION_TRAITS.reduce((acc, trait) => {
+        acc[trait.label] = formatPredictionValue(row.prediction?.[trait.key] ?? null);
         return acc;
-      }, {} as Record<string, string>)
-    }));
+      }, {} as Record<string, string>);
+
+      return {
+        linha: row.lineNumber,
+        id_fazenda: row.idFazenda,
+        nome: row.nome,
+        data_de_nascimento: row.dataNascimento,
+        naab_pai: row.naabPai,
+        nome_pai: row.bulls.sire?.name ?? '',
+        naab_avo_materno: row.naabAvoMaterno,
+        nome_avo_materno: row.bulls.mgs?.name ?? '',
+        naab_bisavo_materno: row.naabBisavoMaterno,
+        nome_bisavo_materno: row.bulls.mmgs?.name ?? '',
+        ...predictionColumns
+      };
+    });
 
 const saveSheet = (data: Record<string, string>[], sheetName: string, filename: string, format: 'xlsx' | 'csv') => {
   const worksheet = utils.json_to_sheet(data);
@@ -231,11 +235,6 @@ const Nexus2PredictionBatch: React.FC = () => {
         fieldErrors.mmgs = t('nexus2.error.requiredMmgs');
       }
 
-      const filledValues = [naabPai, naabAvoMaterno, naabBisavoMaterno].filter(Boolean);
-      if (filledValues.length > new Set(filledValues).size) {
-        errors.push(t('nexus2.batch.error.duplicateInRow'));
-      }
-
       return {
         lineNumber,
         idFazenda,
@@ -254,18 +253,6 @@ const Nexus2PredictionBatch: React.FC = () => {
         status: 'invalid',
         prediction: null
       };
-    });
-
-    const combinationMap = new Map<string, number[]>();
-
-    normalizedRows.forEach((row) => {
-      const key = `${row.naabPai}|${row.naabAvoMaterno}|${row.naabBisavoMaterno}`;
-      if (!key.replace(/\|/g, '')) {
-        return;
-      }
-      const entries = combinationMap.get(key) ?? [];
-      entries.push(row.lineNumber);
-      combinationMap.set(key, entries);
     });
 
     const bullCache = new Map<string, BullSummary | null>();
@@ -291,14 +278,6 @@ const Nexus2PredictionBatch: React.FC = () => {
     };
 
     for (const row of normalizedRows) {
-      const duplicates = combinationMap.get(`${row.naabPai}|${row.naabAvoMaterno}|${row.naabBisavoMaterno}`);
-      if (duplicates && duplicates.length > 1) {
-        const otherLines = duplicates.filter((line) => line !== row.lineNumber);
-        if (otherLines.length) {
-          row.errors.push(`${t('nexus2.batch.error.duplicateRow')} ${otherLines.join(', ')}`);
-        }
-      }
-
       const sire = row.fieldErrors.sire ? null : await resolveBull(row.naabPai);
       const mgs = row.fieldErrors.mgs ? null : await resolveBull(row.naabAvoMaterno);
       const mmgs = row.fieldErrors.mmgs ? null : await resolveBull(row.naabBisavoMaterno);

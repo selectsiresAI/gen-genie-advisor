@@ -6,21 +6,38 @@ export const GENETIC_WEIGHTS = {
   mmgs: 0.15
 } as const;
 
+const FEMALE_PTA_LABELS: Record<string, string> = {
+  hhp_dollar: 'HHP$®',
+  tpi: 'TPI',
+  nm_dollar: 'NM$',
+  cm_dollar: 'CM$',
+  fm_dollar: 'FM$',
+  gm_dollar: 'GM$',
+  ptam: 'PTAM',
+  ptaf: 'PTAF',
+  ptap: 'PTAP',
+  cfp: 'CFP',
+  pl: 'PL',
+  dpr: 'DPR',
+  scs: 'SCS',
+  ptat: 'PTAT'
+};
+
 export const PREDICTION_TRAITS = [
-  { key: 'hhp_dollar', label: 'HHP$' },
-  { key: 'tpi', label: 'TPI' },
-  { key: 'nm_dollar', label: 'NM$' },
-  { key: 'cm_dollar', label: 'CM$' },
-  { key: 'fm_dollar', label: 'FM$' },
-  { key: 'gm_dollar', label: 'GM$' },
-  { key: 'ptam', label: 'PTAM' },
-  { key: 'ptaf', label: 'PTAF' },
-  { key: 'ptap', label: 'PTAP' },
-  { key: 'cfp', label: 'CFP' },
-  { key: 'pl', label: 'PL' },
-  { key: 'dpr', label: 'DPR' },
-  { key: 'scs', label: 'SCS' },
-  { key: 'ptat', label: 'PTAT' }
+  { key: 'hhp_dollar', label: FEMALE_PTA_LABELS.hhp_dollar },
+  { key: 'tpi', label: FEMALE_PTA_LABELS.tpi },
+  { key: 'nm_dollar', label: FEMALE_PTA_LABELS.nm_dollar },
+  { key: 'cm_dollar', label: FEMALE_PTA_LABELS.cm_dollar },
+  { key: 'fm_dollar', label: FEMALE_PTA_LABELS.fm_dollar },
+  { key: 'gm_dollar', label: FEMALE_PTA_LABELS.gm_dollar },
+  { key: 'ptam', label: FEMALE_PTA_LABELS.ptam },
+  { key: 'ptaf', label: FEMALE_PTA_LABELS.ptaf },
+  { key: 'ptap', label: FEMALE_PTA_LABELS.ptap },
+  { key: 'cfp', label: FEMALE_PTA_LABELS.cfp },
+  { key: 'pl', label: FEMALE_PTA_LABELS.pl },
+  { key: 'dpr', label: FEMALE_PTA_LABELS.dpr },
+  { key: 'scs', label: FEMALE_PTA_LABELS.scs },
+  { key: 'ptat', label: FEMALE_PTA_LABELS.ptat }
 ] as const;
 
 export const SUMMARY_TRAITS = [
