@@ -1693,7 +1693,7 @@ export type Database = {
       }
       get_pta_trend_and_stats: {
         Args: {
-          farm_id: string
+          target_farm_id: string
           trait_keys: string[]
         }
         Returns: {
