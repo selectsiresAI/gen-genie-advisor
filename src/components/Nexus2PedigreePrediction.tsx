@@ -1,7 +1,10 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Calculator } from 'lucide-react';
-import PedigreePredictor from './PedigreePredictor';
+import { t } from '@/lib/i18n';
+import Nexus2PredictionIndividual from './nexus2/Nexus2PredictionIndividual';
+import Nexus2PredictionBatch from './nexus2/Nexus2PredictionBatch';
 
 interface Nexus2PedigreePredictionProps {
   onBack: () => void;
@@ -14,21 +17,29 @@ const Nexus2PedigreePrediction: React.FC<Nexus2PedigreePredictionProps> = ({ onB
       <div className="flex items-center gap-4">
         <Button variant="outline" onClick={onBack}>
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Voltar
+          {t('nexus2.back')}
         </Button>
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2">
             <Calculator className="w-6 h-6" />
-            Nexus 2: Predição por Pedigrê
+            {t('nexus2.title')}
           </h2>
-          <p className="text-muted-foreground">
-            Baseado no pedigrê - Pai (57%) + Avô Materno (28%) + Bisavô Materno (15%)
-          </p>
+          <p className="text-muted-foreground">{t('nexus2.subtitle')}</p>
         </div>
       </div>
 
-      {/* Conteúdo do PedigreePredictor */}
-      <PedigreePredictor />
+      <Tabs defaultValue="individual" className="space-y-6">
+        <TabsList className="w-full justify-start overflow-x-auto">
+          <TabsTrigger value="individual">{t('nexus2.tabs.individual')}</TabsTrigger>
+          <TabsTrigger value="batch">{t('nexus2.tabs.batch')}</TabsTrigger>
+        </TabsList>
+        <TabsContent value="individual" className="space-y-6">
+          <Nexus2PredictionIndividual />
+        </TabsContent>
+        <TabsContent value="batch" className="space-y-6">
+          <Nexus2PredictionBatch />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
