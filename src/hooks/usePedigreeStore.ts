@@ -1,70 +1,21 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import {
+  NEXUS2_PTA_DEFINITIONS,
+  NEXUS2_PTA_KEY_TO_LABEL,
+  NEXUS2_PTA_KEYS,
+  NEXUS2_PTA_LABELS,
+  NEXUS2_PTA_LABEL_TO_KEY
+} from '@/constants/nexus2Ptas';
 
 // Vocabulário oficial de PTAs (rótulo UI → chave interna)
-export const PTA_MAPPING: Record<string, string> = {
-  "HHP$®": "ihhp_dollar",
-  "TPI": "tpi", 
-  "NM$": "nm_dollar",
-  "CM$": "cm_dollar",
-  "FM$": "fm_dollar",
-  "GM$": "gm_dollar",
-  "F SAV": "f_sav",
-  "PTAM": "ptam",
-  "CFP": "cfp",
-  "PTAF": "ptaf",
-  "PTAF%": "ptaf_pct",
-  "PTAP": "ptap",
-  "PTAP%": "ptap_pct",
-  "PL": "pl",
-  "DPR": "dpr",
-  "LIV": "liv",
-  "SCS": "scs",
-  "MAST": "mast",
-  "MET": "met",
-  "RP": "rp",
-  "DA": "da",
-  "KET": "ket",
-  "MF": "mf",
-  "PTAT": "ptat",
-  "UDC": "udc",
-  "FLC": "flc",
-  "SCE": "sce",
-  "DCE": "dce",
-  "SSB": "ssb",
-  "DSB": "dsb",
-  "H LIV": "h_liv",
-  "CCR": "ccr",
-  "HCR": "hcr",
-  "FI": "fi",
-  "GL": "gl",
-  "EFC": "efc",
-  "BWC": "bwc",
-  "STA": "sta",
-  "STR": "str",
-  "DFM": "dfm",
-  "RUA": "rua",
-  "RLS": "rls",
-  "RTP": "rtp",
-  "FTL": "ftl",
-  "RW": "rw",
-  "RLR": "rlr",
-  "FTA": "fta",
-  "FLS": "fls",
-  "FUA": "fua",
-  "RUH": "ruh",
-  "RUW": "ruw",
-  "UCL": "ucl",
-  "UDP": "udp",
-  "FTP": "ftp",
-  "RFI": "rfi"
-};
+export const PTA_MAPPING: Record<string, string> = NEXUS2_PTA_LABEL_TO_KEY;
 
-// Rótulos na ordem oficial
-export const PTA_LABELS = Object.keys(PTA_MAPPING);
-
-// Chaves internas na ordem oficial  
-export const PTA_KEYS = Object.values(PTA_MAPPING);
+// Lista canônica (labels e chaves)
+export const PTA_LABELS = NEXUS2_PTA_LABELS;
+export const PTA_KEYS = NEXUS2_PTA_KEYS;
+export const PTA_DEFINITIONS = NEXUS2_PTA_DEFINITIONS;
+export const PTA_KEY_TO_LABEL = NEXUS2_PTA_KEY_TO_LABEL;
 
 // Pesos genéticos
 export const GENETIC_WEIGHTS = {
@@ -236,9 +187,9 @@ export const usePedigreeStore = create<PedigreeState>()(
 // Utility functions for calculations
 export const formatPTAValue = (key: string, value: number | null): string => {
   if (value === null || value === undefined) return '—';
-  
-  const label = Object.keys(PTA_MAPPING).find(k => PTA_MAPPING[k] === key);
-  
+
+  const label = PTA_KEY_TO_LABEL[key];
+
   // Dollar traits (0 decimals)
   if (label && (label.includes('$') || label === 'HHP$®')) {
     return Math.round(value).toString();
