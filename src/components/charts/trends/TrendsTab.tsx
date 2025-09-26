@@ -4,7 +4,20 @@ import * as React from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { TrendsChart, type ChartRow, type TraitSeriesMeta } from './TrendsChart';
+interface ChartRow {
+  year: number;
+  [key: string]: number | null | undefined;
+}
+
+interface TraitSeriesMeta {
+  key: string;
+  label: string;
+  color: string;
+  stats: TrendStats | null;
+  deltaByYear: Record<number, number | null>;
+  meanByYear: Record<number, number | null>;
+  hasTrend: boolean;
+}
 
 interface TrendStats {
   mean: number | null;
@@ -32,7 +45,6 @@ interface TrendsTabProps {
   farmId?: string | null;
   selectedTraits: string[];
   availableTraits: Array<{ key: string; label: string }>;
-  showTrendLine: boolean;
   colors: string[];
 }
 
@@ -136,17 +148,9 @@ const formatValue = (traitKey: string, value: number | null | undefined) => {
   return numberFormatter.format(value);
 };
 
-const TrendsChartLazy = React.lazy(() => import('./TrendsChart').then((module) => ({ default: module.TrendsChart })));
-
 type LoadState = 'idle' | 'loading' | 'empty' | 'error' | 'success';
 
-export const TrendsTab: React.FC<TrendsTabProps> = ({
-  farmId,
-  selectedTraits,
-  availableTraits,
-  showTrendLine,
-  colors,
-}) => {
+export const TrendsTab: React.FC<TrendsTabProps> = ({ farmId, selectedTraits, availableTraits, colors }) => {
   const [loadState, setLoadState] = React.useState<LoadState>('idle');
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [rpcData, setRpcData] = React.useState<RpcRow[]>([]);
@@ -360,7 +364,7 @@ export const TrendsTab: React.FC<TrendsTabProps> = ({
     setRefreshToken((token) => token + 1);
   }, []);
 
-  const renderContent = () => {
+  const renderStatusContent = () => {
     if (!farmId) {
       return (
         <div className="flex h-[320px] items-center justify-center text-sm text-muted-foreground">
@@ -408,31 +412,17 @@ export const TrendsTab: React.FC<TrendsTabProps> = ({
     if (!isClient) {
       return (
         <div className="flex h-[320px] items-center justify-center text-sm text-muted-foreground">
-          Preparando gráfico…
+          Preparando dados…
         </div>
       );
     }
 
-    return (
-      <React.Suspense fallback={<div className="flex h-[320px] items-center justify-center text-sm text-muted-foreground">Carregando gráfico…</div>}>
-        <TrendsChartLazy
-          data={prepared.chartRows}
-          traits={prepared.traitSeries}
-          showTrendLine={showTrendLine}
-          formatValue={formatValue}
-        />
-      </React.Suspense>
-    );
+    return null;
   };
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle>Gráfico de Tendência (Z-score)</CardTitle>
-        </CardHeader>
-        <CardContent>{renderContent()}</CardContent>
-      </Card>
+      {renderStatusContent()}
 
       {prepared.traitSeries.length > 0 && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
