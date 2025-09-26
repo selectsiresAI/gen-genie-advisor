@@ -20,11 +20,6 @@ const YEARS = [2021, 2022, 2023, 2024, 2025];
 
 type RawRow = Record<string, any>;
 
-function coerceYear(v: any): number | null {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-}
-
 function pickNumber(row: RawRow, keys: string[], fallback = 0): number {
   for (const k of keys) {
     const v = row?.[k];
@@ -67,6 +62,71 @@ const COLORS = {
 };
 
 const CHART_COLORS = [COLORS.primary, COLORS.accent, COLORS.secondary, '#FFA500', '#8B5CF6', '#06B6D4', '#F59E0B'];
+
+const LABEL_TO_DB: Record<string, string> = {
+  'HHP$®': 'hhp_dollar',
+  'TPI': 'tpi',
+  'NM$': 'nm_dollar',
+  'CM$': 'cm_dollar',
+  'FM$': 'fm_dollar',
+  'GM$': 'gm_dollar',
+  'F SAV': 'f_sav',
+  'PTAM': 'ptam',
+  'CFP': 'cfp',
+  'PTAF': 'ptaf',
+  'PTAF%': 'ptaf_pct',
+  'PTAP': 'ptap',
+  'PTAP%': 'ptap_pct',
+  'PL': 'pl',
+  'DPR': 'dpr',
+  'LIV': 'liv',
+  'SCS': 'scs',
+  'MAST': 'mast',
+  'MET': 'met',
+  'RP': 'rp',
+  'DA': 'da',
+  'KET': 'ket',
+  'MF': 'mf',
+  'PTAT': 'ptat',
+  'UDC': 'udc',
+  'FLC': 'flc',
+  'SCE': 'sce',
+  'DCE': 'dce',
+  'SSB': 'ssb',
+  'DSB': 'dsb',
+  'H LIV': 'h_liv',
+  'CCR': 'ccr',
+  'HCR': 'hcr',
+  'FI': 'fi',
+  'GL': 'gl',
+  'EFC': 'efc',
+  'BWC': 'bwc',
+  'STA': 'sta',
+  'STR': 'str',
+  'DFM': 'dfm',
+  'RUA': 'rua',
+  'RLS': 'rls',
+  'RTP': 'rtp',
+  'FTL': 'ftl',
+  'RW': 'rw',
+  'RLR': 'rlr',
+  'FTA': 'fta',
+  'FLS': 'fls',
+  'FUA': 'fua',
+  'RUH': 'ruh',
+  'RUW': 'ruw',
+  'UCL': 'ucl',
+  'UDP': 'udp',
+  'FTP': 'ftp',
+  'RFI': 'rfi',
+  'GFI': 'gfi'
+};
+
+const DB_TO_LABEL: Record<string, string> = Object.fromEntries(
+  Object.entries(LABEL_TO_DB).map(([label, key]) => [key, label])
+);
+
+const normalizePTAs = (arr: string[]) => arr.map((key) => LABEL_TO_DB[key] || key);
 
 const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd }) => {
   const [females, setFemales] = useState<any[]>([]);
@@ -148,6 +208,27 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
     { key: 'gfi', label: 'GFI', description: 'Gross Feed Efficiency' }
   ];
 
+  const normalizedPTAs = useMemo(() => normalizePTAs(selectedPTAs), [selectedPTAs]);
+
+  useEffect(() => {
+    const hasDifference =
+      selectedPTAs.length !== normalizedPTAs.length ||
+      selectedPTAs.some((value, index) => value !== normalizedPTAs[index]);
+
+    if (hasDifference) {
+      setSelectedPTAs([...normalizedPTAs]);
+    }
+  }, [normalizedPTAs, selectedPTAs]);
+
+  const resolveTraitLabel = useMemo(() => {
+    const directMap = new Map<string, string>();
+    availablePTAs.forEach((item) => {
+      directMap.set(item.key, item.label);
+    });
+
+    return (key: string) => directMap.get(key) || DB_TO_LABEL[key] || key;
+  }, [availablePTAs]);
+
   // Carregar dados das fêmeas
   useEffect(() => {
     if (farm) {
@@ -160,20 +241,24 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
 
     try {
       setLoading(true);
-      // Use same approach as HerdPage - load all females with high limit
-      const { data, error } = await supabase
-        .rpc('get_females_denorm', { target_farm_id: farm.farm_id })
-        .order('birth_date', { ascending: true })
-        .limit(10000); // Set high limit to ensure all records are loaded
+      const { data, error } = await supabase.rpc('get_females_denorm', {
+        target_farm_id: farm.farm_id
+      });
 
       if (error) throw error;
-      
-      setFemales(data || []);
-    } catch (error) {
-      console.error('Error loading females data:', error);
+
+      const sorted = (data ?? []).slice().sort((a: any, b: any) => {
+        const da = a?.birth_date ? new Date(a.birth_date).getTime() : 0;
+        const db = b?.birth_date ? new Date(b.birth_date).getTime() : 0;
+        return da - db;
+      });
+
+      setFemales(sorted);
+    } catch (err: any) {
+      console.error('[Tendências] Falha ao carregar', err);
       toast({
         title: "Erro",
-        description: "Erro ao carregar dados das fêmeas",
+        description: err?.message || 'Erro ao carregar dados das fêmeas',
         variant: "destructive"
       });
     } finally {
@@ -182,134 +267,166 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
   };
 
   // Processar dados para gráficos de tendência - VERSÃO DEFENSIVA
-  const processedTrendData = useMemo(() => {
-    if (!females || !Array.isArray(females) || females.length === 0) return [];
+  const { processedTrendData, validSelectedPTAs } = useMemo(() => {
+    if (!females || !Array.isArray(females) || females.length === 0) {
+      return { processedTrendData: [] as any[], validSelectedPTAs: [] as string[] };
+    }
+
+    const existingKeys = new Set(Object.keys(females[0] || {}));
+    const validSelectedPTAs = normalizedPTAs.filter((key) => existingKeys.has(key));
+
+    if (validSelectedPTAs.length === 0) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.info('[Tendências] Nenhuma PTA encontrada nas colunas', {
+          selectedPTAs,
+          normalizedPTAs,
+          sampleKeys: Array.from(existingKeys).slice(0, 20)
+        });
+      }
+      return { processedTrendData: [] as any[], validSelectedPTAs: [] as string[] };
+    }
 
     let processedData: any[] = [];
-    
+
     if (groupBy === 'year') {
-      // Normaliza dados por ano com segurança
       const byYear = new Map<number, { year: number; n: number; values: number[] }>();
-      
+
       females.forEach(female => {
         if (!female) return;
-        
-        const birthYear = coerceYear(female.birth_date ? new Date(female.birth_date).getFullYear() : null);
-        if (!birthYear) return;
-        
+
+        const birthYear = (() => {
+          const raw = female?.birth_date;
+          if (!raw) return null;
+          const d = new Date(raw);
+          const y = d.getFullYear();
+          return Number.isFinite(y) ? y : null;
+        })();
+
+        if (birthYear === null) return;
+
         if (!byYear.has(birthYear)) {
           byYear.set(birthYear, { year: birthYear, n: 0, values: [] });
         }
-        
+
         const yearData = byYear.get(birthYear)!;
         yearData.n++;
-        
-        selectedPTAs.forEach(pta => {
+
+        validSelectedPTAs.forEach(pta => {
           const value = pickNumber(female, [pta], NaN);
           if (Number.isFinite(value)) {
             yearData.values.push(value);
           }
         });
       });
-      
-      // Constrói array final para o range fixo
+
       processedData = YEARS_FIXED.map(year => {
         const entry = byYear.get(year);
         const count = entry?.n || 0;
         const values = entry?.values || [];
         const meanVal = values.length > 0 ? mean(values) : 0;
-        
+
         const result: any = { year, count };
-        selectedPTAs.forEach(pta => {
+        validSelectedPTAs.forEach(pta => {
           const ptaValues = values.length > 0 ? values : [];
           result[pta] = ptaValues.length > 0 ? meanVal : null;
         });
-        
+
         return result;
       }).filter(d => d && typeof d === 'object' && (d.count || 0) > 0);
     }
-    
+
     else if (groupBy === 'category') {
       const byCategory = new Map<string, { category: string; n: number; values: number[] }>();
-      
+
       females.forEach(female => {
         if (!female) return;
-        
+
         const category = female.category || 'Sem Categoria';
-        
+
         if (!byCategory.has(category)) {
           byCategory.set(category, { category, n: 0, values: [] });
         }
-        
+
         const catData = byCategory.get(category)!;
         catData.n++;
-        
-        selectedPTAs.forEach(pta => {
+
+        validSelectedPTAs.forEach(pta => {
           const value = pickNumber(female, [pta], NaN);
           if (Number.isFinite(value)) {
             catData.values.push(value);
           }
         });
       });
-      
+
       processedData = Array.from(byCategory.values()).map(catData => {
         const result: any = { name: catData.category, count: catData.n };
-        selectedPTAs.forEach(pta => {
+        validSelectedPTAs.forEach(pta => {
           const values = catData.values;
           result[pta] = values.length > 0 ? mean(values) : null;
         });
         return result;
       }).filter(d => d && typeof d === 'object' && (d.count || 0) > 0);
     }
-    
+
     else if (groupBy === 'parity') {
       const byParity = new Map<string, { parity: string; n: number; values: number[] }>();
-      
+
       females.forEach(female => {
         if (!female) return;
-        
+
         const parity = String(female.parity_order || 'Primípara');
-        
+
         if (!byParity.has(parity)) {
           byParity.set(parity, { parity, n: 0, values: [] });
         }
-        
+
         const parData = byParity.get(parity)!;
         parData.n++;
-        
-        selectedPTAs.forEach(pta => {
+
+        validSelectedPTAs.forEach(pta => {
           const value = pickNumber(female, [pta], NaN);
           if (Number.isFinite(value)) {
             parData.values.push(value);
           }
         });
       });
-      
+
       processedData = Array.from(byParity.values()).map(parData => {
         const result: any = { name: parData.parity, count: parData.n };
-        selectedPTAs.forEach(pta => {
+        validSelectedPTAs.forEach(pta => {
           const values = parData.values;
           result[pta] = values.length > 0 ? mean(values) : null;
         });
         return result;
       }).filter(d => d && typeof d === 'object' && (d.count || 0) > 0);
     }
-    
-    return processedData;
-  }, [females, selectedPTAs, groupBy]);
 
+    return { processedTrendData: processedData, validSelectedPTAs };
+  }, [females, normalizedPTAs, groupBy, selectedPTAs]);
 
-
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.info('[Tendências] farmId', farm?.farm_id);
+      console.info('[Tendências] females length', females.length);
+      if (females[0]) {
+        console.info('[Tendências] sample keys', Object.keys(females[0]).slice(0, 20));
+      }
+      console.info('[Tendências] selectedPTAs', selectedPTAs, 'normalized', normalizedPTAs, 'valid', validSelectedPTAs);
+      console.info('[Tendências] processedTrendData len', processedTrendData.length, 'sample', processedTrendData[0]);
+    }
+  }, [farm?.farm_id, females, selectedPTAs, processedTrendData, normalizedPTAs, validSelectedPTAs]);
 
   // Dados para gráfico de distribuição
+  const distributionTraitKey = validSelectedPTAs[0] ?? normalizedPTAs[0];
+  const distributionTraitLabel = distributionTraitKey ? resolveTraitLabel(distributionTraitKey) : (selectedPTAs[0] || '');
+
   const distributionData = useMemo(() => {
-    if (!females.length || selectedPTAs.length === 0) return [];
-    
-    const firstPTA = selectedPTAs[0];
+    if (!females.length || !distributionTraitKey) return [];
+
     const values = females
-      .map(f => Number(f[firstPTA]))
+      .map(f => Number(f[distributionTraitKey]))
       .filter(v => !isNaN(v) && v !== null);
-    
+
     if (values.length === 0) return [];
     
     const min = Math.min(...values);
@@ -337,7 +454,7 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
     });
     
     return buckets;
-  }, [females, selectedPTAs]);
+  }, [females, distributionTraitKey]);
 
   // Exportar dados
   const handleExport = () => {
@@ -432,14 +549,16 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
                     {availablePTAs.slice(0, 8).map(pta => (
                       <Badge
                         key={pta.key}
-                        variant={selectedPTAs.includes(pta.key) ? "default" : "outline"}
+                        variant={normalizedPTAs.includes(pta.key) ? "default" : "outline"}
                         className="cursor-pointer text-xs"
                         onClick={() => {
-                          setSelectedPTAs(prev => 
-                            prev.includes(pta.key) 
-                              ? prev.filter(p => p !== pta.key)
-                              : [...prev, pta.key].slice(0, 5) // Máximo 5 PTAs
-                          );
+                          setSelectedPTAs(prev => {
+                            const normalizedPrev = normalizePTAs(prev);
+                            if (normalizedPrev.includes(pta.key)) {
+                              return normalizedPrev.filter(p => p !== pta.key);
+                            }
+                            return [...normalizedPrev, pta.key].slice(0, 5);
+                          });
                         }}
                       >
                         {pta.label}
@@ -567,23 +686,23 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
                           formatter={(value: any) => [Number(value).toFixed(2), '']}
                         />
                         <Legend />
-                        {selectedPTAs.slice(0, 2).map((pta, index) => (
+                        {validSelectedPTAs.slice(0, 2).map((pta, index) => (
                           <Bar
                             key={pta}
                             dataKey={pta}
                             fill={CHART_COLORS[index]}
-                            name={availablePTAs.find(p => p.key === pta)?.label || pta}
+                            name={resolveTraitLabel(pta)}
                             opacity={0.7}
                           />
                         ))}
-                        {selectedPTAs.slice(2, 4).map((pta, index) => (
+                        {validSelectedPTAs.slice(2, 4).map((pta, index) => (
                           <Line
                             key={pta}
                             type="monotone"
                             dataKey={pta}
                             stroke={CHART_COLORS[index + 2]}
                             strokeWidth={3}
-                            name={availablePTAs.find(p => p.key === pta)?.label || pta}
+                            name={resolveTraitLabel(pta)}
                           />
                         ))}
                       </ComposedChart>
@@ -605,7 +724,7 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
               <Card>
                 <CardHeader>
                   <CardTitle>
-                    Distribuição de Valores - {availablePTAs.find(p => p.key === selectedPTAs[0])?.label || selectedPTAs[0]}
+                    Distribuição de Valores - {distributionTraitLabel || '—'}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
