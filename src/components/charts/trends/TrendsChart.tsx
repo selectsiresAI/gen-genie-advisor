@@ -34,6 +34,7 @@ export interface TraitSeriesMeta {
   stats: TrendStats | null;
   deltaByYear: Record<number, number | null>;
   meanByYear: Record<number, number | null>;
+  trendByYear: Record<number, number | null>;
   hasTrend: boolean;
 }
 
@@ -43,13 +44,6 @@ interface TrendsChartProps {
   showTrendLine: boolean;
   formatValue: (traitKey: string, value: number | null | undefined) => string;
 }
-
-const formatZScore = (value: number | null | undefined) => {
-  if (value === null || value === undefined || Number.isNaN(value)) {
-    return '—';
-  }
-  return value.toFixed(2);
-};
 
 const buildTooltipContent = (
   props: TooltipProps<number, string>,
@@ -76,24 +70,24 @@ const buildTooltipContent = (
   }
 
   const traitEntries = payload
-    .filter((item) => typeof item?.dataKey === 'string' && item.dataKey.endsWith('_z') && !item.dataKey.endsWith('_trend_z'))
+    .filter((item) => typeof item?.dataKey === 'string' && !item.dataKey.endsWith('_trend'))
     .map((item) => {
       const dataKey = String(item.dataKey);
-      const traitKey = dataKey.replace(/_trend_z$/, '').replace(/_z$/, '');
+      const traitKey = dataKey;
       const trait = traits.find((meta) => meta.key === traitKey);
       if (!trait) {
         return null;
       }
 
       const delta = year !== null ? trait.deltaByYear[year] ?? null : null;
-      const mean = year !== null ? trait.meanByYear[year] ?? null : null;
-      const hasTrend = trait.hasTrend && delta !== null;
+      const trend = year !== null ? trait.trendByYear[year] ?? null : null;
+      const hasTrend = trait.hasTrend && trend !== null;
 
       return {
         trait,
-        zScore: typeof item.value === 'number' && Number.isFinite(item.value) ? item.value : null,
+        observed: typeof item.value === 'number' && Number.isFinite(item.value) ? item.value : null,
         delta,
-        mean,
+        trend,
         hasTrend: trait.hasTrend,
       };
     })
@@ -107,7 +101,7 @@ const buildTooltipContent = (
     <div className="min-w-[220px] rounded-md border bg-background/95 p-3 text-xs shadow">
       <div className="text-sm font-semibold">Ano: {label ?? '—'}</div>
       <div className="mt-2 space-y-2">
-        {traitEntries.map(({ trait, zScore, delta, mean, hasTrend }) => (
+        {traitEntries.map(({ trait, observed, delta, trend, hasTrend }) => (
           <div key={trait.key} className="space-y-1">
             <div className="flex items-center gap-2">
               <span
@@ -118,19 +112,19 @@ const buildTooltipContent = (
               <span className="font-medium text-foreground">{trait.label}</span>
             </div>
             <div className="pl-4 text-[11px] text-muted-foreground">
-              <div>Z-score: <span className="font-medium text-foreground">{formatZScore(zScore)}</span></div>
               <div>
-                {hasTrend ? (
-                  <>
-                    ΔGₜ: <span className="font-medium text-foreground">{formatValue(trait.key, delta)}</span>
-                  </>
-                ) : (
-                  <span>Tendência indisponível (dados insuficientes)</span>
-                )}
+                Observado: <span className="font-medium text-foreground">{formatValue(trait.key, observed)}</span>
               </div>
-              {mean !== null && (
+              {hasTrend ? (
                 <div>
-                  Média observada: <span className="font-medium text-foreground">{formatValue(trait.key, mean)}</span>
+                  ŷ(ano): <span className="font-medium text-foreground">{formatValue(trait.key, trend)}</span>
+                </div>
+              ) : (
+                <div>Tendência indisponível (dados insuficientes)</div>
+              )}
+              {delta !== null && (
+                <div>
+                  ΔGₜ: <span className="font-medium text-foreground">{formatValue(trait.key, delta)}</span>
                 </div>
               )}
             </div>
@@ -152,14 +146,14 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ data, traits, showTren
       <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
         <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
         <XAxis dataKey="year" stroke="#666" fontSize={12} />
-        <YAxis stroke="#666" fontSize={12} label={{ value: 'Z-score', angle: -90, position: 'insideLeft' }} />
+        <YAxis stroke="#666" fontSize={12} label={{ value: 'Valor', angle: -90, position: 'insideLeft' }} />
         <Tooltip content={tooltipRenderer} />
         <Legend />
         {traits.map((trait) => (
           <Line
             key={trait.key}
             type="monotone"
-            dataKey={`${trait.key}_z`}
+            dataKey={trait.key}
             stroke={trait.color}
             strokeWidth={2}
             dot={{ r: 3, strokeWidth: 2, stroke: trait.color, fill: '#fff' }}
@@ -172,7 +166,7 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ data, traits, showTren
           <Line
             key={`${trait.key}-trend`}
             type="monotone"
-            dataKey={`${trait.key}_trend_z`}
+            dataKey={`${trait.key}_trend`}
             stroke={trait.color}
             strokeDasharray="5 4"
             dot={false}

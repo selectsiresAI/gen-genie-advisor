@@ -286,53 +286,50 @@ export const TrendsTab: React.FC<TrendsTabProps> = ({
           stats,
           deltaByYear: {},
           meanByYear: {},
+          trendByYear: {},
           hasTrend: false,
         });
         return;
       }
 
       const sortedPoints = [...validPoints].sort((a, b) => a.year - b.year);
-      const statsMean = stats?.mean ?? 0;
-      const statsSd = stats?.sd && Number.isFinite(stats.sd) && stats.sd !== 0 ? stats.sd : null;
-
-      const zPoints = sortedPoints.map((point) => ({
-        year: point.year,
-        mean: point.mean,
-        n: point.n,
-        z: statsSd ? (point.mean! - statsMean) / statsSd : 0,
-      }));
 
       const originalOls = calculateOls(sortedPoints.map((point) => ({ x: point.year, y: point.mean! })));
-      const zOls = calculateOls(zPoints.map((point) => ({ x: point.year, y: point.z ?? 0 })));
 
       const deltaByYear: Record<number, number | null> = {};
       const meanByYear: Record<number, number | null> = {};
-      const trendZByYear: Record<number, number | null> = {};
+      const trendByYear: Record<number, number | null> = {};
 
       sortedPoints.forEach((point, index) => {
-        meanByYear[point.year] = point.mean ?? null;
-        if (!originalOls || index === 0) {
+        const observed = point.mean ?? null;
+        meanByYear[point.year] = observed;
+
+        if (!originalOls) {
+          deltaByYear[point.year] = null;
+          trendByYear[point.year] = null;
+          return;
+        }
+
+        const predicted = originalOls.intercept + originalOls.slope * point.year;
+        trendByYear[point.year] = Number.isFinite(predicted) ? predicted : null;
+
+        if (index === 0) {
           deltaByYear[point.year] = null;
           return;
         }
+
         const previousYear = sortedPoints[index - 1].year;
-        const currentPred = originalOls.intercept + originalOls.slope * point.year;
         const previousPred = originalOls.intercept + originalOls.slope * previousYear;
-        deltaByYear[point.year] = currentPred - previousPred;
+        deltaByYear[point.year] = Number.isFinite(predicted) && Number.isFinite(previousPred)
+          ? predicted - previousPred
+          : null;
       });
 
-      if (zOls) {
-        sortedPoints.forEach((point) => {
-          trendZByYear[point.year] = zOls.intercept + zOls.slope * point.year;
-        });
-      }
-
-      zPoints.forEach((point) => {
+      sortedPoints.forEach((point) => {
         const entry = dataMap.get(point.year) ?? { year: point.year };
-        entry[`${columnKey}_z`] = Number.isFinite(point.z) ? point.z : null;
-        entry[`${columnKey}_trend_z`] = trendZByYear[point.year] ?? null;
-        entry[`${columnKey}_mean`] = meanByYear[point.year] ?? null;
-        entry[`${columnKey}_delta`] = deltaByYear[point.year] ?? null;
+        const observed = point.mean ?? null;
+        entry[columnKey] = observed !== null && Number.isFinite(observed) ? observed : null;
+        entry[`${columnKey}_trend`] = trendByYear[point.year] ?? null;
         dataMap.set(point.year, entry);
       });
 
@@ -343,7 +340,8 @@ export const TrendsTab: React.FC<TrendsTabProps> = ({
         stats,
         deltaByYear,
         meanByYear,
-        hasTrend: Boolean(zOls && originalOls && sortedPoints.length >= 2),
+        trendByYear,
+        hasTrend: Boolean(originalOls && sortedPoints.length >= 2),
       });
     });
 
@@ -441,7 +439,7 @@ export const TrendsTab: React.FC<TrendsTabProps> = ({
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Gráfico de Tendência (Z-score)</CardTitle>
+          <CardTitle>Gráfico de Tendência</CardTitle>
         </CardHeader>
         <CardContent>{renderContent()}</CardContent>
       </Card>
