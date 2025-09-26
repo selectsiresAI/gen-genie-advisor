@@ -1,30 +1,25 @@
+import { NEXUS2_PTA_KEYS } from '@/constants/nexus2Ptas';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
 export type BullsDenormRow = Database['public']['Views']['bulls_denorm']['Row'];
+
+type SelectColumn =
+  | 'id'
+  | 'code'
+  | 'name'
+  | 'company'
+  | (typeof NEXUS2_PTA_KEYS)[number];
 
 const SELECT_COLUMNS = [
   'id',
   'code',
   'name',
   'company',
-  'hhp_dollar',
-  'tpi',
-  'nm_dollar',
-  'cm_dollar',
-  'fm_dollar',
-  'gm_dollar',
-  'ptam',
-  'ptaf',
-  'ptap',
-  'cfp',
-  'pl',
-  'dpr',
-  'scs',
-  'ptat'
-] as const;
+  ...NEXUS2_PTA_KEYS
+] satisfies readonly SelectColumn[];
 
-export type BullsDenormSelection = Pick<BullsDenormRow, typeof SELECT_COLUMNS[number]>;
+export type BullsDenormSelection = Pick<BullsDenormRow, SelectColumn>;
 
 const selectionQuery = SELECT_COLUMNS.join(', ');
 

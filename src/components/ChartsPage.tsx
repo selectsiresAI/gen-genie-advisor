@@ -15,9 +15,6 @@ import { computeLinearTrend } from "@/lib/linear-trend";
 import type { LinearTrendModel } from "@/lib/linear-trend";
 
 // Constants
-const YEARS_FIXED = [2021, 2022, 2023, 2024, 2025];
-const YEARS = [2021, 2022, 2023, 2024, 2025];
-
 type RawRow = Record<string, any>;
 
 function coerceYear(v: any): number | null {
@@ -258,111 +255,140 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
     let processedData: any[] = [];
     
     if (groupBy === 'year') {
-      // Normaliza dados por ano com segurança
-      const byYear = new Map<number, { year: number; n: number; values: number[] }>();
-      
-      females.forEach(female => {
+      const byYear = new Map<number, {
+        year: number;
+        count: number;
+        perPta: Record<string, { sum: number; count: number }>;
+      }>();
+
+      females.forEach((female) => {
         if (!female) return;
-        
+
         const birthYear = coerceYear(female.birth_date ? new Date(female.birth_date).getFullYear() : null);
-        if (!birthYear) return;
-        
+        if (birthYear === null) return;
+
         if (!byYear.has(birthYear)) {
-          byYear.set(birthYear, { year: birthYear, n: 0, values: [] });
+          byYear.set(birthYear, { year: birthYear, count: 0, perPta: {} });
         }
-        
+
         const yearData = byYear.get(birthYear)!;
-        yearData.n++;
-        
-        selectedPTAs.forEach(pta => {
+        yearData.count += 1;
+
+        selectedPTAs.forEach((pta) => {
           const value = pickNumber(female, [pta], NaN);
-          if (Number.isFinite(value)) {
-            yearData.values.push(value);
+          if (!Number.isFinite(value)) return;
+
+          if (!yearData.perPta[pta]) {
+            yearData.perPta[pta] = { sum: 0, count: 0 };
           }
+
+          yearData.perPta[pta].sum += value;
+          yearData.perPta[pta].count += 1;
         });
       });
-      
-      // Constrói array final para o range fixo
-      processedData = YEARS_FIXED.map(year => {
-        const entry = byYear.get(year);
-        const count = entry?.n || 0;
-        const values = entry?.values || [];
-        const meanVal = values.length > 0 ? mean(values) : 0;
-        
-        const result: any = { year, count };
-        selectedPTAs.forEach(pta => {
-          const ptaValues = values.length > 0 ? values : [];
-          result[pta] = ptaValues.length > 0 ? meanVal : null;
-        });
-        
-        return result;
-      }).filter(d => d && typeof d === 'object' && (d.count || 0) > 0);
+
+      const sortedEntries = Array.from(byYear.entries())
+        .sort((a, b) => a[0] - b[0])
+        .map(([, entry]) => entry);
+
+      processedData = sortedEntries
+        .map((entry) => {
+          const result: any = { year: entry.year, count: entry.count };
+          selectedPTAs.forEach((pta) => {
+            const stats = entry.perPta[pta];
+            result[pta] = stats && stats.count > 0 ? stats.sum / stats.count : null;
+          });
+          return result;
+        })
+        .filter((d) => d && typeof d === 'object' && (d.count || 0) > 0);
     }
-    
+
     else if (groupBy === 'category') {
-      const byCategory = new Map<string, { category: string; n: number; values: number[] }>();
-      
-      females.forEach(female => {
+      const byCategory = new Map<string, {
+        category: string;
+        count: number;
+        perPta: Record<string, { sum: number; count: number }>;
+      }>();
+
+      females.forEach((female) => {
         if (!female) return;
-        
+
         const category = female.category || 'Sem Categoria';
-        
+
         if (!byCategory.has(category)) {
-          byCategory.set(category, { category, n: 0, values: [] });
+          byCategory.set(category, { category, count: 0, perPta: {} });
         }
-        
+
         const catData = byCategory.get(category)!;
-        catData.n++;
-        
-        selectedPTAs.forEach(pta => {
+        catData.count += 1;
+
+        selectedPTAs.forEach((pta) => {
           const value = pickNumber(female, [pta], NaN);
-          if (Number.isFinite(value)) {
-            catData.values.push(value);
+          if (!Number.isFinite(value)) return;
+
+          if (!catData.perPta[pta]) {
+            catData.perPta[pta] = { sum: 0, count: 0 };
           }
+
+          catData.perPta[pta].sum += value;
+          catData.perPta[pta].count += 1;
         });
       });
-      
-      processedData = Array.from(byCategory.values()).map(catData => {
-        const result: any = { name: catData.category, count: catData.n };
-        selectedPTAs.forEach(pta => {
-          const values = catData.values;
-          result[pta] = values.length > 0 ? mean(values) : null;
-        });
-        return result;
-      }).filter(d => d && typeof d === 'object' && (d.count || 0) > 0);
+
+      processedData = Array.from(byCategory.values())
+        .map((catData) => {
+          const result: any = { name: catData.category, count: catData.count };
+          selectedPTAs.forEach((pta) => {
+            const stats = catData.perPta[pta];
+            result[pta] = stats && stats.count > 0 ? stats.sum / stats.count : null;
+          });
+          return result;
+        })
+        .filter((d) => d && typeof d === 'object' && (d.count || 0) > 0);
     }
-    
+
     else if (groupBy === 'parity') {
-      const byParity = new Map<string, { parity: string; n: number; values: number[] }>();
-      
-      females.forEach(female => {
+      const byParity = new Map<string, {
+        parity: string;
+        count: number;
+        perPta: Record<string, { sum: number; count: number }>;
+      }>();
+
+      females.forEach((female) => {
         if (!female) return;
-        
+
         const parity = String(female.parity_order || 'Primípara');
-        
+
         if (!byParity.has(parity)) {
-          byParity.set(parity, { parity, n: 0, values: [] });
+          byParity.set(parity, { parity, count: 0, perPta: {} });
         }
-        
+
         const parData = byParity.get(parity)!;
-        parData.n++;
-        
-        selectedPTAs.forEach(pta => {
+        parData.count += 1;
+
+        selectedPTAs.forEach((pta) => {
           const value = pickNumber(female, [pta], NaN);
-          if (Number.isFinite(value)) {
-            parData.values.push(value);
+          if (!Number.isFinite(value)) return;
+
+          if (!parData.perPta[pta]) {
+            parData.perPta[pta] = { sum: 0, count: 0 };
           }
+
+          parData.perPta[pta].sum += value;
+          parData.perPta[pta].count += 1;
         });
       });
-      
-      processedData = Array.from(byParity.values()).map(parData => {
-        const result: any = { name: parData.parity, count: parData.n };
-        selectedPTAs.forEach(pta => {
-          const values = parData.values;
-          result[pta] = values.length > 0 ? mean(values) : null;
-        });
-        return result;
-      }).filter(d => d && typeof d === 'object' && (d.count || 0) > 0);
+
+      processedData = Array.from(byParity.values())
+        .map((parData) => {
+          const result: any = { name: parData.parity, count: parData.count };
+          selectedPTAs.forEach((pta) => {
+            const stats = parData.perPta[pta];
+            result[pta] = stats && stats.count > 0 ? stats.sum / stats.count : null;
+          });
+          return result;
+        })
+        .filter((d) => d && typeof d === 'object' && (d.count || 0) > 0);
     }
     
     return processedData;
@@ -1207,6 +1233,25 @@ function TraitCard({
   const stats = useMemo(() => descriptiveStats(data.map(d => d.mean)), [data]);
   const h2 = H2[trait] ?? 0.30;
 
+  const yearTicks = useMemo(() => {
+    const ticks = Array.from(new Set(data.map((d) => d.year).filter((year) => Number.isFinite(year))));
+    ticks.sort((a, b) => a - b);
+    return ticks;
+  }, [data]);
+
+  const axisDomain = useMemo<[number, number]>(() => {
+    if (!yearTicks.length) {
+      return [0, 1];
+    }
+
+    if (yearTicks.length === 1) {
+      const single = yearTicks[0];
+      return [single - 1, single + 1];
+    }
+
+    return [yearTicks[0], yearTicks[yearTicks.length - 1]];
+  }, [yearTicks]);
+
   return (
     <div className="rounded-2xl shadow overflow-hidden bg-white">
       {/* Header tarja preta com tendência geral */}
@@ -1225,7 +1270,7 @@ function TraitCard({
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="year" type="number" domain={[2021, 2025]} ticks={[2021,2022,2023,2024,2025]} tickMargin={6} />
+            <XAxis dataKey="year" type="number" domain={axisDomain} ticks={yearTicks} tickMargin={6} />
             <YAxis tickMargin={6} />
             <Tooltip
               content={({ active, payload, label }) => {
@@ -1349,6 +1394,30 @@ const PanoramaRebanhoView: React.FC<{
     return ALL_PTAS_PANORAMA.filter((t) => t.toLowerCase().includes(q));
   }, [search]);
 
+  const panoramaYears = useMemo(() => {
+    const years = new Set<number>();
+    females.forEach((female) => {
+      if (!female?.birth_date) return;
+      const year = new Date(female.birth_date).getFullYear();
+      if (Number.isFinite(year)) {
+        years.add(year);
+      }
+    });
+    return Array.from(years).sort((a, b) => a - b);
+  }, [females]);
+
+  const panoramaYearRangeText = useMemo(() => {
+    if (!panoramaYears.length) {
+      return 'sem ano disponível';
+    }
+
+    if (panoramaYears.length === 1) {
+      return panoramaYears[0].toString();
+    }
+
+    return `${panoramaYears[0]}-${panoramaYears[panoramaYears.length - 1]}`;
+  }, [panoramaYears]);
+
   function toggle(t: string) {
     setSelected((prev) => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
   }
@@ -1360,40 +1429,45 @@ const PanoramaRebanhoView: React.FC<{
   // Processar dados do Supabase
   const seriesByTrait = useMemo(() => {
     if (!females || !females.length) return {};
-    
+
     const out: Record<string, Array<{year:number;n:number;mean:number}>> = {};
-    
+
     for (const trait of selected) {
       const dbKey = PTA_TO_KEY_MAP[trait];
       if (!dbKey) continue;
-      
+
       // Agrupar dados por ano
-      const dataByYear: { [key: string]: number[] } = {};
-      
+      const dataByYear: Record<number, number[]> = {};
+      const yearsWithData = new Set<number>();
+
       females.forEach(female => {
         if (!female || !female.birth_date) return;
         const year = new Date(female.birth_date).getFullYear();
         const value = Number(female[dbKey]);
-        
-        if (!isNaN(value) && value !== null && year >= 2021 && year <= 2025) {
-          if (!dataByYear[year]) dataByYear[year] = [];
-          dataByYear[year].push(value);
-        }
+
+        if (!Number.isFinite(value)) return;
+
+        if (!dataByYear[year]) dataByYear[year] = [];
+        dataByYear[year].push(value);
+        yearsWithData.add(year);
       });
-      
+
       // Calcular médias por ano
-      const series = YEARS.map(year => {
-        const values = dataByYear[year] || [];
-        return {
-          year,
-          n: values.length,
-          mean: values.length > 0 ? mean(values) : 0
-        };
-      }).filter(d => d.n > 0);
-      
+      const series = Array.from(yearsWithData)
+        .sort((a, b) => a - b)
+        .map((year) => {
+          const values = dataByYear[year] || [];
+          return {
+            year,
+            n: values.length,
+            mean: values.length > 0 ? mean(values) : 0
+          };
+        })
+        .filter(d => d.n > 0);
+
       out[trait] = series;
     }
-    
+
     return out;
   }, [selected, females]);
 
@@ -1506,7 +1580,7 @@ const PanoramaRebanhoView: React.FC<{
       )}
 
       <div className="text-xs text-gray-500 text-center pb-8">
-        Dados processados do rebanho da fazenda{farmName ? ` ${farmName}` : ''} com agrupamento por ano de nascimento (2021-2025).
+        Dados processados do rebanho da fazenda{farmName ? ` ${farmName}` : ''} com agrupamento por ano de nascimento ({panoramaYearRangeText}).
       </div>
     </div>
   );

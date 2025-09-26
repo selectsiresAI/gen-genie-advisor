@@ -84,7 +84,7 @@ const buildResultExportRows = (rows: BatchRow[]) =>
     .filter((row) => row.status === 'valid' && row.prediction)
     .map((row) => {
       const predictionColumns = PREDICTION_TRAITS.reduce((acc, trait) => {
-        acc[trait.label] = formatPredictionValue(row.prediction?.[trait.key] ?? null);
+        acc[trait.label] = formatPredictionValue(trait.key, row.prediction?.[trait.key] ?? null);
         return acc;
       }, {} as Record<string, string>);
 
@@ -667,7 +667,7 @@ const Nexus2PredictionBatch: React.FC = () => {
                             </TableCell>
                             {PREDICTION_TRAITS.map((trait) => (
                               <TableCell key={`prediction-${row.lineNumber}-${trait.key}`}>
-                                {formatPredictionValue(row.prediction?.[trait.key] ?? null)}
+                                {formatPredictionValue(trait.key, row.prediction?.[trait.key] ?? null)}
                               </TableCell>
                             ))}
                           </TableRow>

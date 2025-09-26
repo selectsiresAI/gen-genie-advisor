@@ -1,3 +1,7 @@
+import {
+  NEXUS2_PTA_DEFINITIONS,
+  NEXUS2_PTA_KEY_TO_LABEL
+} from '@/constants/nexus2Ptas';
 import type { BullsDenormSelection } from '@/supabase/queries/bulls';
 
 export const GENETIC_WEIGHTS = {
@@ -6,39 +10,9 @@ export const GENETIC_WEIGHTS = {
   mmgs: 0.15
 } as const;
 
-const FEMALE_PTA_LABELS: Record<string, string> = {
-  hhp_dollar: 'HHP$®',
-  tpi: 'TPI',
-  nm_dollar: 'NM$',
-  cm_dollar: 'CM$',
-  fm_dollar: 'FM$',
-  gm_dollar: 'GM$',
-  ptam: 'PTAM',
-  ptaf: 'PTAF',
-  ptap: 'PTAP',
-  cfp: 'CFP',
-  pl: 'PL',
-  dpr: 'DPR',
-  scs: 'SCS',
-  ptat: 'PTAT'
-};
+export const PREDICTION_TRAITS = NEXUS2_PTA_DEFINITIONS;
 
-export const PREDICTION_TRAITS = [
-  { key: 'hhp_dollar', label: FEMALE_PTA_LABELS.hhp_dollar },
-  { key: 'tpi', label: FEMALE_PTA_LABELS.tpi },
-  { key: 'nm_dollar', label: FEMALE_PTA_LABELS.nm_dollar },
-  { key: 'cm_dollar', label: FEMALE_PTA_LABELS.cm_dollar },
-  { key: 'fm_dollar', label: FEMALE_PTA_LABELS.fm_dollar },
-  { key: 'gm_dollar', label: FEMALE_PTA_LABELS.gm_dollar },
-  { key: 'ptam', label: FEMALE_PTA_LABELS.ptam },
-  { key: 'ptaf', label: FEMALE_PTA_LABELS.ptaf },
-  { key: 'ptap', label: FEMALE_PTA_LABELS.ptap },
-  { key: 'cfp', label: FEMALE_PTA_LABELS.cfp },
-  { key: 'pl', label: FEMALE_PTA_LABELS.pl },
-  { key: 'dpr', label: FEMALE_PTA_LABELS.dpr },
-  { key: 'scs', label: FEMALE_PTA_LABELS.scs },
-  { key: 'ptat', label: FEMALE_PTA_LABELS.ptat }
-] as const;
+export type PredictionTraitKey = typeof PREDICTION_TRAITS[number]['key'];
 
 export const SUMMARY_TRAITS = [
   'tpi',
@@ -46,9 +20,7 @@ export const SUMMARY_TRAITS = [
   'hhp_dollar',
   'ptam',
   'ptaf'
-] as const satisfies readonly PredictionTraitKey[];
-
-export type PredictionTraitKey = typeof PREDICTION_TRAITS[number]['key'];
+] satisfies readonly PredictionTraitKey[];
 
 export interface BullSummary {
   id: string;
@@ -121,18 +93,37 @@ export function calculatePedigreePrediction({
   return result;
 }
 
-export function formatPredictionValue(value: number | null | undefined): string {
+const formatTraitValue = (
+  key: PredictionTraitKey,
+  value: number | null | undefined
+): string => {
   if (value == null) {
     return '—';
   }
 
+  const label = NEXUS2_PTA_KEY_TO_LABEL[key];
+
+  if (label?.includes('$') || label === 'HHP$®') {
+    return Math.round(value).toString();
+  }
+
+  if (label?.includes('%')) {
+    return value.toFixed(2);
+  }
+
   return value.toFixed(2);
+};
+
+export function formatPredictionValue(
+  key: PredictionTraitKey,
+  value: number | null | undefined
+): string {
+  return formatTraitValue(key, value);
 }
 
-export function formatBullValue(value: number | null | undefined): string {
-  if (value == null) {
-    return '—';
-  }
-
-  return value.toFixed(2);
+export function formatBullValue(
+  key: PredictionTraitKey,
+  value: number | null | undefined
+): string {
+  return formatTraitValue(key, value);
 }
