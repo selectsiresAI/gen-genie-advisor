@@ -187,7 +187,7 @@ export const TrendsTab: React.FC<TrendsTabProps> = ({
       setErrorMessage(null);
 
       try {
-        const { data, error } = await supabase.rpc('get_pta_trend_and_stats', {
+        const { data, error } = await supabase.rpc('get_pta_trend_and_stats' as any, {
           farm_id: farmId,
           trait_keys: normalizedTraits,
         });

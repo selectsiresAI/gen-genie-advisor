@@ -803,6 +803,231 @@ export type Database = {
           },
         ]
       }
+      genetic_records: {
+        Row: {
+          animal_id: string
+          beta_casein: string | null
+          bull_name: string | null
+          bwc: number | null
+          ccr: number | null
+          cdcb_id: string
+          cfp: number | null
+          cm$: number | null
+          created_at: string | null
+          da: number | null
+          dce: number | null
+          dfm: number | null
+          dob: string | null
+          dpr: number | null
+          dsb: number | null
+          efc: number | null
+          f_sav: number | null
+          fi: number | null
+          flc: number | null
+          fls: number | null
+          fm$: number | null
+          fta: number | null
+          ftl: number | null
+          ftp: number | null
+          fua: number | null
+          gfi: number | null
+          gl: number | null
+          gm$: number | null
+          h_liv: number | null
+          hcr: number | null
+          herd_id: string
+          hhp$: number | null
+          kappa_casein: string | null
+          ket: number | null
+          liv: number | null
+          mast: number | null
+          met: number | null
+          mf: number | null
+          naab: string | null
+          nm$: number | null
+          pl: number | null
+          ptaf: number | null
+          ptaf_pct: number | null
+          ptam: number | null
+          ptap: number | null
+          ptap_pct: number | null
+          ptat: number | null
+          reg: string | null
+          rfi: number | null
+          rlr: number | null
+          rls: number | null
+          rp: number | null
+          rtp: number | null
+          rua: number | null
+          ruh: number | null
+          ruw: number | null
+          rw: number | null
+          sce: number | null
+          scs: number | null
+          ssb: number | null
+          sta: number | null
+          str: number | null
+          tpi: number | null
+          ucl: number | null
+          udc: number | null
+          udp: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          animal_id: string
+          beta_casein?: string | null
+          bull_name?: string | null
+          bwc?: number | null
+          ccr?: number | null
+          cdcb_id: string
+          cfp?: number | null
+          cm$?: number | null
+          created_at?: string | null
+          da?: number | null
+          dce?: number | null
+          dfm?: number | null
+          dob?: string | null
+          dpr?: number | null
+          dsb?: number | null
+          efc?: number | null
+          f_sav?: number | null
+          fi?: number | null
+          flc?: number | null
+          fls?: number | null
+          fm$?: number | null
+          fta?: number | null
+          ftl?: number | null
+          ftp?: number | null
+          fua?: number | null
+          gfi?: number | null
+          gl?: number | null
+          gm$?: number | null
+          h_liv?: number | null
+          hcr?: number | null
+          herd_id: string
+          hhp$?: number | null
+          kappa_casein?: string | null
+          ket?: number | null
+          liv?: number | null
+          mast?: number | null
+          met?: number | null
+          mf?: number | null
+          naab?: string | null
+          nm$?: number | null
+          pl?: number | null
+          ptaf?: number | null
+          ptaf_pct?: number | null
+          ptam?: number | null
+          ptap?: number | null
+          ptap_pct?: number | null
+          ptat?: number | null
+          reg?: string | null
+          rfi?: number | null
+          rlr?: number | null
+          rls?: number | null
+          rp?: number | null
+          rtp?: number | null
+          rua?: number | null
+          ruh?: number | null
+          ruw?: number | null
+          rw?: number | null
+          sce?: number | null
+          scs?: number | null
+          ssb?: number | null
+          sta?: number | null
+          str?: number | null
+          tpi?: number | null
+          ucl?: number | null
+          udc?: number | null
+          udp?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          animal_id?: string
+          beta_casein?: string | null
+          bull_name?: string | null
+          bwc?: number | null
+          ccr?: number | null
+          cdcb_id?: string
+          cfp?: number | null
+          cm$?: number | null
+          created_at?: string | null
+          da?: number | null
+          dce?: number | null
+          dfm?: number | null
+          dob?: string | null
+          dpr?: number | null
+          dsb?: number | null
+          efc?: number | null
+          f_sav?: number | null
+          fi?: number | null
+          flc?: number | null
+          fls?: number | null
+          fm$?: number | null
+          fta?: number | null
+          ftl?: number | null
+          ftp?: number | null
+          fua?: number | null
+          gfi?: number | null
+          gl?: number | null
+          gm$?: number | null
+          h_liv?: number | null
+          hcr?: number | null
+          herd_id?: string
+          hhp$?: number | null
+          kappa_casein?: string | null
+          ket?: number | null
+          liv?: number | null
+          mast?: number | null
+          met?: number | null
+          mf?: number | null
+          naab?: string | null
+          nm$?: number | null
+          pl?: number | null
+          ptaf?: number | null
+          ptaf_pct?: number | null
+          ptam?: number | null
+          ptap?: number | null
+          ptap_pct?: number | null
+          ptat?: number | null
+          reg?: string | null
+          rfi?: number | null
+          rlr?: number | null
+          rls?: number | null
+          rp?: number | null
+          rtp?: number | null
+          rua?: number | null
+          ruh?: number | null
+          ruw?: number | null
+          rw?: number | null
+          sce?: number | null
+          scs?: number | null
+          ssb?: number | null
+          sta?: number | null
+          str?: number | null
+          tpi?: number | null
+          ucl?: number | null
+          udc?: number | null
+          udp?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "genetic_records_herd_id_fkey"
+            columns: ["herd_id"]
+            isOneToOne: false
+            referencedRelation: "farm_dashboard_kpis"
+            referencedColumns: ["farm_id"]
+          },
+          {
+            foreignKeyName: "genetic_records_herd_id_fkey"
+            columns: ["herd_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       matings: {
         Row: {
           bull_id: string
@@ -1689,33 +1914,6 @@ export type Database = {
           udc: number | null
           udp: number | null
           updated_at: string | null
-        }[]
-      }
-      get_pta_trend_and_stats: {
-        Args: {
-          farm_id: string
-          trait_keys: string[]
-        }
-        Returns: {
-          trait: string | null
-          column_name: string | null
-          yearly:
-            | {
-                year: number | null
-                mean: number | null
-                n: number | null
-              }[]
-            | null
-          stats:
-            | {
-                mean: number | null
-                median: number | null
-                min: number | null
-                max: number | null
-                sd: number | null
-                n: number | null
-              }
-            | null
         }[]
       }
       get_semen_inventory: {

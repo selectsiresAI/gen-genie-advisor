@@ -16,6 +16,8 @@ interface FemaleUploadModalProps {
   onImportSuccess?: () => void;
 }
 
+const TARGET_TABLE = "genetic_records";
+
 const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({ 
   isOpen, 
   onClose, 
@@ -26,6 +28,100 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { toast } = useToast();
+
+  // Mapeamento de cabeçalhos para chaves canônicas
+  const mapping: Record<string, string> = {
+    'identifier': 'animal_id',
+    'animal_id': 'animal_id',
+    'name': 'bull_name',
+    'bull_name': 'bull_name',
+    'naab': 'naab',
+    'cdcb_id': 'cdcb_id',
+    'reg': 'reg',
+    'birth_date': 'dob',
+    'dob': 'dob',
+    'hhp_dollar': 'hhp$',
+    'hhp$': 'hhp$',
+    'tpi': 'tpi',
+    'nm_dollar': 'nm$',
+    'nm$': 'nm$',
+    'cm_dollar': 'cm$',
+    'cm$': 'cm$',
+    'fm_dollar': 'fm$',
+    'fm$': 'fm$',
+    'gm_dollar': 'gm$',
+    'gm$': 'gm$',
+    'f_sav': 'f_sav',
+    'ptam': 'ptam',
+    'cfp': 'cfp',
+    'ptaf': 'ptaf',
+    'ptaf_pct': 'ptaf_pct',
+    'ptap': 'ptap',
+    'ptap_pct': 'ptap_pct',
+    'pl': 'pl',
+    'dpr': 'dpr',
+    'liv': 'liv',
+    'scs': 'scs',
+    'mast': 'mast',
+    'met': 'met',
+    'rp': 'rp',
+    'da': 'da',
+    'ket': 'ket',
+    'mf': 'mf',
+    'ptat': 'ptat',
+    'udc': 'udc',
+    'flc': 'flc',
+    'sce': 'sce',
+    'dce': 'dce',
+    'ssb': 'ssb',
+    'dsb': 'dsb',
+    'h_liv': 'h_liv',
+    'ccr': 'ccr',
+    'hcr': 'hcr',
+    'fi': 'fi',
+    'gl': 'gl',
+    'efc': 'efc',
+    'bwc': 'bwc',
+    'sta': 'sta',
+    'str': 'str',
+    'dfm': 'dfm',
+    'rua': 'rua',
+    'rls': 'rls',
+    'rtp': 'rtp',
+    'ftl': 'ftl',
+    'rw': 'rw',
+    'rlr': 'rlr',
+    'fta': 'fta',
+    'fls': 'fls',
+    'fua': 'fua',
+    'ruh': 'ruh',
+    'ruw': 'ruw',
+    'ucl': 'ucl',
+    'udp': 'udp',
+    'ftp': 'ftp',
+    'rfi': 'rfi',
+    'gfi': 'gfi',
+    'beta_casein': 'beta_casein',
+    'kappa_casein': 'kappa_casein'
+  };
+
+  const toCanonicalValue = (canonicalKey: string, header: string, value: any): any => {
+    if (!value || value === '' || value === '#########') return null;
+    
+    // Campos numéricos
+    if (['hhp$', 'tpi', 'nm$', 'cm$', 'fm$', 'gm$', 'f_sav', 'ptam', 'cfp', 
+         'ptaf', 'ptaf_pct', 'ptap', 'ptap_pct', 'pl', 'dpr', 'liv', 'scs', 
+         'mast', 'met', 'rp', 'da', 'ket', 'mf', 'ptat', 'udc', 'flc', 'sce', 
+         'dce', 'ssb', 'dsb', 'h_liv', 'ccr', 'hcr', 'fi', 'gl', 'efc', 'bwc', 
+         'sta', 'str', 'dfm', 'rua', 'rls', 'rtp', 'ftl', 'rw', 'rlr', 'fta', 
+         'fls', 'fua', 'ruh', 'ruw', 'ucl', 'udp', 'ftp', 'rfi', 'gfi'].includes(canonicalKey)) {
+      const normalizedValue = String(value).replace(',', '.');
+      const numValue = parseFloat(normalizedValue);
+      return isNaN(numValue) ? null : numValue;
+    }
+    
+    return value;
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -66,35 +162,20 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
             const values = line.split(';').map(v => v.trim().replace(/^["']|["']$/g, ''));
             const row: any = {};
             
-            headers.forEach((header, index) => {
-              const value = values[index];
-              if (value && value !== '' && value !== '#########') { // Filter out Excel overflow values
-                // Convert numeric fields
-                if (['hhp_dollar', 'tpi', 'nm_dollar', 'cm_dollar', 'fm_dollar', 'gm_dollar', 
-                     'f_sav', 'ptam', 'cfp', 'ptaf', 'ptaf_pct', 'ptap', 'ptap_pct', 
-                     'pl', 'dpr', 'liv', 'scs', 'mast', 'met', 'rp', 'da', 'ket', 'mf',
-                     'ptat', 'udc', 'flc', 'sce', 'dce', 'ssb', 'dsb', 'h_liv', 'ccr',
-                     'hcr', 'fi', 'gl', 'efc', 'bwc', 'sta', 'str', 'dfm', 'rua', 'rls',
-                     'rtp', 'ftl', 'rw', 'rlr', 'fta', 'fls', 'fua', 'ruh', 'ruw', 
-                     'ucl', 'udp', 'ftp', 'rfi', 'gfi'].includes(header)) {
-                  // Handle European decimal notation (comma as decimal separator)
-                  const normalizedValue = value.replace(',', '.');
-                  const numValue = parseFloat(normalizedValue);
-                  row[header] = isNaN(numValue) ? null : numValue;
-                } else {
-                  row[header] = value;
-                }
-              } else {
-                row[header] = null;
-              }
+            // Usar mapeamento canônico
+            headers.forEach((h, index) => {
+              const canonicalKey = mapping[h];
+              if (!canonicalKey) return;
+              const v = toCanonicalValue(canonicalKey, h, values[index]);
+              row[canonicalKey] = v ?? values[index];
             });
             
-            console.log(`Row ${lineIndex + 2} name:`, row.name);
+            console.log(`Row ${lineIndex + 2} animal_id:`, row.animal_id);
             return row;
           });
           
-          // Filter out rows without names
-          const validData = data.filter(row => row.name && row.name.trim() !== '');
+          // Filter out rows without animal_id or cdcb_id
+          const validData = data.filter(row => (row.animal_id && row.animal_id.trim() !== '') || (row.cdcb_id && row.cdcb_id.trim() !== ''));
           console.log('Valid rows after filtering:', validData.length);
           console.log('Sample valid row:', validData[0]);
           
@@ -122,44 +203,42 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
     setIsUploading(true);
 
     try {
-      let femalesData: any[] = [];
+      let recordsData: any[] = [];
 
       // Parse CSV file
       if (selectedFile.name.toLowerCase().endsWith('.csv')) {
-        femalesData = await parseCsvFile(selectedFile);
+        recordsData = await parseCsvFile(selectedFile);
       } else {
         throw new Error('Apenas arquivos CSV são suportados no momento. Use o template CSV.');
       }
 
-      if (femalesData.length === 0) {
+      if (recordsData.length === 0) {
         throw new Error('Nenhum dado válido encontrado no arquivo');
       }
 
       // Validate required fields
-      const invalidRows = femalesData.filter(row => !row.name);
+      const invalidRows = recordsData.filter(row => !row.animal_id && !row.cdcb_id);
       if (invalidRows.length > 0) {
-        throw new Error(`${invalidRows.length} linha(s) sem nome válido encontrada(s)`);
+        throw new Error(`${invalidRows.length} linha(s) sem animal_id ou cdcb_id válido encontrada(s)`);
       }
 
       // Prepare data for insertion with direct column mapping
-      const femalesToInsert = femalesData.map(row => {
+      const recordsToInsert = recordsData.map(row => {
         return {
-          farm_id: farmId,
-          name: row.name,
-          identifier: row.identifier || null,
+          herd_id: farmId,
+          animal_id: row.animal_id || null,
           cdcb_id: row.cdcb_id || null,
-          birth_date: row.birth_date || null,
-          parity_order: row.parity_order ? parseInt(row.parity_order) : null,
-          sire_naab: row.sire_naab || null,
-          mgs_naab: row.mgs_naab || null,
-          mmgs_naab: row.mmgs_naab || null,
-          // Direct PTA column mapping
-          hhp_dollar: row.hhp_dollar,
+          naab: row.naab || null,
+          bull_name: row.bull_name || null,
+          reg: row.reg || null,
+          dob: row.dob || null,
+          // Direct PTA column mapping with $ notation
+          'hhp$': row['hhp$'],
           tpi: row.tpi,
-          nm_dollar: row.nm_dollar,
-          cm_dollar: row.cm_dollar,
-          fm_dollar: row.fm_dollar,
-          gm_dollar: row.gm_dollar,
+          'nm$': row['nm$'],
+          'cm$': row['cm$'],
+          'fm$': row['fm$'],
+          'gm$': row['gm$'],
           f_sav: row.f_sav,
           ptam: row.ptam,
           cfp: row.cfp,
@@ -215,29 +294,28 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
         };
       });
 
-      // Insert females in batches
+      // Insert records in batches with upsert
       const batchSize = 100;
       let totalInserted = 0;
       
-      for (let i = 0; i < femalesToInsert.length; i += batchSize) {
-        const batch = femalesToInsert.slice(i, i + batchSize);
+      for (let i = 0; i < recordsToInsert.length; i += batchSize) {
+        const chunk = recordsToInsert.slice(i, i + batchSize);
         
         const { data, error } = await supabase
-          .from('females')
-          .insert(batch)
-          .select('id');
+          .from(TARGET_TABLE)
+          .upsert(chunk, { onConflict: "herd_id,animal_id,cdcb_id" });
 
         if (error) {
           console.error('Supabase insertion error:', error);
           throw new Error(`Erro ao inserir dados: ${error.message}`);
         }
 
-        totalInserted += data?.length || 0;
+        totalInserted += chunk.length;
       }
 
       toast({
-        title: "Fêmeas importadas com sucesso!",
-        description: `${totalInserted} fêmea(s) importada(s) para a fazenda ${farmName}`,
+        title: "Registros genéticos importados com sucesso!",
+        description: `${totalInserted} registro(s) importado(s) para a fazenda ${farmName}`,
       });
 
       setSelectedFile(null);
@@ -261,21 +339,20 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
   };
 
   const downloadTemplate = () => {
-    // Create a comprehensive CSV template based on females_denorm table
+    // Create a comprehensive CSV template based on genetic_records table
     const headers = [
-      'identifier',
-      'name',
-      'birth_date',
+      'animal_id',
       'cdcb_id',
-      'sire_naab',
-      'mgs_naab',
-      'mmgs_naab',
-      'hhp_dollar',
+      'naab',
+      'bull_name',
+      'reg',
+      'dob',
+      'hhp$',
       'tpi',
-      'nm_dollar',
-      'cm_dollar',
-      'fm_dollar',
-      'gm_dollar',
+      'nm$',
+      'cm$',
+      'fm$',
+      'gm$',
       'f_sav',
       'ptam',
       'cfp',
@@ -325,21 +402,21 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
       'udp',
       'ftp',
       'rfi',
+      'gfi',
       'beta_casein',
-      'kappa_casein',
-      'gfi'
+      'kappa_casein'
     ];
     
     const sampleData = [
-      'BR001,VACA EXEMPLO,2020-01-15,1234567890,200HO12345,200HO67890,200HO11111,820,2650,750,680,590,420,1.2,2.1,3.5,2.8,105,2.5,110,1.2,1.5,2.85,4.2,1.8,1.1,0.2,0.1,2.4,1.8,0.4,0.3,1.2,0.8,2.1,1.9,2.2,1.4,0.9,1.7,1.3,0.6,1.5,2.0,1.8,0.7,0.2,0.5,1.1,0.9,1.3,0.8,0.4,1.2,0.6,0.7,1.0,0.3,0.5,A2A2,AA,1.6'
+      'BR001;1234567890;200HO12345;TOURO EXEMPLO;REG12345;2020-01-15;820;2650;750;680;590;420;1,2;2,1;3,5;2,8;105;2,5;110;1,2;1,5;2,85;4,2;1,8;1,1;0,2;0,1;2,4;1,8;0,4;0,3;1,2;0,8;2,1;1,9;2,2;1,4;0,9;1,7;1,3;0,6;1,5;2,0;1,8;0,7;0,2;0,5;1,1;0,9;1,3;0,8;0,4;1,2;0,6;0,7;1,0;0,3;0,5;1,6;A2A2;AA'
     ];
 
-    const csvContent = [headers.join(','), ...sampleData].join('\n');
+    const csvContent = [headers.join(';'), ...sampleData].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `template_femeas_${farmName.replace(/\s+/g, '_')}.csv`;
+    a.download = `template_registros_geneticos_${farmName.replace(/\s+/g, '_')}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -347,7 +424,7 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
 
     toast({
       title: "Template baixado",
-      description: "Use este modelo para organizar seus dados.",
+      description: "Use este modelo para organizar seus dados genéticos.",
     });
   };
 
@@ -355,9 +432,9 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Importar Fêmeas</DialogTitle>
+          <DialogTitle>Importar Registros Genéticos</DialogTitle>
           <DialogDescription>
-            Faça upload de um arquivo CSV ou Excel com os dados das fêmeas para a fazenda {farmName}.
+            Faça upload de um arquivo CSV com os dados dos registros genéticos para a fazenda {farmName}.
           </DialogDescription>
         </DialogHeader>
 
@@ -365,7 +442,7 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              O arquivo deve conter as colunas conforme o template. Baixe o template para ver todas as colunas disponíveis da tabela females_denorm.
+              O arquivo deve conter as colunas conforme o template. Baixe o template para ver todas as colunas disponíveis da tabela genetic_records.
             </AlertDescription>
           </Alert>
 
