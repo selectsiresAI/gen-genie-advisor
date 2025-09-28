@@ -3,10 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, FileText, AlertCircle } from "lucide-react";
+import { Upload } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from '@/integrations/supabase/client';
+import * as XLSX from "xlsx";
 
 interface FemaleUploadModalProps {
   isOpen: boolean;
@@ -34,6 +34,40 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
     }
   };
 
+  const NUMERIC_FIELDS = new Set([
+    'hhp_dollar', 'tpi', 'nm_dollar', 'cm_dollar', 'fm_dollar', 'gm_dollar',
+    'f_sav', 'ptam', 'cfp', 'ptaf', 'ptaf_pct', 'ptap', 'ptap_pct',
+    'pl', 'dpr', 'liv', 'scs', 'mast', 'met', 'rp', 'da', 'ket', 'mf',
+    'ptat', 'udc', 'flc', 'sce', 'dce', 'ssb', 'dsb', 'h_liv', 'ccr',
+    'hcr', 'fi', 'gl', 'efc', 'bwc', 'sta', 'str', 'dfm', 'rua', 'rls',
+    'rtp', 'ftl', 'rw', 'rlr', 'fta', 'fls', 'fua', 'ruh', 'ruw',
+    'ucl', 'udp', 'ftp', 'rfi', 'gfi'
+  ]);
+
+  const normalizeRow = (raw: Record<string, any>) => {
+    const row: any = {};
+    Object.entries(raw).forEach(([header, value]) => {
+      const trimmedHeader = header?.toString().trim();
+      if (!trimmedHeader) return;
+
+      if (value === undefined || value === null || value === '' || value === '#########') {
+        row[trimmedHeader] = null;
+        return;
+      }
+
+      if (NUMERIC_FIELDS.has(trimmedHeader)) {
+        const asString = typeof value === 'number' ? value.toString() : String(value);
+        const normalized = asString.replace(',', '.');
+        const numeric = Number(normalized);
+        row[trimmedHeader] = Number.isFinite(numeric) ? numeric : null;
+      } else {
+        row[trimmedHeader] = typeof value === 'string' ? value.trim() : value;
+      }
+    });
+
+    return row;
+  };
+
   const parseCsvFile = async (file: File): Promise<any[]> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -56,48 +90,31 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
           console.log('Header line:', headerLine);
           
           // Handle different CSV delimiters and quoted fields
-          const headers = headerLine.split(';').map(h => h.trim().replace(/^["']|["']$/g, ''));
+          const delimiter = headerLine.includes(';') ? ';' : ',';
+          const headers = headerLine.split(delimiter).map(h => h.trim().replace(/^["']|["']$/g, ''));
           console.log('Parsed headers:', headers);
-          
+
           const data = lines.slice(1).map((line, lineIndex) => {
             console.log(`Processing line ${lineIndex + 2}:`, line.substring(0, 100) + '...');
-            
+
             // Split values more carefully
-            const values = line.split(';').map(v => v.trim().replace(/^["']|["']$/g, ''));
-            const row: any = {};
-            
+            const values = line.split(delimiter).map(v => v.trim().replace(/^["']|["']$/g, ''));
+            const rawRow: Record<string, any> = {};
+
             headers.forEach((header, index) => {
-              const value = values[index];
-              if (value && value !== '' && value !== '#########') { // Filter out Excel overflow values
-                // Convert numeric fields
-                if (['hhp_dollar', 'tpi', 'nm_dollar', 'cm_dollar', 'fm_dollar', 'gm_dollar', 
-                     'f_sav', 'ptam', 'cfp', 'ptaf', 'ptaf_pct', 'ptap', 'ptap_pct', 
-                     'pl', 'dpr', 'liv', 'scs', 'mast', 'met', 'rp', 'da', 'ket', 'mf',
-                     'ptat', 'udc', 'flc', 'sce', 'dce', 'ssb', 'dsb', 'h_liv', 'ccr',
-                     'hcr', 'fi', 'gl', 'efc', 'bwc', 'sta', 'str', 'dfm', 'rua', 'rls',
-                     'rtp', 'ftl', 'rw', 'rlr', 'fta', 'fls', 'fua', 'ruh', 'ruw', 
-                     'ucl', 'udp', 'ftp', 'rfi', 'gfi'].includes(header)) {
-                  // Handle European decimal notation (comma as decimal separator)
-                  const normalizedValue = value.replace(',', '.');
-                  const numValue = parseFloat(normalizedValue);
-                  row[header] = isNaN(numValue) ? null : numValue;
-                } else {
-                  row[header] = value;
-                }
-              } else {
-                row[header] = null;
-              }
+              rawRow[header] = values[index] ?? null;
             });
-            
-            console.log(`Row ${lineIndex + 2} name:`, row.name);
-            return row;
+
+            const normalizedRow = normalizeRow(rawRow);
+            console.log(`Row ${lineIndex + 2} name:`, normalizedRow.name);
+            return normalizedRow;
           });
-          
+
           // Filter out rows without names
           const validData = data.filter(row => row.name && row.name.trim() !== '');
           console.log('Valid rows after filtering:', validData.length);
           console.log('Sample valid row:', validData[0]);
-          
+
           resolve(validData);
         } catch (error) {
           console.error('CSV parsing error:', error);
@@ -107,6 +124,33 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
       reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
       reader.readAsText(file, 'UTF-8');
     });
+  };
+
+  const parseExcelFile = async (file: File): Promise<any[]> => {
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: 'array' });
+    const sheetName = workbook.SheetNames[0];
+
+    if (!sheetName) {
+      throw new Error('Arquivo Excel sem abas válidas');
+    }
+
+    const sheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, {
+      defval: null,
+      raw: false,
+      blankrows: false,
+    });
+
+    const normalized = rows
+      .map((row) => normalizeRow(row))
+      .filter((row) => row && row.name && String(row.name).trim() !== '');
+
+    if (!normalized.length) {
+      throw new Error('Nenhum dado válido encontrado no arquivo Excel');
+    }
+
+    return normalized;
   };
 
   const handleUpload = async () => {
@@ -125,10 +169,14 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
       let femalesData: any[] = [];
 
       // Parse CSV file
-      if (selectedFile.name.toLowerCase().endsWith('.csv')) {
+      const extension = selectedFile.name.toLowerCase();
+
+      if (extension.endsWith('.csv')) {
         femalesData = await parseCsvFile(selectedFile);
+      } else if (extension.endsWith('.xlsx') || extension.endsWith('.xls')) {
+        femalesData = await parseExcelFile(selectedFile);
       } else {
-        throw new Error('Apenas arquivos CSV são suportados no momento. Use o template CSV.');
+        throw new Error('Formato de arquivo não suportado. Use CSV ou Excel (.xlsx, .xls).');
       }
 
       if (femalesData.length === 0) {
@@ -260,97 +308,6 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
     }
   };
 
-  const downloadTemplate = () => {
-    // Create a comprehensive CSV template based on females_denorm table
-    const headers = [
-      'identifier',
-      'name',
-      'birth_date',
-      'cdcb_id',
-      'sire_naab',
-      'mgs_naab',
-      'mmgs_naab',
-      'hhp_dollar',
-      'tpi',
-      'nm_dollar',
-      'cm_dollar',
-      'fm_dollar',
-      'gm_dollar',
-      'f_sav',
-      'ptam',
-      'cfp',
-      'ptaf',
-      'ptaf_pct',
-      'ptap',
-      'ptap_pct',
-      'pl',
-      'dpr',
-      'liv',
-      'scs',
-      'mast',
-      'met',
-      'rp',
-      'da',
-      'ket',
-      'mf',
-      'ptat',
-      'udc',
-      'flc',
-      'sce',
-      'dce',
-      'ssb',
-      'dsb',
-      'h_liv',
-      'ccr',
-      'hcr',
-      'fi',
-      'gl',
-      'efc',
-      'bwc',
-      'sta',
-      'str',
-      'dfm',
-      'rua',
-      'rls',
-      'rtp',
-      'ftl',
-      'rw',
-      'rlr',
-      'fta',
-      'fls',
-      'fua',
-      'ruh',
-      'ruw',
-      'ucl',
-      'udp',
-      'ftp',
-      'rfi',
-      'beta_casein',
-      'kappa_casein',
-      'gfi'
-    ];
-    
-    const sampleData = [
-      'BR001,VACA EXEMPLO,2020-01-15,1234567890,200HO12345,200HO67890,200HO11111,820,2650,750,680,590,420,1.2,2.1,3.5,2.8,105,2.5,110,1.2,1.5,2.85,4.2,1.8,1.1,0.2,0.1,2.4,1.8,0.4,0.3,1.2,0.8,2.1,1.9,2.2,1.4,0.9,1.7,1.3,0.6,1.5,2.0,1.8,0.7,0.2,0.5,1.1,0.9,1.3,0.8,0.4,1.2,0.6,0.7,1.0,0.3,0.5,A2A2,AA,1.6'
-    ];
-
-    const csvContent = [headers.join(','), ...sampleData].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `template_femeas_${farmName.replace(/\s+/g, '_')}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-
-    toast({
-      title: "Template baixado",
-      description: "Use este modelo para organizar seus dados.",
-    });
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
@@ -362,13 +319,6 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
         </DialogHeader>
 
         <div className="space-y-4">
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              O arquivo deve conter as colunas conforme o template. Baixe o template para ver todas as colunas disponíveis da tabela females_denorm.
-            </AlertDescription>
-          </Alert>
-
           <div className="space-y-2">
             <Label htmlFor="file-upload">Selecionar arquivo</Label>
             <Input
@@ -385,34 +335,23 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
             )}
           </div>
 
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={downloadTemplate}
-              className="flex-1"
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              Baixar Template
-            </Button>
-            
-            <Button
-              onClick={handleUpload}
-              disabled={!selectedFile || isUploading}
-              className="flex-1"
-            >
-              {isUploading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Processando...
-                </>
-              ) : (
-                <>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Importar
-                </>
-              )}
-            </Button>
-          </div>
+          <Button
+            onClick={handleUpload}
+            disabled={!selectedFile || isUploading}
+            className="w-full"
+          >
+            {isUploading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Processando...
+              </>
+            ) : (
+              <>
+                <Upload className="w-4 h-4 mr-2" />
+                Importar
+              </>
+            )}
+          </Button>
 
           <div className="text-xs text-muted-foreground">
             <strong>Formatos aceitos:</strong> CSV, Excel (.xlsx, .xls)<br />
