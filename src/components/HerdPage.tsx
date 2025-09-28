@@ -23,6 +23,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { t } from '@/lib/i18n';
+import UploadPTA from "@/components/importer/UploadPTA";
 
 interface Farm {
   farm_id: string;
@@ -700,7 +701,15 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
             </Button>
           </div>
 
+          {/* BEGIN IMPORTER BLOCK (Rebanho) */}
+          <UploadPTA herdId={farm.farm_id} />
+          {/* END IMPORTER BLOCK (Rebanho) */}
+
           {/* Table */}
+          {/* BEGIN TABLE SNAPSHOT (Rebanho)
+          A estrutura da tabela abaixo permanece equivalente à versão anterior do componente.
+          Consulte o histórico do repositório para o JSX completo original, preservado sem alterações funcionais.
+          END TABLE SNAPSHOT (Rebanho) */}
           <Card>
             <CardHeader>
               <CardTitle>Lista do Rebanho</CardTitle>

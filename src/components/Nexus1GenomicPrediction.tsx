@@ -13,6 +13,7 @@ import { Upload, Download, Calculator, ArrowLeft, Users, Target, Database, FileU
 import { read, utils, writeFileXLSX } from 'xlsx';
 import { supabase } from '@/integrations/supabase/client';
 import { useHerdStore } from '@/hooks/useHerdStore';
+import UploadPTA from "@/components/importer/UploadPTA";
 
 // Colunas específicas para Nexus 1
 const NEXUS1_COLUMNS = [
@@ -818,6 +819,14 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
           </p>
         </div>
       </div>
+
+      {/* BEGIN IMPORTER BLOCK (Nexus 1) */}
+      <UploadPTA herdId={currentFarmId ?? ""} />
+      {/* END IMPORTER BLOCK (Nexus 1) */}
+
+      {/* BEGIN TABLE SNAPSHOT (Nexus 1)
+      A renderização principal da página (cards e tabelas de predição) permanece idêntica ao layout existente.
+      END TABLE SNAPSHOT (Nexus 1) */}
 
       {/* Indicador de Passos */}
       {renderStepIndicator()}

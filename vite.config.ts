@@ -13,6 +13,7 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "fuse.js": path.resolve(__dirname, "./src/lib/vendor/fuse"),
     },
   },
 }));

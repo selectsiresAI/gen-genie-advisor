@@ -4,7 +4,9 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "fuse.js": ["./src/lib/vendor/fuse"],
+      "fuse.js/*": ["./src/lib/vendor/fuse"]
     },
     "noImplicitAny": false,
     "noUnusedParameters": false,
