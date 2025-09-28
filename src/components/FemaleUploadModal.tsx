@@ -1,12 +1,21 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, FileText, AlertCircle } from "lucide-react";
+import { Upload, AlertCircle } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { supabase } from '@/integrations/supabase/client';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/integrations/supabase/types';
+import { read, utils } from 'xlsx';
+
+type FemaleRow = Record<string, unknown>;
+
+type SupabaseConfigInput = {
+  supabaseUrl?: string;
+  supabaseAnonKey?: string;
+};
 
 interface FemaleUploadModalProps {
   isOpen: boolean;
@@ -14,6 +23,8 @@ interface FemaleUploadModalProps {
   farmId: string;
   farmName: string;
   onImportSuccess?: () => void;
+  supabaseUrl?: string;
+  supabaseAnonKey?: string;
 }
 
 const TARGET_TABLE = "females";
@@ -26,87 +37,171 @@ const DB_FIELD_MAP: Record<string, string> = {
   "gm$": "gm_dollar",
 };
 
-const HEADER_MAPPING: Record<string, string> = {
-  'hhp_dollar': 'hhp$',
-  'hhp$': 'hhp$',
-  'tpi': 'tpi',
-  'nm_dollar': 'nm$',
-  'nm$': 'nm$',
-  'cm_dollar': 'cm$',
-  'cm$': 'cm$',
-  'fm_dollar': 'fm$',
-  'fm$': 'fm$',
-  'gm_dollar': 'gm$',
-  'gm$': 'gm$',
-  'f_sav': 'f_sav',
-  'ptam': 'ptam',
-  'cfp': 'cfp',
-  'ptaf': 'ptaf',
-  'ptaf_pct': 'ptaf_pct',
-  'ptap': 'ptap',
-  'ptap_pct': 'ptap_pct',
-  'pl': 'pl',
-  'dpr': 'dpr',
-  'liv': 'liv',
-  'scs': 'scs',
-  'mast': 'mast',
-  'met': 'met',
-  'rp': 'rp',
-  'da': 'da',
-  'ket': 'ket',
-  'mf': 'mf',
-  'ptat': 'ptat',
-  'udc': 'udc',
-  'flc': 'flc',
-  'sce': 'sce',
-  'dce': 'dce',
-  'ssb': 'ssb',
-  'dsb': 'dsb',
-  'h_liv': 'h_liv',
-  'ccr': 'ccr',
-  'hcr': 'hcr',
-  'fi': 'fi',
-  'gl': 'gl',
-  'efc': 'efc',
-  'bwc': 'bwc',
-  'sta': 'sta',
-  'str': 'str',
-  'dfm': 'dfm',
-  'rua': 'rua',
-  'rls': 'rls',
-  'rtp': 'rtp',
-  'ftl': 'ftl',
-  'rw': 'rw',
-  'rlr': 'rlr',
-  'fta': 'fta',
-  'fls': 'fls',
-  'fua': 'fua',
-  'ruh': 'ruh',
-  'ruw': 'ruw',
-  'ucl': 'ucl',
-  'udp': 'udp',
-  'ftp': 'ftp',
-  'rfi': 'rfi',
-  'gfi': 'gfi',
-  'beta_casein': 'beta_casein',
-  'kappa_casein': 'kappa_casein'
-};
-
-const NORMALIZED_HEADER_MAPPING: Record<string, string> = Object.entries(HEADER_MAPPING).reduce(
-  (acc, [key, value]) => {
-    acc[key.toLowerCase()] = value;
-    return acc;
-  },
-  {} as Record<string, string>
-);
-
-type FemaleRow = Record<string, unknown>;
+const PTA_CANONICAL_FIELDS = [
+  'hhp$','tpi','nm$','cm$','fm$','gm$','f_sav','ptam','cfp','ptaf','ptaf_pct','ptap','ptap_pct','pl','dpr','liv','scs','mast','met','rp','da','ket','mf','ptat','udc','flc','sce','dce','ssb','dsb','h_liv','ccr','hcr','fi','gl','efc','bwc','sta','str','dfm','rua','rls','rtp','ftl','rw','rlr','fta','fls','fua','ruh','ruw','ucl','udp','ftp','rfi','gfi','beta_casein','kappa_casein'
+] as const;
 
 const PTAS_KEYS = [
-  'tpi','ptam','ptaf','ptaf_pct','ptap','ptap_pct','scs','pl','dpr','liv','ptat','udc','flc','sce','dce','ssb','dsb',
-  'h_liv','ccr','hcr','fi','gl','efc','bwc','sta','str','dfm','rua','rls','rtp','ftl','rw','rlr','fta','fls','fua',
-  'ruh','ruw','ucl','udp','ftp','rfi','gfi','beta_casein','kappa_casein'
+  'tpi','ptam','ptaf','ptaf_pct','ptap','ptap_pct','scs','pl','dpr','liv','ptat','udc','flc','sce','dce','ssb','dsb','h_liv','ccr','hcr','fi','gl','efc','bwc','sta','str','dfm','rua','rls','rtp','ftl','rw','rlr','fta','fls','fua','ruh','ruw','ucl','udp','ftp','rfi','gfi','beta_casein','kappa_casein'
+] as const;
+
+const NUMERIC_KEYS = new Set<string>(
+  PTA_CANONICAL_FIELDS.filter((key) => key !== 'beta_casein' && key !== 'kappa_casein')
+);
+
+const HEADER_SYNONYMS: Record<string, string[]> = {
+  'hhp$': ['hhp', 'hhp dollar', 'hhp dolar', 'hhp score'],
+  'tpi': ['total performance index', 'indice tpi'],
+  'nm$': ['net merit', 'net merit $', 'merito liquido', 'merito liquido$', 'nm dollar'],
+  'cm$': ['cheese merit', 'cheese merit $', 'merito queijo'],
+  'fm$': ['fluid merit', 'fluid merit $'],
+  'gm$': ['grazing merit', 'grazing merit $'],
+  'f_sav': ['feed saved', 'economia de alimento'],
+  'ptam': ['pta milk', 'milk', 'milk lbs', 'milk (lbs)', 'pta leite', 'leite pta', 'leite (kg)', 'milk kg'],
+  'cfp': ['combined fat protein', 'cheese fat protein'],
+  'ptaf': ['pta fat', 'fat', 'fat lbs', 'pta gordura', 'gordura (kg)'],
+  'ptaf_pct': ['ptaf%', 'ptaf pct', 'fat%', 'fat pct', 'pta gordura %', 'gordura %'],
+  'ptap': ['pta protein', 'protein', 'protein lbs', 'pta proteina', 'proteina (kg)'],
+  'ptap_pct': ['ptap%', 'ptap pct', 'protein%', 'protein pct', 'proteina %'],
+  'pl': ['productive life', 'vida produtiva'],
+  'dpr': ['daughter pregnancy rate', 'taxa prenhez filhas'],
+  'liv': ['longevity', 'longevidade'],
+  'scs': ['somatic cell score', 'ccs', 'escore celulas somaticas'],
+  'mast': ['mastitis'],
+  'met': ['metritis'],
+  'rp': ['retained placenta', 'placenta retida'],
+  'da': ['displaced abomasum', 'abomaso deslocado'],
+  'ket': ['ketosis', 'cetose'],
+  'mf': ['milk fever', 'febre do leite'],
+  'ptat': ['type', 'tipo'],
+  'udc': ['udder composite', 'composto ubre'],
+  'flc': ['feet and legs', 'composto pes pernas'],
+  'sce': ['sire calving ease', 'facilidade parto touro'],
+  'dce': ['daughter calving ease', 'facilidade parto filhas'],
+  'ssb': ['sire stillbirth', 'natimorto touro'],
+  'dsb': ['daughter stillbirth', 'natimorto filhas'],
+  'h_liv': ['herd life', 'vida rebanho'],
+  'ccr': ['cow conception rate', 'taxa concepcao vacas'],
+  'hcr': ['heifer conception rate', 'taxa concepcao novilhas'],
+  'fi': ['fertility index', 'indice fertilidade'],
+  'gl': ['gestation length', 'gestacao'],
+  'efc': ['early first calving', 'idade primeiro parto'],
+  'bwc': ['body weight composite', 'composto peso corporal'],
+  'sta': ['stature', 'estatura'],
+  'str': ['strength', 'forca'],
+  'dfm': ['dairy form', 'forma leiteira'],
+  'rua': ['rump angle', 'angulo garupa'],
+  'rls': ['rear legs side', 'pernas traseiras lateral'],
+  'rtp': ['rear teat placement', 'posicao teto traseiro'],
+  'ftl': ['fore teat length', 'comprimento teto frontal'],
+  'rw': ['rump width', 'largura garupa'],
+  'rlr': ['rear legs rear', 'pernas traseiras posterior'],
+  'fta': ['front teat angle', 'angulo teto frontal'],
+  'fls': ['foot angle', 'angulo casco'],
+  'fua': ['front udder attachment', 'ligacao ubre frontal'],
+  'ruh': ['rear udder height', 'altura ubre traseiro'],
+  'ruw': ['rear udder width', 'largura ubre traseiro'],
+  'ucl': ['udder cleft', 'ligamento ubre'],
+  'udp': ['udder depth', 'profundidade ubre'],
+  'ftp': ['front teat placement', 'posicao teto frontal'],
+  'rfi': ['residual feed intake', 'ingestao residual alimento'],
+  'gfi': ['grazing feed intake', 'ingestao pastejo'],
+  'beta_casein': ['beta casein', 'beta-casein', 'beta caseina'],
+  'kappa_casein': ['kappa casein', 'kappa-casein', 'kappa caseina'],
+};
+
+const FIXED_FIELD_ALIASES = [
+  'Nome','name','Nome Animal','Animal','ID CDCB','cdcb_id','CDCB','CDCB ID','Data de Nascimento','birth_date','Nascimento','Data Nascimento',
+  'Pedigre Pai/Avô Materno/BisaAvô Materno','Pedigree','Pedigree Pai','ID Fazenda','identifier','animal_id','Brinco','ID Animal','farm_id',
+  'sire_naab','Pai','mgs_naab','Avô Materno','mmgs_naab','BisaAvô Materno'
 ];
+
+const FIXED_FIELD_ALIAS_SET = new Set(FIXED_FIELD_ALIASES.map((alias) => sanitizeHeaderKey(alias)));
+
+const sanitizeHeaderKey = (value: string): string =>
+  value
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/\$/g, 'dollar')
+    .replace(/%/g, 'pct')
+    .replace(/[^a-z0-9]/g, '');
+
+const dbCol = (canonicalKey: string): string => {
+  return DB_FIELD_MAP[canonicalKey] ?? canonicalKey;
+};
+
+const resolveSupabaseConfig = (input?: SupabaseConfigInput) => {
+  const pickString = (source: Record<string, unknown> | undefined, keys: string[]): string | undefined => {
+    if (!source) return undefined;
+    for (const key of keys) {
+      const candidate = source[key];
+      if (typeof candidate === 'string' && candidate.trim() !== '') {
+        return candidate;
+      }
+    }
+    return undefined;
+  };
+
+  const win = typeof window !== 'undefined' ? (window as unknown as Record<string, unknown>) : undefined;
+  const winEnvRaw = win?.['__env'];
+  const winEnv = (typeof winEnvRaw === 'object' && winEnvRaw !== null)
+    ? (winEnvRaw as Record<string, unknown>)
+    : undefined;
+  const importMetaEnv = typeof import.meta !== 'undefined'
+    ? (((import.meta as unknown as Record<string, unknown>).env as Record<string, unknown>) ?? {})
+    : {};
+  const processEnv = typeof process !== 'undefined' && typeof process.env !== 'undefined'
+    ? (process.env as unknown as Record<string, unknown>)
+    : {};
+
+  const supabaseUrl =
+    input?.supabaseUrl ??
+    pickString(win, ['supabaseUrl', 'SUPABASE_URL']) ??
+    pickString(winEnv, ['supabaseUrl', 'SUPABASE_URL']) ??
+    pickString(importMetaEnv, ['VITE_SUPABASE_URL', 'SUPABASE_URL']) ??
+    pickString(processEnv, ['VITE_SUPABASE_URL', 'SUPABASE_URL']);
+
+  const supabaseAnonKey =
+    input?.supabaseAnonKey ??
+    pickString(win, ['supabaseAnonKey', 'SUPABASE_ANON_KEY']) ??
+    pickString(winEnv, ['supabaseAnonKey', 'SUPABASE_ANON_KEY']) ??
+    pickString(importMetaEnv, ['VITE_SUPABASE_ANON_KEY', 'SUPABASE_ANON_KEY']) ??
+    pickString(processEnv, ['VITE_SUPABASE_ANON_KEY', 'SUPABASE_ANON_KEY']);
+
+  return { supabaseUrl, supabaseAnonKey };
+};
+
+const createSupabase = ({ url, anonKey }: { url: string; anonKey: string }): SupabaseClient<Database> => {
+  return createClient<Database>(url, anonKey);
+};
+
+const buildHeaderAliasMap = () => {
+  const map = new Map<string, string>();
+
+  const register = (alias: string, canonical: string) => {
+    const sanitized = sanitizeHeaderKey(alias);
+    if (!sanitized || map.has(sanitized)) return;
+    map.set(sanitized, canonical);
+  };
+
+  PTA_CANONICAL_FIELDS.forEach((canonical) => {
+    register(canonical, canonical);
+    register(canonical.toUpperCase(), canonical);
+    register(canonical.replace(/_/g, ' '), canonical);
+    register(dbCol(canonical), canonical);
+    register(dbCol(canonical).toUpperCase(), canonical);
+  });
+
+  Object.entries(HEADER_SYNONYMS).forEach(([canonical, synonyms]) => {
+    synonyms.forEach((synonym) => register(synonym, canonical));
+  });
+
+  return map;
+};
+
+const HEADER_ALIAS_MAP = buildHeaderAliasMap();
+const HEADER_ALIAS_ENTRIES = Array.from(HEADER_ALIAS_MAP.entries());
 
 const hasValidString = (value: unknown) => {
   if (value === null || value === undefined) return false;
@@ -114,72 +209,312 @@ const hasValidString = (value: unknown) => {
   return true;
 };
 
-const dbCol = (canonicalKey: string): string => {
-  return DB_FIELD_MAP[canonicalKey] ?? canonicalKey;
-};
+const toCanonicalValue = (canonicalKey: string, _headerLabel: string, value: unknown): number | string | null => {
+  if (value === null || value === undefined) return null;
 
-const getRowValue = (row: FemaleRow, key: string): unknown => {
-  if (key in row) return row[key];
-  const normalized = key.toLowerCase();
-  const found = Object.keys(row).find((k) => k.toLowerCase() === normalized);
-  return found ? row[found] : undefined;
-};
-
-const mapFixedColumnsFromRow = (r: FemaleRow, farmId: string): FemaleRow => {
-  const out: FemaleRow = { farm_id: farmId };
-
-  const firstNonNull = (...keys: string[]) => {
-    for (const key of keys) {
-      const value = getRowValue(r, key);
-      if (value != null && value !== "") return value;
+  if (typeof value === 'number') {
+    if (NUMERIC_KEYS.has(canonicalKey)) {
+      return value;
     }
+    return value.toString();
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed === '' || trimmed === '#########') return null;
+
+    if (NUMERIC_KEYS.has(canonicalKey)) {
+      const normalized = trimmed
+        .replace(/\s+/g, '')
+        .replace(/[%]/g, '')
+        .replace(/[^0-9,.-]/g, '')
+        .replace(/,(?=\d{3}(\D|$))/g, '')
+        .replace(/\.(?=\d{3}(\D|$))/g, '')
+        .replace(/,/g, '.');
+      const num = parseFloat(normalized);
+      return Number.isNaN(num) ? null : num;
+    }
+
+    return trimmed;
+  }
+
+  return value as string | null;
+};
+
+const parseDelimitedLine = (line: string, delimiter: string): string[] => {
+  const cells: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  let quoteChar = '"';
+
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i];
+    if ((char === '"' || char === "'") && (!inQuotes || char === quoteChar)) {
+      if (inQuotes && line[i + 1] === char) {
+        current += char;
+        i += 1;
+      } else {
+        inQuotes = !inQuotes;
+        quoteChar = char;
+      }
+      continue;
+    }
+
+    if (char === delimiter && !inQuotes) {
+      cells.push(current);
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  cells.push(current);
+  return cells;
+};
+
+const detectDelimiter = (line: string): string => {
+  const semicolons = (line.match(/;/g) ?? []).length;
+  const commas = (line.match(/,/g) ?? []).length;
+  if (semicolons === 0 && commas === 0) return ';';
+  if (semicolons >= commas) return ';';
+  return ',';
+};
+
+const parseCsvText = (text: string): { headers: string[]; rows: FemaleRow[] } => {
+  const cleaned = text.replace(/^\uFEFF/, '');
+  const lines = cleaned.split(/\r?\n/).filter((line) => line.trim() !== '');
+
+  if (lines.length === 0) {
+    return { headers: [], rows: [] };
+  }
+
+  const delimiter = detectDelimiter(lines[0]);
+  const rawHeaders = parseDelimitedLine(lines[0], delimiter).map((header) => header.trim());
+  const headers = rawHeaders.filter((header) => header !== '');
+  const rows: FemaleRow[] = [];
+
+  for (let i = 1; i < lines.length; i += 1) {
+    const values = parseDelimitedLine(lines[i], delimiter);
+    const row: FemaleRow = {};
+    let hasValue = false;
+
+    rawHeaders.forEach((header, index) => {
+      if (!header) return;
+      const rawValue = values[index] ?? '';
+      const trimmed = rawValue.trim();
+      if (trimmed !== '') {
+        hasValue = true;
+        row[header] = trimmed;
+      } else {
+        row[header] = null;
+      }
+    });
+
+    if (hasValue) {
+      rows.push(row);
+    }
+  }
+
+  return { headers, rows };
+};
+
+const parseXlsxData = (buffer: ArrayBuffer): { headers: string[]; rows: FemaleRow[] } => {
+  const workbook = read(new Uint8Array(buffer), { type: 'array', cellDates: false });
+  const sheetName = workbook.SheetNames[0];
+  const sheet = workbook.Sheets[sheetName];
+
+  if (!sheet) {
+    return { headers: [], rows: [] };
+  }
+
+  const rowsMatrix = utils.sheet_to_json<(string | number | null)[]>(sheet, {
+    header: 1,
+    defval: null,
+    raw: false,
+    blankrows: false,
+    dateNF: 'yyyy-mm-dd',
+  });
+
+  if (rowsMatrix.length === 0) {
+    return { headers: [], rows: [] };
+  }
+
+  const headerRow = Array.isArray(rowsMatrix[0]) ? rowsMatrix[0] : [];
+  const headers = headerRow.map((cell) => (cell == null ? '' : String(cell).trim())).filter((header) => header !== '');
+  const rows: FemaleRow[] = [];
+
+  rowsMatrix.slice(1).forEach((rowArray) => {
+    if (!Array.isArray(rowArray)) return;
+    const row: FemaleRow = {};
+    let hasValue = false;
+
+    headerRow.forEach((headerCell, index) => {
+      const header = headerCell == null ? '' : String(headerCell).trim();
+      if (!header) return;
+      const cell = rowArray[index];
+      let value: unknown = cell;
+
+      if (typeof cell === 'string') {
+        value = cell.trim() === '' ? null : cell.trim();
+      }
+
+      if (value !== null && value !== undefined && value !== '') {
+        hasValue = true;
+      } else {
+        value = null;
+      }
+
+      row[header] = value;
+    });
+
+    if (hasValue) {
+      rows.push(row);
+    }
+  });
+
+  return { headers, rows };
+};
+
+const parseFile = async (file: File): Promise<{ headers: string[]; rows: FemaleRow[] }> => {
+  const extension = file.name.toLowerCase();
+  const isSpreadsheet = extension.endsWith('.xlsx') || extension.endsWith('.xls');
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+      try {
+        const result = event.target?.result;
+        if (result == null) {
+          reject(new Error('Arquivo vazio ou ilegível'));
+          return;
+        }
+
+        if (isSpreadsheet) {
+          const buffer = result instanceof ArrayBuffer ? result : new Uint8Array(result as ArrayLike<number>).buffer;
+          resolve(parseXlsxData(buffer));
+        } else {
+          const text = typeof result === 'string'
+            ? result
+            : new TextDecoder('utf-8').decode(result as ArrayBuffer);
+          resolve(parseCsvText(text));
+        }
+      } catch (error) {
+        reject(new Error('Erro ao processar arquivo'));
+      }
+    };
+
+    reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
+
+    if (isSpreadsheet) {
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.readAsText(file, 'utf-8');
+    }
+  });
+};
+
+const buildRowValueResolver = (row: FemaleRow) => {
+  const normalizedMap = new Map<string, string>();
+  const sanitizedMap = new Map<string, string>();
+
+  Object.keys(row).forEach((key) => {
+    const lower = key.toLowerCase();
+    if (!normalizedMap.has(lower)) {
+      normalizedMap.set(lower, key);
+    }
+
+    const sanitized = sanitizeHeaderKey(key);
+    if (sanitized && !sanitizedMap.has(sanitized)) {
+      sanitizedMap.set(sanitized, key);
+    }
+  });
+
+  return (candidates: string[]): unknown => {
+    for (const candidate of candidates) {
+      if (!candidate) continue;
+      if (Object.prototype.hasOwnProperty.call(row, candidate)) {
+        return row[candidate];
+      }
+
+      const lower = candidate.toLowerCase();
+      const normalizedMatch = normalizedMap.get(lower);
+      if (normalizedMatch) {
+        return row[normalizedMatch];
+      }
+
+      const sanitized = sanitizeHeaderKey(candidate);
+      if (sanitized) {
+        const sanitizedMatch = sanitizedMap.get(sanitized);
+        if (sanitizedMatch) {
+          return row[sanitizedMatch];
+        }
+      }
+    }
+
     return undefined;
   };
+};
+
+const mapFixedColumns = (
+  row: FemaleRow,
+  farmId: string,
+  resolveValue: (candidates: string[]) => unknown,
+): FemaleRow => {
+  const out: FemaleRow = { farm_id: farmId };
 
   const toTrimmedString = (value: unknown) =>
     value == null ? undefined : String(value).trim() || undefined;
 
-  const nameValue = firstNonNull("Nome", "name", "Nome Animal", "Animal");
+  const nameValue = resolveValue(['Nome', 'name', 'Nome Animal', 'Animal']);
   if (nameValue != null) {
     out.name = toTrimmedString(nameValue);
   }
 
-  const cdcbValue = firstNonNull("ID CDCB", "cdcb_id", "CDCB");
+  const cdcbValue = resolveValue(['ID CDCB', 'cdcb_id', 'CDCB', 'CDCB ID']);
   if (cdcbValue != null) {
     out.cdcb_id = toTrimmedString(cdcbValue);
   }
 
-  const birthValue = firstNonNull("Data de Nascimento", "birth_date", "Nascimento");
-  if (birthValue) {
-    out.birth_date = toTrimmedString(birthValue)?.slice(0, 10);
+  const birthValue = resolveValue(['Data de Nascimento', 'birth_date', 'Nascimento', 'Data Nascimento']);
+  if (birthValue != null) {
+    const birthString = toTrimmedString(birthValue);
+    if (birthString) {
+      out.birth_date = birthString.slice(0, 10);
+    }
   }
 
-  const ped = firstNonNull("Pedigre Pai/Avô Materno/BisaAvô Materno");
-  if (ped) {
-    const parts = String(ped)
-      .split("/")
-      .map((s) => s.trim());
+  const pedigreeValue = resolveValue([
+    'Pedigre Pai/Avô Materno/BisaAvô Materno',
+    'Pedigree',
+    'Pedigree Pai',
+  ]);
+  if (pedigreeValue) {
+    const parts = String(pedigreeValue)
+      .split('/')
+      .map((part) => part.trim());
     out.sire_naab = parts[0] || null;
     out.mgs_naab = parts[1] || null;
     out.mmgs_naab = parts[2] || null;
   }
 
-  const sireValue = firstNonNull("sire_naab", "Pai", "NAAB", "naab");
+  const sireValue = resolveValue(['sire_naab', 'Pai', 'Sire NAAB', 'Pai NAAB']);
   if (sireValue && !out.sire_naab) {
-    out.sire_naab = toTrimmedString(sireValue);
+    out.sire_naab = toTrimmedString(sireValue) ?? null;
   }
 
-  const mgsValue = firstNonNull("mgs_naab", "Avô Materno");
+  const mgsValue = resolveValue(['mgs_naab', 'Avô Materno', 'MGS']);
   if (mgsValue && !out.mgs_naab) {
-    out.mgs_naab = toTrimmedString(mgsValue);
+    out.mgs_naab = toTrimmedString(mgsValue) ?? null;
   }
 
-  const mmgsValue = firstNonNull("mmgs_naab", "BisaAvô Materno");
+  const mmgsValue = resolveValue(['mmgs_naab', 'BisaAvô Materno', 'MMGS']);
   if (mmgsValue && !out.mmgs_naab) {
-    out.mmgs_naab = toTrimmedString(mmgsValue);
+    out.mmgs_naab = toTrimmedString(mmgsValue) ?? null;
   }
 
-  const identifierValue = firstNonNull("ID Fazenda", "identifier", "animal_id", "Brinco");
+  const identifierValue = resolveValue(['ID Fazenda', 'identifier', 'animal_id', 'Brinco', 'ID Animal']);
   if (identifierValue != null) {
     out.identifier = toTrimmedString(identifierValue);
   }
@@ -194,114 +529,77 @@ const mapFixedColumnsFromRow = (r: FemaleRow, farmId: string): FemaleRow => {
   return out;
 };
 
+const findCanonicalForHeader = (header: string): string | undefined => {
+  const sanitized = sanitizeHeaderKey(header);
+  if (!sanitized) return undefined;
+
+  const direct = HEADER_ALIAS_MAP.get(sanitized);
+  if (direct) return direct;
+
+  for (const [alias, canonical] of HEADER_ALIAS_ENTRIES) {
+    if (alias.length >= 4 && sanitized.includes(alias)) {
+      return canonical;
+    }
+  }
+
+  return undefined;
+};
+
+const buildHeaderMapping = (headers: string[]): { mapping: Record<string, string>; unmatched: string[] } => {
+  const mapping: Record<string, string> = {};
+  const unmatched: string[] = [];
+
+  headers.forEach((header) => {
+    const canonical = findCanonicalForHeader(header);
+    if (canonical) {
+      mapping[header] = canonical;
+      return;
+    }
+
+    const sanitized = sanitizeHeaderKey(header);
+    if (!sanitized || FIXED_FIELD_ALIAS_SET.has(sanitized) || sanitized === 'ptas') {
+      return;
+    }
+
+    unmatched.push(header);
+  });
+
+  return { mapping, unmatched };
+};
+
 const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
-  isOpen, 
-  onClose, 
-  farmId, 
+  isOpen,
+  onClose,
+  farmId,
   farmName,
-  onImportSuccess
+  onImportSuccess,
+  supabaseUrl,
+  supabaseAnonKey,
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { toast } = useToast();
 
-  // Mapeamento de cabeçalhos para chaves canônicas
-  const toCanonicalValue = (canonicalKey: string, value: unknown): number | string | null => {
-    if (value === null || value === undefined) return null;
+  const supabaseConfig = useMemo(
+    () => resolveSupabaseConfig({ supabaseUrl, supabaseAnonKey }),
+    [supabaseUrl, supabaseAnonKey]
+  );
 
-    if (typeof value === 'string') {
-      const trimmed = value.trim();
-      if (trimmed === '' || trimmed === '#########') return null;
-      const numericKeys = ['hhp$', 'tpi', 'nm$', 'cm$', 'fm$', 'gm$', 'f_sav', 'ptam', 'cfp',
-        'ptaf', 'ptaf_pct', 'ptap', 'ptap_pct', 'pl', 'dpr', 'liv', 'scs',
-        'mast', 'met', 'rp', 'da', 'ket', 'mf', 'ptat', 'udc', 'flc', 'sce',
-        'dce', 'ssb', 'dsb', 'h_liv', 'ccr', 'hcr', 'fi', 'gl', 'efc', 'bwc',
-        'sta', 'str', 'dfm', 'rua', 'rls', 'rtp', 'ftl', 'rw', 'rlr', 'fta',
-        'fls', 'fua', 'ruh', 'ruw', 'ucl', 'udp', 'ftp', 'rfi', 'gfi'];
-
-      if (numericKeys.includes(canonicalKey)) {
-        const normalizedValue = trimmed.replace(',', '.');
-        const numValue = parseFloat(normalizedValue);
-        return Number.isNaN(numValue) ? null : numValue;
-      }
-
-      return trimmed;
+  const supabaseClient = useMemo(() => {
+    if (!supabaseConfig.supabaseUrl || !supabaseConfig.supabaseAnonKey) {
+      return null;
     }
 
-    if (typeof value === 'number') {
-      const numericKeys = ['hhp$', 'tpi', 'nm$', 'cm$', 'fm$', 'gm$', 'f_sav', 'ptam', 'cfp',
-        'ptaf', 'ptaf_pct', 'ptap', 'ptap_pct', 'pl', 'dpr', 'liv', 'scs',
-        'mast', 'met', 'rp', 'da', 'ket', 'mf', 'ptat', 'udc', 'flc', 'sce',
-        'dce', 'ssb', 'dsb', 'h_liv', 'ccr', 'hcr', 'fi', 'gl', 'efc', 'bwc',
-        'sta', 'str', 'dfm', 'rua', 'rls', 'rtp', 'ftl', 'rw', 'rlr', 'fta',
-        'fls', 'fua', 'ruh', 'ruw', 'ucl', 'udp', 'ftp', 'rfi', 'gfi'];
-
-      if (numericKeys.includes(canonicalKey)) {
-        return value;
-      }
-
-      return String(value);
-    }
-
-    return value as string | null;
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-    }
-  };
-
-  const parseCsvFile = async (file: File): Promise<{ headers: string[]; rows: FemaleRow[] }> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const text = e.target?.result as string;
-          console.log('Raw CSV text (first 500 chars):', text.substring(0, 500));
-          
-          // Split lines and filter empty ones
-          const lines = text.split(/\r?\n/).filter(line => line.trim());
-          console.log('Number of lines after filtering:', lines.length);
-          
-          if (lines.length < 2) {
-            reject(new Error('Arquivo deve conter pelo menos um cabeçalho e uma linha de dados'));
-            return;
-          }
-          
-          // Parse headers more carefully
-          const headerLine = lines[0];
-          console.log('Header line:', headerLine);
-          
-          // Handle different CSV delimiters and quoted fields
-          const headers = headerLine.split(';').map(h => h.trim().replace(/^["']|["']$/g, ''));
-          console.log('Parsed headers:', headers);
-          
-          const data = lines.slice(1).map((line, lineIndex) => {
-            console.log(`Processing line ${lineIndex + 2}:`, line.substring(0, 100) + '...');
-
-            // Split values more carefully
-            const values = line.split(';').map(v => v.trim().replace(/^["']|["']$/g, ''));
-            const row: FemaleRow = {};
-
-            headers.forEach((h, index) => {
-              const rawValue = values[index];
-              row[h] = rawValue === '' ? null : rawValue;
-            });
-
-            return row;
-          });
-
-          resolve({ headers, rows: data });
-        } catch (error) {
-          console.error('CSV parsing error:', error);
-          reject(new Error('Erro ao processar arquivo CSV'));
-        }
-      };
-      reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
-      reader.readAsText(file, 'UTF-8');
+    return createSupabase({
+      url: supabaseConfig.supabaseUrl,
+      anonKey: supabaseConfig.supabaseAnonKey,
     });
+  }, [supabaseConfig.supabaseUrl, supabaseConfig.supabaseAnonKey]);
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    setSelectedFile(file);
+    event.target.value = '';
   };
 
   const handleUpload = async () => {
@@ -314,82 +612,86 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
       return;
     }
 
+    if (!supabaseClient) {
+      toast({
+        title: "Configuração do Supabase ausente",
+        description: "Não foi possível resolver as credenciais do Supabase no navegador.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsUploading(true);
 
     try {
-      let parsedCsv: { headers: string[]; rows: FemaleRow[] } | null = null;
-
-      if (selectedFile.name.toLowerCase().endsWith('.csv')) {
-        parsedCsv = await parseCsvFile(selectedFile);
-      } else {
-        throw new Error('Apenas arquivos CSV são suportados no momento. Use o template CSV.');
-      }
-
-      if (!parsedCsv) {
-        throw new Error('Não foi possível processar o arquivo fornecido');
-      }
-
-      const { headers, rows } = parsedCsv;
-
-      if (!rows || rows.length === 0) {
+      const parsed = await parseFile(selectedFile);
+      if (!parsed || parsed.rows.length === 0) {
         throw new Error('Nenhum dado válido encontrado no arquivo');
       }
 
-      const normalizedRecords: FemaleRow[] = rows.map((row) => {
-        const obj: FemaleRow = mapFixedColumnsFromRow(row, farmId);
+      const { mapping, unmatched } = buildHeaderMapping(parsed.headers);
 
-        headers.forEach((header) => {
-          const canonicalKey = NORMALIZED_HEADER_MAPPING[header.toLowerCase()];
-          if (!canonicalKey) return;
+      const normalizedRecords: FemaleRow[] = parsed.rows.map((row) => {
+        const resolveValue = buildRowValueResolver(row);
+        const normalized: FemaleRow = mapFixedColumns(row, farmId, resolveValue);
 
-          const rawValue = getRowValue(row, header);
-          const convertedValue = toCanonicalValue(String(canonicalKey), rawValue);
+        Object.entries(mapping).forEach(([header, canonicalKey]) => {
+          const rawValue = resolveValue([header]);
+          const convertedValue = toCanonicalValue(canonicalKey, header, rawValue);
           const fallbackValue =
             rawValue === undefined || rawValue === null || rawValue === '' ? null : rawValue;
           const finalValue = convertedValue ?? fallbackValue;
 
           if (finalValue !== undefined) {
-            obj[dbCol(canonicalKey)] = finalValue;
+            normalized[dbCol(canonicalKey)] = finalValue;
           }
         });
 
         const ptas: Record<string, unknown> = {};
         PTAS_KEYS.forEach((key) => {
           const column = dbCol(key);
-          if (obj[column] !== undefined && obj[column] !== null) {
-            ptas[key] = obj[column];
+          if (
+            Object.prototype.hasOwnProperty.call(normalized, column) &&
+            normalized[column] !== undefined &&
+            normalized[column] !== null
+          ) {
+            ptas[key] = normalized[column];
           }
         });
 
         if (Object.keys(ptas).length > 0) {
-          obj.ptas = ptas;
+          normalized.ptas = ptas;
         }
 
-        return obj;
+        return normalized;
       });
+
+      const warningMessages: string[] = [];
 
       const missingCdcb = normalizedRecords.filter((row) => !hasValidString(row['cdcb_id']));
       if (missingCdcb.length > 0) {
-        throw new Error(`${missingCdcb.length} linha(s) sem ID CDCB válido encontrada(s)`);
+        warningMessages.push(`${missingCdcb.length} linha(s) sem ID CDCB válido`);
       }
 
       const missingName = normalizedRecords.filter((row) => !hasValidString(row['name']));
       if (missingName.length > 0) {
-        throw new Error(`${missingName.length} linha(s) sem Nome válido encontrada(s)`);
+        warningMessages.push(`${missingName.length} linha(s) sem Nome válido`);
       }
 
-      const batchSize = 100;
+      if (unmatched.length > 0) {
+        warningMessages.push(`Colunas ignoradas: ${unmatched.join(', ')}`);
+      }
+
+      const chunkSize = 500;
       let totalInserted = 0;
 
-      for (let i = 0; i < normalizedRecords.length; i += batchSize) {
-        const chunk = normalizedRecords.slice(i, i + batchSize);
-
-        const { error } = await supabase
+      for (let i = 0; i < normalizedRecords.length; i += chunkSize) {
+        const chunk = normalizedRecords.slice(i, i + chunkSize);
+        const { error } = await supabaseClient
           .from(TARGET_TABLE)
           .upsert(chunk, { onConflict: "farm_id,cdcb_id" });
 
         if (error) {
-          console.error('Supabase insertion error:', error);
           throw new Error(`Erro ao inserir dados: ${error.message}`);
         }
 
@@ -401,116 +703,31 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
         description: `${totalInserted} registro(s) importado(s) para a fazenda ${farmName}`,
       });
 
+      if (warningMessages.length > 0) {
+        toast({
+          title: "Importação concluída com avisos",
+          description: warningMessages.join(' • '),
+        });
+      }
+
       setSelectedFile(null);
-      
-      // Call import success callback if provided
+
       if (onImportSuccess) {
         onImportSuccess();
       }
-      
+
       onClose();
     } catch (error) {
-      console.error('Upload error:', error);
       toast({
         title: "Erro no upload",
-        description: error instanceof Error ? error.message : "Não foi possível processar o arquivo. Tente novamente.",
+        description: error instanceof Error
+          ? error.message
+          : "Não foi possível processar o arquivo. Tente novamente.",
         variant: "destructive",
       });
     } finally {
       setIsUploading(false);
     }
-  };
-
-  const downloadTemplate = () => {
-    // Create a comprehensive CSV template based on females table
-    const headers = [
-      'Nome',
-      'ID CDCB',
-      'Data de Nascimento',
-      'Pedigre Pai/Avô Materno/BisaAvô Materno',
-      'ID Fazenda',
-      'sire_naab',
-      'mgs_naab',
-      'mmgs_naab',
-      'hhp$',
-      'tpi',
-      'nm$',
-      'cm$',
-      'fm$',
-      'gm$',
-      'f_sav',
-      'ptam',
-      'cfp',
-      'ptaf',
-      'ptaf_pct',
-      'ptap',
-      'ptap_pct',
-      'pl',
-      'dpr',
-      'liv',
-      'scs',
-      'mast',
-      'met',
-      'rp',
-      'da',
-      'ket',
-      'mf',
-      'ptat',
-      'udc',
-      'flc',
-      'sce',
-      'dce',
-      'ssb',
-      'dsb',
-      'h_liv',
-      'ccr',
-      'hcr',
-      'fi',
-      'gl',
-      'efc',
-      'bwc',
-      'sta',
-      'str',
-      'dfm',
-      'rua',
-      'rls',
-      'rtp',
-      'ftl',
-      'rw',
-      'rlr',
-      'fta',
-      'fls',
-      'fua',
-      'ruh',
-      'ruw',
-      'ucl',
-      'udp',
-      'ftp',
-      'rfi',
-      'gfi',
-      'beta_casein',
-      'kappa_casein'
-    ];
-    
-    const sampleData = [
-      'Fêmea Exemplo;1234567890;2021-05-10;PAI123/AVM456/BAVM789;BRINCO001;PAI123;AVM456;BAVM789;820;2650;750;680;590;420;1,2;2,1;3,5;2,8;105;2,5;110;1,2;1,5;2,85;4,2;1,8;1,1;0,2;0,1;2,4;1,8;0,4;0,3;1,2;0,8;2,1;1,9;2,2;1,4;0,9;1,7;1,3;0,6;1,5;2,0;1,8;0,7;0,2;0,5;1,1;0,9;1,3;0,8;0,4;1,2;0,6;0,7;1,0;0,3;0,5;1,6;A2A2;AA'
-    ];
-
-    const csvContent = [headers.join(';'), ...sampleData].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `template_registros_geneticos_${farmName.replace(/\s+/g, '_')}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-
-    toast({
-      title: "Template baixado",
-      description: "Use este modelo para organizar seus dados genéticos.",
-    });
   };
 
   return (
@@ -519,7 +736,7 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
         <DialogHeader>
           <DialogTitle>Importar Registros Genéticos</DialogTitle>
           <DialogDescription>
-            Faça upload de um arquivo CSV com os dados dos registros genéticos para a fazenda {farmName}.
+            Faça upload de um arquivo CSV ou Excel (.xlsx, .xls) com os dados dos registros genéticos para a fazenda {farmName}.
           </DialogDescription>
         </DialogHeader>
 
@@ -527,7 +744,7 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              O arquivo deve conter as colunas conforme o template. Baixe o template para ver todas as colunas disponíveis da tabela genetic_records.
+              As colunas podem estar em qualquer ordem e aceitamos sinônimos conhecidos dos principais PTAs. Garanta apenas que as colunas fixas (Nome, ID CDCB, Data de Nascimento e pedigree) estejam presentes para melhor contexto.
             </AlertDescription>
           </Alert>
 
@@ -547,34 +764,23 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
             )}
           </div>
 
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={downloadTemplate}
-              className="flex-1"
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              Baixar Template
-            </Button>
-            
-            <Button
-              onClick={handleUpload}
-              disabled={!selectedFile || isUploading}
-              className="flex-1"
-            >
-              {isUploading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Processando...
-                </>
-              ) : (
-                <>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Importar
-                </>
-              )}
-            </Button>
-          </div>
+          <Button
+            onClick={handleUpload}
+            disabled={!selectedFile || isUploading}
+            className="w-full"
+          >
+            {isUploading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Processando...
+              </>
+            ) : (
+              <>
+                <Upload className="w-4 h-4 mr-2" />
+                Importar
+              </>
+            )}
+          </Button>
 
           <div className="text-xs text-muted-foreground">
             <strong>Formatos aceitos:</strong> CSV, Excel (.xlsx, .xls)<br />
