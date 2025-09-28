@@ -670,10 +670,15 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
 
       const missingCdcb = normalizedRecords.filter((row) => !hasValidString(row['cdcb_id']));
       if (missingCdcb.length > 0) {
-        warningMessages.push(`${missingCdcb.length} linha(s) sem ID CDCB válido`);
+        warningMessages.push(`${missingCdcb.length} linha(s) sem ID CDCB válido foram ignoradas`);
       }
 
-      const missingName = normalizedRecords.filter((row) => !hasValidString(row['name']));
+      const recordsToInsert = normalizedRecords.filter((row) => hasValidString(row['cdcb_id']));
+      if (recordsToInsert.length === 0) {
+        throw new Error('Nenhum ID CDCB válido encontrado nas linhas importadas.');
+      }
+
+      const missingName = recordsToInsert.filter((row) => !hasValidString(row['name']));
       if (missingName.length > 0) {
         warningMessages.push(`${missingName.length} linha(s) sem Nome válido`);
       }
@@ -685,8 +690,8 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
       const chunkSize = 500;
       let totalInserted = 0;
 
-      for (let i = 0; i < normalizedRecords.length; i += chunkSize) {
-        const chunk = normalizedRecords.slice(i, i + chunkSize);
+      for (let i = 0; i < recordsToInsert.length; i += chunkSize) {
+        const chunk = recordsToInsert.slice(i, i + chunkSize);
         const { error } = await supabaseClient
           .from(TARGET_TABLE)
           .upsert(chunk, { onConflict: "farm_id,cdcb_id" });
