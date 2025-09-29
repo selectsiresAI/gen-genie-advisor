@@ -283,7 +283,16 @@ const normalizeNumericValue = (canonicalKey: string, value: unknown): number | n
   return Number.isNaN(numericValue) ? null : numericValue;
 };
 
-const toCanonicalValue = (canonicalKey: string, header: string, value: unknown): any => {
+type FemaleCanonicalColumn = typeof canonicalColumns[number];
+type FemaleOptionalColumn = Exclude<FemaleCanonicalColumn, 'id' | 'farm_id' | 'name'>;
+type FemaleValue = string | number | boolean | null | Record<string, unknown>;
+type FemaleRow = Partial<Record<FemaleCanonicalColumn, FemaleValue>>;
+
+const toCanonicalValue = (
+  canonicalKey: string,
+  header: string,
+  value: unknown
+): FemaleValue | null => {
   if (value === undefined) {
     return null;
   }
@@ -316,7 +325,7 @@ const toCanonicalValue = (canonicalKey: string, header: string, value: unknown):
     return normalizeNumericValue(canonicalKey, value);
   }
 
-  return value;
+  return value as FemaleValue;
 };
 
 const splitCsvLine = (line: string, delimiter: string): string[] => {
@@ -372,7 +381,7 @@ const isRowEmpty = (row: (string | number | null | undefined)[]) => {
   });
 };
 
-const buildRecordsFromRows = (rows: (string | number | null | undefined)[][]) => {
+const buildRecordsFromRows = (rows: (string | number | null | undefined)[][]): FemaleRow[] => {
   const workingRows = [...rows];
 
   while (workingRows.length > 0 && isRowEmpty(workingRows[0])) {
@@ -399,7 +408,7 @@ const buildRecordsFromRows = (rows: (string | number | null | undefined)[][]) =>
     throw new Error('Nenhuma coluna conhecida foi identificada. Baixe o template atualizado do rebanho e tente novamente.');
   }
 
-  const dataRows: Record<string, any>[] = [];
+  const dataRows: FemaleRow[] = [];
   const rowErrors: string[] = [];
   const seenIds = new Set<string>();
   const seenIdentifiers = new Map<string, number>();
@@ -409,7 +418,7 @@ const buildRecordsFromRows = (rows: (string | number | null | undefined)[][]) =>
       return;
     }
 
-    const row: Record<string, any> = {};
+    const row: FemaleRow = {};
 
     headerInfos.forEach((info, columnIndex) => {
       if (!info.canonicalKey) return;
@@ -502,10 +511,10 @@ interface FemaleUploadModalProps {
   onImportSuccess?: () => void;
 }
 
-const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  farmId, 
+const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
+  isOpen,
+  onClose,
+  farmId,
   farmName,
   onImportSuccess
 }) => {
@@ -513,7 +522,7 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { toast } = useToast();
 
-  const optionalFields = canonicalColumns.filter((column) => !['id', 'farm_id', 'name'].includes(column));
+  const optionalFields = canonicalColumns.filter((column) => !['id', 'farm_id', 'name'].includes(column)) as FemaleOptionalColumn[];
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -523,7 +532,7 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
     e.target.value = '';
   };
 
-  const parseCsvFile = async (file: File): Promise<any[]> => {
+  const parseCsvFile = async (file: File): Promise<FemaleRow[]> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -562,7 +571,7 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
     });
   };
 
-  const parseExcelFile = async (file: File): Promise<any[]> => {
+  const parseExcelFile = async (file: File): Promise<FemaleRow[]> => {
     try {
       const buffer = await file.arrayBuffer();
       const workbook = read(buffer, { type: 'array' });
@@ -587,7 +596,7 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
     }
   };
 
-  const parseFileData = async (file: File) => {
+  const parseFileData = async (file: File): Promise<FemaleRow[]> => {
     const extension = file.name.split('.').pop()?.toLowerCase();
 
     if (extension === 'csv' || extension === 'txt') {
@@ -620,10 +629,13 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
         throw new Error('Nenhum dado válido encontrado no arquivo');
       }
 
-      const recordsToInsert = recordsData.map((row) => {
-        const record: Record<string, any> = {
+      type FemaleInsertRecord = FemaleRow & { farm_id: string; name: string | null };
+
+      const recordsToInsert: FemaleInsertRecord[] = recordsData.map((row) => {
+        const nameValue = row.name;
+        const record: FemaleInsertRecord = {
           farm_id: farmId,
-          name: row.name,
+          name: typeof nameValue === 'string' ? nameValue : nameValue != null ? String(nameValue) : null,
         };
 
         if (row.id) {
@@ -632,7 +644,7 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
 
         optionalFields.forEach((field) => {
           if (field in row) {
-            const value = (row as Record<string, any>)[field];
+            const value = row[field];
             record[field] = value ?? null;
           }
         });
@@ -648,11 +660,12 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
 
         const { error } = await supabase
           .from('females')
-          .upsert(chunk, { onConflict: 'id' });
+          .upsert(chunk as Record<string, unknown>[], { onConflict: 'id' });
 
         if (error) {
           console.error('Supabase insertion error:', error);
-          const details = (error as any)?.details || (error as any)?.hint;
+          const details = (error as { details?: string; hint?: string } | null | undefined)?.details
+            || (error as { details?: string; hint?: string } | null | undefined)?.hint;
           const message = details ? `${error.message} (${details})` : error.message;
           throw new Error(`Erro ao inserir dados: ${message}`);
         }
