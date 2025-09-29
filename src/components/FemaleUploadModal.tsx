@@ -176,8 +176,15 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
             return row;
           });
           
-          // Filter out rows without name (required for females)
-          const validData = data.filter(row => row.name && row.name.trim() !== '');
+          // Use identifier as name if name is empty, then filter out rows without either
+          const processedData = data.map(row => {
+            if (!row.name || row.name.trim() === '') {
+              row.name = row.identifier || null;
+            }
+            return row;
+          });
+          
+          const validData = processedData.filter(row => row.name && row.name.trim() !== '');
           console.log('Valid rows after filtering:', validData.length);
           console.log('Sample valid row:', validData[0]);
           
