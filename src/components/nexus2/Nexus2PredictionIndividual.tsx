@@ -66,7 +66,7 @@ function useNaabField() {
     const handler = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const records = await searchBulls(trimmed, 8);
+        const records = await searchBulls(trimmed, { limit: 8 });
         const bulls = records
           .map(mapBullRecord)
           .filter((bull): bull is BullSummary => Boolean(bull));

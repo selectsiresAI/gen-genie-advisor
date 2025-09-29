@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePlanStore, AVAILABLE_PTAS, getFemalesByFarm, countFromCategoria, calculateMotherAverages, getBullPTAValue, calculatePopulationStructure } from "../hooks/usePlanStore";
 import { useHerdStore } from "../hooks/useHerdStore";
 import { useFileStore } from "../hooks/useFileStore";
@@ -7,6 +7,9 @@ import { supabase } from '@/integrations/supabase/client';
 import EstruturalPopulacional from './EstruturalPopulacional';
 import PTAMothersTable from './PTAMothersTable';
 import { BullSelector } from '@/components/BullSelector';
+import { BullMultiSelector, type BullChipData } from '@/components/projection/BullMultiSelector';
+import type { BullsSelection } from '@/supabase/queries/bulls';
+import { PTA_COLUMN_MAP } from '@/hooks/usePTAStore';
 
 /**
  * Projeção Genética MVP – Select Sires (Frontend Only, Single File)
@@ -952,7 +955,140 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
 function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.SetStateAction<AppState>> }) {
   const planStore = usePlanStore();
   const [toolssBulls, setToolssBulls] = useState<any[]>([]);
-  
+  const farmId = planStore.selectedFarmId || (st.selectedFarm as any)?.farm_id || null;
+
+  const createEmptyBull = useCallback((index: number): Bull => {
+    const defaultPTA: Record<string, number> = {};
+    planStore.selectedPTAList.forEach((ptaLabel) => {
+      defaultPTA[ptaLabel] = 0;
+    });
+
+    return {
+      id: `bull${index + 1}`,
+      name: "",
+      naab: "",
+      empresa: "",
+      semen: "Sexado" as SemenType,
+      pricePerDose: 0,
+      doses: { novilhas: 0, primiparas: 0, secundiparas: 0, multiparous: 0 },
+      pta: defaultPTA,
+    };
+  }, [planStore.selectedPTAList]);
+
+  const initialSelectedChips = useMemo<BullChipData[]>(() => {
+    return st.bulls
+      .slice(0, st.numberOfBulls)
+      .filter((bull) => bull.naab)
+      .map((bull) => ({
+        id: bull.id,
+        code: bull.naab,
+        name: bull.name,
+        company: bull.empresa,
+        registry: undefined
+      }));
+  }, [st.bulls, st.numberOfBulls]);
+
+  const mapRecordToToolssBull = useCallback((record: BullsSelection) => {
+    const normalized: Record<string, any> = {
+      naab: record.code ?? "",
+      nome: record.name ?? "",
+      empresa: record.company ?? "",
+      registro: record.registration ?? ""
+    };
+
+    const source = record as Record<string, any>;
+
+    Object.entries(PTA_COLUMN_MAP).forEach(([label, column]) => {
+      const value = source[column];
+      normalized[label] = typeof value === 'number' ? value : value ?? null;
+    });
+
+    normalized.Milk = source.ptam ?? null;
+    normalized.Fat = source.ptaf ?? null;
+    normalized.Protein = source.ptap ?? null;
+    normalized['Fat%'] = source.ptaf_pct ?? null;
+    normalized['Protein%'] = source.ptap_pct ?? null;
+
+    if (normalized['HHP$®'] != null && normalized['HHP$'] == null) {
+      normalized['HHP$'] = normalized['HHP$®'];
+    }
+
+    return normalized;
+  }, []);
+
+  const mapRecordToStateBull = useCallback((record: BullsSelection, index: number, previous?: Bull): Bull => {
+    const base = previous ?? createEmptyBull(index);
+    const toolssBull = mapRecordToToolssBull(record);
+    const updatedPTA: Record<string, number | null> = { ...base.pta };
+
+    planStore.selectedPTAList.forEach((ptaLabel) => {
+      const value = getBullPTAValue(toolssBull, ptaLabel);
+      updatedPTA[ptaLabel] = value ?? null;
+    });
+
+    return {
+      ...base,
+      id: record.id ?? base.id,
+      name: record.name ?? base.name,
+      naab: record.code ?? base.naab,
+      empresa: record.company ?? base.empresa,
+      pta: updatedPTA
+    };
+  }, [createEmptyBull, mapRecordToToolssBull, planStore.selectedPTAList]);
+
+  const handleMultiSelectConfirm = useCallback(async (records: BullsSelection[]) => {
+    if (!records.length) {
+      return;
+    }
+
+    setToolssBulls((prev) => {
+      const map = new Map<string, any>();
+      prev.forEach((bull: any) => {
+        if (bull?.naab) {
+          map.set(String(bull.naab).toUpperCase(), bull);
+        }
+      });
+
+      records.forEach((record) => {
+        const normalized = mapRecordToToolssBull(record);
+        if (normalized.naab) {
+          map.set(String(normalized.naab).toUpperCase(), normalized);
+        }
+      });
+
+      return Array.from(map.values());
+    });
+
+    setSt((prev) => {
+      const requiredLength = Math.max(prev.numberOfBulls, records.length);
+      const nextBulls = [...prev.bulls];
+
+      while (nextBulls.length < requiredLength) {
+        nextBulls.push(createEmptyBull(nextBulls.length));
+      }
+
+      records.forEach((record, index) => {
+        nextBulls[index] = mapRecordToStateBull(record, index, nextBulls[index]);
+      });
+
+      return {
+        ...prev,
+        numberOfBulls: requiredLength,
+        bulls: nextBulls
+      };
+    });
+  }, [createEmptyBull, mapRecordToStateBull, mapRecordToToolssBull, setSt, setToolssBulls]);
+
+  const handleMultiSelectClear = useCallback(() => {
+    setSt((prev) => {
+      const nextBulls = [...prev.bulls];
+      for (let i = 0; i < prev.numberOfBulls; i++) {
+        nextBulls[i] = createEmptyBull(i);
+      }
+      return { ...prev, bulls: nextBulls };
+    });
+  }, [createEmptyBull, setSt]);
+
   useEffect(() => {
     const loadBullsFromSupabase = async () => {
       try {
@@ -969,33 +1105,10 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
         }
         
         if (bulls && bulls.length > 0) {
-          // Convert Supabase bulls to ToolSS format for compatibility
-          // Filter out bulls without HHP$ as requested by user
           const convertedBulls = bulls
             .filter((bull: any) => bull.hhp_dollar && bull.hhp_dollar !== null)
-            .map((bull: any) => ({
-              naab: bull.code,
-              nome: bull.name,
-              empresa: bull.company || 'N/A',
-              TPI: bull.tpi || 0,
-              "NM$": bull.nm_dollar || 0,
-              "HHP$": bull.hhp_dollar, // No fallback to 0 since we filtered
-              "FM$": bull.fm_dollar || 0,
-              "GM$": bull.gm_dollar || 0,
-              "CM$": bull.cm_dollar || 0,
-              Milk: bull.ptam || 0,
-              Fat: bull.ptaf || 0,
-              Protein: bull.ptap || 0,
-              "Fat%": bull.ptaf_pct || 0,
-              "Protein%": bull.ptap_pct || 0,
-              PL: bull.pl || 0,
-              DPR: bull.dpr || 0,
-              LIV: bull.liv || 0,
-              SCS: bull.scs || 0,
-              PTAT: bull.ptat || 0,
-              // Add other PTAs as needed...
-            }));
-          
+            .map((bull: any) => mapRecordToToolssBull(bull as BullsSelection));
+
           console.log(`🐂 Loaded ${convertedBulls.length} bulls from Supabase (filtered: only with HHP$)`);
           console.log('📋 Sample bulls with HHP$:', convertedBulls.slice(0, 3).map((b: any) => ({ naab: b.naab, nome: b.nome, empresa: b.empresa, hhp: b["HHP$"] })));
           setToolssBulls(convertedBulls);
@@ -1004,36 +1117,22 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
         console.warn("Erro ao carregar touros do Supabase:", e);
       }
     };
-    
+
     loadBullsFromSupabase();
-  }, []);
+  }, [mapRecordToToolssBull]);
 
   // Inicializa touros se necessário - sem loops
   useEffect(() => {
     if (st.bulls.length < st.numberOfBulls) {
       const newBulls = [];
       for (let i = st.bulls.length; i < st.numberOfBulls; i++) {
-        const defaultPTA: Record<string, number> = {};
-        planStore.selectedPTAList.forEach(ptaLabel => {
-          defaultPTA[ptaLabel] = 0;
-        });
-        
-        newBulls.push({
-          id: `bull${i + 1}`,
-          name: "",
-          naab: "",
-          empresa: "",
-          semen: "Sexado" as SemenType,
-          pricePerDose: 0,
-          doses: { novilhas: 0, primiparas: 0, secundiparas: 0, multiparous: 0 },
-          pta: defaultPTA,
-        });
+        newBulls.push(createEmptyBull(i));
       }
       if (newBulls.length > 0) {
         setSt(s => ({ ...s, bulls: [...s.bulls, ...newBulls] }));
       }
     }
-  }, [st.numberOfBulls, st.bulls.length, planStore.selectedPTAList.length]); // Stable dependency
+  }, [createEmptyBull, setSt, st.bulls.length, st.numberOfBulls]);
 
   return (
     <div>
@@ -1042,8 +1141,8 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
           <div>
             <Label>Número de touros para análise (1-5)</Label>
-            <Select 
-              value={st.numberOfBulls} 
+            <Select
+              value={st.numberOfBulls}
               onChange={(v) => setSt(s => ({ ...s, numberOfBulls: parseInt(v) }))}
               options={[
                 { value: "1", label: "1 touro" },
@@ -1060,6 +1159,14 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
             </div>
           </div>
         </div>
+        <BullMultiSelector
+          className="mt-4"
+          farmId={farmId ?? undefined}
+          selectionLimit={st.numberOfBulls}
+          initialSelection={initialSelectedChips}
+          onConfirm={handleMultiSelectConfirm}
+          onClear={handleMultiSelectClear}
+        />
       </Section>
 
       {/* Configuração de cada touro */}
