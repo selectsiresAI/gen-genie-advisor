@@ -7,9 +7,10 @@ import { Upload, FileText, AlertCircle } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from '@/integrations/supabase/client';
-import type { Database } from '@/integrations/supabase/types';
 import { read, utils } from 'xlsx';
 import { parse as parseDateFn, isValid as isValidDate } from 'date-fns';
+
+const TARGET_TABLE = "females";
 
 const canonicalColumns = [
   'id', 'farm_id', 'name', 'identifier', 'cdcb_id', 'sire_naab', 'mgs_naab', 'mmgs_naab', 'birth_date',
@@ -97,10 +98,6 @@ const nullTokens = new Set<string>([
   '', 'null', 'undefined', 'na', 'n/a', 'nan', 'none', 'sem dado', 'sem dados', 'sem valor', '-', '--', '#########'
 ]);
 
-const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/;
-
-const isValidUUID = (value: string): boolean => uuidRegex.test(value);
-
 const padNumber = (value: number) => value.toString().padStart(2, '0');
 
 const excelSerialToDate = (serial: number) => {
@@ -149,41 +146,27 @@ const normalizeDateValue = (value: unknown, column: string): string | null => {
   if (value === null || value === undefined || value === '') {
     return null;
   }
-
   if (value instanceof Date) {
     return formatDateUTC(value);
   }
-
   if (typeof value === 'number' && Number.isFinite(value)) {
     return formatDateUTC(excelSerialToDate(value));
   }
-
   const raw = String(value).trim();
   if (!raw) return null;
-
   const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (isoMatch) {
     return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
   }
-
   const sanitized = raw.replace(/\u00A0/g, ' ');
   const parsed =
     tryParseWithFormats(sanitized, [
-      'dd/MM/yyyy',
-      'MM/dd/yyyy',
-      'dd-MM-yyyy',
-      'MM-dd-yyyy',
-      'dd.MM.yyyy',
-      'MM.dd.yyyy',
-      'yyyy/MM/dd',
-      'ddMMyyyy',
-      'yyyyMMdd'
+      'dd/MM/yyyy','MM/dd/yyyy','dd-MM-yyyy','MM-dd-yyyy',
+      'dd.MM.yyyy','MM.dd.yyyy','yyyy/MM/dd','ddMMyyyy','yyyyMMdd'
     ]) || new Date(sanitized);
-
   if (parsed && isValidDate(parsed)) {
     return formatDateUTC(parsed);
   }
-
   console.warn(`⚠️  Não foi possível normalizar a data na coluna ${column}. Valor mantido como string.`);
   return raw;
 };
@@ -192,57 +175,56 @@ const normalizeTimestampValue = (value: unknown, column: string): string | null 
   if (value === null || value === undefined || value === '') {
     return null;
   }
-
   if (value instanceof Date) {
     return formatDateTimeUTC(value);
   }
-
   if (typeof value === 'number' && Number.isFinite(value)) {
     return formatDateTimeUTC(excelSerialToDate(value));
   }
-
   const raw = String(value).trim();
   if (!raw) return null;
-
   const directParse = new Date(raw);
   if (!Number.isNaN(directParse.getTime())) {
     return directParse.toISOString();
   }
-
   const parsed = tryParseWithFormats(raw, [
-    'dd/MM/yyyy HH:mm:ss',
-    'dd/MM/yyyy HH:mm',
-    'MM/dd/yyyy HH:mm:ss',
-    'MM/dd/yyyy HH:mm',
-    'dd-MM-yyyy HH:mm:ss',
-    'dd-MM-yyyy HH:mm',
-    'yyyy-MM-dd HH:mm:ss',
-    'yyyy-MM-dd HH:mm'
+    'dd/MM/yyyy HH:mm:ss','dd/MM/yyyy HH:mm',
+    'MM/dd/yyyy HH:mm:ss','MM/dd/yyyy HH:mm',
+    'dd-MM-yyyy HH:mm:ss','dd-MM-yyyy HH:mm',
+    'yyyy-MM-dd HH:mm:ss','yyyy-MM-dd HH:mm'
   ]);
-
   if (parsed && isValidDate(parsed)) {
     return parsed.toISOString();
   }
-
   console.warn(`⚠️  Não foi possível normalizar o timestamp na coluna ${column}. Valor mantido como string.`);
   return raw;
 };
 
+const normalizeNumericValue = (canonicalKey: string, value: unknown): number | null => {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  const cleaned = raw
+    .replace(/\s+/g, '')
+    .replace(/%/g, '')
+    .replace(/\./g, raw.includes(',') ? '' : '.')
+    .replace(/,/g, '.');
+  const numericValue = canonicalKey === 'parity_order'
+    ? parseInt(cleaned, 10)
+    : parseFloat(cleaned);
+  return Number.isNaN(numericValue) ? null : numericValue;
+};
+
 const parsePtasValue = (value: unknown, header: string) => {
-  if (value === null || value === undefined) {
-    return null;
-  }
-
-  if (typeof value === 'object' && !Array.isArray(value)) {
-    return value;
-  }
-
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'object' && !Array.isArray(value)) return value;
   const raw = typeof value === 'string' ? value.trim() : String(value);
   if (!raw) return null;
 
   try {
     return JSON.parse(raw);
-  } catch (error) {
+  } catch {
     const entries = raw.split(/[,;]+/).map((part) => part.trim()).filter(Boolean);
     if (entries.length > 0) {
       const result: Record<string, unknown> = {};
@@ -253,39 +235,11 @@ const parsePtasValue = (value: unknown, header: string) => {
         const numeric = normalizeNumericValue(normalizedKey, rawVal);
         result[normalizedKey] = numeric ?? rawVal;
       }
-      if (Object.keys(result).length > 0) {
-        return result;
-      }
+      if (Object.keys(result).length > 0) return result;
     }
-
     console.warn(`⚠️  Não foi possível converter o campo PTAs na coluna ${header}. Valor armazenado como texto.`);
     return { raw };
   }
-};
-
-const normalizeNumericValue = (canonicalKey: string, value: unknown): number | null => {
-  if (value === null || value === undefined || value === '') {
-    return null;
-  }
-
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : null;
-  }
-
-  const raw = String(value).trim();
-  if (!raw) return null;
-
-  const cleaned = raw
-    .replace(/\s+/g, '')
-    .replace(/%/g, '')
-    .replace(/\./g, raw.includes(',') ? '' : '.')
-    .replace(/,/g, '.');
-
-  const numericValue = canonicalKey === 'parity_order'
-    ? parseInt(cleaned, 10)
-    : parseFloat(cleaned);
-
-  return Number.isNaN(numericValue) ? null : numericValue;
 };
 
 type FemaleCanonicalColumn = typeof canonicalColumns[number];
@@ -298,37 +252,19 @@ const toCanonicalValue = (
   header: string,
   value: unknown
 ): FemaleValue | null => {
-  if (value === undefined) {
-    return null;
-  }
+  if (value === undefined) return null;
 
   if (typeof value === 'string') {
     const normalized = value.trim();
-    if (nullTokens.has(normalized.toLowerCase())) {
-      return null;
-    }
+    if (nullTokens.has(normalized.toLowerCase())) return null;
     value = normalized;
   }
+  if (value === null || value === '') return null;
 
-  if (value === null || value === '') {
-    return null;
-  }
-
-  if (dateFields.has(canonicalKey)) {
-    return normalizeDateValue(value, header);
-  }
-
-  if (timestampFields.has(canonicalKey)) {
-    return normalizeTimestampValue(value, header);
-  }
-
-  if (canonicalKey === 'ptas') {
-    return parsePtasValue(value, header);
-  }
-
-  if (numericFields.has(canonicalKey)) {
-    return normalizeNumericValue(canonicalKey, value);
-  }
+  if (dateFields.has(canonicalKey)) return normalizeDateValue(value, header);
+  if (timestampFields.has(canonicalKey)) return normalizeTimestampValue(value, header);
+  if (canonicalKey === 'ptas') return parsePtasValue(value, header);
+  if (numericFields.has(canonicalKey)) return normalizeNumericValue(canonicalKey, value);
 
   return value as FemaleValue;
 };
@@ -340,22 +276,15 @@ const splitCsvLine = (line: string, delimiter: string): string[] => {
 
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
-
     if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        current += '"';
-        i++;
-      } else {
-        inQuotes = !inQuotes;
-      }
+      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+      else { inQuotes = !inQuotes; }
     } else if (char === delimiter && !inQuotes) {
-      values.push(current.trim());
-      current = '';
+      values.push(current.trim()); current = '';
     } else {
       current += char;
     }
   }
-
   values.push(current.trim());
   return values.map((value) => value.replace(/^["']|["']$/g, ''));
 };
@@ -367,12 +296,8 @@ const detectDelimiter = (line: string): string => {
 
   for (const candidate of candidates) {
     const parsed = splitCsvLine(line, candidate);
-    if (parsed.length > bestScore) {
-      bestScore = parsed.length;
-      bestDelimiter = candidate;
-    }
+    if (parsed.length > bestScore) { bestScore = parsed.length; bestDelimiter = candidate; }
   }
-
   return bestDelimiter === '\t' ? '\t' : bestDelimiter;
 };
 
@@ -392,10 +317,7 @@ const buildRecordsFromRows = (rows: (string | number | null | undefined)[][]): F
   while (workingRows.length > 0 && isRowEmpty(workingRows[0])) {
     workingRows.shift();
   }
-
-  if (workingRows.length < 2) {
-    throw new Error('Arquivo deve conter pelo menos um cabeçalho e uma linha de dados');
-  }
+  if (workingRows.length < 2) throw new Error('Arquivo deve conter pelo menos um cabeçalho e uma linha de dados');
 
   const headerRow = workingRows[0].map((cell) => {
     const raw = cell === null || cell === undefined ? '' : String(cell);
@@ -419,67 +341,31 @@ const buildRecordsFromRows = (rows: (string | number | null | undefined)[][]): F
   const seenIdentifiers = new Map<string, number>();
 
   workingRows.slice(1).forEach((rawValues, index) => {
-    if (isRowEmpty(rawValues)) {
-      return;
-    }
+    if (isRowEmpty(rawValues)) return;
 
     const row: FemaleRow = {};
-
     headerInfos.forEach((info, columnIndex) => {
       if (!info.canonicalKey) return;
       const rawValue = rawValues[columnIndex];
       const value = toCanonicalValue(info.canonicalKey, info.header, rawValue);
-      if (value !== undefined) {
-        row[info.canonicalKey] = value;
-      }
+      if (value !== undefined) row[info.canonicalKey] = value;
     });
 
     const displayRow = index + 2;
 
-    if (row.id !== undefined && row.id !== null) {
-      const trimmedId = String(row.id).trim();
-      if (trimmedId && isValidUUID(trimmedId)) {
-        row.id = trimmedId;
-      } else if (trimmedId) {
-        rowErrors.push(`Linha ${displayRow}: valor inválido em "id" (${trimmedId}). Informe um UUID ou deixe vazio.`);
-        delete row.id;
-      }
-    }
-
-    if (row.identifier !== undefined && row.identifier !== null) {
-      const trimmedIdentifier = String(row.identifier).trim();
-      if (trimmedIdentifier) {
-        row.identifier = trimmedIdentifier;
-      } else {
-        delete row.identifier;
-      }
-    }
-
-    if (row.cdcb_id !== undefined && row.cdcb_id !== null) {
-      const trimmedCdcb = String(row.cdcb_id).trim();
-      if (trimmedCdcb) {
-        row.cdcb_id = trimmedCdcb;
-      } else {
-        delete row.cdcb_id;
-      }
-    }
+    if (row.id !== undefined && row.id !== null) row.id = String(row.id).trim();
+    if (row.identifier !== undefined && row.identifier !== null) row.identifier = String(row.identifier).trim();
+    if (row.cdcb_id !== undefined && row.cdcb_id !== null) row.cdcb_id = String(row.cdcb_id).trim();
 
     if (!row.name || String(row.name).trim() === '') {
       const fallback = row.identifier || row.cdcb_id || row.id;
-      if (fallback) {
-        row.name = String(fallback).trim();
-      }
+      if (fallback) row.name = String(fallback).trim();
     } else {
       row.name = String(row.name).trim();
     }
 
-    if (!row.identifier && row.cdcb_id) {
-      row.identifier = row.cdcb_id;
-    }
-
-    if (!row.identifier && row.id) {
-      row.identifier = row.id;
-    }
+    if (!row.identifier && row.cdcb_id) row.identifier = row.cdcb_id;
+    if (!row.identifier && row.id) row.identifier = row.id;
 
     if (!row.name || String(row.name).trim() === '') {
       rowErrors.push(`Linha ${displayRow}: não há coluna "name" preenchida nem identificador para deduzir o nome do animal.`);
@@ -488,11 +374,8 @@ const buildRecordsFromRows = (rows: (string | number | null | undefined)[][]): F
     if (row.id) {
       const idValue = String(row.id).trim();
       if (idValue) {
-        if (seenIds.has(idValue)) {
-          rowErrors.push(`Linha ${displayRow}: identificador de registro duplicado (id=${idValue}).`);
-        } else {
-          seenIds.add(idValue);
-        }
+        if (seenIds.has(idValue)) rowErrors.push(`Linha ${displayRow}: identificador de registro duplicado (id=${idValue}).`);
+        else seenIds.add(idValue);
       }
     }
 
@@ -500,20 +383,15 @@ const buildRecordsFromRows = (rows: (string | number | null | undefined)[][]): F
       const identifierValue = String(row.identifier).trim();
       if (identifierValue) {
         const firstOccurrence = seenIdentifiers.get(identifierValue);
-        if (firstOccurrence) {
-          rowErrors.push(`Linhas ${firstOccurrence} e ${displayRow}: identificador '${identifierValue}' duplicado no arquivo.`);
-        } else {
-          seenIdentifiers.set(identifierValue, displayRow);
-        }
+        if (firstOccurrence) rowErrors.push(`Linhas ${firstOccurrence} e ${displayRow}: identificador '${identifierValue}' duplicado no arquivo.`);
+        else seenIdentifiers.set(identifierValue, displayRow);
       }
     }
 
     dataRows.push(row);
   });
 
-  if (dataRows.length === 0) {
-    throw new Error('Nenhum dado válido encontrado no arquivo. Verifique se as linhas possuem informações preenchidas.');
-  }
+  if (dataRows.length === 0) throw new Error('Nenhum dado válido encontrado no arquivo. Verifique se as linhas possuem informações preenchidas.');
 
   if (rowErrors.length > 0) {
     const preview = rowErrors.slice(0, 3).join(' | ');
@@ -545,58 +423,9 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
 
   const optionalFields = canonicalColumns.filter((column) => !['id', 'farm_id', 'name'].includes(column)) as FemaleOptionalColumn[];
 
-  type FemaleInsertPayload = Database['public']['Tables']['females']['Insert'];
-
-  const buildInsertRecord = (
-    row: FemaleRow,
-    identifierToId: Map<string, string>
-  ): FemaleInsertPayload => {
-    const nameValue = row.name;
-    const identifierValue = row.identifier ? String(row.identifier).trim() : '';
-    const normalizedIdentifier = identifierValue || null;
-    const normalizedName = typeof nameValue === 'string'
-      ? nameValue.trim()
-      : nameValue != null
-        ? String(nameValue).trim()
-        : '';
-
-    const record: FemaleInsertPayload = {
-      farm_id: farmId,
-      name: normalizedName,
-      identifier: normalizedIdentifier,
-    };
-
-    const rowId = typeof row.id === 'string' ? row.id : row.id != null ? String(row.id) : undefined;
-    const fallbackId = normalizedIdentifier ? identifierToId.get(normalizedIdentifier) : undefined;
-    const finalId = rowId || fallbackId;
-
-    if (finalId && isValidUUID(finalId)) {
-      record.id = finalId;
-    }
-
-    optionalFields.forEach((field) => {
-      if (field in row) {
-        const value = row[field];
-        if (value === undefined) {
-          return;
-        }
-
-        if (field === 'name' || field === 'farm_id' || field === 'identifier') {
-          return;
-        }
-
-        record[field as keyof FemaleInsertPayload] = (value as FemaleInsertPayload[keyof FemaleInsertPayload]) ?? null;
-      }
-    });
-
-    return record;
-  };
-
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-    }
+    if (file) setSelectedFile(file);
     e.target.value = '';
   };
 
@@ -625,10 +454,7 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
             }
           }
 
-          if (!headerCaptured) {
-            throw new Error('Arquivo deve conter pelo menos um cabeçalho e uma linha de dados');
-          }
-
+          if (!headerCaptured) throw new Error('Arquivo deve conter pelo menos um cabeçalho e uma linha de dados');
           resolve(buildRecordsFromRows(rows));
         } catch (error) {
           reject(error instanceof Error ? error : new Error('Erro ao processar arquivo CSV'));
@@ -644,11 +470,7 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
       const buffer = await file.arrayBuffer();
       const workbook = read(buffer, { type: 'array' });
       const sheetName = workbook.SheetNames[0];
-
-      if (!sheetName) {
-        throw new Error('Arquivo Excel sem abas válidas.');
-      }
-
+      if (!sheetName) throw new Error('Arquivo Excel sem abas válidas.');
       const worksheet = workbook.Sheets[sheetName];
       const rawRows = utils.sheet_to_json<(string | number | null | undefined)[]>(worksheet, { header: 1, raw: true });
 
@@ -666,25 +488,14 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
 
   const parseFileData = async (file: File): Promise<FemaleRow[]> => {
     const extension = file.name.split('.').pop()?.toLowerCase();
-
-    if (extension === 'csv' || extension === 'txt') {
-      return parseCsvFile(file);
-    }
-
-    if (extension && ['xlsx', 'xls', 'xlsm', 'xlsb'].includes(extension)) {
-      return parseExcelFile(file);
-    }
-
+    if (extension === 'csv' || extension === 'txt') return parseCsvFile(file);
+    if (extension && ['xlsx', 'xls', 'xlsm', 'xlsb'].includes(extension)) return parseExcelFile(file);
     throw new Error('Formato de arquivo não suportado. Utilize CSV ou Excel (.xlsx, .xls).');
   };
 
   const handleUpload = async () => {
     if (!selectedFile) {
-      toast({
-        title: "Nenhum arquivo selecionado",
-        description: "Selecione um arquivo CSV ou Excel para continuar.",
-        variant: "destructive",
-      });
+      toast({ title: "Nenhum arquivo selecionado", description: "Selecione um arquivo CSV ou Excel para continuar.", variant: "destructive" });
       return;
     }
 
@@ -692,52 +503,37 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
 
     try {
       const recordsData = await parseFileData(selectedFile);
+      if (!recordsData || recordsData.length === 0) throw new Error('Nenhum dado válido encontrado no arquivo');
 
-      if (!recordsData || recordsData.length === 0) {
-        throw new Error('Nenhum dado válido encontrado no arquivo');
-      }
+      // Montar registros para a tabela females
+      type FemaleInsertRecord = FemaleRow & { farm_id: string; name: string | null };
+      const recordsToInsert: FemaleInsertRecord[] = recordsData.map((row) => {
+        const nameValue = row.name;
+        const record: FemaleInsertRecord = {
+          farm_id: farmId,
+          name: typeof nameValue === 'string' ? nameValue : nameValue != null ? String(nameValue) : null,
+        };
+        // id opcional
+        if (row.id) record.id = String(row.id);
 
-      const identifiers = Array.from(
-        new Set(
-          recordsData
-            .map((row) => {
-              if (!row.identifier) return null;
-              const identifierValue = String(row.identifier).trim();
-              return identifierValue || null;
-            })
-            .filter((value): value is string => Boolean(value))
-        )
-      );
+        // copiar os demais campos reconhecidos (ou null)
+        optionalFields.forEach((field) => {
+          if (field in row) {
+            const value = row[field];
+            record[field] = value ?? null;
+          }
+        });
 
-      const identifierToId = new Map<string, string>();
+        // reforçar alguns campos textuais com trim
+        if (record.identifier != null) record.identifier = String(record.identifier).trim();
+        if (record.cdcb_id != null) record.cdcb_id = String(record.cdcb_id).trim();
 
-      const identifierChunkSize = 100;
-      for (let i = 0; i < identifiers.length; i += identifierChunkSize) {
-        const chunk = identifiers.slice(i, i + identifierChunkSize);
-        const { data: existingFemales, error: existingFemalesError } = await supabase
-          .from('females')
-          .select('id, identifier')
-          .eq('farm_id', farmId)
-          .in('identifier', chunk);
+        return record;
+      });
 
-        if (existingFemalesError) {
-          console.error('Erro ao buscar fêmeas existentes:', existingFemalesError);
-          throw new Error('Não foi possível verificar os registros existentes. Tente novamente mais tarde.');
-        }
-
-        existingFemales
-          ?.filter((female): female is { id: string; identifier: string } => Boolean(female?.id && female?.identifier))
-          .forEach((female) => {
-            identifierToId.set(female.identifier, female.id);
-          });
-      }
-
-      const recordsToInsert = recordsData.map((row) => buildInsertRecord(row, identifierToId));
-
-      const missingNames = recordsToInsert.filter((record) => !record.name || record.name.trim() === '');
-      if (missingNames.length > 0) {
-        throw new Error('Alguns registros não possuem nome válido após o processamento. Verifique o arquivo e tente novamente.');
-      }
+      // Validação mínima: nome obrigatório
+      const invalidRows = recordsToInsert.filter(r => !r.name || String(r.name).trim() === '');
+      if (invalidRows.length > 0) throw new Error(`${invalidRows.length} linha(s) sem nome válido encontrada(s)`);
 
       const batchSize = 100;
       let totalInserted = 0;
@@ -745,33 +541,28 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
       for (let i = 0; i < recordsToInsert.length; i += batchSize) {
         const chunk = recordsToInsert.slice(i, i + batchSize);
 
-        const { error } = await supabase
-          .from('females')
-          .upsert(chunk as Record<string, unknown>[], { onConflict: 'id' });
+        // Escolha 1 (sem depender de índice único): INSERT
+        const { error } = await supabase.from(TARGET_TABLE).insert(chunk as Record<string, unknown>[]);
+        // Escolha 2 (se tiver índice único em farm_id,cdcb_id): use upsert
+        // const { error } = await supabase.from(TARGET_TABLE).upsert(chunk as Record<string, unknown>[], { onConflict: 'farm_id,cdcb_id' });
 
         if (error) {
           console.error('Supabase insertion error:', error);
           const details = (error as { details?: string; hint?: string } | null | undefined)?.details
             || (error as { details?: string; hint?: string } | null | undefined)?.hint;
-          const message = details ? `${error.message} (${details})` : error.message;
+          const message = details ? `${(error as any).message} (${details})` : (error as any).message;
           throw new Error(`Erro ao inserir dados: ${message}`);
         }
-
         totalInserted += chunk.length;
       }
 
       toast({
-        title: "Rebanho importado com sucesso!",
+        title: "Fêmeas importadas com sucesso!",
         description: `${totalInserted} fêmea(s) importada(s) para a fazenda ${farmName}`,
       });
 
       setSelectedFile(null);
-      
-      // Call import success callback if provided
-      if (onImportSuccess) {
-        onImportSuccess();
-      }
-      
+      if (onImportSuccess) onImportSuccess();
       onClose();
     } catch (error) {
       console.error('Upload error:', error);
@@ -786,67 +577,41 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
   };
 
   const downloadTemplate = () => {
-    // Create a comprehensive CSV template baseado na tabela females/females_denorm
-    const headers = ['id', 'farm_id', 'name', ...optionalFields];
+    // Template baseado nas colunas principais de females
+    const headers = [
+      'name','identifier','cdcb_id','birth_date','parity_order','category',
+      'sire_naab','mgs_naab','mmgs_naab',
+      'hhp_dollar','tpi','nm_dollar','cm_dollar','fm_dollar','gm_dollar',
+      'f_sav','ptam','cfp','ptaf','ptaf_pct','ptap','ptap_pct',
+      'pl','dpr','liv','scs','mast','met','rp','da','ket','mf',
+      'ptat','udc','flc','sce','dce','ssb','dsb','h_liv','ccr','hcr','fi','gl','efc','bwc','sta','str','dfm',
+      'rua','rls','rtp','ftl','rw','rlr','fta','fls','fua','ruh','ruw','ucl','udp','ftp','rfi','gfi',
+      'beta_casein','kappa_casein'
+    ];
 
-    const sampleRow: Record<string, string> = {
-      id: 'uuid-exemplo',
-      farm_id: farmId,
-      name: 'Fêmea Exemplo',
-      identifier: 'BR123456789',
-      cdcb_id: 'USA000000000',
-      sire_naab: '1HO12345',
-      mgs_naab: '1HO54321',
-      mmgs_naab: '1HO67890',
-      birth_date: '2021-05-12',
-      ptas: '{"TPI": 2700, "NM$": 620}',
-      hhp_dollar: '850',
-      tpi: '2700',
-      nm_dollar: '620',
-      cm_dollar: '580',
-      fm_dollar: '520',
-      gm_dollar: '450',
-      f_sav: '1.2',
-      ptam: '1100',
-      ptaf: '45',
-      ptap: '38',
-      pl: '2.3',
-      dpr: '1.1',
-      scs: '2.85',
-      ptat: '2.4',
-      udc: '2.1',
-      category: 'Novilha',
-      parity_order: '0',
-      beta_casein: 'A2/A2',
-      kappa_casein: 'BB'
-    };
-
-    const sampleData = [headers.map(header => sampleRow[header] ?? '').join(';')];
+    const sampleData = [
+      'FEMEA EXEMPLO;BR001;1234567890;2020-01-15;2;Multipara;200HO12345;100HO98765;050HO11111;820;2650;750;680;590;420;1,2;1100;10;45;3,5;38;3,1;2,3;1,1;1,0;2,85;4,2;1,8;1,1;0,2;0,1;2,4;1,8;0,4;0,3;1,2;0,8;2,1;1,9;2,2;1,4;0,9;1,7;1,3;0,6;1,5;2,0;1,8;0,7;0,2;0,5;1,1;0,9;1,3;0,8;0,4;1,2;0,6;0,7;1,0;0,3;0,5;1,6;A2A2;AA'
+    ];
 
     const csvContent = [headers.join(';'), ...sampleData].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `template_rebanho_${farmName.replace(/\s+/g, '_')}.csv`;
+    a.download = `template_femeas_${farmName.replace(/\s+/g, '_')}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
-
-    toast({
-      title: "Template baixado",
-      description: "Use este modelo para organizar os dados do rebanho.",
-    });
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Importar Registros Genéticos</DialogTitle>
+          <DialogTitle>Importar Fêmeas</DialogTitle>
           <DialogDescription>
-            Faça upload de um arquivo CSV ou Excel com os dados dos registros genéticos para a fazenda {farmName}.
+            Faça upload de um arquivo CSV ou Excel com os dados das fêmeas para a fazenda {farmName}.
           </DialogDescription>
         </DialogHeader>
 
@@ -854,7 +619,7 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              O arquivo deve conter as colunas conforme o template. Baixe o template para ver todas as colunas disponíveis nas tabelas females/females_denorm.
+              O arquivo pode conter colunas em ordem diferente e com nomes alternativos — o importador tenta reconhecer e normalizar.
             </AlertDescription>
           </Alert>
 
@@ -875,20 +640,12 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
           </div>
 
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={downloadTemplate}
-              className="flex-1"
-            >
+            <Button variant="outline" onClick={downloadTemplate} className="flex-1">
               <FileText className="w-4 h-4 mr-2" />
               Baixar Template
             </Button>
-            
-            <Button
-              onClick={handleUpload}
-              disabled={!selectedFile || isUploading}
-              className="flex-1"
-            >
+
+            <Button onClick={handleUpload} disabled={!selectedFile || isUploading} className="flex-1">
               {isUploading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
