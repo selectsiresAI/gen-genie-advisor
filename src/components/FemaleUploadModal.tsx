@@ -300,7 +300,7 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
         
         const { data, error } = await supabase
           .from(TARGET_TABLE)
-          .upsert(chunk, { onConflict: "farm_id,name,identifier" });
+          .insert(chunk);
 
         if (error) {
           console.error('Supabase insertion error:', error);
