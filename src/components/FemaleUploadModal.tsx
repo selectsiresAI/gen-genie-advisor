@@ -7,6 +7,7 @@ import { Upload, FileText, AlertCircle } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { read, utils } from 'xlsx';
 import { parse as parseDateFn, isValid as isValidDate } from 'date-fns';
 
@@ -95,6 +96,10 @@ const timestampFields = new Set<string>(['created_at', 'updated_at']);
 const nullTokens = new Set<string>([
   '', 'null', 'undefined', 'na', 'n/a', 'nan', 'none', 'sem dado', 'sem dados', 'sem valor', '-', '--', '#########'
 ]);
+
+const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/;
+
+const isValidUUID = (value: string): boolean => uuidRegex.test(value);
 
 const padNumber = (value: number) => value.toString().padStart(2, '0');
 
@@ -432,15 +437,31 @@ const buildRecordsFromRows = (rows: (string | number | null | undefined)[][]): F
     const displayRow = index + 2;
 
     if (row.id !== undefined && row.id !== null) {
-      row.id = String(row.id).trim();
+      const trimmedId = String(row.id).trim();
+      if (trimmedId && isValidUUID(trimmedId)) {
+        row.id = trimmedId;
+      } else if (trimmedId) {
+        rowErrors.push(`Linha ${displayRow}: valor inválido em "id" (${trimmedId}). Informe um UUID ou deixe vazio.`);
+        delete row.id;
+      }
     }
 
     if (row.identifier !== undefined && row.identifier !== null) {
-      row.identifier = String(row.identifier).trim();
+      const trimmedIdentifier = String(row.identifier).trim();
+      if (trimmedIdentifier) {
+        row.identifier = trimmedIdentifier;
+      } else {
+        delete row.identifier;
+      }
     }
 
     if (row.cdcb_id !== undefined && row.cdcb_id !== null) {
-      row.cdcb_id = String(row.cdcb_id).trim();
+      const trimmedCdcb = String(row.cdcb_id).trim();
+      if (trimmedCdcb) {
+        row.cdcb_id = trimmedCdcb;
+      } else {
+        delete row.cdcb_id;
+      }
     }
 
     if (!row.name || String(row.name).trim() === '') {
@@ -523,6 +544,53 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
   const { toast } = useToast();
 
   const optionalFields = canonicalColumns.filter((column) => !['id', 'farm_id', 'name'].includes(column)) as FemaleOptionalColumn[];
+
+  type FemaleInsertPayload = Database['public']['Tables']['females']['Insert'];
+
+  const buildInsertRecord = (
+    row: FemaleRow,
+    identifierToId: Map<string, string>
+  ): FemaleInsertPayload => {
+    const nameValue = row.name;
+    const identifierValue = row.identifier ? String(row.identifier).trim() : '';
+    const normalizedIdentifier = identifierValue || null;
+    const normalizedName = typeof nameValue === 'string'
+      ? nameValue.trim()
+      : nameValue != null
+        ? String(nameValue).trim()
+        : '';
+
+    const record: FemaleInsertPayload = {
+      farm_id: farmId,
+      name: normalizedName,
+      identifier: normalizedIdentifier,
+    };
+
+    const rowId = typeof row.id === 'string' ? row.id : row.id != null ? String(row.id) : undefined;
+    const fallbackId = normalizedIdentifier ? identifierToId.get(normalizedIdentifier) : undefined;
+    const finalId = rowId || fallbackId;
+
+    if (finalId && isValidUUID(finalId)) {
+      record.id = finalId;
+    }
+
+    optionalFields.forEach((field) => {
+      if (field in row) {
+        const value = row[field];
+        if (value === undefined) {
+          return;
+        }
+
+        if (field === 'name' || field === 'farm_id' || field === 'identifier') {
+          return;
+        }
+
+        record[field as keyof FemaleInsertPayload] = (value as FemaleInsertPayload[keyof FemaleInsertPayload]) ?? null;
+      }
+    });
+
+    return record;
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -629,28 +697,47 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
         throw new Error('Nenhum dado válido encontrado no arquivo');
       }
 
-      type FemaleInsertRecord = FemaleRow & { farm_id: string; name: string | null };
+      const identifiers = Array.from(
+        new Set(
+          recordsData
+            .map((row) => {
+              if (!row.identifier) return null;
+              const identifierValue = String(row.identifier).trim();
+              return identifierValue || null;
+            })
+            .filter((value): value is string => Boolean(value))
+        )
+      );
 
-      const recordsToInsert: FemaleInsertRecord[] = recordsData.map((row) => {
-        const nameValue = row.name;
-        const record: FemaleInsertRecord = {
-          farm_id: farmId,
-          name: typeof nameValue === 'string' ? nameValue : nameValue != null ? String(nameValue) : null,
-        };
+      const identifierToId = new Map<string, string>();
 
-        if (row.id) {
-          record.id = String(row.id);
+      const identifierChunkSize = 100;
+      for (let i = 0; i < identifiers.length; i += identifierChunkSize) {
+        const chunk = identifiers.slice(i, i + identifierChunkSize);
+        const { data: existingFemales, error: existingFemalesError } = await supabase
+          .from('females')
+          .select('id, identifier')
+          .eq('farm_id', farmId)
+          .in('identifier', chunk);
+
+        if (existingFemalesError) {
+          console.error('Erro ao buscar fêmeas existentes:', existingFemalesError);
+          throw new Error('Não foi possível verificar os registros existentes. Tente novamente mais tarde.');
         }
 
-        optionalFields.forEach((field) => {
-          if (field in row) {
-            const value = row[field];
-            record[field] = value ?? null;
-          }
-        });
+        existingFemales
+          ?.filter((female): female is { id: string; identifier: string } => Boolean(female?.id && female?.identifier))
+          .forEach((female) => {
+            identifierToId.set(female.identifier, female.id);
+          });
+      }
 
-        return record;
-      });
+      const recordsToInsert = recordsData.map((row) => buildInsertRecord(row, identifierToId));
+
+      const missingNames = recordsToInsert.filter((record) => !record.name || record.name.trim() === '');
+      if (missingNames.length > 0) {
+        throw new Error('Alguns registros não possuem nome válido após o processamento. Verifique o arquivo e tente novamente.');
+      }
 
       const batchSize = 100;
       let totalInserted = 0;
