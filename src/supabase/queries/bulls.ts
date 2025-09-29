@@ -70,6 +70,40 @@ const selectionQuery = SELECT_COLUMNS.join(', ');
 
 const escapeIlike = (value: string) => value.replace(/[%_]/g, (match) => `\\${match}`);
 
+type BullTable = 'bulls_denorm' | 'bulls';
+
+const BULL_TABLES: readonly BullTable[] = ['bulls_denorm', 'bulls'];
+
+async function fetchBullFrom(table: BullTable, code: string) {
+  const { data, error } = await supabase
+    .from(table)
+    .select(selectionQuery)
+    .eq('code', code)
+    .order('updated_at', { ascending: false, nullsLast: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      const fallback = await supabase
+        .from(table)
+        .select(selectionQuery)
+        .eq('code', code)
+        .limit(1);
+
+      if (fallback.error) {
+        throw new Error(fallback.error.message);
+      }
+
+      return (fallback.data?.[0] ?? null) as BullsDenormSelection | null;
+    }
+
+    throw new Error(error.message);
+  }
+
+  return data as unknown as BullsDenormSelection | null;
+}
+
 export async function getBullByNaab(naab: string): Promise<BullsDenormSelection | null> {
   const normalized = naab.trim().toUpperCase();
 
@@ -77,36 +111,14 @@ export async function getBullByNaab(naab: string): Promise<BullsDenormSelection 
     return null;
   }
 
-  const denormResult = await supabase
-    .from('bulls_denorm')
-    .select(selectionQuery)
-    .ilike('code', normalized)
-    .maybeSingle();
-
-  if (denormResult.error && denormResult.error.code !== 'PGRST116') {
-    throw new Error(denormResult.error.message);
-  }
-
-  const denormBull = denormResult.data as unknown as BullsDenormSelection | null;
-  if (denormBull) {
-    return denormBull;
-  }
-
-  const bullsResult = await supabase
-    .from('bulls')
-    .select(selectionQuery)
-    .ilike('code', normalized)
-    .maybeSingle();
-
-  if (bullsResult.error) {
-    if (bullsResult.error.code === 'PGRST116') {
-      return null;
+  for (const table of BULL_TABLES) {
+    const bull = await fetchBullFrom(table, normalized);
+    if (bull) {
+      return bull;
     }
-
-    throw new Error(bullsResult.error.message);
   }
 
-  return bullsResult.data as unknown as BullsDenormSelection | null;
+  return null;
 }
 
 export async function searchBulls(term: string, limit = 10): Promise<BullsDenormSelection[]> {
@@ -127,7 +139,7 @@ export async function searchBulls(term: string, limit = 10): Promise<BullsDenorm
       `code.ilike.${codePattern},name.ilike.${namePattern}`
     )
     .order('code', { ascending: true, nullsFirst: false })
-    .limit(limit);
+    .limit(limit * 2);
 
   const bullsPromise = supabase
     .from('bulls')
@@ -136,7 +148,7 @@ export async function searchBulls(term: string, limit = 10): Promise<BullsDenorm
       `code.ilike.${codePattern},name.ilike.${namePattern}`
     )
     .order('code', { ascending: true, nullsFirst: false })
-    .limit(limit);
+    .limit(limit * 2);
 
   const [denormResult, bullsResult] = await Promise.all([denormPromise, bullsPromise]);
 
@@ -156,27 +168,46 @@ export async function searchBulls(term: string, limit = 10): Promise<BullsDenorm
   const normalizedUpper = normalized.toUpperCase();
   const normalizedLower = normalized.toLowerCase();
 
+  const pushRecord = (
+    record: BullsDenormSelection | null | undefined,
+    accumulator: BullsDenormSelection[]
+  ) => {
+    if (!record) {
+      return;
+    }
+
+    const code = record.code?.toUpperCase();
+
+    if (!code || seenCodes.has(code)) {
+      return;
+    }
+
+    seenCodes.add(code);
+    accumulator.push(record);
+  };
+
   const addRecords = (records: unknown[] | null | undefined, accumulator: BullsDenormSelection[]) => {
     if (!records) {
       return;
     }
 
     for (const record of records) {
-      const bull = record as BullsDenormSelection;
-      const code = bull.code?.toUpperCase();
-
-      if (!code || seenCodes.has(code)) {
-        continue;
-      }
-
-      seenCodes.add(code);
-      accumulator.push(bull);
+      pushRecord(record as BullsDenormSelection, accumulator);
     }
   };
 
   const combined: BullsDenormSelection[] = [];
   addRecords(denormResult.data, combined);
   addRecords(bullsResult.data, combined);
+
+  if (!seenCodes.has(normalizedUpper)) {
+    try {
+      const exactMatch = await getBullByNaab(normalizedUpper);
+      pushRecord(exactMatch, combined);
+    } catch (error) {
+      console.warn('Erro ao buscar correspondência exata de touro:', error);
+    }
+  }
 
   const rankRecord = (bull: BullsDenormSelection) => {
     const code = bull.code?.toUpperCase() ?? '';
