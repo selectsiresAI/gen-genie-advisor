@@ -101,7 +101,9 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
   };
 
   const toCanonicalValue = (canonicalKey: string, header: string, value: any): any => {
-    if (!value || value === '' || value === '#########') return null;
+    if (!value || value === '' || value === '#########' || value === 'null' || value === 'NULL') {
+      return null;
+    }
     
     // Campos numéricos
     if (['hhp_dollar', 'tpi', 'nm_dollar', 'cm_dollar', 'fm_dollar', 'gm_dollar', 'f_sav', 'ptam', 'cfp', 
@@ -110,12 +112,17 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
          'dce', 'ssb', 'dsb', 'h_liv', 'ccr', 'hcr', 'fi', 'gl', 'efc', 'bwc', 
          'sta', 'str', 'dfm', 'rua', 'rls', 'rtp', 'ftl', 'rw', 'rlr', 'fta', 
          'fls', 'fua', 'ruh', 'ruw', 'ucl', 'udp', 'ftp', 'rfi', 'gfi', 'parity_order'].includes(canonicalKey)) {
-      const normalizedValue = String(value).replace(',', '.');
+      const normalizedValue = String(value).trim().replace(',', '.');
+      if (normalizedValue === '' || normalizedValue === 'null' || normalizedValue === 'NULL') {
+        return null;
+      }
       const numValue = parseFloat(normalizedValue);
       return isNaN(numValue) ? null : numValue;
     }
     
-    return value;
+    // Campos de texto - limpar strings vazias
+    const textValue = String(value).trim();
+    return textValue === '' ? null : textValue;
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
