@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Search, X } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { useBullsSearch } from '@/hooks/useBullsSearch';
+import { getBullByNaab, type BullsSelection } from '@/supabase/queries/bulls';
 
 export interface BullSearchResult {
   id: string;
@@ -31,8 +31,10 @@ interface BullSelectorProps {
   className?: string;
 }
 
-export function BullSelector({ 
-  label = "Selecionar Touro", 
+const generateFallbackId = () => `bull-${Math.random().toString(36).slice(2, 10)}`;
+
+export function BullSelector({
+  label = "Selecionar Touro",
   placeholder = "Digite o código NAAB ou selecione da lista",
   value,
   onChange,
@@ -40,10 +42,7 @@ export function BullSelector({
   showPTAs = false,
   className = ""
 }: BullSelectorProps) {
-  const [searchTerm, setSearchTerm] = useState("");
   const [naabInput, setNaabInput] = useState("");
-  const [bulls, setBulls] = useState<BullSearchResult[]>([]);
-  const [loading, setLoading] = useState(false);
   const [searchMode, setSearchMode] = useState<'dropdown' | 'naab'>('dropdown');
   const [isOpen, setIsOpen] = useState(false);
   const [naabValidation, setNaabValidation] = useState<{
@@ -51,54 +50,38 @@ export function BullSelector({
     message: string;
     bull?: BullSearchResult;
   } | null>(null);
+  const [isValidatingNaab, setIsValidatingNaab] = useState(false);
 
-  // Load bulls from database
-  useEffect(() => {
-    const loadBulls = async () => {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .rpc('get_bulls_denorm')
-          .order('tpi', { ascending: false })
-          .limit(200);
+  const { query, setQuery, results, isLoading, error, hasSearched } = useBullsSearch({ limit: 50 });
 
-        if (error) {
-          console.error('Erro ao carregar touros:', error);
-          return;
-        }
+  const convertedResults = useMemo(() => {
+    const toResult = (bull: BullsSelection): BullSearchResult => ({
+      id: bull.id ?? bull.code ?? generateFallbackId(),
+      code: bull.code ?? '',
+      name: bull.name ?? '',
+      company: bull.company ?? undefined,
+      ptas: (bull as any).ptas,
+      hhp_dollar: bull.hhp_dollar ?? null,
+      tpi: bull.tpi ?? null,
+      nm_dollar: bull.nm_dollar ?? null
+    });
 
-        const convertedBulls: BullSearchResult[] = (data || []).map((bull: any) => ({
-          id: bull.id,
-          code: bull.code,
-          name: bull.name,
-          company: bull.company,
-          ptas: bull.ptas,
-          hhp_dollar: bull.hhp_dollar,
-          tpi: bull.tpi,
-          nm_dollar: bull.nm_dollar
-        }));
-
-        setBulls(convertedBulls);
-      } catch (error) {
-        console.error('Erro ao carregar touros:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadBulls();
-  }, []);
+    return results.map(toResult);
+  }, [results]);
 
   // Filter bulls based on search term
   const filteredBulls = useMemo(() => {
-    if (!searchTerm) return bulls.slice(0, 50); // Show first 50 by default
-    
-    return bulls.filter(bull => 
-      bull.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      bull.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (bull.company && bull.company.toLowerCase().includes(searchTerm.toLowerCase()))
-    ).slice(0, 50);
-  }, [bulls, searchTerm]);
+    if (!query) {
+      return convertedResults;
+    }
+
+    const normalized = query.toLowerCase();
+    return convertedResults.filter((bull) =>
+      bull.name.toLowerCase().includes(normalized) ||
+      bull.code.toLowerCase().includes(normalized) ||
+      (bull.company && bull.company.toLowerCase().includes(normalized))
+    );
+  }, [convertedResults, query]);
 
   // Validate NAAB code
   const validateNaab = async (naab: string) => {
@@ -108,43 +91,29 @@ export function BullSelector({
     }
 
     try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .rpc('validate_naab', { naab: naab.trim() });
+      setIsValidatingNaab(true);
+      const bull = await getBullByNaab(naab.trim());
 
-      if (error) {
-        console.error('Erro ao validar NAAB:', error);
+      if (bull) {
+        setNaabValidation({
+          isValid: true,
+          message: 'Código NAAB válido',
+          bull: {
+            id: bull.id ?? bull.code ?? generateFallbackId(),
+            code: bull.code ?? naab.trim(),
+            name: bull.name ?? '',
+            company: bull.company ?? undefined,
+            ptas: (bull as any).ptas,
+            hhp_dollar: bull.hhp_dollar ?? null,
+            tpi: bull.tpi ?? null,
+            nm_dollar: bull.nm_dollar ?? null
+          }
+        });
+      } else {
         setNaabValidation({
           isValid: false,
-          message: 'Erro ao validar código NAAB'
+          message: 'Código NAAB não encontrado'
         });
-        return;
-      }
-
-      if (data && data.length > 0) {
-        const result = data[0];
-        
-        if (result.is_valid && result.bull_id) {
-          // Find the bull in our local data
-          const bull = bulls.find(b => b.id === result.bull_id);
-          if (bull) {
-            setNaabValidation({
-              isValid: true,
-              message: 'Código NAAB válido',
-              bull
-            });
-          } else {
-            setNaabValidation({
-              isValid: false,
-              message: 'Touro não encontrado'
-            });
-          }
-        } else {
-          setNaabValidation({
-            isValid: false,
-            message: result.message || 'Código NAAB não encontrado'
-          });
-        }
       }
     } catch (error) {
       console.error('Erro ao validar NAAB:', error);
@@ -153,7 +122,7 @@ export function BullSelector({
         message: 'Erro ao validar código NAAB'
       });
     } finally {
-      setLoading(false);
+      setIsValidatingNaab(false);
     }
   };
 
@@ -166,12 +135,12 @@ export function BullSelector({
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [naabInput, searchMode, bulls]);
+  }, [naabInput, searchMode]);
 
   const handleSelectBull = (bull: BullSearchResult) => {
     onChange(bull);
     setIsOpen(false);
-    setSearchTerm("");
+    setQuery('');
   };
 
   const handleNaabSubmit = () => {
@@ -184,7 +153,7 @@ export function BullSelector({
 
   const clearSelection = () => {
     onChange(null);
-    setSearchTerm("");
+    setQuery('');
     setNaabInput("");
     setNaabValidation(null);
   };
@@ -262,22 +231,31 @@ export function BullSelector({
                 role="combobox"
                 aria-expanded={isOpen}
                 className="w-full justify-start text-left font-normal"
-                disabled={disabled || loading}
+                disabled={disabled}
               >
                 <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-                {loading ? "Carregando..." : placeholder}
+                {isLoading ? "Buscando touros..." : placeholder}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[400px] p-0" align="start" side="bottom">
               <Command>
                 <CommandInput
-                  placeholder="Buscar touro..."
-                  value={searchTerm}
-                  onValueChange={setSearchTerm}
+                  placeholder="Buscar touro (mín. 2 caracteres)"
+                  value={query}
+                  onValueChange={setQuery}
                 />
                 <CommandList>
-                  <CommandEmpty>Nenhum touro encontrado.</CommandEmpty>
+                  <CommandEmpty>
+                    {hasSearched
+                      ? 'Nenhum touro encontrado. Tente o NAAB completo ou parte do nome/registro.'
+                      : 'Digite ao menos 2 caracteres para buscar.'}
+                  </CommandEmpty>
                   <CommandGroup>
+                    {isLoading && (
+                      <CommandItem disabled value="carregando">
+                        Buscando touros...
+                      </CommandItem>
+                    )}
                     {filteredBulls.map((bull) => (
                       <CommandItem
                         key={bull.id}
@@ -301,6 +279,11 @@ export function BullSelector({
                   </CommandGroup>
                 </CommandList>
               </Command>
+              {error && (
+                <div className="border-t bg-red-50 p-2 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
             </PopoverContent>
           </Popover>
         )}
@@ -319,19 +302,21 @@ export function BullSelector({
               <Button
                 type="button"
                 onClick={handleNaabSubmit}
-                disabled={!naabValidation?.isValid || loading}
+                disabled={!naabValidation?.isValid || isValidatingNaab}
               >
                 Selecionar
               </Button>
             </div>
-            
+
             {/* NAAB validation feedback */}
             {naabValidation && (
-              <div className={`text-sm p-2 rounded ${
-                naabValidation.isValid 
-                  ? 'bg-green-50 text-green-700 border border-green-200' 
-                  : 'bg-red-50 text-red-700 border border-red-200'
-              }`}>
+              <div
+                className={`text-sm p-2 rounded ${
+                  naabValidation.isValid
+                    ? 'bg-green-50 text-green-700 border border-green-200'
+                    : 'bg-red-50 text-red-700 border border-red-200'
+                }`}
+              >
                 {naabValidation.message}
                 {naabValidation.isValid && naabValidation.bull && (
                   <div className="mt-1 font-medium">
@@ -342,6 +327,9 @@ export function BullSelector({
                   </div>
                 )}
               </div>
+            )}
+            {isValidatingNaab && (
+              <div className="text-xs text-muted-foreground">Validando código NAAB...</div>
             )}
           </div>
         )}
