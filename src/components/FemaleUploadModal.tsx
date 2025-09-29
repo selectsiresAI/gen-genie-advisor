@@ -542,7 +542,7 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
         const chunk = recordsToInsert.slice(i, i + batchSize);
 
         // Escolha 1 (sem depender de índice único): INSERT
-        const { error } = await supabase.from(TARGET_TABLE).insert(chunk as Record<string, unknown>[]);
+        const { error } = await supabase.from(TARGET_TABLE).insert(chunk as any);
         // Escolha 2 (se tiver índice único em farm_id,cdcb_id): use upsert
         // const { error } = await supabase.from(TARGET_TABLE).upsert(chunk as Record<string, unknown>[], { onConflict: 'farm_id,cdcb_id' });
 
