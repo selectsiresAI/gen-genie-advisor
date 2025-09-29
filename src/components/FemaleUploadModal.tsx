@@ -16,7 +16,7 @@ interface FemaleUploadModalProps {
   onImportSuccess?: () => void;
 }
 
-const TARGET_TABLE = "genetic_records";
+const TARGET_TABLE = "females";
 
 const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({ 
   isOpen, 
@@ -31,33 +31,45 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
 
   // Mapeamento de cabeçalhos para chaves canônicas
   const mapping: Record<string, string> = {
-    'identifier': 'animal_id',
-    'animal_id': 'animal_id',
-    'name': 'bull_name',
-    'bull_name': 'bull_name',
-    'naab': 'naab',
+    'name': 'name',
+    'nome': 'name',
+    'identifier': 'identifier',
+    'identificador': 'identifier',
     'cdcb_id': 'cdcb_id',
-    'reg': 'reg',
-    'birth_date': 'dob',
-    'dob': 'dob',
-    'hhp_dollar': 'hhp$',
-    'hhp$': 'hhp$',
+    'id cdcb': 'cdcb_id',
+    'birth_date': 'birth_date',
+    'data nascimento': 'birth_date',
+    'ordem de parto': 'parity_order',
+    'parity_order': 'parity_order',
+    'categoria': 'category',
+    'category': 'category',
+    'sire_naab': 'sire_naab',
+    'pai naab': 'sire_naab',
+    'mgs_naab': 'mgs_naab',
+    'avô materno naab': 'mgs_naab',
+    'mmgs_naab': 'mmgs_naab',
+    'bisavô materno naab': 'mmgs_naab',
+    'hhp_dollar': 'hhp_dollar',
+    'hhp$': 'hhp_dollar',
     'tpi': 'tpi',
-    'nm_dollar': 'nm$',
-    'nm$': 'nm$',
-    'cm_dollar': 'cm$',
-    'cm$': 'cm$',
-    'fm_dollar': 'fm$',
-    'fm$': 'fm$',
-    'gm_dollar': 'gm$',
-    'gm$': 'gm$',
+    'nm_dollar': 'nm_dollar',
+    'nm$': 'nm_dollar',
+    'cm_dollar': 'cm_dollar',
+    'cm$': 'cm_dollar',
+    'fm_dollar': 'fm_dollar',
+    'fm$': 'fm_dollar',
+    'gm_dollar': 'gm_dollar',
+    'gm$': 'gm_dollar',
     'f_sav': 'f_sav',
+    'f sav': 'f_sav',
     'ptam': 'ptam',
     'cfp': 'cfp',
     'ptaf': 'ptaf',
     'ptaf_pct': 'ptaf_pct',
+    'ptaf%': 'ptaf_pct',
     'ptap': 'ptap',
     'ptap_pct': 'ptap_pct',
+    'ptap%': 'ptap_pct',
     'pl': 'pl',
     'dpr': 'dpr',
     'liv': 'liv',
@@ -76,6 +88,7 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
     'ssb': 'ssb',
     'dsb': 'dsb',
     'h_liv': 'h_liv',
+    'h liv': 'h_liv',
     'ccr': 'ccr',
     'hcr': 'hcr',
     'fi': 'fi',
@@ -102,24 +115,100 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
     'rfi': 'rfi',
     'gfi': 'gfi',
     'beta_casein': 'beta_casein',
-    'kappa_casein': 'kappa_casein'
+    'beta-casein': 'beta_casein',
+    'kappa_casein': 'kappa_casein',
+    'kappa-casein': 'kappa_casein'
   };
 
   const toCanonicalValue = (canonicalKey: string, header: string, value: any): any => {
     if (!value || value === '' || value === '#########') return null;
-    
-    // Campos numéricos
-    if (['hhp$', 'tpi', 'nm$', 'cm$', 'fm$', 'gm$', 'f_sav', 'ptam', 'cfp', 
-         'ptaf', 'ptaf_pct', 'ptap', 'ptap_pct', 'pl', 'dpr', 'liv', 'scs', 
-         'mast', 'met', 'rp', 'da', 'ket', 'mf', 'ptat', 'udc', 'flc', 'sce', 
-         'dce', 'ssb', 'dsb', 'h_liv', 'ccr', 'hcr', 'fi', 'gl', 'efc', 'bwc', 
-         'sta', 'str', 'dfm', 'rua', 'rls', 'rtp', 'ftl', 'rw', 'rlr', 'fta', 
-         'fls', 'fua', 'ruh', 'ruw', 'ucl', 'udp', 'ftp', 'rfi', 'gfi'].includes(canonicalKey)) {
+
+    if (
+      [
+        'hhp_dollar',
+        'tpi',
+        'nm_dollar',
+        'cm_dollar',
+        'fm_dollar',
+        'gm_dollar',
+        'f_sav',
+        'ptam',
+        'cfp',
+        'ptaf',
+        'ptaf_pct',
+        'ptap',
+        'ptap_pct',
+        'pl',
+        'dpr',
+        'liv',
+        'scs',
+        'mast',
+        'met',
+        'rp',
+        'da',
+        'ket',
+        'mf',
+        'ptat',
+        'udc',
+        'flc',
+        'sce',
+        'dce',
+        'ssb',
+        'dsb',
+        'h_liv',
+        'ccr',
+        'hcr',
+        'fi',
+        'gl',
+        'efc',
+        'bwc',
+        'sta',
+        'str',
+        'dfm',
+        'rua',
+        'rls',
+        'rtp',
+        'ftl',
+        'rw',
+        'rlr',
+        'fta',
+        'fls',
+        'fua',
+        'ruh',
+        'ruw',
+        'ucl',
+        'udp',
+        'ftp',
+        'rfi',
+        'gfi'
+      ].includes(canonicalKey)
+    ) {
       const normalizedValue = String(value).replace(',', '.');
       const numValue = parseFloat(normalizedValue);
       return isNaN(numValue) ? null : numValue;
     }
-    
+
+    if (canonicalKey === 'parity_order') {
+      const intValue = parseInt(String(value), 10);
+      return isNaN(intValue) ? null : intValue;
+    }
+
+    if (canonicalKey === 'birth_date') {
+      const normalized = String(value).trim();
+      const parts = normalized.split(/[\/-]/);
+      if (parts.length === 3) {
+        const [part1, part2, part3] = parts;
+        if (part1.length === 2 && part2.length === 2 && part3.length === 4) {
+          return `${part3}-${part2}-${part1}`;
+        }
+        if (part1.length === 4 && part2.length === 2 && part3.length === 2) {
+          return `${part1}-${part2}-${part3}`;
+        }
+      }
+      const date = new Date(normalized);
+      return isNaN(date.getTime()) ? normalized : date.toISOString().split('T')[0];
+    }
+
     return value;
   };
 
@@ -164,18 +253,19 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
             
             // Usar mapeamento canônico
             headers.forEach((h, index) => {
-              const canonicalKey = mapping[h];
+              const normalizedHeader = h.toLowerCase();
+              const canonicalKey = mapping[normalizedHeader] || mapping[h];
               if (!canonicalKey) return;
               const v = toCanonicalValue(canonicalKey, h, values[index]);
               row[canonicalKey] = v ?? values[index];
             });
             
-            console.log(`Row ${lineIndex + 2} animal_id:`, row.animal_id);
+            console.log(`Row ${lineIndex + 2} name:`, row.name);
             return row;
           });
-          
-          // Filter out rows without animal_id or cdcb_id
-          const validData = data.filter(row => (row.animal_id && row.animal_id.trim() !== '') || (row.cdcb_id && row.cdcb_id.trim() !== ''));
+
+          // Filter out rows without name
+          const validData = data.filter(row => row.name && row.name.trim() !== '');
           console.log('Valid rows after filtering:', validData.length);
           console.log('Sample valid row:', validData[0]);
           
@@ -217,80 +307,82 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
       }
 
       // Validate required fields
-      const invalidRows = recordsData.filter(row => !row.animal_id && !row.cdcb_id);
+      const invalidRows = recordsData.filter(row => !row.name || row.name.trim() === '');
       if (invalidRows.length > 0) {
-        throw new Error(`${invalidRows.length} linha(s) sem animal_id ou cdcb_id válido encontrada(s)`);
+        throw new Error(`${invalidRows.length} linha(s) sem nome válido encontrada(s)`);
       }
 
       // Prepare data for insertion with direct column mapping
       const recordsToInsert = recordsData.map(row => {
         return {
-          herd_id: farmId,
-          animal_id: row.animal_id || null,
+          farm_id: farmId,
+          name: row.name,
+          identifier: row.identifier || null,
           cdcb_id: row.cdcb_id || null,
-          naab: row.naab || null,
-          bull_name: row.bull_name || null,
-          reg: row.reg || null,
-          dob: row.dob || null,
-          // Direct PTA column mapping with $ notation
-          'hhp$': row['hhp$'],
-          tpi: row.tpi,
-          'nm$': row['nm$'],
-          'cm$': row['cm$'],
-          'fm$': row['fm$'],
-          'gm$': row['gm$'],
-          f_sav: row.f_sav,
-          ptam: row.ptam,
-          cfp: row.cfp,
-          ptaf: row.ptaf,
-          ptaf_pct: row.ptaf_pct,
-          ptap: row.ptap,
-          ptap_pct: row.ptap_pct,
-          pl: row.pl,
-          dpr: row.dpr,
-          liv: row.liv,
-          scs: row.scs,
-          mast: row.mast,
-          met: row.met,
-          rp: row.rp,
-          da: row.da,
-          ket: row.ket,
-          mf: row.mf,
-          ptat: row.ptat,
-          udc: row.udc,
-          flc: row.flc,
-          sce: row.sce,
-          dce: row.dce,
-          ssb: row.ssb,
-          dsb: row.dsb,
-          h_liv: row.h_liv,
-          ccr: row.ccr,
-          hcr: row.hcr,
-          fi: row.fi,
-          gl: row.gl,
-          efc: row.efc,
-          bwc: row.bwc,
-          sta: row.sta,
-          str: row.str,
-          dfm: row.dfm,
-          rua: row.rua,
-          rls: row.rls,
-          rtp: row.rtp,
-          ftl: row.ftl,
-          rw: row.rw,
-          rlr: row.rlr,
-          fta: row.fta,
-          fls: row.fls,
-          fua: row.fua,
-          ruh: row.ruh,
-          ruw: row.ruw,
-          ucl: row.ucl,
-          udp: row.udp,
-          ftp: row.ftp,
-          rfi: row.rfi,
-          gfi: row.gfi,
-          beta_casein: row.beta_casein,
-          kappa_casein: row.kappa_casein
+          birth_date: row.birth_date || null,
+          parity_order: row.parity_order ?? null,
+          category: row.category || null,
+          sire_naab: row.sire_naab || null,
+          mgs_naab: row.mgs_naab || null,
+          mmgs_naab: row.mmgs_naab || null,
+          hhp_dollar: row.hhp_dollar ?? null,
+          tpi: row.tpi ?? null,
+          nm_dollar: row.nm_dollar ?? null,
+          cm_dollar: row.cm_dollar ?? null,
+          fm_dollar: row.fm_dollar ?? null,
+          gm_dollar: row.gm_dollar ?? null,
+          f_sav: row.f_sav ?? null,
+          ptam: row.ptam ?? null,
+          cfp: row.cfp ?? null,
+          ptaf: row.ptaf ?? null,
+          ptaf_pct: row.ptaf_pct ?? null,
+          ptap: row.ptap ?? null,
+          ptap_pct: row.ptap_pct ?? null,
+          pl: row.pl ?? null,
+          dpr: row.dpr ?? null,
+          liv: row.liv ?? null,
+          scs: row.scs ?? null,
+          mast: row.mast ?? null,
+          met: row.met ?? null,
+          rp: row.rp ?? null,
+          da: row.da ?? null,
+          ket: row.ket ?? null,
+          mf: row.mf ?? null,
+          ptat: row.ptat ?? null,
+          udc: row.udc ?? null,
+          flc: row.flc ?? null,
+          sce: row.sce ?? null,
+          dce: row.dce ?? null,
+          ssb: row.ssb ?? null,
+          dsb: row.dsb ?? null,
+          h_liv: row.h_liv ?? null,
+          ccr: row.ccr ?? null,
+          hcr: row.hcr ?? null,
+          fi: row.fi ?? null,
+          gl: row.gl ?? null,
+          efc: row.efc ?? null,
+          bwc: row.bwc ?? null,
+          sta: row.sta ?? null,
+          str: row.str ?? null,
+          dfm: row.dfm ?? null,
+          rua: row.rua ?? null,
+          rls: row.rls ?? null,
+          rtp: row.rtp ?? null,
+          ftl: row.ftl ?? null,
+          rw: row.rw ?? null,
+          rlr: row.rlr ?? null,
+          fta: row.fta ?? null,
+          fls: row.fls ?? null,
+          fua: row.fua ?? null,
+          ruh: row.ruh ?? null,
+          ruw: row.ruw ?? null,
+          ucl: row.ucl ?? null,
+          udp: row.udp ?? null,
+          ftp: row.ftp ?? null,
+          rfi: row.rfi ?? null,
+          gfi: row.gfi ?? null,
+          beta_casein: row.beta_casein || null,
+          kappa_casein: row.kappa_casein || null
         };
       });
 
@@ -303,7 +395,7 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
         
         const { data, error } = await supabase
           .from(TARGET_TABLE)
-          .upsert(chunk, { onConflict: "herd_id,animal_id,cdcb_id" });
+          .upsert(chunk, { onConflict: "farm_id,identifier,cdcb_id" });
 
         if (error) {
           console.error('Supabase insertion error:', error);
@@ -314,8 +406,8 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
       }
 
       toast({
-        title: "Registros genéticos importados com sucesso!",
-        description: `${totalInserted} registro(s) importado(s) para a fazenda ${farmName}`,
+        title: "Rebanho importado com sucesso!",
+        description: `${totalInserted} fêmea(s) importada(s) para a fazenda ${farmName}`,
       });
 
       setSelectedFile(null);
@@ -339,76 +431,79 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
   };
 
   const downloadTemplate = () => {
-    // Create a comprehensive CSV template based on genetic_records table
+    // Create a comprehensive CSV template based on females_denorm view
     const headers = [
-      'animal_id',
-      'cdcb_id',
-      'naab',
-      'bull_name',
-      'reg',
-      'dob',
-      'hhp$',
-      'tpi',
-      'nm$',
-      'cm$',
-      'fm$',
-      'gm$',
-      'f_sav',
-      'ptam',
-      'cfp',
-      'ptaf',
-      'ptaf_pct',
-      'ptap',
-      'ptap_pct',
-      'pl',
-      'dpr',
-      'liv',
-      'scs',
-      'mast',
-      'met',
-      'rp',
-      'da',
-      'ket',
-      'mf',
-      'ptat',
-      'udc',
-      'flc',
-      'sce',
-      'dce',
-      'ssb',
-      'dsb',
-      'h_liv',
-      'ccr',
-      'hcr',
-      'fi',
-      'gl',
-      'efc',
-      'bwc',
-      'sta',
-      'str',
-      'dfm',
-      'rua',
-      'rls',
-      'rtp',
-      'ftl',
-      'rw',
-      'rlr',
-      'fta',
-      'fls',
-      'fua',
-      'ruh',
-      'ruw',
-      'ucl',
-      'udp',
-      'ftp',
-      'rfi',
-      'gfi',
-      'beta_casein',
-      'kappa_casein'
+      'Nome',
+      'Identificador',
+      'ID CDCB',
+      'Data Nascimento',
+      'Ordem de Parto',
+      'Categoria',
+      'Pai NAAB',
+      'Avô Materno NAAB',
+      'BisAvô Materno NAAB',
+      'HHP$',
+      'TPI',
+      'NM$',
+      'CM$',
+      'FM$',
+      'GM$',
+      'F SAV',
+      'PTAM',
+      'CFP',
+      'PTAF',
+      'PTAF%',
+      'PTAP',
+      'PTAP%',
+      'PL',
+      'DPR',
+      'LIV',
+      'SCS',
+      'MAST',
+      'MET',
+      'RP',
+      'DA',
+      'KET',
+      'MF',
+      'PTAT',
+      'UDC',
+      'FLC',
+      'SCE',
+      'DCE',
+      'SSB',
+      'DSB',
+      'H LIV',
+      'CCR',
+      'HCR',
+      'FI',
+      'GL',
+      'EFC',
+      'BWC',
+      'STA',
+      'STR',
+      'DFM',
+      'RUA',
+      'RLS',
+      'RTP',
+      'FTL',
+      'RW',
+      'RLR',
+      'FTA',
+      'FLS',
+      'FUA',
+      'RUH',
+      'RUW',
+      'UCL',
+      'UDP',
+      'FTP',
+      'RFI',
+      'Beta-Casein',
+      'Kappa-Casein',
+      'GFI'
     ];
     
     const sampleData = [
-      'BR001;1234567890;200HO12345;TOURO EXEMPLO;REG12345;2020-01-15;820;2650;750;680;590;420;1,2;2,1;3,5;2,8;105;2,5;110;1,2;1,5;2,85;4,2;1,8;1,1;0,2;0,1;2,4;1,8;0,4;0,3;1,2;0,8;2,1;1,9;2,2;1,4;0,9;1,7;1,3;0,6;1,5;2,0;1,8;0,7;0,2;0,5;1,1;0,9;1,3;0,8;0,4;1,2;0,6;0,7;1,0;0,3;0,5;1,6;A2A2;AA'
+      'Fêmea Exemplo;BR001;CDCB123456;2020-01-15;1;Novilha;200HO12345;200HO54321;200HO67890;820;2650;750;680;590;420;1,2;2,5;105;2,5;1,2;2,8;1,1;4,2;1,8;1,1;0,2;0,1;2,4;1,8;0,4;0,3;1,2;0,8;2,1;1,9;2,2;1,4;0,9;1,7;1,3;0,6;1,5;2,0;1,8;0,7;0,2;0,5;1,1;0,9;1,3;0,8;0,4;1,2;0,6;0,7;1,0;0,3;0,5;1,6;1,2;0,4;0,6;0,7;1,0;A2A2;AA;1,1'
     ];
 
     const csvContent = [headers.join(';'), ...sampleData].join('\n');
@@ -416,7 +511,7 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `template_registros_geneticos_${farmName.replace(/\s+/g, '_')}.csv`;
+    a.download = `template_rebanho_femeas_${farmName.replace(/\s+/g, '_')}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -442,7 +537,7 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              O arquivo deve conter as colunas conforme o template. Baixe o template para ver todas as colunas disponíveis da tabela genetic_records.
+              O arquivo deve conter as colunas conforme o template. Baixe o template para ver todas as colunas disponíveis da view females_denorm.
             </AlertDescription>
           </Alert>
 
