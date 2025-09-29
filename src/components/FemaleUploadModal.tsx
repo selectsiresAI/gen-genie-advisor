@@ -7,6 +7,492 @@ import { Upload, FileText, AlertCircle } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from '@/integrations/supabase/client';
+import { read, utils } from 'xlsx';
+import { parse as parseDateFn, isValid as isValidDate } from 'date-fns';
+
+const canonicalColumns = [
+  'id', 'farm_id', 'name', 'identifier', 'cdcb_id', 'sire_naab', 'mgs_naab', 'mmgs_naab', 'birth_date',
+  'ptas', 'created_at', 'updated_at', 'hhp_dollar', 'tpi', 'nm_dollar', 'cm_dollar', 'fm_dollar', 'gm_dollar',
+  'f_sav', 'ptam', 'cfp', 'ptaf', 'ptaf_pct', 'ptap', 'ptap_pct', 'pl', 'dpr', 'liv', 'scs', 'mast', 'met',
+  'rp', 'da', 'ket', 'mf', 'ptat', 'udc', 'flc', 'sce', 'dce', 'ssb', 'dsb', 'h_liv', 'ccr', 'hcr', 'fi',
+  'gl', 'efc', 'bwc', 'sta', 'str', 'dfm', 'rua', 'rls', 'rtp', 'ftl', 'rw', 'rlr', 'fta', 'fls', 'fua',
+  'ruh', 'ruw', 'ucl', 'udp', 'ftp', 'rfi', 'gfi', 'beta_casein', 'kappa_casein', 'parity_order', 'category'
+] as const;
+
+const canonicalColumnsSet = new Set<string>(canonicalColumns);
+
+const headerAliases: Record<string, string> = {
+  id: 'id',
+  farm: 'farm_id',
+  farm_id: 'farm_id',
+  farmid: 'farm_id',
+  herd: 'farm_id',
+  herd_id: 'farm_id',
+  nome: 'name',
+  animal: 'name',
+  animal_nome: 'name',
+  name: 'name',
+  identifier: 'identifier',
+  identificador: 'identifier',
+  identificacao: 'identifier',
+  animal_id: 'identifier',
+  animalid: 'identifier',
+  id_animal: 'identifier',
+  brinco: 'identifier',
+  ear_tag: 'identifier',
+  tag: 'identifier',
+  cdcb: 'cdcb_id',
+  cdcb_id: 'cdcb_id',
+  sire: 'sire_naab',
+  naab: 'sire_naab',
+  sire_naab: 'sire_naab',
+  pai_naab: 'sire_naab',
+  mgs: 'mgs_naab',
+  mgs_naab: 'mgs_naab',
+  avo_materno_naab: 'mgs_naab',
+  mmgs: 'mmgs_naab',
+  mmgs_naab: 'mmgs_naab',
+  bisavo_materno_naab: 'mmgs_naab',
+  dob: 'birth_date',
+  birth_date: 'birth_date',
+  data_nascimento: 'birth_date',
+  nascimento: 'birth_date',
+  ptas: 'ptas',
+  created_at: 'created_at',
+  data_criacao: 'created_at',
+  updated_at: 'updated_at',
+  data_atualizacao: 'updated_at',
+  hhp: 'hhp_dollar',
+  hhp_dollar: 'hhp_dollar',
+  'hhp_dollar_usd': 'hhp_dollar',
+  tpi: 'tpi',
+  nm: 'nm_dollar',
+  nm_dollar: 'nm_dollar',
+  cm: 'cm_dollar',
+  cm_dollar: 'cm_dollar',
+  fm: 'fm_dollar',
+  fm_dollar: 'fm_dollar',
+  gm: 'gm_dollar',
+  gm_dollar: 'gm_dollar',
+  parity_order: 'parity_order',
+  ordem_parto: 'parity_order',
+  ordem_de_parto: 'parity_order',
+  categoria: 'category',
+  category: 'category'
+};
+
+const numericFields = new Set<string>([
+  'hhp_dollar', 'tpi', 'nm_dollar', 'cm_dollar', 'fm_dollar', 'gm_dollar', 'f_sav', 'ptam', 'cfp', 'ptaf',
+  'ptaf_pct', 'ptap', 'ptap_pct', 'pl', 'dpr', 'liv', 'scs', 'mast', 'met', 'rp', 'da', 'ket', 'mf', 'ptat',
+  'udc', 'flc', 'sce', 'dce', 'ssb', 'dsb', 'h_liv', 'ccr', 'hcr', 'fi', 'gl', 'efc', 'bwc', 'sta', 'str',
+  'dfm', 'rua', 'rls', 'rtp', 'ftl', 'rw', 'rlr', 'fta', 'fls', 'fua', 'ruh', 'ruw', 'ucl', 'udp', 'ftp',
+  'rfi', 'gfi', 'parity_order'
+]);
+
+const dateFields = new Set<string>(['birth_date']);
+const timestampFields = new Set<string>(['created_at', 'updated_at']);
+
+const nullTokens = new Set<string>([
+  '', 'null', 'undefined', 'na', 'n/a', 'nan', 'none', 'sem dado', 'sem dados', 'sem valor', '-', '--', '#########'
+]);
+
+const padNumber = (value: number) => value.toString().padStart(2, '0');
+
+const excelSerialToDate = (serial: number) => {
+  const utcMilliseconds = Math.round((serial - 25569) * 86400 * 1000);
+  return new Date(utcMilliseconds);
+};
+
+const formatDateUTC = (date: Date) => {
+  return `${date.getUTCFullYear()}-${padNumber(date.getUTCMonth() + 1)}-${padNumber(date.getUTCDate())}`;
+};
+
+const formatDateTimeUTC = (date: Date) => {
+  return `${formatDateUTC(date)}T${padNumber(date.getUTCHours())}:${padNumber(date.getUTCMinutes())}:${padNumber(date.getUTCSeconds())}Z`;
+};
+
+const tryParseWithFormats = (value: string, formats: string[]): Date | null => {
+  for (const formatStr of formats) {
+    const parsed = parseDateFn(value, formatStr, new Date());
+    if (isValidDate(parsed)) {
+      return parsed;
+    }
+  }
+  return null;
+};
+
+const normalizeHeader = (header: string): string => {
+  let normalized = header.trim().toLowerCase();
+  normalized = normalized.normalize('NFD').replace(/\p{Diacritic}/gu, '');
+  normalized = normalized.replace(/\$/g, '_dollar');
+  normalized = normalized.replace(/%/g, '_pct');
+  normalized = normalized.replace(/[^a-z0-9_]+/g, '_');
+  normalized = normalized.replace(/_{2,}/g, '_');
+  normalized = normalized.replace(/^_|_$/g, '');
+  return normalized;
+};
+
+const isEmptyCell = (value: unknown) => {
+  if (value === null || value === undefined) return true;
+  if (typeof value === 'string') {
+    return value.trim() === '';
+  }
+  return false;
+};
+
+const normalizeDateValue = (value: unknown, column: string): string | null => {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    return formatDateUTC(value);
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return formatDateUTC(excelSerialToDate(value));
+  }
+
+  const raw = String(value).trim();
+  if (!raw) return null;
+
+  const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+  }
+
+  const sanitized = raw.replace(/\u00A0/g, ' ');
+  const parsed =
+    tryParseWithFormats(sanitized, [
+      'dd/MM/yyyy',
+      'MM/dd/yyyy',
+      'dd-MM-yyyy',
+      'MM-dd-yyyy',
+      'dd.MM.yyyy',
+      'MM.dd.yyyy',
+      'yyyy/MM/dd',
+      'ddMMyyyy',
+      'yyyyMMdd'
+    ]) || new Date(sanitized);
+
+  if (parsed && isValidDate(parsed)) {
+    return formatDateUTC(parsed);
+  }
+
+  console.warn(`⚠️  Não foi possível normalizar a data na coluna ${column}. Valor mantido como string.`);
+  return raw;
+};
+
+const normalizeTimestampValue = (value: unknown, column: string): string | null => {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    return formatDateTimeUTC(value);
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return formatDateTimeUTC(excelSerialToDate(value));
+  }
+
+  const raw = String(value).trim();
+  if (!raw) return null;
+
+  const directParse = new Date(raw);
+  if (!Number.isNaN(directParse.getTime())) {
+    return directParse.toISOString();
+  }
+
+  const parsed = tryParseWithFormats(raw, [
+    'dd/MM/yyyy HH:mm:ss',
+    'dd/MM/yyyy HH:mm',
+    'MM/dd/yyyy HH:mm:ss',
+    'MM/dd/yyyy HH:mm',
+    'dd-MM-yyyy HH:mm:ss',
+    'dd-MM-yyyy HH:mm',
+    'yyyy-MM-dd HH:mm:ss',
+    'yyyy-MM-dd HH:mm'
+  ]);
+
+  if (parsed && isValidDate(parsed)) {
+    return parsed.toISOString();
+  }
+
+  console.warn(`⚠️  Não foi possível normalizar o timestamp na coluna ${column}. Valor mantido como string.`);
+  return raw;
+};
+
+const parsePtasValue = (value: unknown, header: string) => {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    return value;
+  }
+
+  const raw = typeof value === 'string' ? value.trim() : String(value);
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    const entries = raw.split(/[,;]+/).map((part) => part.trim()).filter(Boolean);
+    if (entries.length > 0) {
+      const result: Record<string, unknown> = {};
+      for (const entry of entries) {
+        const [key, rawVal] = entry.split(/[:=]/).map(part => part.trim());
+        if (!key || !rawVal) continue;
+        const normalizedKey = normalizeHeader(key);
+        const numeric = normalizeNumericValue(normalizedKey, rawVal);
+        result[normalizedKey] = numeric ?? rawVal;
+      }
+      if (Object.keys(result).length > 0) {
+        return result;
+      }
+    }
+
+    console.warn(`⚠️  Não foi possível converter o campo PTAs na coluna ${header}. Valor armazenado como texto.`);
+    return { raw };
+  }
+};
+
+const normalizeNumericValue = (canonicalKey: string, value: unknown): number | null => {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  const raw = String(value).trim();
+  if (!raw) return null;
+
+  const cleaned = raw
+    .replace(/\s+/g, '')
+    .replace(/%/g, '')
+    .replace(/\./g, raw.includes(',') ? '' : '.')
+    .replace(/,/g, '.');
+
+  const numericValue = canonicalKey === 'parity_order'
+    ? parseInt(cleaned, 10)
+    : parseFloat(cleaned);
+
+  return Number.isNaN(numericValue) ? null : numericValue;
+};
+
+const toCanonicalValue = (canonicalKey: string, header: string, value: unknown): any => {
+  if (value === undefined) {
+    return null;
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.trim();
+    if (nullTokens.has(normalized.toLowerCase())) {
+      return null;
+    }
+    value = normalized;
+  }
+
+  if (value === null || value === '') {
+    return null;
+  }
+
+  if (dateFields.has(canonicalKey)) {
+    return normalizeDateValue(value, header);
+  }
+
+  if (timestampFields.has(canonicalKey)) {
+    return normalizeTimestampValue(value, header);
+  }
+
+  if (canonicalKey === 'ptas') {
+    return parsePtasValue(value, header);
+  }
+
+  if (numericFields.has(canonicalKey)) {
+    return normalizeNumericValue(canonicalKey, value);
+  }
+
+  return value;
+};
+
+const splitCsvLine = (line: string, delimiter: string): string[] => {
+  const values: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === delimiter && !inQuotes) {
+      values.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+
+  values.push(current.trim());
+  return values.map((value) => value.replace(/^["']|["']$/g, ''));
+};
+
+const detectDelimiter = (line: string): string => {
+  const candidates = [';', ',', '\t', '|'];
+  let bestDelimiter = ';';
+  let bestScore = 1;
+
+  for (const candidate of candidates) {
+    const parsed = splitCsvLine(line, candidate);
+    if (parsed.length > bestScore) {
+      bestScore = parsed.length;
+      bestDelimiter = candidate;
+    }
+  }
+
+  return bestDelimiter === '\t' ? '\t' : bestDelimiter;
+};
+
+const isRowEmpty = (row: (string | number | null | undefined)[]) => {
+  if (!row) return true;
+  return row.every((cell) => {
+    if (cell === null || cell === undefined) return true;
+    if (typeof cell === 'string') return cell.trim() === '';
+    if (Array.isArray(cell)) return cell.length === 0;
+    return false;
+  });
+};
+
+const buildRecordsFromRows = (rows: (string | number | null | undefined)[][]) => {
+  const workingRows = [...rows];
+
+  while (workingRows.length > 0 && isRowEmpty(workingRows[0])) {
+    workingRows.shift();
+  }
+
+  if (workingRows.length < 2) {
+    throw new Error('Arquivo deve conter pelo menos um cabeçalho e uma linha de dados');
+  }
+
+  const headerRow = workingRows[0].map((cell) => {
+    const raw = cell === null || cell === undefined ? '' : String(cell);
+    return raw.replace(/^\uFEFF/, '');
+  });
+
+  const headerInfos = headerRow.map((header) => {
+    const normalized = normalizeHeader(header);
+    const canonicalKey = headerAliases[normalized] ?? (canonicalColumnsSet.has(normalized) ? normalized : undefined);
+    return { header, normalized, canonicalKey };
+  });
+
+  const recognized = headerInfos.filter((info) => info.canonicalKey);
+  if (recognized.length === 0) {
+    throw new Error('Nenhuma coluna conhecida foi identificada. Baixe o template atualizado do rebanho e tente novamente.');
+  }
+
+  const dataRows: Record<string, any>[] = [];
+  const rowErrors: string[] = [];
+  const seenIds = new Set<string>();
+  const seenIdentifiers = new Map<string, number>();
+
+  workingRows.slice(1).forEach((rawValues, index) => {
+    if (isRowEmpty(rawValues)) {
+      return;
+    }
+
+    const row: Record<string, any> = {};
+
+    headerInfos.forEach((info, columnIndex) => {
+      if (!info.canonicalKey) return;
+      const rawValue = rawValues[columnIndex];
+      const value = toCanonicalValue(info.canonicalKey, info.header, rawValue);
+      if (value !== undefined) {
+        row[info.canonicalKey] = value;
+      }
+    });
+
+    const displayRow = index + 2;
+
+    if (row.id !== undefined && row.id !== null) {
+      row.id = String(row.id).trim();
+    }
+
+    if (row.identifier !== undefined && row.identifier !== null) {
+      row.identifier = String(row.identifier).trim();
+    }
+
+    if (row.cdcb_id !== undefined && row.cdcb_id !== null) {
+      row.cdcb_id = String(row.cdcb_id).trim();
+    }
+
+    if (!row.name || String(row.name).trim() === '') {
+      const fallback = row.identifier || row.cdcb_id || row.id;
+      if (fallback) {
+        row.name = String(fallback).trim();
+      }
+    } else {
+      row.name = String(row.name).trim();
+    }
+
+    if (!row.identifier && row.cdcb_id) {
+      row.identifier = row.cdcb_id;
+    }
+
+    if (!row.identifier && row.id) {
+      row.identifier = row.id;
+    }
+
+    if (!row.name || String(row.name).trim() === '') {
+      rowErrors.push(`Linha ${displayRow}: não há coluna "name" preenchida nem identificador para deduzir o nome do animal.`);
+    }
+
+    if (row.id) {
+      const idValue = String(row.id).trim();
+      if (idValue) {
+        if (seenIds.has(idValue)) {
+          rowErrors.push(`Linha ${displayRow}: identificador de registro duplicado (id=${idValue}).`);
+        } else {
+          seenIds.add(idValue);
+        }
+      }
+    }
+
+    if (row.identifier) {
+      const identifierValue = String(row.identifier).trim();
+      if (identifierValue) {
+        const firstOccurrence = seenIdentifiers.get(identifierValue);
+        if (firstOccurrence) {
+          rowErrors.push(`Linhas ${firstOccurrence} e ${displayRow}: identificador '${identifierValue}' duplicado no arquivo.`);
+        } else {
+          seenIdentifiers.set(identifierValue, displayRow);
+        }
+      }
+    }
+
+    dataRows.push(row);
+  });
+
+  if (dataRows.length === 0) {
+    throw new Error('Nenhum dado válido encontrado no arquivo. Verifique se as linhas possuem informações preenchidas.');
+  }
+
+  if (rowErrors.length > 0) {
+    const preview = rowErrors.slice(0, 3).join(' | ');
+    const suffix = rowErrors.length > 3 ? ` (+${rowErrors.length - 3} linha(s) adicionais com erro)` : '';
+    throw new Error(`Erros de validação encontrados: ${preview}${suffix}`);
+  }
+
+  return dataRows;
+};
 
 interface FemaleUploadModalProps {
   isOpen: boolean;
@@ -27,224 +513,92 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { toast } = useToast();
 
-  // Mapeamento de cabeçalhos para colunas da tabela females/females_denorm
-  const mapping: Record<string, string> = {
-    'id': 'id',
-    'farm_id': 'farm_id',
-    'name': 'name',
-    'identifier': 'identifier',
-    'animal_id': 'identifier',
-    'cdcb_id': 'cdcb_id',
-    'sire_naab': 'sire_naab',
-    'naab': 'sire_naab',
-    'mgs_naab': 'mgs_naab',
-    'mmgs_naab': 'mmgs_naab',
-    'birth_date': 'birth_date',
-    'dob': 'birth_date',
-    'ptas': 'ptas',
-    'created_at': 'created_at',
-    'updated_at': 'updated_at',
-    'hhp_dollar': 'hhp_dollar',
-    'hhp$': 'hhp_dollar',
-    'tpi': 'tpi',
-    'nm_dollar': 'nm_dollar',
-    'nm$': 'nm_dollar',
-    'cm_dollar': 'cm_dollar',
-    'cm$': 'cm_dollar',
-    'fm_dollar': 'fm_dollar',
-    'fm$': 'fm_dollar',
-    'gm_dollar': 'gm_dollar',
-    'gm$': 'gm_dollar',
-    'f_sav': 'f_sav',
-    'ptam': 'ptam',
-    'cfp': 'cfp',
-    'ptaf': 'ptaf',
-    'ptaf_pct': 'ptaf_pct',
-    'ptap': 'ptap',
-    'ptap_pct': 'ptap_pct',
-    'pl': 'pl',
-    'dpr': 'dpr',
-    'liv': 'liv',
-    'scs': 'scs',
-    'mast': 'mast',
-    'met': 'met',
-    'rp': 'rp',
-    'da': 'da',
-    'ket': 'ket',
-    'mf': 'mf',
-    'ptat': 'ptat',
-    'udc': 'udc',
-    'flc': 'flc',
-    'sce': 'sce',
-    'dce': 'dce',
-    'ssb': 'ssb',
-    'dsb': 'dsb',
-    'h_liv': 'h_liv',
-    'ccr': 'ccr',
-    'hcr': 'hcr',
-    'fi': 'fi',
-    'gl': 'gl',
-    'efc': 'efc',
-    'bwc': 'bwc',
-    'sta': 'sta',
-    'str': 'str',
-    'dfm': 'dfm',
-    'rua': 'rua',
-    'rls': 'rls',
-    'rtp': 'rtp',
-    'ftl': 'ftl',
-    'rw': 'rw',
-    'rlr': 'rlr',
-    'fta': 'fta',
-    'fls': 'fls',
-    'fua': 'fua',
-    'ruh': 'ruh',
-    'ruw': 'ruw',
-    'ucl': 'ucl',
-    'udp': 'udp',
-    'ftp': 'ftp',
-    'rfi': 'rfi',
-    'gfi': 'gfi',
-    'beta_casein': 'beta_casein',
-    'kappa_casein': 'kappa_casein',
-    'parity_order': 'parity_order',
-    'category': 'category'
-  };
-
-  const numericFields = new Set([
-    'hhp_dollar', 'tpi', 'nm_dollar', 'cm_dollar', 'fm_dollar', 'gm_dollar',
-    'f_sav', 'ptam', 'cfp', 'ptaf', 'ptaf_pct', 'ptap', 'ptap_pct', 'pl',
-    'dpr', 'liv', 'scs', 'mast', 'met', 'rp', 'da', 'ket', 'mf', 'ptat',
-    'udc', 'flc', 'sce', 'dce', 'ssb', 'dsb', 'h_liv', 'ccr', 'hcr', 'fi',
-    'gl', 'efc', 'bwc', 'sta', 'str', 'dfm', 'rua', 'rls', 'rtp', 'ftl',
-    'rw', 'rlr', 'fta', 'fls', 'fua', 'ruh', 'ruw', 'ucl', 'udp', 'ftp',
-    'rfi', 'gfi', 'parity_order'
-  ]);
-
-  const splitCsvLine = (line: string, delimiter: string) => {
-    const values: string[] = [];
-    let current = '';
-    let inQuotes = false;
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-
-      if (char === '"') {
-        if (inQuotes && line[i + 1] === '"') {
-          current += '"';
-          i++;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (char === delimiter && !inQuotes) {
-        values.push(current.trim());
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-
-    values.push(current.trim());
-    return values.map(v => v.replace(/^["']|["']$/g, ''));
-  };
-
-  const toCanonicalValue = (canonicalKey: string, header: string, value: any): any => {
-    if (!value || value === '' || value === '#########') return null;
-
-    if (canonicalKey === 'ptas') {
-      try {
-        return typeof value === 'string' ? JSON.parse(value) : value;
-      } catch (err) {
-        console.warn(`⚠️  Não foi possível converter o campo PTAs na coluna ${header}. Valor mantido como string.`);
-        return value;
-      }
-    }
-
-    if (numericFields.has(canonicalKey)) {
-      const normalizedValue = String(value).replace('%', '').replace(',', '.');
-      const numValue = canonicalKey === 'parity_order'
-        ? parseInt(normalizedValue, 10)
-        : parseFloat(normalizedValue);
-      return isNaN(numValue) ? null : numValue;
-    }
-
-    return value;
-  };
+  const optionalFields = canonicalColumns.filter((column) => !['id', 'farm_id', 'name'].includes(column));
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
     }
+    e.target.value = '';
   };
 
   const parseCsvFile = async (file: File): Promise<any[]> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = (event) => {
         try {
-          const text = e.target?.result as string;
-          console.log('Raw CSV text (first 500 chars):', text.substring(0, 500));
-          
-          // Split lines and filter empty ones
-          const lines = text.split(/\r?\n/).filter(line => line.trim());
-          console.log('Number of lines after filtering:', lines.length);
-          
-          if (lines.length < 2) {
-            reject(new Error('Arquivo deve conter pelo menos um cabeçalho e uma linha de dados'));
-            return;
+          const text = (event.target?.result as string) ?? '';
+          const normalizedText = text.replace(/\r\n/g, '\n');
+          const lines = normalizedText.split('\n');
+
+          const rows: (string | number | null | undefined)[][] = [];
+          let delimiter = ';';
+          let headerCaptured = false;
+
+          for (const rawLine of lines) {
+            if (!headerCaptured) {
+              if (rawLine.trim() === '') continue;
+              const headerLine = rawLine.replace(/^\uFEFF/, '');
+              delimiter = detectDelimiter(headerLine);
+              rows.push(splitCsvLine(headerLine, delimiter));
+              headerCaptured = true;
+            } else {
+              rows.push(splitCsvLine(rawLine, delimiter));
+            }
           }
-          
-          // Parse headers more carefully
-          const headerLine = lines[0];
-          console.log('Header line:', headerLine);
-          
-          // Handle different CSV delimiters and quoted fields
-          const delimiter = headerLine.includes(';')
-            ? ';'
-            : headerLine.includes(',')
-              ? ','
-              : headerLine.includes('\t')
-                ? '\t'
-                : ';';
 
-          const headers = splitCsvLine(headerLine, delimiter).map(h => h.trim().replace(/^["']|["']$/g, ''));
-          console.log('Parsed headers:', headers);
+          if (!headerCaptured) {
+            throw new Error('Arquivo deve conter pelo menos um cabeçalho e uma linha de dados');
+          }
 
-          const data = lines.slice(1).map((line, lineIndex) => {
-            console.log(`Processing line ${lineIndex + 2}:`, line.substring(0, 100) + '...');
-
-            const values = splitCsvLine(line, delimiter).map(v => v.trim().replace(/^["']|["']$/g, ''));
-            const row: any = {};
-
-            // Usar mapeamento canônico
-            headers.forEach((h, index) => {
-              const canonicalKey = mapping[h];
-              if (!canonicalKey) return;
-              const v = toCanonicalValue(canonicalKey, h, values[index]);
-              if (v !== undefined) {
-                row[canonicalKey] = v;
-              }
-            });
-
-            console.log(`Row ${lineIndex + 2} identifier:`, row.identifier);
-            return row;
-          });
-          
-          // Filter out rows without name
-          const validData = data.filter(row => row.name && row.name.trim() !== '');
-          console.log('Valid rows after filtering:', validData.length);
-          console.log('Sample valid row:', validData[0]);
-
-          resolve(validData);
+          resolve(buildRecordsFromRows(rows));
         } catch (error) {
-          console.error('CSV parsing error:', error);
-          reject(new Error('Erro ao processar arquivo CSV'));
+          reject(error instanceof Error ? error : new Error('Erro ao processar arquivo CSV'));
         }
       };
       reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
-      reader.readAsText(file, 'UTF-8');
+      reader.readAsText(file, 'utf-8');
     });
+  };
+
+  const parseExcelFile = async (file: File): Promise<any[]> => {
+    try {
+      const buffer = await file.arrayBuffer();
+      const workbook = read(buffer, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+
+      if (!sheetName) {
+        throw new Error('Arquivo Excel sem abas válidas.');
+      }
+
+      const worksheet = workbook.Sheets[sheetName];
+      const rawRows = utils.sheet_to_json<(string | number | null | undefined)[]>(worksheet, { header: 1, raw: true });
+
+      const rows = rawRows.map((row) => {
+        if (!Array.isArray(row)) return [];
+        return row.map((cell) => (typeof cell === 'string' ? cell.trim() : cell));
+      });
+
+      return buildRecordsFromRows(rows);
+    } catch (error) {
+      console.error('Excel parsing error:', error);
+      throw error instanceof Error ? error : new Error('Erro ao processar arquivo Excel');
+    }
+  };
+
+  const parseFileData = async (file: File) => {
+    const extension = file.name.split('.').pop()?.toLowerCase();
+
+    if (extension === 'csv' || extension === 'txt') {
+      return parseCsvFile(file);
+    }
+
+    if (extension && ['xlsx', 'xls', 'xlsm', 'xlsb'].includes(extension)) {
+      return parseExcelFile(file);
+    }
+
+    throw new Error('Formato de arquivo não suportado. Utilize CSV ou Excel (.xlsx, .xls).');
   };
 
   const handleUpload = async () => {
@@ -260,64 +614,47 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
     setIsUploading(true);
 
     try {
-      let recordsData: any[] = [];
+      const recordsData = await parseFileData(selectedFile);
 
-      // Parse CSV file
-      if (selectedFile.name.toLowerCase().endsWith('.csv')) {
-        recordsData = await parseCsvFile(selectedFile);
-      } else {
-        throw new Error('Apenas arquivos CSV são suportados no momento. Use o template CSV.');
-      }
-
-      if (recordsData.length === 0) {
+      if (!recordsData || recordsData.length === 0) {
         throw new Error('Nenhum dado válido encontrado no arquivo');
       }
 
-      // Prepare data for insertion na tabela females
-      const recordsToInsert = recordsData.map(row => {
-        const record: any = {
+      const recordsToInsert = recordsData.map((row) => {
+        const record: Record<string, any> = {
           farm_id: farmId,
           name: row.name,
         };
 
         if (row.id) {
-          record.id = row.id;
+          record.id = String(row.id);
         }
 
-        const optionalFields = [
-          'identifier', 'cdcb_id', 'sire_naab', 'mgs_naab', 'mmgs_naab', 'birth_date',
-          'ptas', 'created_at', 'updated_at', 'hhp_dollar', 'tpi', 'nm_dollar', 'cm_dollar',
-          'fm_dollar', 'gm_dollar', 'f_sav', 'ptam', 'cfp', 'ptaf', 'ptaf_pct', 'ptap',
-          'ptap_pct', 'pl', 'dpr', 'liv', 'scs', 'mast', 'met', 'rp', 'da', 'ket', 'mf',
-          'ptat', 'udc', 'flc', 'sce', 'dce', 'ssb', 'dsb', 'h_liv', 'ccr', 'hcr', 'fi',
-          'gl', 'efc', 'bwc', 'sta', 'str', 'dfm', 'rua', 'rls', 'rtp', 'ftl', 'rw', 'rlr',
-          'fta', 'fls', 'fua', 'ruh', 'ruw', 'ucl', 'udp', 'ftp', 'rfi', 'beta_casein',
-          'kappa_casein', 'gfi', 'parity_order', 'category'
-        ];
-
-        optionalFields.forEach(field => {
+        optionalFields.forEach((field) => {
           if (field in row) {
-            record[field] = row[field] ?? null;
+            const value = (row as Record<string, any>)[field];
+            record[field] = value ?? null;
           }
         });
 
         return record;
       });
 
-      // Insert records in batches with upsert na tabela females
       const batchSize = 100;
       let totalInserted = 0;
 
       for (let i = 0; i < recordsToInsert.length; i += batchSize) {
         const chunk = recordsToInsert.slice(i, i + batchSize);
 
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('females')
           .upsert(chunk, { onConflict: 'id' });
 
         if (error) {
           console.error('Supabase insertion error:', error);
-          throw new Error(`Erro ao inserir dados: ${error.message}`);
+          const details = (error as any)?.details || (error as any)?.hint;
+          const message = details ? `${error.message} (${details})` : error.message;
+          throw new Error(`Erro ao inserir dados: ${message}`);
         }
 
         totalInserted += chunk.length;
@@ -350,80 +687,7 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
 
   const downloadTemplate = () => {
     // Create a comprehensive CSV template baseado na tabela females/females_denorm
-    const headers = [
-      'id',
-      'farm_id',
-      'name',
-      'identifier',
-      'cdcb_id',
-      'sire_naab',
-      'mgs_naab',
-      'mmgs_naab',
-      'birth_date',
-      'ptas',
-      'created_at',
-      'updated_at',
-      'hhp_dollar',
-      'tpi',
-      'nm_dollar',
-      'cm_dollar',
-      'fm_dollar',
-      'gm_dollar',
-      'f_sav',
-      'ptam',
-      'cfp',
-      'ptaf',
-      'ptaf_pct',
-      'ptap',
-      'ptap_pct',
-      'pl',
-      'dpr',
-      'liv',
-      'scs',
-      'mast',
-      'met',
-      'rp',
-      'da',
-      'ket',
-      'mf',
-      'ptat',
-      'udc',
-      'flc',
-      'sce',
-      'dce',
-      'ssb',
-      'dsb',
-      'h_liv',
-      'ccr',
-      'hcr',
-      'fi',
-      'gl',
-      'efc',
-      'bwc',
-      'sta',
-      'str',
-      'dfm',
-      'rua',
-      'rls',
-      'rtp',
-      'ftl',
-      'rw',
-      'rlr',
-      'fta',
-      'fls',
-      'fua',
-      'ruh',
-      'ruw',
-      'ucl',
-      'udp',
-      'ftp',
-      'rfi',
-      'beta_casein',
-      'kappa_casein',
-      'gfi',
-      'parity_order',
-      'category'
-    ];
+    const headers = ['id', 'farm_id', 'name', ...optionalFields];
 
     const sampleRow: Record<string, string> = {
       id: 'uuid-exemplo',
@@ -451,7 +715,10 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
       scs: '2.85',
       ptat: '2.4',
       udc: '2.1',
-      category: 'Novilha'
+      category: 'Novilha',
+      parity_order: '0',
+      beta_casein: 'A2/A2',
+      kappa_casein: 'BB'
     };
 
     const sampleData = [headers.map(header => sampleRow[header] ?? '').join(';')];
@@ -479,7 +746,7 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
         <DialogHeader>
           <DialogTitle>Importar Registros Genéticos</DialogTitle>
           <DialogDescription>
-            Faça upload de um arquivo CSV com os dados dos registros genéticos para a fazenda {farmName}.
+            Faça upload de um arquivo CSV ou Excel com os dados dos registros genéticos para a fazenda {farmName}.
           </DialogDescription>
         </DialogHeader>
 
