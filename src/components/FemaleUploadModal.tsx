@@ -222,7 +222,9 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
               const canonicalKey = mapping[h];
               if (!canonicalKey) return;
               const v = toCanonicalValue(canonicalKey, h, values[index]);
-              row[canonicalKey] = v ?? values[index];
+              if (v !== undefined) {
+                row[canonicalKey] = v;
+              }
             });
 
             console.log(`Row ${lineIndex + 2} identifier:`, row.identifier);
