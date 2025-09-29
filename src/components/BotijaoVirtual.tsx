@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { BullSelector } from '@/components/BullSelector';
+import { getBullByNaab, type BullsSelection } from '@/supabase/queries/bulls';
 
 // Types - Updated to match Supabase structure
 type Bull = {
@@ -117,6 +118,18 @@ type StockUpdate = {
   categoria: string;
   data: string;
   tecnico: string;
+};
+
+const mapSelectionToBull = (record: BullsSelection): Bull => {
+  const { company, ...rest } = record as Record<string, any>;
+
+  return {
+    ...(rest as Bull),
+    id: record.id ?? record.code ?? '',
+    code: record.code ?? '',
+    name: record.name ?? '',
+    empresa: company ?? undefined,
+  };
 };
 
 interface BotijaoVirtualPageProps {
@@ -836,31 +849,44 @@ function BotijaoVirtualPage({ client, farm, bulls: propBulls, selectedBulls = []
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <BullSelector 
+                  <BullSelector
                     label="Selecionar Touro"
                     placeholder="Digite o código NAAB ou selecione da lista"
                     value={newItem.touro ? {
                       id: newItem.touro.code,
                       code: newItem.touro.code,
                       name: newItem.touro.name,
-                      company: newItem.touro.empresa
+                      company: newItem.touro.empresa ?? null
                     } : null}
-                     onChange={(bull) => {
-                       if (bull) {
-                         setNewItem(prev => ({ 
-                           ...prev, 
-                           touro: {
-                             id: bull.id || bull.code,
-                             code: bull.code,
-                             name: bull.name,
-                             empresa: bull.company || "",
-                             ptas: bull.ptas || {}
-                           }
-                         }));
-                       } else {
-                         setNewItem(prev => ({ ...prev, touro: undefined }));
-                       }
-                     }}
+                    onChange={(bull) => {
+                      if (!bull) {
+                        setNewItem(prev => ({ ...prev, touro: undefined }));
+                        return;
+                      }
+
+                      const applyRecord = (record: BullsSelection) => {
+                        const mapped = mapSelectionToBull(record);
+                        setNewItem(prev => ({
+                          ...prev,
+                          touro: mapped
+                        }));
+                      };
+
+                      if (bull.record) {
+                        applyRecord(bull.record);
+                        return;
+                      }
+
+                      if (bull.code) {
+                        void getBullByNaab(bull.code, { farmId: farm?.id })
+                          .then((record) => {
+                            if (record) {
+                              applyRecord(record);
+                            }
+                          })
+                          .catch((err) => console.error('Erro ao carregar touro selecionado:', err));
+                      }
+                    }}
                     showPTAs={true}
                   />
                 </div>

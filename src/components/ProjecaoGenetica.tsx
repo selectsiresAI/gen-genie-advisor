@@ -8,7 +8,7 @@ import EstruturalPopulacional from './EstruturalPopulacional';
 import PTAMothersTable from './PTAMothersTable';
 import { BullSelector } from '@/components/BullSelector';
 import { BullMultiSelector, type BullChipData } from '@/components/projection/BullMultiSelector';
-import type { BullsSelection } from '@/supabase/queries/bulls';
+import { getBullByNaab, type BullsSelection } from '@/supabase/queries/bulls';
 import { PTA_COLUMN_MAP } from '@/hooks/usePTAStore';
 
 /**
@@ -1173,80 +1173,95 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
       {st.bulls.slice(0, st.numberOfBulls).map((b, idx) => (
         <Section key={b.id} title={`Touro ${idx + 1}`}>
           {/* Seleção do touro usando BullSelector */}
-          {toolssBulls.length > 0 && (
-            <div style={{ marginBottom: 12 }}>
-              <BullSelector 
-                label={`Selecionar Touro ${idx + 1}`}
-                placeholder="Digite o código NAAB ou selecione da lista"
-                value={b.naab ? {
-                  id: b.naab,
-                  code: b.naab,
-                  name: b.name || "",
-                  company: b.empresa || ""
-                } : null}
-                onChange={(bull) => {
-                  console.log(`🔄 Touro ${idx + 1}: selecionado bull =`, bull);
-                  
-                  if (!bull) {
-                    // Limpa o touro
-                    console.log(`🧹 Limpando dados do Touro ${idx + 1}`);
-                    setSt(s => ({ 
-                      ...s, 
-                      bulls: s.bulls.map((bullItem, i) => 
-                        i === idx ? {
-                          ...bullItem,
-                          name: "",
-                          naab: "",
-                          empresa: "",
-                          pta: Object.fromEntries(planStore.selectedPTAList.map(pta => [pta, 0]))
-                        } : bullItem
-                      )
-                    }));
-                  } else {
-                    const selectedBull = toolssBulls.find(toolsBull => toolsBull.naab === bull.code);
-                    if (selectedBull) {
-                      console.log(`✅ Touro encontrado: ${selectedBull.nome} (${selectedBull.empresa})`);
-                      
-                      const updatedPTA: Record<string, number | null> = {};
-                      planStore.selectedPTAList.forEach(ptaLabel => {
-                        // Use getBullPTAValue function to get the value with proper mapping
-                        const value = getBullPTAValue(selectedBull, ptaLabel);
-                        updatedPTA[ptaLabel] = value;
-                        console.log(`🔍 Bull ${selectedBull.naab}: ${ptaLabel} = ${value} (from field: ${ptaLabel === "HHP$®" ? "HHP$" : ptaLabel})`);
-                      });
-                      
-                      console.log('📊 PTAs carregadas:', planStore.selectedPTAList.map(k => `${k}:${updatedPTA[k] === null ? '—' : updatedPTA[k]}`));
-                      console.log('🐂 Selected Bull raw data:', selectedBull);
-                      
-                      setSt(s => ({ 
-                        ...s, 
-                        bulls: s.bulls.map((bullItem, i) => 
-                          i === idx ? {
-                            ...bullItem,
-                            name: selectedBull.nome || "",
-                            naab: selectedBull.naab || "",
-                            empresa: selectedBull.empresa || "",
-                            pta: updatedPTA
-                          } : bullItem
-                        )
-                      }));
-                      
-                      // Show success toast
-                      console.log(`✅ Touro ${idx + 1} configurado: ${selectedBull.nome} - ${selectedBull.naab}`);
-                    } else {
-                      console.log(`❌ Touro com código ${bull.code} não encontrado na lista`);
+          <div style={{ marginBottom: 12 }}>
+            <BullSelector
+              label={`Selecionar Touro ${idx + 1}`}
+              placeholder="Digite o código NAAB ou selecione da lista"
+              farmId={farmId ?? undefined}
+              value={b.naab ? {
+                id: b.naab,
+                code: b.naab,
+                name: b.name || "",
+                company: b.empresa ?? null
+              } : null}
+              onChange={(bull) => {
+                console.log(`🔄 Touro ${idx + 1}: selecionado bull =`, bull);
+
+                if (!bull) {
+                  console.log(`🧹 Limpando dados do Touro ${idx + 1}`);
+                  setSt(s => ({
+                    ...s,
+                    bulls: s.bulls.map((bullItem, i) =>
+                      i === idx ? {
+                        ...bullItem,
+                        name: "",
+                        naab: "",
+                        empresa: "",
+                        pta: Object.fromEntries(planStore.selectedPTAList.map(pta => [pta, 0]))
+                      } : bullItem
+                    )
+                  }));
+                  return;
+                }
+
+                const applyRecord = (record: BullsSelection) => {
+                  const normalized = mapRecordToToolssBull(record);
+
+                  setToolssBulls((prev) => {
+                    const map = new Map<string, any>();
+                    prev.forEach((item: any) => {
+                      if (item?.naab) {
+                        map.set(String(item.naab).toUpperCase(), item);
+                      }
+                    });
+
+                    if (normalized.naab) {
+                      map.set(String(normalized.naab).toUpperCase(), normalized);
                     }
-                  }
-                }}
-                showPTAs={true}
-              />
-              {b.naab && (
-                <div style={{ marginTop: 4, fontSize: 11, color: "#16a34a" }}>
-                  ✅ PTAs carregadas automaticamente para as {planStore.selectedPTAList.length} características selecionadas
-                </div>
-              )}
-            </div>
-          )}
+
+                    return Array.from(map.values());
+                  });
+
+                  setSt((prev) => {
+                    const nextBulls = [...prev.bulls];
+                    nextBulls[idx] = mapRecordToStateBull(record, idx, nextBulls[idx]);
+
+                    return {
+                      ...prev,
+                      bulls: nextBulls
+                    };
+                  });
+
+                  console.log(`✅ Touro ${idx + 1} configurado: ${record.name ?? record.code}`);
+                };
+
+                if (bull.record) {
+                  applyRecord(bull.record);
+                  return;
+                }
+
+                if (bull.code) {
+                  void getBullByNaab(bull.code, { farmId: farmId ?? undefined })
+                    .then((record) => {
+                      if (record) {
+                        applyRecord(record);
+                      } else {
+                        console.warn(`❌ Touro com código ${bull.code} não encontrado no Supabase`);
+                      }
+                    })
+                    .catch((err) => {
+                      console.error(`Erro ao buscar touro ${bull.code}:`, err);
+                    });
+                }
+              }}
+              showPTAs={true}
+            />
+            {b.naab && (
+              <div style={{ marginTop: 4, fontSize: 11, color: "#16a34a" }}>
+                ✅ PTAs carregadas automaticamente para as {planStore.selectedPTAList.length} características selecionadas
+              </div>
+            )}
+          </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 12, marginBottom: 8 }}>
             <div>
