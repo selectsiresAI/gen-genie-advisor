@@ -45,12 +45,15 @@ interface Female {
   parity_order?: number;
   category?: string;
   sire_naab?: string;
+  sire_name?: string;
   mgs_naab?: string;
+  mgs_name?: string;
   farm_id: string;
   created_at: string;
   updated_at?: string;
   cdcb_id?: string;
   mmgs_naab?: string;
+  mmgs_name?: string;
   // Genetic traits from females_denorm
   hhp_dollar?: number;
   tpi?: number;
@@ -300,11 +303,24 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
     const today = new Date();
     const years = today.getFullYear() - birth.getFullYear();
     const months = today.getMonth() - birth.getMonth();
-    
+
     if (years > 0) {
       return `${years}a ${months >= 0 ? months : 12 + months}m`;
     }
     return `${months >= 0 ? months : 12 + months}m`;
+  };
+
+  const renderPedigreeCell = (code?: string | null, name?: string | null) => {
+    if (!code && !name) {
+      return <span>-</span>;
+    }
+
+    return (
+      <div className="flex flex-col leading-tight">
+        {code && <span className="font-medium">{code}</span>}
+        {name && <span className="text-[11px] text-muted-foreground">{name}</span>}
+      </div>
+    );
   };
 
   const handleSelectFemale = (femaleId: string) => {
@@ -809,7 +825,9 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
                           <th className="border px-2 py-1 text-left text-xs bg-muted">ID Fazenda</th>
                           <th className="border px-2 py-1 text-left text-xs bg-muted">Nome</th>
                           <th className="border px-2 py-1 text-left text-xs bg-muted">ID CDCB</th>
-                          <th className="border px-2 py-1 text-left text-xs bg-muted">Pedigre Pai/Avô Materno/BisaAvô Materno</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">Pai</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">Avô Materno</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">Bisavô Materno</th>
                           <th className="border px-2 py-1 text-left text-xs bg-muted">Data de Nascimento</th>
                           <th className="border px-2 py-1 text-left text-xs bg-muted">Ordem de Parto</th>
                           <th className="border px-2 py-1 text-left text-xs bg-muted">Categoria</th>
@@ -887,7 +905,9 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
                             <td className="border px-2 py-1 text-xs">{farm.farm_id}</td>
                             <td className="border px-2 py-1 text-xs font-medium">{female.name}</td>
                             <td className="border px-2 py-1 text-xs">{female.cdcb_id || female.identifier || '-'}</td>
-                            <td className="border px-2 py-1 text-xs">{[female.sire_naab, female.mgs_naab, female.mmgs_naab].filter(Boolean).join('/') || '-'}</td>
+                            <td className="border px-2 py-1 text-xs">{renderPedigreeCell(female.sire_naab, female.sire_name)}</td>
+                            <td className="border px-2 py-1 text-xs">{renderPedigreeCell(female.mgs_naab, female.mgs_name)}</td>
+                            <td className="border px-2 py-1 text-xs">{renderPedigreeCell(female.mmgs_naab, female.mmgs_name)}</td>
                             <td className="border px-2 py-1 text-xs">
                               {female.birth_date ? formatDate(female.birth_date) : '-'} 
                               {female.birth_date && (

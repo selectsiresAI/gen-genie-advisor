@@ -31,6 +31,11 @@ type Female = {
   parity_order?: number;
   category?: string;
   sire_naab?: string;
+  sire_name?: string;
+  mgs_naab?: string;
+  mgs_name?: string;
+  mmgs_naab?: string;
+  mmgs_name?: string;
   hhp_dollar?: number;
   nm_dollar?: number;
   tpi?: number;
@@ -203,7 +208,7 @@ function formatDate(dateString: string | null | undefined): string {
 
 function getAge(birthDate: string | null | undefined): string {
   if (!birthDate) return '-';
-  
+
   try {
     const today = new Date();
     const birth = new Date(birthDate);
@@ -219,6 +224,19 @@ function getAge(birthDate: string | null | undefined): string {
   } catch {
     return '-';
   }
+}
+
+function renderPedigreeCell(code?: string | null, name?: string | null) {
+  if (!code && !name) {
+    return <span>-</span>;
+  }
+
+  return (
+    <div className="flex flex-col leading-tight">
+      {code && <span className="font-medium" style={{ color: SS.black }}>{code}</span>}
+      {name && <span className="text-[11px]" style={{ color: '#6B7280' }}>{name}</span>}
+    </div>
+  );
 }
 
 function getAutomaticCategory(birthDate?: string, parityOrder?: number): string {
@@ -1509,7 +1527,9 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
                       <th className="border px-2 py-1 text-left text-xs" style={{ background: SS.gray }}>ID Fazenda</th>
                       <th className="border px-2 py-1 text-left text-xs" style={{ background: SS.gray }}>Nome</th>
                       <th className="border px-2 py-1 text-left text-xs" style={{ background: SS.gray }}>ID CDCB</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{ background: SS.gray }}>Pedigre Pai/Avô Materno/BisaAvô Materno</th>
+                      <th className="border px-2 py-1 text-left text-xs" style={{ background: SS.gray }}>Pai</th>
+                      <th className="border px-2 py-1 text-left text-xs" style={{ background: SS.gray }}>Avô Materno</th>
+                      <th className="border px-2 py-1 text-left text-xs" style={{ background: SS.gray }}>Bisavô Materno</th>
                       <th className="border px-2 py-1 text-left text-xs" style={{ background: SS.gray }}>Data de Nascimento</th>
                       <th className="border px-2 py-1 text-left text-xs" style={{ background: SS.gray }}>Ordem de Parto</th>
                       <th className="border px-2 py-1 text-left text-xs" style={{ background: SS.gray }}>Categoria</th>
@@ -1592,7 +1612,9 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
                         <td className="border px-2 py-1 text-xs">{(a as any).farm_id || '-'}</td>
                         <td className="border px-2 py-1 text-xs font-medium">{a.__nameKey ? (a as any)[a.__nameKey] : ((a as any).name ?? '')}</td>
                         <td className="border px-2 py-1 text-xs">{(a as any).cdcb_id || (a as any).identifier || '-'}</td>
-                        <td className="border px-2 py-1 text-xs">{[(a as any).sire_naab, (a as any).mgs_naab, (a as any).mmgs_naab].filter(Boolean).join('/') || '-'}</td>
+                        <td className="border px-2 py-1 text-xs">{renderPedigreeCell((a as any).sire_naab, (a as any).sire_name)}</td>
+                        <td className="border px-2 py-1 text-xs">{renderPedigreeCell((a as any).mgs_naab, (a as any).mgs_name)}</td>
+                        <td className="border px-2 py-1 text-xs">{renderPedigreeCell((a as any).mmgs_naab, (a as any).mmgs_name)}</td>
                         <td className="border px-2 py-1 text-xs">
                           {(a as any).birth_date ? formatDate((a as any).birth_date) : '-'}
                           {(a as any).birth_date && (
