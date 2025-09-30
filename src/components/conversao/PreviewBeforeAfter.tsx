@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { DetectionRow, PreviewRow } from '@/lib/conversion/types';
 
@@ -7,9 +8,19 @@ interface PreviewBeforeAfterProps {
   rows: PreviewRow[];
   detections: DetectionRow[];
   selections: Record<string, string>;
+  onDownload: () => void;
+  downloadDisabled?: boolean;
+  requiredMissing: string[];
 }
 
-const PreviewBeforeAfter: React.FC<PreviewBeforeAfterProps> = ({ rows, detections, selections }) => {
+const PreviewBeforeAfter: React.FC<PreviewBeforeAfterProps> = ({
+  rows,
+  detections,
+  selections,
+  onDownload,
+  downloadDisabled,
+  requiredMissing,
+}) => {
   const preview = useMemo(() => {
     return rows.map((row) => {
       const after: Record<string, unknown> = {};
@@ -38,11 +49,26 @@ const PreviewBeforeAfter: React.FC<PreviewBeforeAfterProps> = ({ rows, detection
 
   return (
     <Card className="h-full">
-      <CardHeader>
-        <CardTitle>Prévia Antes/Depois</CardTitle>
-        <CardDescription>
-          Amostra de até 20 linhas comparando os cabeçalhos originais com a projeção após o mapeamento escolhido.
-        </CardDescription>
+      <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <CardTitle>Prévia Antes/Depois</CardTitle>
+          <CardDescription>
+            Amostra de até 20 linhas comparando os cabeçalhos originais com a projeção após o mapeamento escolhido.
+          </CardDescription>
+        </div>
+        <div className="flex flex-col items-start gap-2 lg:items-end">
+          <Button onClick={onDownload} disabled={downloadDisabled || rows.length === 0}>
+            Baixar planilha padronizada
+          </Button>
+          {requiredMissing.length > 0 && (
+            <p className="text-xs text-destructive text-right">
+              Mapeie as colunas obrigatórias antes de exportar.
+            </p>
+          )}
+          {rows.length === 0 && (
+            <p className="text-xs text-muted-foreground text-right">Nenhuma linha disponível para prévia.</p>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="grid gap-6 lg:grid-cols-2">
         <div>

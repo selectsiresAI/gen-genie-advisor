@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -13,6 +13,16 @@ interface ReviewMapperProps {
 }
 
 const ReviewMapper: React.FC<ReviewMapperProps> = ({ rows, selected, onChange }) => {
+  const canonicalOptions = useMemo(() => {
+    return [...KNOWN_CANONICAL_COLUMNS].sort((a, b) => {
+      const requiredSort = Number(Boolean(b.required)) - Number(Boolean(a.required));
+      if (requiredSort !== 0) {
+        return requiredSort;
+      }
+      return a.canonical_key.localeCompare(b.canonical_key);
+    });
+  }, []);
+
   return (
     <Card className="h-full">
       <CardHeader>
@@ -38,9 +48,10 @@ const ReviewMapper: React.FC<ReviewMapperProps> = ({ rows, selected, onChange })
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">Manter original</SelectItem>
-                      {KNOWN_CANONICAL_COLUMNS.map((column) => (
+                      {canonicalOptions.map((column) => (
                         <SelectItem key={column.canonical_key} value={column.canonical_key}>
                           {column.canonical_key}
+                          {column.required ? ' • obrigatório' : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>

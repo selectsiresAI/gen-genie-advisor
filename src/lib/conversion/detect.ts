@@ -1,5 +1,6 @@
 import rawSuggestions from '../../../data/column_alias_suggestions.json?raw';
 import rawSuggestionsCsv from '../../../data/column_alias_suggestions.csv?raw';
+import { KNOWN_CANONICAL_COLUMNS } from './constants';
 import { normalizeAlias } from './normalize';
 import type { AliasSuggestion, DetectionRow, InventoryRow } from './types';
 
@@ -51,6 +52,20 @@ const SUGGESTIONS = [...parsedJson, ...parsedCsv].reduce<AliasSuggestion[]>((acc
   return acc;
 }, []);
 
+const CANONICAL_NORMALIZED_LOOKUP = (() => {
+  const lookup = new Map<string, string>();
+  for (const column of KNOWN_CANONICAL_COLUMNS) {
+    lookup.set(normalizeAlias(column.canonical_key), column.canonical_key);
+    if (column.label_pt) {
+      lookup.set(normalizeAlias(column.label_pt), column.canonical_key);
+    }
+    if (column.label_en) {
+      lookup.set(normalizeAlias(column.label_en), column.canonical_key);
+    }
+  }
+  return lookup;
+})();
+
 const REGEX_PATTERNS: Array<{ pattern: RegExp; canonical: string }> = [
   { pattern: /^nm(\$)?$/, canonical: 'nm_dollar' },
   { pattern: /^net[\s_-]?merit$/, canonical: 'nm_dollar' },
@@ -63,6 +78,23 @@ const REGEX_PATTERNS: Array<{ pattern: RegExp; canonical: string }> = [
   { pattern: /^scs$/, canonical: 'scs' },
   { pattern: /^dpr$/, canonical: 'dpr' },
   { pattern: /^birth(_|\s)?date$/, canonical: 'birth_date' },
+  { pattern: /^parity(_|\s)?order$/, canonical: 'parity_order' },
+  { pattern: /^ordem(_|\s)?de(_|\s)?parto$/, canonical: 'parity_order' },
+  { pattern: /^category$/, canonical: 'category' },
+  { pattern: /^categoria$/, canonical: 'category' },
+  { pattern: /^animal(_|\s)?id$/, canonical: 'id' },
+  { pattern: /^farm(_|\s)?id$/, canonical: 'farm_id' },
+  { pattern: /^nome$/, canonical: 'name' },
+  { pattern: /^identifier$/, canonical: 'identifier' },
+  { pattern: /^identificador$/, canonical: 'identifier' },
+  { pattern: /^cdcb(_|\s)?id$/, canonical: 'cdcb_id' },
+  { pattern: /^mgs(_|\s)?naab$/, canonical: 'mgs_naab' },
+  { pattern: /^mmgs(_|\s)?naab$/, canonical: 'mmgs_naab' },
+  { pattern: /^ptas?$/, canonical: 'ptas' },
+  { pattern: /^created(_|\s)?at$/, canonical: 'created_at' },
+  { pattern: /^updated(_|\s)?at$/, canonical: 'updated_at' },
+  { pattern: /^sire(_|\s)?naab$/, canonical: 'sire_naab' },
+  { pattern: /^pai(_|\s)?naab$/, canonical: 'sire_naab' },
 ];
 
 function jaroDistance(s1: string, s2: string): number {
@@ -159,18 +191,31 @@ export function detectAliasesFromHeaders(headers: string[], options: DetectOptio
 
     let best: DetectionRow | null = null;
 
-    const exactMatch = SUGGESTIONS.find(
-      (suggestion) => normalizeAlias(suggestion.alias_original) === normalizedHeader,
-    );
-
-    if (exactMatch) {
+    const canonicalDirect = CANONICAL_NORMALIZED_LOOKUP.get(normalizedHeader);
+    if (canonicalDirect) {
       best = {
         alias_original: header,
-        suggested: exactMatch.suggested_canonical_key,
+        suggested: canonicalDirect,
         method: 'exact',
-        score: exactMatch.confidence ?? 0.99,
+        score: 0.99,
         occurrences,
       };
+    }
+
+    if (!best) {
+      const exactMatch = SUGGESTIONS.find(
+        (suggestion) => normalizeAlias(suggestion.alias_original) === normalizedHeader,
+      );
+
+      if (exactMatch) {
+        best = {
+          alias_original: header,
+          suggested: exactMatch.suggested_canonical_key,
+          method: 'exact',
+          score: exactMatch.confidence ?? 0.99,
+          occurrences,
+        };
+      }
     }
 
     if (!best) {

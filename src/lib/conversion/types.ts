@@ -27,6 +27,7 @@ export interface CanonicalColumn {
   datatype?: 'number' | 'percent' | 'string' | 'date';
   unit?: string;
   category?: 'PTA' | 'indice' | 'meta' | 'sensor';
+  required?: boolean;
 }
 
 export interface PreviewRow {

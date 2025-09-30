@@ -11,3 +11,25 @@ PTAP%,ptap_percent,percentual,0.95
 SCS,scs,saúde,0.99
 DPR,dpr,fertilidade,0.99
 birth_date,birth_date,yyyy-mm-dd,0.99
+Parity Order,parity_order,en-us,0.99
+Ordem de Parto,parity_order,pt-br,0.98
+category,category,form padrão,0.99
+Categoria,category,pt-br,0.98
+id,id,campo interno,0.99
+animal_id,id,variação,0.95
+farm_id,farm_id,id fazenda,0.99
+Farm ID,farm_id,en-us,0.99
+name,name,en-us,0.99
+Nome,name,pt-br,0.98
+identifier,identifier,en-us,0.99
+Identificador,identifier,pt-br,0.98
+CDCB ID,cdcb_id,form padrão,0.99
+mgs_naab,mgs_naab,form padrão,0.99
+MGS NAAB,mgs_naab,variação,0.99
+mmgs_naab,mmgs_naab,form padrão,0.99
+MMGS NAAB,mmgs_naab,variação,0.99
+PTAs,ptas,form padrão,0.99
+created_at,created_at,timestamp,0.99
+updated_at,updated_at,timestamp,0.99
+Sire NAAB,sire_naab,en-us,0.99
+Pai NAAB,sire_naab,pt-br,0.98

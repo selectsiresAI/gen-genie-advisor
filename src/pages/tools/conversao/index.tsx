@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import * as XLSX from 'xlsx';
 import { ArrowLeft, ArrowRight, CheckCircle2, Loader2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -14,6 +15,7 @@ import SaveProfileModal from '@/components/conversao/SaveProfileModal';
 import { detectAliasesFromHeaders } from '@/lib/conversion/detect';
 import type { DetectionRow, InventoryRow } from '@/lib/conversion/types';
 import { supabase } from '@/integrations/supabase/client';
+import { REQUIRED_CANONICAL_KEYS } from '@/lib/conversion/constants';
 
 const STEPS = [
   {
@@ -98,6 +100,17 @@ const ConversaoPage: React.FC = () => {
     }));
   }, [detections, selections]);
 
+  const requiredMissing = useMemo(() => {
+    const chosenSet = new Set(
+      finalMappings.map((row) => row.chosen).filter((value): value is string => Boolean(value)),
+    );
+    return REQUIRED_CANONICAL_KEYS.filter((key) => !chosenSet.has(key));
+  }, [finalMappings]);
+
+  const canDownloadStandardized = useMemo(() => {
+    return requiredMissing.length === 0 && (uploadResult?.rows?.length ?? 0) > 0;
+  }, [requiredMissing, uploadResult]);
+
   const canProceed = (nextStep: number) => {
     if (nextStep === 1) {
       return Boolean(uploadResult);
@@ -126,6 +139,67 @@ const ConversaoPage: React.FC = () => {
 
   const handlePrevious = () => {
     setActiveStep((prev) => Math.max(0, prev - 1));
+  };
+
+  const handleDownloadStandardized = () => {
+    if (!uploadResult) {
+      toast({
+        title: 'Nenhum arquivo carregado',
+        description: 'Envie uma planilha antes de gerar a versão padronizada.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (requiredMissing.length > 0) {
+      toast({
+        title: 'Mapeie as colunas obrigatórias',
+        description: `Ainda faltam: ${requiredMissing.join(', ')}`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const canonicalMap = new Map<string, string>();
+    finalMappings.forEach((row) => {
+      if (row.chosen) {
+        canonicalMap.set(row.alias_original, row.chosen);
+      }
+    });
+
+    const canonicalHeaders = new Set<string>([...REQUIRED_CANONICAL_KEYS, ...canonicalMap.values()]);
+
+    const dataset = (uploadResult.rows ?? []).map((row) => {
+      const output: Record<string, unknown> = {};
+      canonicalHeaders.forEach((key) => {
+        output[key] = '';
+      });
+      for (const [alias, canonical] of canonicalMap.entries()) {
+        output[canonical] = row[alias];
+      }
+      return output;
+    });
+
+    const headersArray = Array.from(canonicalHeaders);
+    let worksheet: XLSX.WorkSheet;
+    if (dataset.length > 0) {
+      worksheet = XLSX.utils.json_to_sheet(dataset, { header: headersArray });
+    } else {
+      worksheet = XLSX.utils.aoa_to_sheet([headersArray]);
+    }
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Rebanho');
+
+    const baseName = uploadResult.fileName.replace(/\.(csv|xlsx|xls)$/i, '') || 'dataset';
+    const outputName = `${baseName}_padronizado.xlsx`;
+
+    XLSX.writeFile(workbook, outputName);
+
+    toast({
+      title: 'Arquivo gerado',
+      description: `Download iniciado para ${outputName}.`,
+    });
   };
 
   const handleSaveProfile = async (profileName: string, scope: 'global' | 'private') => {
@@ -271,7 +345,7 @@ const ConversaoPage: React.FC = () => {
       {activeStep === 2 && (
         <div className="grid gap-6 lg:grid-cols-2">
           <ReviewMapper rows={detections} selected={selections} onChange={handleSelectionChange} />
-          <ValidationPanel rows={detections} selections={selections} />
+          <ValidationPanel rows={detections} selections={selections} requiredMissing={requiredMissing} />
         </div>
       )}
 
@@ -282,8 +356,11 @@ const ConversaoPage: React.FC = () => {
               rows={uploadResult?.previewRows ?? []}
               detections={detections}
               selections={selections}
+              onDownload={handleDownloadStandardized}
+              downloadDisabled={!canDownloadStandardized}
+              requiredMissing={requiredMissing}
             />
-            <ValidationPanel rows={detections} selections={selections} />
+            <ValidationPanel rows={detections} selections={selections} requiredMissing={requiredMissing} />
           </div>
           <div className="flex justify-end">
             <Button onClick={() => setSaveModalOpen(true)} disabled={isSavingProfile}>
