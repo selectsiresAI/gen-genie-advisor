@@ -1,0 +1,22 @@
+{
+  "mappings": [
+    {
+      "alias_original": "fazenda",
+      "suggested_canonical_key": "farm_name",
+      "source_hint": "default",
+      "confidence": 0.95
+    },
+    {
+      "alias_original": "animal",
+      "suggested_canonical_key": "animal_id",
+      "source_hint": "default",
+      "confidence": 0.94
+    },
+    {
+      "alias_original": "lactacao",
+      "suggested_canonical_key": "lactation_number",
+      "source_hint": "default",
+      "confidence": 0.9
+    }
+  ]
+}

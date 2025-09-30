@@ -1,0 +1,4 @@
+alias_original,suggested_canonical_key,source_hint,confidence
+fazenda,farm_name,default,0.95
+animal,animal_id,default,0.94
+lactacao,lactation_number,default,0.9

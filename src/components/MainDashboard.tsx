@@ -50,7 +50,21 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'farm' | 'herd' | 'segmentation' | 'bulls' | 'nexus' | 'charts' | 'botijao' | 'sms' | 'metas' | 'plano' | 'arquivos'>('dashboard');
+  const [currentView, setCurrentView] = useState<
+    | 'dashboard'
+    | 'farm'
+    | 'herd'
+    | 'segmentation'
+    | 'bulls'
+    | 'nexus'
+    | 'charts'
+    | 'botijao'
+    | 'sms'
+    | 'metas'
+    | 'plano'
+    | 'arquivos'
+    | 'conversao'
+  >('dashboard');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [totalFarms, setTotalFarms] = useState(0);
   const [totalAnimals, setTotalAnimals] = useState(0);
