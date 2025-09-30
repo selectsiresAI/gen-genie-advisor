@@ -7,16 +7,130 @@
       "confidence": 0.95
     },
     {
+      "alias_original": "nome",
+      "suggested_canonical_key": "name",
+      "source_hint": "default",
+      "confidence": 0.95
+    },
+    {
       "alias_original": "animal",
-      "suggested_canonical_key": "animal_id",
+      "suggested_canonical_key": "identifier",
       "source_hint": "default",
       "confidence": 0.94
     },
     {
-      "alias_original": "lactacao",
-      "suggested_canonical_key": "lactation_number",
+      "alias_original": "brinco",
+      "suggested_canonical_key": "identifier",
+      "source_hint": "default",
+      "confidence": 0.92
+    },
+    {
+      "alias_original": "categoria",
+      "suggested_canonical_key": "category",
       "source_hint": "default",
       "confidence": 0.9
+    },
+    {
+      "alias_original": "data_nascimento",
+      "suggested_canonical_key": "birth_date",
+      "source_hint": "default",
+      "confidence": 0.9
+    },
+    {
+      "alias_original": "ordem_parto",
+      "suggested_canonical_key": "parity_order",
+      "source_hint": "default",
+      "confidence": 0.88
+    },
+    {
+      "alias_original": "pai_naab",
+      "suggested_canonical_key": "sire_naab",
+      "source_hint": "default",
+      "confidence": 0.9
+    },
+    {
+      "alias_original": "avo_materno",
+      "suggested_canonical_key": "mgs_naab",
+      "source_hint": "default",
+      "confidence": 0.88
+    },
+    {
+      "alias_original": "bisavo_materno",
+      "suggested_canonical_key": "mmgs_naab",
+      "source_hint": "default",
+      "confidence": 0.88
+    },
+    {
+      "alias_original": "hhp$",
+      "suggested_canonical_key": "hhp_dollar",
+      "source_hint": "default",
+      "confidence": 0.9
+    },
+    {
+      "alias_original": "nm$",
+      "suggested_canonical_key": "nm_dollar",
+      "source_hint": "default",
+      "confidence": 0.9
+    },
+    {
+      "alias_original": "cm$",
+      "suggested_canonical_key": "cm_dollar",
+      "source_hint": "default",
+      "confidence": 0.9
+    },
+    {
+      "alias_original": "fm$",
+      "suggested_canonical_key": "fm_dollar",
+      "source_hint": "default",
+      "confidence": 0.9
+    },
+    {
+      "alias_original": "gm$",
+      "suggested_canonical_key": "gm_dollar",
+      "source_hint": "default",
+      "confidence": 0.9
+    },
+    {
+      "alias_original": "pta_milk",
+      "suggested_canonical_key": "ptam",
+      "source_hint": "default",
+      "confidence": 0.9
+    },
+    {
+      "alias_original": "pta_fat",
+      "suggested_canonical_key": "ptaf",
+      "source_hint": "default",
+      "confidence": 0.9
+    },
+    {
+      "alias_original": "pta_protein",
+      "suggested_canonical_key": "ptap",
+      "source_hint": "default",
+      "confidence": 0.9
+    },
+    {
+      "alias_original": "somatic_cell_score",
+      "suggested_canonical_key": "scs",
+      "source_hint": "default",
+      "confidence": 0.9
+    },
+    {
+      "alias_original": "udder_depth",
+      "suggested_canonical_key": "udp",
+      "source_hint": "default",
+      "confidence": 0.88
+    },
+    {
+      "alias_original": "ultima_predicao_metodo",
+      "suggested_canonical_key": "last_prediction_method",
+      "source_hint": "default",
+      "confidence": 0.85
+    },
+    {
+      "alias_original": "score_segmentacao",
+      "suggested_canonical_key": "segmentation_score",
+      "source_hint": "default",
+      "confidence": 0.85
     }
   ]
 }

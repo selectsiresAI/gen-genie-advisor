@@ -12,7 +12,11 @@ import ValidationPanel from '@/components/conversao/ValidationPanel';
 import PreviewBeforeAfter from '@/components/conversao/PreviewBeforeAfter';
 import { detectAliasesFromHeaders } from '@/lib/conversion/detect';
 import type { AliasSuggestion, DetectionRow } from '@/lib/conversion/types';
-import { CONFIDENCE_BADGE_MAP, KNOWN_CANONICAL_COLUMNS, REQUIRED_CANONICAL_KEYS } from '@/lib/conversion/constants';
+import {
+  CONFIDENCE_BADGE_MAP,
+  REQUIRED_CANONICAL_KEYS,
+  STANDARD_OUTPUT_HEADERS,
+} from '@/lib/conversion/constants';
 
 const ConversaoPage: React.FC = () => {
   const { toast } = useToast();
@@ -168,23 +172,25 @@ const ConversaoPage: React.FC = () => {
     const originalRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: null });
 
     const allOriginalHeaders = Object.keys(originalRows[0] ?? {});
-    const renamedHeaders = allOriginalHeaders.map((h) => canonicalMap.get(h) ?? h);
-    const ptaCanonical = KNOWN_CANONICAL_COLUMNS.filter((c) => c.category === 'PTA' || c.category === 'indice').map(
-      (c) => c.canonical_key,
-    );
-    const finalHeaderSet = new Set<string>([...renamedHeaders, ...ptaCanonical]);
+    const templateOrder = STANDARD_OUTPUT_HEADERS;
+    const templateSet = new Set(templateOrder);
+    const destinationHeaders: string[] = [];
+    for (const header of allOriginalHeaders) {
+      const dest = canonicalMap.get(header) ?? header;
+      if (!destinationHeaders.includes(dest)) destinationHeaders.push(dest);
+    }
+    const extraHeaders = destinationHeaders.filter((h) => !templateSet.has(h));
+    const headersArray = [...templateOrder, ...extraHeaders];
 
     const dataset = originalRows.map((row) => {
       const out: Record<string, unknown> = {};
-      finalHeaderSet.forEach((h) => (out[h] = ''));
+      for (const header of headersArray) out[header] = '';
       for (const orig of allOriginalHeaders) {
         const dest = canonicalMap.get(orig) ?? orig;
         out[dest] = row[orig];
       }
       return out;
     });
-
-    const headersArray = Array.from(finalHeaderSet);
     const outWs = dataset.length > 0
       ? XLSX.utils.json_to_sheet(dataset, { header: headersArray })
       : XLSX.utils.aoa_to_sheet([headersArray]);
