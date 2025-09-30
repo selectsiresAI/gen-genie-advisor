@@ -1,0 +1,13 @@
+alias_original,suggested_canonical_key,source_hint,confidence
+NM$,nm_dollar,CDCB,0.99
+NM,nm_dollar,variante sem símbolo,0.95
+Net Merit,nm_dollar,en-us,0.99
+Mérito Líquido,nm_dollar,pt-br,0.98
+HHP$,hhp_dollar,CDCB/SSI,0.99
+TPI,tpi,CDCB,0.99
+PTAM,ptam,CDCB production,0.99
+PTAF%,ptaf_percent,percentual,0.95
+PTAP%,ptap_percent,percentual,0.95
+SCS,scs,saúde,0.99
+DPR,dpr,fertilidade,0.99
+birth_date,birth_date,yyyy-mm-dd,0.99

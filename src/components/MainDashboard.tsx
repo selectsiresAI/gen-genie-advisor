@@ -22,6 +22,7 @@ import FemaleUploadModal from './FemaleUploadModal';
 import SegmentationPage from './SegmentationPage';
 import { usePlanStore } from '@/hooks/usePlanStore';
 import { useHerdStore } from '@/hooks/useHerdStore';
+import ConversaoPage from '@/pages/tools/conversao';
 
 interface MainDashboardProps {
   user: User;
@@ -50,7 +51,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'farm' | 'herd' | 'segmentation' | 'bulls' | 'nexus' | 'charts' | 'botijao' | 'sms' | 'metas' | 'plano' | 'arquivos'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'farm' | 'herd' | 'segmentation' | 'bulls' | 'nexus' | 'charts' | 'botijao' | 'sms' | 'metas' | 'plano' | 'arquivos' | 'conversao'>('dashboard');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [totalFarms, setTotalFarms] = useState(0);
   const [totalAnimals, setTotalAnimals] = useState(0);
@@ -359,6 +360,25 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
 
               <Tooltip>
                 <TooltipTrigger asChild>
+                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('conversao')}>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Beaker className="w-5 h-5 text-primary" />
+                        Tools → Conversão
+                      </CardTitle>
+                      <CardDescription>
+                        Funil provisório para padronização de colunas
+                      </CardDescription>
+                    </CardHeader>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Abrir o wizard de Conversão (provisório) para detectar e mapear aliases.</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
                   <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('botijao')}>
                     <CardHeader className="pb-3">
                       <CardTitle className="flex items-center gap-2 text-base">
@@ -638,6 +658,22 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
         };
         return <div className="min-h-screen bg-background">
             <ChartsPage farm={selectedFarm!} onBack={handleBackToDashboard} onNavigateToHerd={handleNavigateToHerd} />
+          </div>;
+      }
+      if (currentView === 'conversao') {
+        return <div className="min-h-screen bg-background">
+            <div className="border-b">
+              <div className="flex h-16 items-center px-4">
+                <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Dashboard
+                </Button>
+                <h1 className="text-xl font-semibold">Tools - Conversão (provisório)</h1>
+              </div>
+            </div>
+            <div className="container mx-auto px-4 py-8">
+              <ConversaoPage />
+            </div>
           </div>;
       }
       if (currentView === 'bulls') {

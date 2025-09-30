@@ -8,7 +8,9 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "aliases:lint": "node -e \"try{const fs=require('fs');const j=JSON.parse(fs.readFileSync('data/column_alias_suggestions.json','utf8'));if(!Array.isArray(j.mappings))process.exit(1);console.log('OK: JSON válido com',j.mappings.length,'mapeamentos');}catch(e){console.error(e);process.exit(1)}\"",
+    "aliases:preview": "node -e \"const fs=require('fs');const csv=fs.readFileSync('data/column_alias_suggestions.csv','utf8').split('\\n').slice(0,8).join('\\n');console.log(csv)\""
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://example.com/schemas/column_alias_suggestions.schema.json",
+  "version": "0.1.0",
+  "generated_at": "SEED",
+  "notes": "Seed inicial do dicionário de aliases → chaves canônicas. Substituir/expandir com dump completo.",
+  "mappings": [
+    { "alias_original": "NM$", "suggested_canonical_key": "nm_dollar", "source_hint": "CDCB", "confidence": 0.99 },
+    { "alias_original": "NM", "suggested_canonical_key": "nm_dollar", "source_hint": "variante sem símbolo", "confidence": 0.95 },
+    { "alias_original": "Net Merit", "suggested_canonical_key": "nm_dollar", "source_hint": "en-us", "confidence": 0.99 },
+    { "alias_original": "Mérito Líquido", "suggested_canonical_key": "nm_dollar", "source_hint": "pt-br", "confidence": 0.98 },
+    { "alias_original": "HHP$", "suggested_canonical_key": "hhp_dollar", "source_hint": "CDCB/SSI", "confidence": 0.99 },
+    { "alias_original": "TPI", "suggested_canonical_key": "tpi", "source_hint": "CDCB", "confidence": 0.99 },
+    { "alias_original": "PTAM", "suggested_canonical_key": "ptam", "source_hint": "CDCB production", "confidence": 0.99 },
+    { "alias_original": "PTAF%", "suggested_canonical_key": "ptaf_percent", "source_hint": "percentual", "confidence": 0.95 },
+    { "alias_original": "PTAP%", "suggested_canonical_key": "ptap_percent", "source_hint": "percentual", "confidence": 0.95 },
+    { "alias_original": "SCS", "suggested_canonical_key": "scs", "source_hint": "saúde", "confidence": 0.99 },
+    { "alias_original": "DPR", "suggested_canonical_key": "dpr", "source_hint": "fertilidade", "confidence": 0.99 },
+    { "alias_original": "birth_date", "suggested_canonical_key": "birth_date", "source_hint": "yyyy-mm-dd", "confidence": 0.99 }
+  ]
+}
