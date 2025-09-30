@@ -13,9 +13,14 @@ import type { DetectionRow } from '@/lib/conversion/types';
 interface DetectionTableProps {
   rows: DetectionRow[];
   onExportJson?: () => void;
+  title?: string;
+  description?: string;
+  limit?: number;
+  showExport?: boolean;
+  defaultMethod?: 'all' | DetectionRow['method'];
 }
 
-const LIMIT = 200;
+const DEFAULT_LIMIT = 200;
 
 function getConfidenceVariant(score: number) {
   if (score >= CONFIDENCE_BADGE_MAP.high) return 'default';
@@ -23,9 +28,17 @@ function getConfidenceVariant(score: number) {
   return 'destructive';
 }
 
-const DetectionTable: React.FC<DetectionTableProps> = ({ rows, onExportJson }) => {
+const DetectionTable: React.FC<DetectionTableProps> = ({
+  rows,
+  onExportJson,
+  title = 'Sugestões de Mapeamento (primeiros 200)',
+  description = 'Ajuste filtros ou exporte o JSON com os resultados da detecção para revisão.',
+  limit = DEFAULT_LIMIT,
+  showExport = true,
+  defaultMethod = 'all',
+}) => {
   const [search, setSearch] = useState('');
-  const [method, setMethod] = useState<'all' | DetectionRow['method']>('all');
+  const [method, setMethod] = useState<'all' | DetectionRow['method']>(defaultMethod);
   const [showAll, setShowAll] = useState(false);
 
   const filteredRows = useMemo(() => {
@@ -36,20 +49,20 @@ const DetectionTable: React.FC<DetectionTableProps> = ({ rows, onExportJson }) =
     });
   }, [rows, search, method]);
 
-  const displayRows = showAll ? filteredRows : filteredRows.slice(0, LIMIT);
+  const displayRows = showAll ? filteredRows : filteredRows.slice(0, limit);
 
   return (
     <Card className="h-full">
       <CardHeader className="flex flex-row items-start justify-between gap-4">
         <div>
-          <CardTitle>Sugestões de Mapeamento (primeiros 200)</CardTitle>
-          <CardDescription>
-            Ajuste filtros ou exporte o JSON com os resultados da detecção para revisão.
-          </CardDescription>
+          <CardTitle>{title}</CardTitle>
+          <CardDescription>{description}</CardDescription>
         </div>
-        <Button variant="outline" size="sm" onClick={onExportJson} disabled={rows.length === 0}>
-          Baixar JSON
-        </Button>
+        {showExport && (
+          <Button variant="outline" size="sm" onClick={onExportJson} disabled={rows.length === 0}>
+            Baixar JSON
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-4 md:grid-cols-3">
@@ -78,8 +91,8 @@ const DetectionTable: React.FC<DetectionTableProps> = ({ rows, onExportJson }) =
             </Select>
           </div>
           <div className="flex items-end">
-            <Button variant="secondary" onClick={() => setShowAll((prev) => !prev)} disabled={filteredRows.length <= LIMIT}>
-              {showAll ? 'Mostrar primeiros 200' : 'Ver todos'} ({filteredRows.length})
+            <Button variant="secondary" onClick={() => setShowAll((prev) => !prev)} disabled={filteredRows.length <= limit}>
+              {showAll ? `Mostrar primeiros ${limit}` : 'Ver todos'} ({filteredRows.length})
             </Button>
           </div>
         </div>

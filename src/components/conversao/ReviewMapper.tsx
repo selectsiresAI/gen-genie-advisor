@@ -26,22 +26,26 @@ const ReviewMapper: React.FC<ReviewMapperProps> = ({ rows, selected, onChange })
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle>Revisão Humana</CardTitle>
+        <CardTitle>Ajustes pendentes</CardTitle>
         <CardDescription>
-          Ajuste manualmente a chave canônica sugerida para cada alias utilizando o combobox por linha.
+          Revise apenas os aliases que ainda estão fora do padrão e selecione a chave canônica adequada antes da
+          autorização técnica.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <ScrollArea className="max-h-[420px] space-y-4">
           <div className="space-y-4 pr-4">
             {rows.map((row) => {
-              const value = selected[row.alias_original] ?? row.suggested;
+              const value = selected[row.alias_original] ?? '';
               return (
                 <div key={row.alias_original} className="space-y-1">
                   <Label className="text-sm font-medium flex justify-between">
                     <span>{row.alias_original}</span>
                     <span className="text-xs text-muted-foreground capitalize">{row.method}</span>
                   </Label>
+                  {row.suggested && (
+                    <p className="text-xs text-muted-foreground">Sugestão automática: {row.suggested}</p>
+                  )}
                   <Select value={value} onValueChange={(canonical) => onChange(row.alias_original, canonical)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecionar chave canônica" />
@@ -60,7 +64,7 @@ const ReviewMapper: React.FC<ReviewMapperProps> = ({ rows, selected, onChange })
               );
             })}
             {rows.length === 0 && (
-              <p className="text-sm text-muted-foreground">Nenhum alias detectado até o momento.</p>
+              <p className="text-sm text-muted-foreground">Nenhum ajuste pendente. Tudo pronto para autorização.</p>
             )}
           </div>
         </ScrollArea>

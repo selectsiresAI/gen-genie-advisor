@@ -1,72 +1,56 @@
-import React, { useMemo } from 'react';
+import React from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import type { DetectionRow } from '@/lib/conversion/types';
 
 interface ValidationPanelProps {
-  rows: DetectionRow[];
-  selections: Record<string, string>;
   requiredMissing: string[];
+  pendingAliases: string[];
+  reviewRequested: boolean;
+  authorized: boolean;
+  onRequestReview: () => void;
+  onAuthorize: () => void;
+  canAuthorize: boolean;
 }
 
-const ValidationPanel: React.FC<ValidationPanelProps> = ({ rows, selections, requiredMissing }) => {
-  const { stats, unmappedAliases } = useMemo(() => {
-    const counts: Record<string, number> = {
-      mapped: 0,
-      unmapped: 0,
-      exact: 0,
-      regex: 0,
-      fuzzy: 0,
-    };
-
-    const pending: string[] = [];
-
-    rows.forEach((row) => {
-      const chosen = selections[row.alias_original] ?? row.suggested;
-      if (chosen) {
-        counts.mapped++;
-      } else {
-        counts.unmapped++;
-        pending.push(row.alias_original);
-      }
-      counts[row.method] = (counts[row.method] ?? 0) + 1;
-    });
-
-    return { stats: counts, unmappedAliases: pending };
-  }, [rows, selections]);
+const ValidationPanel: React.FC<ValidationPanelProps> = ({
+  requiredMissing,
+  pendingAliases,
+  reviewRequested,
+  authorized,
+  onRequestReview,
+  onAuthorize,
+  canAuthorize,
+}) => {
+  const totalPendencias = requiredMissing.length + pendingAliases.length;
 
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle>Validações</CardTitle>
+        <CardTitle>Pendências para revisão</CardTitle>
         <CardDescription>
-          Indicadores de consistência antes de aplicar o perfil. A pré-validação considera tipo, unidade e regras gerais.
+          Detectamos automaticamente as colunas que precisam de atenção antes de liberar o ajuste do Rebanho.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="rounded-md border p-3">
-            <p className="text-muted-foreground">Mapeados</p>
-            <p className="text-xl font-semibold">{stats.mapped}</p>
-          </div>
-          <div className="rounded-md border p-3">
-            <p className="text-muted-foreground">Pendentes</p>
-            <p className="text-xl font-semibold">{stats.unmapped}</p>
-          </div>
-          <div className="rounded-md border p-3">
-            <p className="text-muted-foreground">Detecções exatas</p>
-            <p className="text-xl font-semibold">{stats.exact}</p>
-          </div>
-          <div className="rounded-md border p-3">
-            <p className="text-muted-foreground">Regex / Fuzzy</p>
-            <p className="text-xl font-semibold">{stats.regex + stats.fuzzy}</p>
-          </div>
+        <div className="flex items-center gap-3">
+          <Badge variant={totalPendencias === 0 ? 'default' : 'destructive'}>
+            {totalPendencias === 0 ? 'Sem pendências' : `${totalPendencias} pendência(s)`}
+          </Badge>
+          {authorized ? (
+            <span className="text-xs text-emerald-600">Ajustes autorizados pelo técnico.</span>
+          ) : reviewRequested ? (
+            <span className="text-xs text-muted-foreground">Aguardando autorização do técnico.</span>
+          ) : (
+            <span className="text-xs text-muted-foreground">Solicite revisão técnica antes de prosseguir.</span>
+          )}
         </div>
 
-        {requiredMissing.length > 0 ? (
-          <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3">
-            <h4 className="font-semibold text-destructive text-sm">Colunas obrigatórias pendentes</h4>
+        {requiredMissing.length > 0 && (
+          <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3">
+            <h4 className="font-semibold text-destructive text-sm">Obrigatórias ausentes</h4>
             <p className="text-xs text-destructive/80">
-              Ajuste o mapeamento para as chaves canônicas abaixo antes de gerar o arquivo para o Rebanho.
+              O sistema não encontrou as chaves canônicas abaixo. Ajuste os aliases para padronizar o arquivo.
             </p>
             <ul className="mt-2 list-disc pl-4 space-y-1 text-sm text-destructive">
               {requiredMissing.map((key) => (
@@ -74,33 +58,35 @@ const ValidationPanel: React.FC<ValidationPanelProps> = ({ rows, selections, req
               ))}
             </ul>
           </div>
-        ) : (
-          <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-700">
-            Todas as colunas obrigatórias estão cobertas pelo mapeamento selecionado.
-          </div>
         )}
 
-        {unmappedAliases.length > 0 && (
+        {pendingAliases.length > 0 && (
           <div className="rounded-md border p-3">
-            <h4 className="font-semibold text-sm">Aliases sem mapeamento</h4>
+            <h4 className="font-semibold text-sm">Aliases fora do padrão</h4>
             <p className="text-xs text-muted-foreground">
-              Esses cabeçalhos permanecerão como estão até que um mapeamento seja selecionado.
+              Ajuste manualmente esses cabeçalhos antes de solicitar a autorização técnica.
             </p>
-            <ul className="mt-2 list-disc pl-4 text-sm text-muted-foreground space-y-1">
-              {unmappedAliases.map((alias) => (
+            <ul className="mt-2 list-disc pl-4 space-y-1 text-sm text-muted-foreground">
+              {pendingAliases.map((alias) => (
                 <li key={alias}>{alias}</li>
               ))}
             </ul>
           </div>
         )}
 
-        <div className="space-y-2">
-          <h4 className="font-medium text-base">Regras de negócio (beta)</h4>
-          <ul className="list-disc pl-4 space-y-1 text-muted-foreground">
-            <li>Tipos numéricos sugeridos para indicadores PTA e índices.</li>
-            <li>Percentuais automaticamente convertidos em escala 0-1 quando aplicável.</li>
-            <li>Datas validadas contra o padrão ISO (yyyy-mm-dd).</li>
-          </ul>
+        {totalPendencias === 0 && (
+          <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-700">
+            Todas as colunas obrigatórias e aliases foram padronizados. Aguardando autorização técnica.
+          </div>
+        )}
+
+        <div className="flex flex-col gap-2 pt-2">
+          <Button variant="outline" onClick={onRequestReview} disabled={reviewRequested}>
+            {reviewRequested ? 'Revisão solicitada' : 'Solicitar revisão técnica'}
+          </Button>
+          <Button onClick={onAuthorize} disabled={!canAuthorize || authorized}>
+            {authorized ? 'Ajustes autorizados' : 'Autorizar ajustes e liberar download'}
+          </Button>
         </div>
       </CardContent>
     </Card>

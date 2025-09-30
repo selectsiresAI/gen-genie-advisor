@@ -11,6 +11,7 @@ interface PreviewBeforeAfterProps {
   onDownload: () => void;
   downloadDisabled?: boolean;
   requiredMissing: string[];
+  statusMessage?: string;
 }
 
 const PreviewBeforeAfter: React.FC<PreviewBeforeAfterProps> = ({
@@ -20,12 +21,13 @@ const PreviewBeforeAfter: React.FC<PreviewBeforeAfterProps> = ({
   onDownload,
   downloadDisabled,
   requiredMissing,
+  statusMessage,
 }) => {
   const preview = useMemo(() => {
     return rows.map((row) => {
       const after: Record<string, unknown> = {};
       for (const detection of detections) {
-        const canonical = selections[detection.alias_original] ?? detection.suggested;
+        const canonical = selections[detection.alias_original];
         if (!canonical) continue;
         after[canonical] = row.before[detection.alias_original];
       }
@@ -64,6 +66,9 @@ const PreviewBeforeAfter: React.FC<PreviewBeforeAfterProps> = ({
             <p className="text-xs text-destructive text-right">
               Mapeie as colunas obrigatórias antes de exportar.
             </p>
+          )}
+          {statusMessage && (
+            <p className="text-xs text-muted-foreground text-right">{statusMessage}</p>
           )}
           {rows.length === 0 && (
             <p className="text-xs text-muted-foreground text-right">Nenhuma linha disponível para prévia.</p>

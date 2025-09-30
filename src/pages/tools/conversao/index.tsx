@@ -1,73 +1,39 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import * as XLSX from 'xlsx';
-import { ArrowLeft, ArrowRight, CheckCircle2, Loader2, Save } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import UploadStep, { UploadResult } from '@/components/conversao/UploadStep';
 import DetectionTable from '@/components/conversao/DetectionTable';
-import InventoryTable from '@/components/conversao/InventoryTable';
 import ReviewMapper from '@/components/conversao/ReviewMapper';
 import ValidationPanel from '@/components/conversao/ValidationPanel';
 import PreviewBeforeAfter from '@/components/conversao/PreviewBeforeAfter';
-import SaveProfileModal from '@/components/conversao/SaveProfileModal';
 import { detectAliasesFromHeaders } from '@/lib/conversion/detect';
-import type { DetectionRow, InventoryRow } from '@/lib/conversion/types';
-import { supabase } from '@/integrations/supabase/client';
-import { REQUIRED_CANONICAL_KEYS } from '@/lib/conversion/constants';
-
-const STEPS = [
-  {
-    title: 'Upload e Inventário',
-    description: 'Envie o arquivo de origem e gere o inventário de abas/colunas.',
-  },
-  {
-    title: 'Sugestões Automáticas',
-    description: 'Analise as primeiras 200 sugestões de mapeamento.',
-  },
-  {
-    title: 'Revisão Humana',
-    description: 'Ajuste manualmente as chaves canônicas e aplique regras de negócio.',
-  },
-  {
-    title: 'Validações e Prévia',
-    description: 'Valide tipos/unidades, visualize antes/depois e salve o perfil.',
-  },
-];
+import type { DetectionRow } from '@/lib/conversion/types';
+import { CONFIDENCE_BADGE_MAP, REQUIRED_CANONICAL_KEYS } from '@/lib/conversion/constants';
 
 const ConversaoPage: React.FC = () => {
   const { toast } = useToast();
-  const [activeStep, setActiveStep] = useState(0);
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
   const [detections, setDetections] = useState<DetectionRow[]>([]);
-  const [inventory, setInventory] = useState<InventoryRow[]>([]);
   const [selections, setSelections] = useState<Record<string, string>>({});
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [saveModalOpen, setSaveModalOpen] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data?.user?.id) {
-        setUserId(data.user.id);
-      }
-    });
-  }, []);
+  const [reviewRequested, setReviewRequested] = useState(false);
+  const [authorized, setAuthorized] = useState(false);
 
   const handleUpload = (result: UploadResult) => {
     setUploadResult(result);
-    setInventory(result.inventory);
     const detectionResults = detectAliasesFromHeaders(result.headers, { inventory: result.inventory });
     setDetections(detectionResults);
     const mapping = detectionResults.reduce<Record<string, string>>((acc, row) => {
-      if (row.suggested) {
+      if (row.suggested && row.score >= CONFIDENCE_BADGE_MAP.medium) {
         acc[row.alias_original] = row.suggested;
       }
       return acc;
     }, {});
     setSelections(mapping);
-    setActiveStep(1);
+    setReviewRequested(false);
+    setAuthorized(false);
   };
 
   const handleExportJson = () => {
@@ -91,54 +57,83 @@ const ConversaoPage: React.FC = () => {
       ...prev,
       [alias]: canonical,
     }));
+    setAuthorized(false);
   };
 
   const finalMappings = useMemo(() => {
     return detections.map((row) => ({
       ...row,
-      chosen: selections[row.alias_original] ?? row.suggested ?? '',
+      chosen: selections[row.alias_original] ?? '',
     }));
   }, [detections, selections]);
 
   const requiredMissing = useMemo(() => {
-    const chosenSet = new Set(
-      finalMappings.map((row) => row.chosen).filter((value): value is string => Boolean(value)),
-    );
+    const chosenSet = new Set(finalMappings.map((row) => row.chosen).filter(Boolean));
     return REQUIRED_CANONICAL_KEYS.filter((key) => !chosenSet.has(key));
   }, [finalMappings]);
 
-  const canDownloadStandardized = useMemo(() => {
-    return requiredMissing.length === 0 && (uploadResult?.rows?.length ?? 0) > 0;
-  }, [requiredMissing, uploadResult]);
+  const pendingAliases = useMemo(() => {
+    return finalMappings.filter((row) => !row.chosen).map((row) => row.alias_original);
+  }, [finalMappings]);
 
-  const canProceed = (nextStep: number) => {
-    if (nextStep === 1) {
-      return Boolean(uploadResult);
-    }
-    if (nextStep === 2) {
-      return detections.length > 0;
-    }
-    if (nextStep === 3) {
-      return detections.length > 0;
-    }
-    return true;
-  };
+  const pendingSet = useMemo(() => new Set(pendingAliases), [pendingAliases]);
 
-  const handleNext = () => {
-    const nextStep = Math.min(activeStep + 1, STEPS.length - 1);
-    if (!canProceed(nextStep)) {
+  const flaggedRows = useMemo(() => {
+    return detections.filter((row) => pendingSet.has(row.alias_original));
+  }, [detections, pendingSet]);
+
+  const canAuthorize = reviewRequested && requiredMissing.length === 0 && pendingAliases.length === 0;
+
+  const statusMessage = useMemo(() => {
+    if (!reviewRequested) {
+      return 'Solicite revisão técnica para liberar o download.';
+    }
+    if (!authorized) {
+      return 'Aguardando autorização do técnico.';
+    }
+    return 'Ajustes autorizados. Download disponível.';
+  }, [reviewRequested, authorized]);
+
+  const handleRequestReview = () => {
+    if (!uploadResult) {
       toast({
-        title: 'Etapa pendente',
-        description: 'Finalize a etapa atual antes de avançar.',
+        title: 'Nenhum arquivo carregado',
+        description: 'Envie uma planilha antes de solicitar revisão.',
         variant: 'destructive',
       });
       return;
     }
-    setActiveStep(nextStep);
+    setReviewRequested(true);
+    toast({
+      title: 'Revisão solicitada',
+      description: 'O técnico foi notificado para aprovar os ajustes.',
+    });
   };
 
-  const handlePrevious = () => {
-    setActiveStep((prev) => Math.max(0, prev - 1));
+  const handleAuthorize = () => {
+    if (!reviewRequested) {
+      toast({
+        title: 'Revisão pendente',
+        description: 'Solicite a revisão técnica antes de autorizar.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (requiredMissing.length > 0 || pendingAliases.length > 0) {
+      toast({
+        title: 'Pendências encontradas',
+        description: 'Resolva todas as pendências antes da autorização.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setAuthorized(true);
+    toast({
+      title: 'Ajustes autorizados',
+      description: 'Download liberado para a planilha padronizada.',
+    });
   };
 
   const handleDownloadStandardized = () => {
@@ -151,19 +146,19 @@ const ConversaoPage: React.FC = () => {
       return;
     }
 
-    if (requiredMissing.length > 0) {
+    if (!authorized) {
       toast({
-        title: 'Mapeie as colunas obrigatórias',
-        description: `Ainda faltam: ${requiredMissing.join(', ')}`,
+        title: 'Autorização pendente',
+        description: 'O técnico precisa autorizar os ajustes antes do download.',
         variant: 'destructive',
       });
       return;
     }
 
     const canonicalMap = new Map<string, string>();
-    finalMappings.forEach((row) => {
-      if (row.chosen) {
-        canonicalMap.set(row.alias_original, row.chosen);
+    Object.entries(selections).forEach(([alias, canonical]) => {
+      if (canonical) {
+        canonicalMap.set(alias, canonical);
       }
     });
 
@@ -202,189 +197,68 @@ const ConversaoPage: React.FC = () => {
     });
   };
 
-  const handleSaveProfile = async (profileName: string, scope: 'global' | 'private') => {
-    if (!userId) {
-      toast({
-        title: 'Sessão não encontrada',
-        description: 'Faça login novamente para salvar perfis.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const payload = finalMappings
-      .filter((row) => row.chosen)
-      .map((row) => ({
-        alias_original: row.alias_original,
-        canonical_key: row.chosen,
-        confidence: row.score,
-        source_hint: row.method,
-      }));
-
-    if (payload.length === 0) {
-      toast({
-        title: 'Nenhum mapeamento selecionado',
-        description: 'Selecione pelo menos uma chave canônica antes de salvar o perfil.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsSavingProfile(true);
-
-    try {
-      const { data: profileData, error: profileError } = await supabase
-        .from('source_profiles')
-        .insert({
-          name: profileName,
-          scope,
-          owner: userId,
-        })
-        .select()
-        .single();
-
-      if (profileError) {
-        throw profileError;
-      }
-
-      const profileId = profileData?.id;
-      if (!profileId) {
-        throw new Error('Não foi possível recuperar o identificador do perfil.');
-      }
-
-      const mappingPayload = payload.map((row) => ({
-        profile_id: profileId,
-        alias_original: row.alias_original,
-        canonical_key: row.canonical_key,
-        confidence: row.confidence,
-        source_hint: row.source_hint,
-      }));
-
-      const { error: mappingsError } = await supabase.from('profile_mappings').insert(mappingPayload);
-      if (mappingsError) {
-        throw mappingsError;
-      }
-
-      const mappedCount = payload.length;
-      const ambiguousCount = finalMappings.filter((row) => row.method !== 'exact' && row.chosen).length;
-      const ignoredCount = finalMappings.filter((row) => !row.chosen).length;
-
-      const { error: runError } = await supabase.from('conversion_runs').insert({
-        profile_id: profileId,
-        dataset_name: uploadResult?.fileName ?? 'preview',
-        mapped_count: mappedCount,
-        ambiguous_count: ambiguousCount,
-        ignored_count: ignoredCount,
-        inventory,
-        mappings: payload,
-        created_by: userId,
-      });
-
-      if (runError) {
-        throw runError;
-      }
-
-      toast({
-        title: 'Perfil salvo com sucesso',
-        description: `${profileName} disponível para futuras importações.`,
-      });
-    } catch (error) {
-      console.error('Erro ao salvar perfil', error);
-      toast({
-        title: 'Erro ao salvar perfil',
-        description: error instanceof Error ? error.message : 'Não foi possível concluir a operação.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSavingProfile(false);
-    }
-  };
-
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold">Conversão (provisório)</h1>
         <p className="text-muted-foreground max-w-3xl">
-          Funil de padronização de colunas com detecção automática, revisão humana e validações antes de salvar um perfil reutilizável.
+          Detecção automática das colunas obrigatórias do Rebanho. Ajustamos tudo que for possível e destacamos apenas o que
+          precisa de atenção humana.
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-4">
-        {STEPS.map((step, index) => {
-          const completed = index < activeStep;
-          const current = index === activeStep;
-          return (
-            <Card
-              key={step.title}
-              className={`flex-1 min-w-[220px] border ${current ? 'border-primary shadow-sm' : ''}`}
-            >
-              <div className="flex items-center gap-3 p-4">
-                <Badge variant={completed ? 'default' : current ? 'secondary' : 'outline'}>{index + 1}</Badge>
-                <div>
-                  <p className="font-semibold flex items-center gap-1">
-                    {step.title}
-                    {completed && <CheckCircle2 className="h-4 w-4 text-primary" />}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{step.description}</p>
-                </div>
+      <UploadStep onUploadComplete={handleUpload} />
+
+      {uploadResult && (
+        <div className="space-y-6">
+          <Card className="border-dashed">
+            <div className="flex flex-wrap items-center justify-between gap-4 p-6">
+              <div>
+                <p className="text-sm text-muted-foreground">Arquivo carregado</p>
+                <p className="text-lg font-semibold">{uploadResult.fileName}</p>
               </div>
-            </Card>
-          );
-        })}
-      </div>
+              <Badge variant="secondary">{detections.length} aliases detectados</Badge>
+              <Button variant="outline" onClick={handleExportJson} disabled={detections.length === 0}>
+                Exportar detecção (JSON)
+              </Button>
+            </div>
+          </Card>
 
-      {activeStep === 0 && <UploadStep onUploadComplete={handleUpload} />}
-
-      {activeStep === 1 && (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <DetectionTable rows={detections} onExportJson={handleExportJson} />
-          <InventoryTable inventory={inventory} />
-        </div>
-      )}
-
-      {activeStep === 2 && (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <ReviewMapper rows={detections} selected={selections} onChange={handleSelectionChange} />
-          <ValidationPanel rows={detections} selections={selections} requiredMissing={requiredMissing} />
-        </div>
-      )}
-
-      {activeStep === 3 && (
-        <div className="grid gap-6">
           <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+            <DetectionTable
+              rows={flaggedRows}
+              onExportJson={handleExportJson}
+              showExport={false}
+              title="Aliases fora do padrão"
+              description="Listamos apenas os cabeçalhos sem correspondência automática. Ajuste-os antes de solicitar autorização."
+              limit={100}
+              defaultMethod="all"
+            />
+            <ValidationPanel
+              requiredMissing={requiredMissing}
+              pendingAliases={pendingAliases}
+              reviewRequested={reviewRequested}
+              authorized={authorized}
+              onRequestReview={handleRequestReview}
+              onAuthorize={handleAuthorize}
+              canAuthorize={canAuthorize}
+            />
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <ReviewMapper rows={flaggedRows} selected={selections} onChange={handleSelectionChange} />
             <PreviewBeforeAfter
-              rows={uploadResult?.previewRows ?? []}
+              rows={uploadResult.previewRows}
               detections={detections}
               selections={selections}
               onDownload={handleDownloadStandardized}
-              downloadDisabled={!canDownloadStandardized}
+              downloadDisabled={!authorized}
               requiredMissing={requiredMissing}
+              statusMessage={statusMessage}
             />
-            <ValidationPanel rows={detections} selections={selections} requiredMissing={requiredMissing} />
-          </div>
-          <div className="flex justify-end">
-            <Button onClick={() => setSaveModalOpen(true)} disabled={isSavingProfile}>
-              {isSavingProfile ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Salvar Perfil e Log
-            </Button>
           </div>
         </div>
       )}
-
-      <div className="flex items-center justify-between border-t pt-4">
-        <Button variant="outline" onClick={handlePrevious} disabled={activeStep === 0}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
-        </Button>
-        <Button onClick={handleNext} disabled={activeStep === STEPS.length - 1}>
-          Avançar <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
-      </div>
-
-      <SaveProfileModal
-        open={saveModalOpen}
-        onOpenChange={setSaveModalOpen}
-        onSave={handleSaveProfile}
-      />
     </div>
   );
 };
