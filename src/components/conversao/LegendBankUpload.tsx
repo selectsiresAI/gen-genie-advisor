@@ -10,13 +10,118 @@ interface LegendBankUploadProps {
   onLegendReady: (mappings: AliasSuggestion[]) => void;
 }
 
-function pick<T extends object>(obj: any, keys: (keyof T)[]): Partial<T> {
-  const out: Partial<T> = {};
-  for (const k of keys) {
-    if (obj[k as string] !== undefined) (out as any)[k] = obj[k as string];
+const NORMALIZE_KEY = (key: string) =>
+  key
+    .toString()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '');
+
+const buildKeySet = (keys: string[]) => new Set(keys.map((key) => NORMALIZE_KEY(key)));
+
+const CANONICAL_FIELDS = buildKeySet([
+  'suggested_canonical_key',
+  'canonical',
+  'canonical_key',
+  'padrao',
+  'padrão',
+  'nome_padrao',
+  'nome_padrão',
+  'nome_canonico',
+  'nome_canônico',
+  'chave_padrao',
+  'chave_padrão',
+  'header_padrao',
+  'standard_name',
+  'canonical header',
+  'coluna_padrao',
+  'coluna_padrão',
+]);
+
+const SOURCE_FIELDS = buildKeySet(['source_hint', 'fonte', 'source', 'origem', 'notes', 'comentario', 'comentário']);
+const CONFIDENCE_FIELDS = buildKeySet(['confidence', 'confianca', 'confiança', 'score', 'precisao', 'precisão']);
+
+const ALIAS_FIELDS = buildKeySet([
+  'alias_original',
+  'alias',
+  'coluna',
+  'header',
+  'nome_original',
+  'nome',
+  'campo',
+  'campo_original',
+  'var',
+  'variacao',
+  'variação',
+  'sinonimo',
+  'sinônimo',
+  'sinonimo_1',
+  'sinonimo_2',
+  'sinonimo_3',
+  'versao',
+  'versão',
+  'apelido',
+  'header_variacao',
+]);
+
+const META_FIELDS = buildKeySet([
+  'categoria',
+  'category',
+  'descricao',
+  'descrição',
+  'description',
+  'grupo',
+  'tipo',
+  'unidade',
+  'observacao',
+  'observação',
+  'comentarios',
+  'comentários',
+  'obs',
+  'exemplo',
+  'nota',
+  'notes',
+  'referencia',
+  'referência',
+  'id',
+]);
+
+const splitCellValues = (value: unknown): string[] => {
+  if (value === undefined || value === null) return [];
+  const text = String(value).trim();
+  if (!text) return [];
+  return text
+    .split(/[\n,;|]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
+const dedupeSuggestions = (entries: AliasSuggestion[]): AliasSuggestion[] => {
+  const seen = new Set<string>();
+  const result: AliasSuggestion[] = [];
+  for (const entry of entries) {
+    const key = `${entry.alias_original.toLowerCase()}::${entry.suggested_canonical_key.toLowerCase()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(entry);
   }
-  return out;
-}
+  return result;
+};
+
+const parseConfidence = (value: unknown): number | undefined => {
+  if (value === undefined || value === null) return undefined;
+  const raw = String(value).trim();
+  if (!raw) return undefined;
+  const normalized = raw.replace(/%/g, '').replace(',', '.');
+  const numeric = Number(normalized);
+  if (!Number.isFinite(numeric)) return undefined;
+  if (raw.includes('%') || numeric > 1) {
+    return Math.max(0, Math.min(1, numeric / 100));
+  }
+  return Math.max(0, Math.min(1, numeric));
+};
 
 export const LegendBankUpload: React.FC<LegendBankUploadProps> = ({ onLegendReady }) => {
   const { toast } = useToast();
@@ -27,65 +132,112 @@ export const LegendBankUpload: React.FC<LegendBankUploadProps> = ({ onLegendRead
 
     try {
       const buf = await file.arrayBuffer();
-      const isCsv = /\.csv$/i.test(file.name);
+      const wb = XLSX.read(buf, { type: 'array' });
+      const sheetName = wb.SheetNames[0];
+      if (!sheetName) throw new Error('Arquivo sem abas reconhecidas.');
+      const ws = wb.Sheets[sheetName];
+      if (!ws) throw new Error('Não foi possível interpretar a primeira aba do arquivo.');
+      const rows: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
 
-      let rows: any[] = [];
-      if (isCsv) {
-        const text = new TextDecoder().decode(new Uint8Array(buf));
-        const lines = text.split(/\r?\n/).filter(Boolean);
-        if (lines.length === 0) throw new Error('Arquivo CSV vazio.');
-        const headers = lines[0].split(',').map((h) => h.trim().toLowerCase());
-        rows = lines.slice(1).map((ln) => {
-          const cols = ln.split(',');
-          const obj: Record<string, string> = {};
-          headers.forEach((h, i) => (obj[h] = (cols[i] ?? '').trim()));
-          return obj;
+      const mapped: AliasSuggestion[] = [];
+
+      for (const rawRow of rows) {
+        const normalizedEntries = new Map<string, { key: string; value: unknown }>();
+        Object.entries(rawRow).forEach(([key, value]) => {
+          const normalizedKey = NORMALIZE_KEY(key);
+          if (!normalizedKey) return;
+          normalizedEntries.set(normalizedKey, { key, value });
         });
-      } else {
-        const wb = XLSX.read(buf, { type: 'array' });
-        const sh = wb.SheetNames[0];
-        const ws = wb.Sheets[sh];
-        rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+        const canonicalCandidate = Array.from(CANONICAL_FIELDS)
+          .map((field) => normalizedEntries.get(field))
+          .find((entry) => entry && String(entry.value ?? '').trim());
+        const canonicalValue = canonicalCandidate ? String(canonicalCandidate.value ?? '').trim() : '';
+        if (!canonicalValue) continue;
+
+        const sourceCandidate = Array.from(SOURCE_FIELDS)
+          .map((field) => normalizedEntries.get(field))
+          .find((entry) => entry && String(entry.value ?? '').trim());
+
+        const confidenceCandidate = Array.from(CONFIDENCE_FIELDS)
+          .map((field) => normalizedEntries.get(field))
+          .find((entry) => entry && String(entry.value ?? '').trim());
+
+        const aliasBuckets: string[] = [];
+
+        const aliasEntries = Array.from(normalizedEntries.entries()).filter(([normalizedKey]) =>
+          ALIAS_FIELDS.has(normalizedKey),
+        );
+
+        if (aliasEntries.length > 0) {
+          for (const [, entry] of aliasEntries) {
+            splitCellValues(entry.value).forEach((value) => aliasBuckets.push(value));
+          }
+        } else {
+          const canonicalNormalized = canonicalCandidate ? NORMALIZE_KEY(canonicalCandidate.key) : '';
+          for (const [normalizedKey, entry] of normalizedEntries.entries()) {
+            if (normalizedKey === canonicalNormalized) continue;
+            if (CANONICAL_FIELDS.has(normalizedKey)) continue;
+            if (SOURCE_FIELDS.has(normalizedKey)) continue;
+            if (CONFIDENCE_FIELDS.has(normalizedKey)) continue;
+            if (META_FIELDS.has(normalizedKey)) continue;
+
+            const rawHeader = entry.key ?? '';
+            const potentialValues = splitCellValues(entry.value);
+            const looksLikeAlias =
+              ALIAS_FIELDS.has(normalizedKey) ||
+              /alias|nome|header|coluna|campo|variac|sinon|apelido/i.test(rawHeader) ||
+              potentialValues.length > 0;
+            if (!looksLikeAlias) continue;
+            potentialValues.forEach((value) => aliasBuckets.push(value));
+          }
+        }
+
+        const canonicalLower = canonicalValue.toLowerCase();
+        const uniqueAliases = Array.from(
+          new Set(
+            aliasBuckets
+              .map((alias) => alias.trim())
+              .filter((alias) => alias && alias.toLowerCase() !== canonicalLower),
+          ),
+        );
+
+        const parsedConfidence = confidenceCandidate ? parseConfidence(confidenceCandidate.value) : undefined;
+        const sourceHint = sourceCandidate ? String(sourceCandidate.value ?? '').trim() || undefined : undefined;
+
+        mapped.push({
+          alias_original: canonicalValue,
+          suggested_canonical_key: canonicalValue,
+          source_hint: sourceHint,
+          confidence: parsedConfidence ?? 0.99,
+        });
+
+        for (const alias of uniqueAliases) {
+          mapped.push({
+            alias_original: alias,
+            suggested_canonical_key: canonicalValue,
+            source_hint: sourceHint,
+            confidence: parsedConfidence,
+          });
+        }
       }
 
-      const mapped: AliasSuggestion[] = rows
-        .map((r) => {
-          const alias =
-            r['alias_original'] ?? r['alias'] ?? r['coluna'] ?? r['header'] ?? r['nome_original'] ?? r['nome'];
-          const canonical =
-            r['suggested_canonical_key'] ?? r['canonical'] ?? r['padrao'] ?? r['chave'] ?? r['destino'];
-          if (!alias || !canonical) return null;
+      const deduped = dedupeSuggestions(mapped);
 
-          const row = {
-            alias_original: String(alias).trim(),
-            suggested_canonical_key: String(canonical).trim(),
-            source_hint: r['source_hint'] ?? r['fonte'] ?? r['origem'] ?? '',
-            confidence: r['confidence'] ? Number(r['confidence']) : undefined,
-          };
-          if (!row.alias_original || !row.suggested_canonical_key) return null;
-          return pick<AliasSuggestion>(row, [
-            'alias_original',
-            'suggested_canonical_key',
-            'source_hint',
-            'confidence',
-          ]) as AliasSuggestion;
-        })
-        .filter(Boolean) as AliasSuggestion[];
-
-      if (mapped.length === 0) {
+      if (deduped.length === 0) {
         toast({
           title: 'Banco vazio ou cabeçalhos não reconhecidos',
           description:
-            'Use cabeçalhos: alias_original, suggested_canonical_key (opcionais: source_hint, confidence).',
+            'Utilize cabeçalhos com a nomenclatura padrão ou variações reconhecíveis (ex: nome_padrão, variação 1, etc).',
           variant: 'destructive',
         });
         return;
       }
 
-      onLegendReady(mapped);
+      onLegendReady(deduped);
       toast({
         title: 'Banco de nomenclaturas carregado',
-        description: `${file.name}: ${mapped.length} mapeamentos prontos para uso.`,
+        description: `${file.name}: ${deduped.length} mapeamentos prontos para uso.`,
       });
     } catch (err) {
       console.error(err);
@@ -104,8 +256,8 @@ export const LegendBankUpload: React.FC<LegendBankUploadProps> = ({ onLegendRead
       <CardHeader>
         <CardTitle>Banco de Nomenclaturas</CardTitle>
         <CardDescription>
-          (Opcional) Envie um Excel/CSV com as colunas <b>alias_original</b> e <b>suggested_canonical_key</b> para
-          personalizar as sugestões.
+          (Opcional) Envie um Excel/CSV com o cabeçalho padrão e suas variações. Cada linha pode conter o nome
+          padronizado e múltiplas colunas de sinônimos/variações.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">

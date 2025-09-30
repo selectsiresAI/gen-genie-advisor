@@ -141,8 +141,12 @@ const ConversaoPage: React.FC = () => {
 
     const canonicalMap = new Map<string, string>();
     detections.forEach((det) => {
-      const chosen = selections[det.alias_original] || (det.score >= CONFIDENCE_BADGE_MAP.medium ? det.suggested : '');
-      if (chosen) canonicalMap.set(det.alias_original, chosen);
+      const manualChoice = selections[det.alias_original];
+      if (manualChoice) {
+        canonicalMap.set(det.alias_original, manualChoice);
+      } else if (det.suggested) {
+        canonicalMap.set(det.alias_original, det.suggested);
+      }
     });
 
     let wb: XLSX.WorkBook;
