@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Building2, Users, Beef, BarChart3, Plus, LogOut, Zap, ArrowLeft, TrendingUp, Beaker, MessageSquare, Target, FolderOpen, Calculator, Trash2 } from "lucide-react";
+import { Building2, Users, Beef, BarChart3, Plus, LogOut, Zap, ArrowLeft, TrendingUp, Beaker, MessageSquare, Target, FolderOpen, Calculator, Trash2, Shuffle } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import CreateFarmModal from './CreateFarmModal';
@@ -20,6 +20,7 @@ import HerdPage from './HerdPage';
 import BullSearchPage from './BullSearchPage';
 import FemaleUploadModal from './FemaleUploadModal';
 import SegmentationPage from './SegmentationPage';
+import ConversaoPage from '@/pages/tools/conversao';
 import { usePlanStore } from '@/hooks/usePlanStore';
 import { useHerdStore } from '@/hooks/useHerdStore';
 
@@ -484,6 +485,23 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
     } : null;
 
     // Handle views that need special rendering
+    if (currentView === 'conversao') {
+      return <div className="min-h-screen bg-background">
+          <div className="border-b">
+            <div className="flex h-16 items-center px-4">
+              <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Dashboard
+              </Button>
+              <h1 className="text-xl font-semibold">Conversão de Planilhas</h1>
+            </div>
+          </div>
+          <div className="container mx-auto px-4 py-8">
+            <ConversaoPage />
+          </div>
+        </div>;
+    }
+
     if (currentView === 'nexus') {
       return <div className="min-h-screen bg-background">
           <div className="border-b">
@@ -761,7 +779,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                 Criar Fazenda
               </Button>
             </div>
-            
+
             {farms.length === 0 ? <Card>
                 <CardContent className="flex flex-col items-center justify-center py-8">
                   <Building2 className="w-12 h-12 text-muted-foreground mb-4" />
@@ -811,10 +829,38 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
               </div>}
           </div>
 
+          {/* Ferramentas */}
+          <div className="space-y-6">
+            <h3 className="text-xl font-semibold">Ferramentas</h3>
+
+            <TooltipProvider>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('conversao')}>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-2 text-base">
+                          <Shuffle className="w-5 h-5 text-primary" />
+                          Conversão de Planilhas
+                        </CardTitle>
+                        <CardDescription>
+                          Padronize cabeçalhos antes de importar dados.
+                        </CardDescription>
+                      </CardHeader>
+                    </Card>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Envie arquivos, ajuste aliases e baixe planilhas com nomenclatura padronizada.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </TooltipProvider>
+          </div>
+
           {/* Account Totals */}
           <div className="space-y-6">
             <h3 className="text-xl font-semibold">Resumo da Conta</h3>
-            
+
             <div className="grid gap-4 md:grid-cols-2">
               <Card>
                 <CardHeader className="pb-3">
