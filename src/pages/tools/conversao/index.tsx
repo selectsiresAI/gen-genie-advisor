@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ const ConversaoPage: React.FC = () => {
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [reviewRequested, setReviewRequested] = useState(false);
   const [authorized, setAuthorized] = useState(false);
+  const autoAuthorizedRef = useRef(false);
 
   const handleLegendReady = (m: AliasSuggestion[]) => {
     setLegendMappings(m);
@@ -38,6 +39,7 @@ const ConversaoPage: React.FC = () => {
       setSelections(mapping);
       setReviewRequested(false);
       setAuthorized(false);
+      autoAuthorizedRef.current = false;
     }
   };
 
@@ -55,11 +57,13 @@ const ConversaoPage: React.FC = () => {
     setSelections(mapping);
     setReviewRequested(false);
     setAuthorized(false);
+    autoAuthorizedRef.current = false;
   };
 
   const handleSelectionChange = (alias: string, canonical: string) => {
     setSelections((prev) => ({ ...prev, [alias]: canonical }));
     setAuthorized(false);
+    autoAuthorizedRef.current = false;
   };
 
   const finalMappings = useMemo(
@@ -95,7 +99,10 @@ const ConversaoPage: React.FC = () => {
     if (!uploadResult)
       return toast({ title: 'Nenhum arquivo', description: 'Envie a planilha de dados primeiro.', variant: 'destructive' });
     setReviewRequested(true);
-    toast({ title: 'Revisão solicitada', description: 'Aguardando autorização técnica.' });
+    toast({
+      title: 'Revisão solicitada',
+      description: 'Verificando pendências para autorizar automaticamente.',
+    });
   };
 
   const handleAuthorize = () => {
@@ -106,6 +113,24 @@ const ConversaoPage: React.FC = () => {
     setAuthorized(true);
     toast({ title: 'Autorizado', description: 'Download liberado.' });
   };
+
+  useEffect(() => {
+    if (!reviewRequested) {
+      autoAuthorizedRef.current = false;
+      return;
+    }
+
+    const ready = requiredMissing.length === 0 && pendingAliases.length === 0;
+    if (ready && !authorized) {
+      setAuthorized(true);
+      if (!autoAuthorizedRef.current) {
+        toast({ title: 'Autorizado automaticamente', description: 'Pendências resolvidas. Download liberado.' });
+      }
+      autoAuthorizedRef.current = true;
+    } else if (!ready) {
+      autoAuthorizedRef.current = false;
+    }
+  }, [reviewRequested, requiredMissing, pendingAliases, authorized, toast]);
 
   const handleDownloadStandardized = () => {
     if (!uploadResult) return;
@@ -172,7 +197,7 @@ const ConversaoPage: React.FC = () => {
   const statusMessage = !reviewRequested
     ? 'Solicite revisão técnica para liberar o download.'
     : !authorized
-    ? 'Aguardando autorização do técnico.'
+    ? 'Verificando pendências para liberar automaticamente.'
     : 'Ajustes autorizados. Download disponível.';
 
   return (
