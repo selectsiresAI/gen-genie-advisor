@@ -13,7 +13,8 @@ export interface UploadResult {
   inventory: InventoryRow[];
   previewRows: PreviewRow[];
   fileName: string;
-  rows: Record<string, unknown>[];
+  workbookData: ArrayBuffer;
+  primarySheetName: string;
 }
 
 interface UploadStepProps {
@@ -33,8 +34,33 @@ function extractHeadersFromSheet(sheet: XLSX.WorkSheet): string[] {
     .filter(Boolean);
 }
 
-function buildPreviewRows(rows: Record<string, unknown>[], headers: string[]): PreviewRow[] {
-  return rows.slice(0, MAX_PREVIEW_ROWS).map((row) => ({
+function buildPreviewRowsFromSheet(sheet: XLSX.WorkSheet, headers: string[]): PreviewRow[] {
+  if (!sheet['!ref'] || headers.length === 0) {
+    return [];
+  }
+
+  const range = XLSX.utils.decode_range(sheet['!ref']);
+  const headerRowIndex = range.s.r;
+  const dataStartRow = headerRowIndex + 1;
+  if (dataStartRow > range.e.r) {
+    return [];
+  }
+
+  const dataEndRow = Math.min(range.e.r, dataStartRow + MAX_PREVIEW_ROWS - 1);
+
+  const previewRange = {
+    s: { c: range.s.c, r: dataStartRow },
+    e: { c: range.e.c, r: dataEndRow },
+  };
+
+  const previewData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+    header: headers,
+    range: previewRange,
+    defval: null,
+    blankrows: false,
+  });
+
+  return previewData.map((row) => ({
     before: headers.reduce<Record<string, unknown>>((acc, header) => {
       acc[header] = row[header];
       return acc;
@@ -57,7 +83,7 @@ const UploadStep: React.FC<UploadStepProps> = ({ onUploadComplete }) => {
       const inventory: InventoryRow[] = [];
       const headerSet = new Set<string>();
       let previewRows: PreviewRow[] = [];
-      let fullRows: Record<string, unknown>[] = [];
+      let primarySheetName = workbook.SheetNames[0] ?? '';
 
       workbook.SheetNames.forEach((sheetName, index) => {
         const sheet = workbook.Sheets[sheetName];
@@ -71,9 +97,8 @@ const UploadStep: React.FC<UploadStepProps> = ({ onUploadComplete }) => {
         });
 
         if (index === 0) {
-          const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null });
-          fullRows = rows;
-          previewRows = buildPreviewRows(rows, headers);
+          primarySheetName = sheetName;
+          previewRows = buildPreviewRowsFromSheet(sheet, headers);
         }
       });
 
@@ -87,7 +112,8 @@ const UploadStep: React.FC<UploadStepProps> = ({ onUploadComplete }) => {
         inventory,
         previewRows,
         fileName: file.name,
-        rows: fullRows,
+        workbookData: data,
+        primarySheetName,
       });
 
       toast({

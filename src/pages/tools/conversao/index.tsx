@@ -164,7 +164,37 @@ const ConversaoPage: React.FC = () => {
 
     const canonicalHeaders = new Set<string>([...REQUIRED_CANONICAL_KEYS, ...canonicalMap.values()]);
 
-    const dataset = (uploadResult.rows ?? []).map((row) => {
+    let workbook: XLSX.WorkBook;
+    try {
+      workbook = XLSX.read(uploadResult.workbookData, { type: 'array' });
+    } catch (error) {
+      console.error('Erro ao reprocessar workbook', error);
+      toast({
+        title: 'Erro ao gerar planilha',
+        description: 'Não foi possível reprocessar o arquivo original.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const sheetName =
+      (uploadResult.primarySheetName && workbook.SheetNames.includes(uploadResult.primarySheetName)
+        ? uploadResult.primarySheetName
+        : workbook.SheetNames[0]) ?? '';
+    const sheet = sheetName ? workbook.Sheets[sheetName] : undefined;
+
+    if (!sheet) {
+      toast({
+        title: 'Erro ao gerar planilha',
+        description: 'Não foi possível localizar a aba original para gerar o download.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const originalRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null });
+
+    const dataset = originalRows.map((row) => {
       const output: Record<string, unknown> = {};
       canonicalHeaders.forEach((key) => {
         output[key] = '';
@@ -183,13 +213,13 @@ const ConversaoPage: React.FC = () => {
       worksheet = XLSX.utils.aoa_to_sheet([headersArray]);
     }
 
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Rebanho');
+    const outputWorkbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(outputWorkbook, worksheet, 'Rebanho');
 
     const baseName = uploadResult.fileName.replace(/\.(csv|xlsx|xls)$/i, '') || 'dataset';
     const outputName = `${baseName}_padronizado.xlsx`;
 
-    XLSX.writeFile(workbook, outputName);
+    XLSX.writeFile(outputWorkbook, outputName);
 
     toast({
       title: 'Arquivo gerado',
