@@ -161,6 +161,16 @@ export function detectAliasesFromHeaders(headers: string[], options: DetectOptio
     ...SUGGESTIONS,
   ];
 
+  const exactSuggestionLookup = new Map<string, AliasSuggestion>();
+  const normalizedSuggestions: Array<{ normalized: string; suggestion: AliasSuggestion }> = [];
+  for (const suggestion of BASE_SUGGESTIONS) {
+    const normalized = normalizeAlias(suggestion.alias_original);
+    if (!exactSuggestionLookup.has(normalized)) {
+      exactSuggestionLookup.set(normalized, suggestion);
+    }
+    normalizedSuggestions.push({ normalized, suggestion });
+  }
+
   const results: DetectionRow[] = [];
 
   for (const header of headers) {
@@ -174,7 +184,7 @@ export function detectAliasesFromHeaders(headers: string[], options: DetectOptio
     }
 
     if (!best) {
-      const exactMatch = BASE_SUGGESTIONS.find((s) => normalizeAlias(s.alias_original) === normalizedHeader);
+      const exactMatch = exactSuggestionLookup.get(normalizedHeader);
       if (exactMatch) {
         best = {
           alias_original: header,
@@ -195,20 +205,23 @@ export function detectAliasesFromHeaders(headers: string[], options: DetectOptio
     }
 
     if (!best) {
-      const fuzzyCandidates = BASE_SUGGESTIONS
-        .map((s) => ({ s, score: jaroWinkler(normalizedHeader, normalizeAlias(s.alias_original)) }))
-        .filter((x) => x.score >= 0.88)
-        .sort((a, b) => b.score - a.score);
+      let topCandidate: { suggestion: AliasSuggestion; score: number } | null = null;
+      for (const { normalized, suggestion } of normalizedSuggestions) {
+        const score = jaroWinkler(normalizedHeader, normalized);
+        if (score < 0.88) continue;
+        if (!topCandidate || score > topCandidate.score) {
+          topCandidate = { suggestion, score };
+        }
+      }
 
-      if (fuzzyCandidates.length > 0) {
-        const top = fuzzyCandidates[0];
+      if (topCandidate) {
         best = {
           alias_original: header,
-          suggested: top.s.suggested_canonical_key,
+          suggested: topCandidate.suggestion.suggested_canonical_key,
           method: 'fuzzy',
-          score: top.score,
+          score: topCandidate.score,
           occurrences,
-          source_hint: top.s.source_hint,
+          source_hint: topCandidate.suggestion.source_hint,
         };
       }
     }

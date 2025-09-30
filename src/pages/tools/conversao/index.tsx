@@ -73,10 +73,21 @@ const ConversaoPage: React.FC = () => {
   const pendingSet = useMemo(() => new Set(pendingAliases), [pendingAliases]);
   const flaggedRows = useMemo(() => detections.filter((r) => pendingSet.has(r.alias_original)), [detections, pendingSet]);
 
+  const availableCanonicalKeys = useMemo(() => {
+    const keys = new Set<string>();
+    detections.forEach((row) => {
+      if (row.suggested) keys.add(row.suggested);
+    });
+    if (uploadResult) {
+      uploadResult.headers.forEach((header) => keys.add(header));
+    }
+    return keys;
+  }, [detections, uploadResult]);
+
   const requiredMissing = useMemo(() => {
     const chosenSet = new Set(finalMappings.map((r) => r.chosen).filter(Boolean));
-    return REQUIRED_CANONICAL_KEYS.filter((k) => !chosenSet.has(k));
-  }, [finalMappings]);
+    return REQUIRED_CANONICAL_KEYS.filter((k) => availableCanonicalKeys.has(k) && !chosenSet.has(k));
+  }, [finalMappings, availableCanonicalKeys]);
 
   const canAuthorize = reviewRequested && requiredMissing.length === 0 && pendingAliases.length === 0;
 
