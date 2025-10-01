@@ -10,7 +10,6 @@ import { normalizeKey, jaroWinkler, type LegendEntry } from "./utils";
 import { FileUploadCard } from "./components/FileUploadCard";
 import { LegendBankSummary } from "./components/LegendBankSummary";
 import { DetectionTable, type MappingRow, type MappingMethod } from "./components/DetectionTable";
-import { PreviewBeforeAfter } from "./components/PreviewBeforeAfter";
 
 interface ParsedWorkbook {
   headers: string[];
@@ -359,11 +358,18 @@ const ConversaoPage: React.FC = () => {
 
   const approvedCount = useMemo(() => mappings.filter((row) => row.approved).length, [mappings]);
 
+  const hasPendingApprovals = useMemo(
+    () => mappings.some((row) => row.selectedCanonical && !row.approved),
+    [mappings],
+  );
+
+  const canDownload = conversionResult.headers.length > 0 && dataRows.length > 0 && !hasPendingApprovals && approvedCount > 0;
+
   const handleDownload = () => {
-    if (conversionResult.headers.length === 0) {
+    if (!canDownload) {
       toast({
         title: "Nada para exportar",
-        description: "Faça o upload dos arquivos e aprove os mapeamentos antes de exportar.",
+        description: "Faça o upload dos arquivos e conclua as aprovações antes de exportar.",
         variant: "destructive",
       });
       return;
@@ -436,7 +442,7 @@ const ConversaoPage: React.FC = () => {
             dataRows.length > 0 ? (
               <p className="text-xs text-muted-foreground">{dataRows.length} linhas carregadas.</p>
             ) : (
-              <p className="text-xs text-muted-foreground">Após o upload você verá a prévia antes/depois.</p>
+              <p className="text-xs text-muted-foreground">Após o upload você poderá revisar e aprovar os mapeamentos.</p>
             )
           }
           badge={dataRows.length > 0 ? <Badge variant="secondary">Dados prontos</Badge> : undefined}
@@ -461,7 +467,7 @@ const ConversaoPage: React.FC = () => {
             <Button variant="outline" onClick={handleApproveSafe} disabled={safeSuggestions.length === 0}>
               Aprovar sugestões seguras ({safeSuggestions.length})
             </Button>
-            <Button onClick={handleDownload} disabled={conversionResult.headers.length === 0}>
+            <Button onClick={handleDownload} disabled={!canDownload}>
               Baixar *_padronizado.xlsx
             </Button>
           </div>
@@ -482,22 +488,6 @@ const ConversaoPage: React.FC = () => {
         />
       </div>
 
-      <Separator />
-
-      <div className="space-y-4">
-        <div>
-          <h2 className="text-2xl font-semibold">Prévia Antes/Depois</h2>
-          <p className="text-sm text-muted-foreground">
-            Compare os cabeçalhos originais com o resultado padronizado antes de baixar.
-          </p>
-        </div>
-        <PreviewBeforeAfter
-          originalHeaders={dataHeaders}
-          convertedHeaders={conversionResult.headers}
-          originalRows={dataRows}
-          convertedRows={conversionResult.rows}
-        />
-      </div>
     </div>
   );
 };
