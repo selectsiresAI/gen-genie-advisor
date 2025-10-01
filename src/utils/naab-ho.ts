@@ -1,17 +1,10 @@
-/** Limpa string e padroniza caixa alta */
-function clean(s: string): string {
-  return (s || "")
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
+const HO_PATTERN = /(?:^|[^A-Z0-9])(?<stud>\d{1,3})[^A-Z0-9]*HO[^A-Z0-9]*(?<bull>\d{1,7})?(?:[^A-Z0-9]|$)/i;
 
 /** Zero-left pad do stud (1–3 dígitos -> 3 dígitos) */
-function padStud(stud: string): string {
-  const n = (stud || "").replace(/\D/g, "");
-  if (!n) return "";
-  return n.padStart(3, "0").slice(-3);
+function padStud(stud: string | undefined): string {
+  if (!stud) return "";
+  const digits = stud.replace(/\D/g, "");
+  return digits ? digits.padStart(3, "0").slice(-3) : "";
 }
 
 /**
@@ -26,16 +19,15 @@ function padStud(stud: string): string {
  *  - null se não reconhecer padrão HO válido
  */
 export function normalizeNaabHO(input: string): string | null {
-  const raw = clean(input);
-  // Padrão: [stud 1-3] [opcional separador] HO [opcional separador] [bull 1-7]
-  const re = /(?:^|\s)(?<stud>\d{1,3})\s*-?\s*HO\s*-?\s*(?<bull>\d{1,7})?(?:\s|$)/i;
-  const m = raw.match(re);
-  if (!m?.groups) return null;
+  if (!input) return null;
 
-  const stud = padStud(m.groups.stud);
+  const match = input.toUpperCase().match(HO_PATTERN);
+  if (!match?.groups) return null;
+
+  const stud = padStud(match.groups.stud);
   if (!stud) return null;
 
-  const bull = (m.groups.bull || "").replace(/\D/g, "");
+  const bull = (match.groups.bull || "").replace(/\D/g, "");
   return bull ? `${stud}HO${bull}` : `${stud}HO`;
 }
 
@@ -44,16 +36,17 @@ export function normalizeNaabFieldsHO<T extends Record<string, any>>(
   row: T,
   columns: string[]
 ): T {
-  const out: Record<string, any> = { ...row };
+  let out: Record<string, any> | null = null;
   for (const col of columns) {
     const val = row[col];
-    if (typeof val === "string" && val.trim() !== "") {
-      const normalized = normalizeNaabHO(val);
-      if (normalized) {
-        out[col] = normalized;
-        out[`${col}__original`] = val;
-      }
-    }
+    if (typeof val !== "string" || val === "") continue;
+
+    const normalized = normalizeNaabHO(val);
+    if (!normalized) continue;
+
+    if (!out) out = { ...row };
+    out[col] = normalized;
+    out[`${col}__original`] = val;
   }
-  return out as T;
+  return (out as T) || row;
 }
