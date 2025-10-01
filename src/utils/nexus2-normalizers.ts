@@ -52,8 +52,11 @@ export function normalizeDateFast(v: unknown): string {
  * 7H, 7HO, 07HO, 007HO, 7HO12345, 07-HO-012345, corrige H0/HOO...
  * Retorna "DDDHO" ou "DDDHO<bull>"
  */
-export function normalizeNaabHOFast(v: string): string | null {
-  const fixed = up(v).replace(/H0/g, "HO").replace(/HOO+/g, "HO");
+export function normalizeNaabHOFast(v: unknown): string | null {
+  const raw = strip(v);
+  if (!raw) return null;
+
+  const fixed = up(raw).replace(/H0/g, "HO").replace(/HOO+/g, "HO");
   // âncoras para evitar “scan” pesado
   const m = fixed.match(/^\s*(\d{1,3})\s*H(?:O)?\s*(\d{0,7})\s*$/);
   if (!m) return null;
@@ -80,7 +83,7 @@ export function applyFastNormalizers(
   }
   for (const c of naabCols) {
     const val = out[c];
-    if (typeof val === "string" && val.trim()) {
+    if (val !== undefined && val !== null) {
       const n = normalizeNaabHOFast(val);
       if (n) out[c] = n;
     }

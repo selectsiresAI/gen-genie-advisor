@@ -18,6 +18,7 @@ import {
 } from '@/services/prediction.service';
 import {
   applyFastNormalizers,
+  normalizeNaabHOFast,
   parseCsvQuick,
   parseXlsxQuick
 } from '@/utils/nexus2-normalizers';
@@ -35,7 +36,13 @@ const REQUIRED_COLUMNS = [
 
 const fixHeader = (h: string) => h.replace(/[,;:.]+$/g, '');
 
-const cleanNaab = (value: string) => value.trim().replace(/[\s-]/g, '').toUpperCase();
+const cleanNaab = (value: string) => {
+  const normalized = normalizeNaabHOFast(value);
+  if (normalized) {
+    return normalized;
+  }
+  return value.trim().replace(/[\s-]/g, '').toUpperCase();
+};
 
 async function readFileFast(file: File) {
   if (file.name.toLowerCase().endsWith('.csv')) {
