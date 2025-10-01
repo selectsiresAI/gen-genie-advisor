@@ -304,9 +304,29 @@ const ConversaoPage: React.FC = () => {
     );
   };
 
-  const conversionResult = useMemo(() => {
-    if (dataRows.length === 0) {
-      return { headers: [] as string[], rows: [] as Record<string, any>[] };
+  const safeSuggestions = useMemo(
+    () => mappings.filter((row) => !row.approved && row.selectedCanonical && ((row.confidence ?? 0) >= 0.88 || row.method === "legend")),
+    [mappings],
+  );
+
+  const approvedCount = useMemo(() => mappings.filter((row) => row.approved).length, [mappings]);
+
+  const hasPendingApprovals = useMemo(
+    () => mappings.some((row) => row.selectedCanonical && !row.approved),
+    [mappings],
+  );
+
+  const canDownload =
+    modelHeaders.length > 0 && dataRows.length > 0 && !hasPendingApprovals && approvedCount > 0;
+
+  const handleDownload = () => {
+    if (!canDownload) {
+      toast({
+        title: "Nada para exportar",
+        description: "Faça o upload dos arquivos e conclua as aprovações antes de exportar.",
+        variant: "destructive",
+      });
+      return;
     }
 
     const canonicalSet = new Set(modelHeaders.map((header) => normalizeKey(header)));
@@ -348,35 +368,8 @@ const ConversaoPage: React.FC = () => {
       return output;
     });
 
-    return { headers: finalHeaders, rows: convertedRows };
-  }, [dataRows, mappings, modelHeaders, dataHeaders]);
-
-  const safeSuggestions = useMemo(
-    () => mappings.filter((row) => !row.approved && row.selectedCanonical && ((row.confidence ?? 0) >= 0.88 || row.method === "legend")),
-    [mappings],
-  );
-
-  const approvedCount = useMemo(() => mappings.filter((row) => row.approved).length, [mappings]);
-
-  const hasPendingApprovals = useMemo(
-    () => mappings.some((row) => row.selectedCanonical && !row.approved),
-    [mappings],
-  );
-
-  const canDownload = conversionResult.headers.length > 0 && dataRows.length > 0 && !hasPendingApprovals && approvedCount > 0;
-
-  const handleDownload = () => {
-    if (!canDownload) {
-      toast({
-        title: "Nada para exportar",
-        description: "Faça o upload dos arquivos e conclua as aprovações antes de exportar.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     const workbook = XLSX.utils.book_new();
-    const aoa = [conversionResult.headers, ...conversionResult.rows.map((row) => conversionResult.headers.map((header) => row[header]))];
+    const aoa = [finalHeaders, ...convertedRows.map((row) => finalHeaders.map((header) => row[header]))];
     const sheet = XLSX.utils.aoa_to_sheet(aoa);
     XLSX.utils.book_append_sheet(workbook, sheet, "Padronizado");
 
