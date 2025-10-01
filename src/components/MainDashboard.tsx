@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Building2, Users, Beef, BarChart3, Plus, LogOut, Zap, ArrowLeft, TrendingUp, Beaker, MessageSquare, Target, FolderOpen, Calculator, Trash2 } from "lucide-react";
+import { Building2, Users, Beef, BarChart3, Plus, LogOut, Zap, ArrowLeft, ArrowLeftRight, TrendingUp, Beaker, MessageSquare, Target, FolderOpen, Calculator, Trash2 } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import CreateFarmModal from './CreateFarmModal';
@@ -22,6 +22,7 @@ import FemaleUploadModal from './FemaleUploadModal';
 import SegmentationPage from './SegmentationPage';
 import { usePlanStore } from '@/hooks/usePlanStore';
 import { useHerdStore } from '@/hooks/useHerdStore';
+import ConversaoPage from '@/pages/tools/conversao';
 
 interface MainDashboardProps {
   user: User;
@@ -50,7 +51,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'farm' | 'herd' | 'segmentation' | 'bulls' | 'nexus' | 'charts' | 'botijao' | 'sms' | 'metas' | 'plano' | 'arquivos'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'farm' | 'herd' | 'segmentation' | 'bulls' | 'nexus' | 'charts' | 'botijao' | 'sms' | 'metas' | 'plano' | 'arquivos' | 'conversao'>('dashboard');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [totalFarms, setTotalFarms] = useState(0);
   const [totalAnimals, setTotalAnimals] = useState(0);
@@ -435,6 +436,25 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
 
               <Tooltip>
                 <TooltipTrigger asChild>
+                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('conversao')}>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <ArrowLeftRight className="w-5 h-5 text-primary" />
+                        Conversão (preview)
+                      </CardTitle>
+                      <CardDescription>
+                        Padronize planilhas e cabeçalhos
+                      </CardDescription>
+                    </CardHeader>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Converta arquivos usando o modelo padrão e sugestões inteligentes.</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
                   <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('plano')}>
                     <CardHeader className="pb-3">
                       <CardTitle className="flex items-center gap-2 text-base">
@@ -470,6 +490,22 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
     } : null;
 
     // Handle views that need special rendering
+    if (currentView === 'conversao') {
+      return <div className="min-h-screen bg-background">
+          <div className="border-b">
+            <div className="flex h-16 items-center px-4">
+              <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Dashboard
+              </Button>
+              <h1 className="text-xl font-semibold">Conversão de planilhas (preview)</h1>
+            </div>
+          </div>
+          <div className="container mx-auto px-4 py-8">
+            <ConversaoPage />
+          </div>
+        </div>;
+    }
     if (currentView === 'nexus') {
       return <div className="min-h-screen bg-background">
           <div className="border-b">
