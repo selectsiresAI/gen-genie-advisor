@@ -89,10 +89,9 @@ export async function getBullByNaab(naab: string): Promise<BullsDenormSelection 
     return null;
   }
 
+  // Buscar usando a função normalize_naab do Postgres para garantir correspondência
   const { data, error } = await supabase
-    .from('bulls_denorm')
-    .select(selectionQuery, { head: false, count: 'exact' })
-    .ilike('code', normalized)
+    .rpc('get_bull_by_naab', { naab: normalized })
     .maybeSingle();
 
   if (error) {
@@ -103,7 +102,22 @@ export async function getBullByNaab(naab: string): Promise<BullsDenormSelection 
     throw new Error(error.message);
   }
 
-  return data as unknown as BullsDenormSelection | null;
+  // Se encontrou pelo RPC, buscar dados completos
+  if (data && data.found && data.bull_id) {
+    const { data: bullData, error: bullError } = await supabase
+      .from('bulls_denorm')
+      .select(selectionQuery, { head: false, count: 'exact' })
+      .eq('id', data.bull_id)
+      .maybeSingle();
+
+    if (bullError) {
+      throw new Error(bullError.message);
+    }
+
+    return bullData as unknown as BullsDenormSelection | null;
+  }
+
+  return null;
 }
 
 export async function searchBulls(term: string, limit = 10): Promise<BullsDenormSelection[]> {
@@ -113,22 +127,34 @@ export async function searchBulls(term: string, limit = 10): Promise<BullsDenorm
     return [];
   }
 
-  const escaped = escapeIlike(normalized);
-  const codePattern = `${escaped.toUpperCase()}%`;
-  const namePattern = `%${escaped}%`;
-
+  // Usar a função RPC que aplica normalização do Postgres
   const { data, error } = await supabase
-    .from('bulls_denorm')
-    .select(selectionQuery, { head: false, count: 'exact' })
-    .or(
-      `code.ilike.${codePattern},name.ilike.${namePattern}`
-    )
-    .order('code', { ascending: true, nullsFirst: false })
-    .limit(limit);
+    .rpc('search_bulls', { q: normalized, limit_count: limit });
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return (data as unknown as BullsDenormSelection[]) ?? [];
+  if (!data) {
+    return [];
+  }
+
+  // Buscar dados completos dos bulls encontrados
+  const bullIds = data.map((bull: any) => bull.bull_id);
+  
+  if (bullIds.length === 0) {
+    return [];
+  }
+
+  const { data: bullsData, error: bullsError } = await supabase
+    .from('bulls_denorm')
+    .select(selectionQuery, { head: false, count: 'exact' })
+    .in('id', bullIds)
+    .order('code', { ascending: true, nullsFirst: false });
+
+  if (bullsError) {
+    throw new Error(bullsError.message);
+  }
+
+  return (bullsData as unknown as BullsDenormSelection[]) ?? [];
 }
