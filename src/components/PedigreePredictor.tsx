@@ -48,6 +48,11 @@ const REQUIRED_COLUMNS: Record<BatchUploadMode, Array<keyof BatchInput>> = {
   sms: ['idFazenda', 'dataNascimento', 'naabPai', 'naabAvoMaterno', 'naabBisavoMaterno']
 };
 
+const BATCH_MODE_LABELS: Record<BatchUploadMode, string> = {
+  standard: 'Modelo Padrão',
+  sms: 'Padrão SMS'
+};
+
 const COMMON_HEADER_ALIASES: Array<[string, keyof BatchInput]> = [
   ['ID_Fazenda', 'idFazenda'],
   ['id_fazenda', 'idFazenda'],
@@ -592,8 +597,9 @@ const PedigreePredictor: React.FC = () => {
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUploadForMode = (mode: BatchUploadMode) => (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
+    setBatchUploadMode(mode);
     setBatchResults([]);
     setParsedBatchData([]);
     setPreviewError(null);
@@ -938,61 +944,75 @@ const PedigreePredictor: React.FC = () => {
               <CardTitle>Processamento em Lote</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <Tabs
-                  value={batchUploadMode}
-                  onValueChange={(value) => setBatchUploadMode(value as BatchUploadMode)}
-                  className="w-full"
-                >
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="standard">Modelo Padrão</TabsTrigger>
-                    <TabsTrigger value="sms">Padrão SMS</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="batch-file">Arquivo (.csv, .xlsx, .xls)</Label>
-                    <Input id="batch-file" type="file" accept={ACCEPTED_FILE_TYPES} onChange={handleFileUpload} />
-                  </div>
-
-                  {batchUploadMode === 'standard' ? (
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="space-y-3 rounded-lg border border-muted-foreground/20 bg-muted/10 p-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Modelo Padrão</p>
                     <p className="text-sm text-muted-foreground">
-                      Envie .csv/.xlsx/.xls com colunas: ID_Fazenda, Nome, Data_de_Nascimento, naab_pai, naab_avo_materno,
-                      naab_bisavo_materno.
+                      Utilize esta opção quando sua planilha já estiver no formato interno.
                     </p>
-                  ) : (
-                    <Alert className="border-primary/40 bg-primary/5">
-                      <AlertTitle className="flex items-center gap-2">
-                        <span role="img" aria-hidden="true">📘</span>
-                        Como preparar seu arquivo SMS antes do upload:
-                      </AlertTitle>
-                      <AlertDescription>
-                        <ol className="list-decimal space-y-1 pl-4">
-                          <li>Abra a planilha SMS original.</li>
-                          <li>
-                            <strong>Apague a linha 1</strong> (cabeçalho antigo).
-                          </li>
-                          <li>
-                            <strong>Apague as colunas B, D, G até AQ</strong>.
-                          </li>
-                          <li>
-                            Certifique-se de manter apenas: Nº VACA, PAI, AVÔ MATERNO, BISAVÔ MATERNO, DATA NASCIMENTO.
-                          </li>
-                          <li>
-                            Para animais sem NAAB do avô materno, preencha com <strong>007HO00001</strong>.
-                          </li>
-                          <li>
-                            Para animais sem NAAB do bisavô materno, preencha com <strong>007HO00002</strong>.
-                          </li>
-                          <li>
-                            Salve o arquivo em <code>.csv</code>, <code>.xlsx</code> ou <code>.xls (Excel 5.0/95)</code>.
-                          </li>
-                          <li>Faça o upload aqui.</li>
-                        </ol>
-                      </AlertDescription>
-                    </Alert>
-                  )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="batch-file-standard">Arquivo (.csv, .xlsx, .xls)</Label>
+                    <Input
+                      id="batch-file-standard"
+                      type="file"
+                      accept={ACCEPTED_FILE_TYPES}
+                      onChange={handleFileUploadForMode('standard')}
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Envie .csv/.xlsx/.xls com colunas: ID_Fazenda, Nome, Data_de_Nascimento, naab_pai, naab_avo_materno,
+                    naab_bisavo_materno.
+                  </p>
+                </div>
+
+                <div className="space-y-3 rounded-lg border border-primary/40 bg-primary/5 p-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-primary">Padrão SMS</p>
+                    <p className="text-sm text-muted-foreground">
+                      Convertemos automaticamente as colunas para o formato interno.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="batch-file-sms">Arquivo (.csv, .xlsx, .xls)</Label>
+                    <Input
+                      id="batch-file-sms"
+                      type="file"
+                      accept={ACCEPTED_FILE_TYPES}
+                      onChange={handleFileUploadForMode('sms')}
+                    />
+                  </div>
+                  <Alert className="border-primary/60 bg-background">
+                    <AlertTitle className="flex items-center gap-2">
+                      <span role="img" aria-hidden="true">📘</span>
+                      Como preparar seu arquivo SMS antes do upload:
+                    </AlertTitle>
+                    <AlertDescription>
+                      <ol className="list-decimal space-y-1 pl-4">
+                        <li>Abra a planilha SMS original.</li>
+                        <li>
+                          <strong>Apague a linha 1</strong> (cabeçalho antigo).
+                        </li>
+                        <li>
+                          <strong>Apague as colunas B, D, G até AQ</strong>.
+                        </li>
+                        <li>
+                          Certifique-se de manter apenas: Nº VACA, PAI, AVÔ MATERNO, BISAVÔ MATERNO, DATA NASCIMENTO.
+                        </li>
+                        <li>
+                          Para animais sem NAAB do avô materno, preencha com <strong>007HO00001</strong>.
+                        </li>
+                        <li>
+                          Para animais sem NAAB do bisavô materno, preencha com <strong>007HO00002</strong>.
+                        </li>
+                        <li>
+                          Salve o arquivo em <code>.csv</code>, <code>.xlsx</code> ou <code>.xls (Excel 5.0/95)</code>.
+                        </li>
+                        <li>Faça o upload aqui.</li>
+                      </ol>
+                    </AlertDescription>
+                  </Alert>
                 </div>
               </div>
 
@@ -1010,7 +1030,9 @@ const PedigreePredictor: React.FC = () => {
               {!isPreviewLoading && parsedBatchData.length > 0 && (
                 <div className="space-y-2">
                   <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                    <h3 className="font-semibold">Pré-visualização normalizada</h3>
+                    <h3 className="font-semibold">
+                      Pré-visualização normalizada — {BATCH_MODE_LABELS[batchUploadMode]}
+                    </h3>
                     <span className="text-sm text-muted-foreground">
                       Mostrando {Math.min(10, parsedBatchData.length)} de {parsedBatchData.length} linhas
                     </span>
