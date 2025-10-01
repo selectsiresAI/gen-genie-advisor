@@ -21,7 +21,16 @@ import { read, utils, writeFileXLSX } from 'xlsx';
 const ACCEPTED_EXTENSIONS = '.csv,.xlsx,.xls';
 const REQUIRED_HEADERS = ['naab_pai', 'naab_avo_materno', 'naab_bisavo_materno'] as const;
 
-const normalizeNaab = (value: string) => value.trim().toUpperCase();
+const normalizeNaab = (value: string) => {
+  // Remove espaços, hífens e converte para uppercase
+  let normalized = value.trim().replace(/[\s-]/g, '').toUpperCase();
+  
+  // Remove zeros à esquerda antes das letras (007HO -> 7HO, 011HO -> 11HO)
+  normalized = normalized.replace(/^0+([1-9]\d*[A-Z]+)/, '$1');
+  normalized = normalized.replace(/^0+([A-Z]+)/, '$1');
+  
+  return normalized;
+};
 
 const normalizeHeaderName = (value: unknown) => {
   const stringValue = String(value ?? '').trim();

@@ -70,8 +70,20 @@ const selectionQuery = SELECT_COLUMNS.join(', ');
 
 const escapeIlike = (value: string) => value.replace(/[%_]/g, (match) => `\\${match}`);
 
+const normalizeNaabCode = (naab: string): string => {
+  // Remove espaços, hífens e converte para uppercase
+  let normalized = naab.trim().replace(/[\s-]/g, '').toUpperCase();
+  
+  // Remove zeros à esquerda antes das letras (007HO -> 7HO, 011HO -> 11HO)
+  // Mantém zeros após as letras (7HO00001 permanece 7HO00001)
+  normalized = normalized.replace(/^0+([1-9]\d*[A-Z]+)/, '$1');
+  normalized = normalized.replace(/^0+([A-Z]+)/, '$1');
+  
+  return normalized;
+};
+
 export async function getBullByNaab(naab: string): Promise<BullsDenormSelection | null> {
-  const normalized = naab.trim().toUpperCase();
+  const normalized = normalizeNaabCode(naab);
 
   if (!normalized) {
     return null;
