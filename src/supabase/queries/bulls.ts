@@ -79,7 +79,7 @@ export async function getBullByNaab(naab: string): Promise<BullsDenormSelection 
 
   const { data, error } = await supabase
     .from('bulls_denorm')
-    .select(selectionQuery)
+    .select(selectionQuery, { head: false, count: 'exact' })
     .ilike('code', normalized)
     .maybeSingle();
 
@@ -107,7 +107,7 @@ export async function searchBulls(term: string, limit = 10): Promise<BullsDenorm
 
   const { data, error } = await supabase
     .from('bulls_denorm')
-    .select(selectionQuery)
+    .select(selectionQuery, { head: false, count: 'exact' })
     .or(
       `code.ilike.${codePattern},name.ilike.${namePattern}`
     )
