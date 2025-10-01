@@ -1,12 +1,43 @@
 import { read, utils } from "xlsx";
 
 /** ======= Helpers de normalização ======= */
-const strip = (s: string) => (s ?? "").trim();
-const up = (s: string) =>
-  (s ?? "").toUpperCase().replace(/[^A-Z0-9]/g, " ").replace(/\s+/g, " ").trim();
+const strip = (value: unknown) => (value ?? "").toString().trim();
+const up = (value: unknown) =>
+  strip(value).toUpperCase().replace(/[^A-Z0-9]/g, " ").replace(/\s+/g, " ").trim();
+
+const toIsoDate = (date: Date) =>
+  Number.isNaN(date.valueOf()) ? "" : date.toISOString().slice(0, 10);
+
+const excelSerialToIso = (value: number) => {
+  if (!Number.isFinite(value) || value <= 0) return "";
+
+  // Ajuste padrão: 25569 é o deslocamento para 1970-01-01 no calendário Excel
+  const ms = Math.round((value - 25569) * 86400 * 1000);
+  if (!Number.isFinite(ms)) return "";
+  const date = new Date(ms);
+  return toIsoDate(date);
+};
 
 /** Data: dd/mm/aaaa | dd-mm-aaaa | yyyymmdd -> aaaa-mm-dd */
-export function normalizeDateFast(v: string): string {
+export function normalizeDateFast(v: unknown): string {
+  if (v instanceof Date) {
+    const iso = toIsoDate(v);
+    if (iso) return iso;
+  }
+
+  if (typeof v === "number" && Number.isFinite(v)) {
+    const int = Math.trunc(v);
+    const asEightDigits = String(int);
+    if (asEightDigits.length === 8) {
+      const s = asEightDigits.padStart(8, "0");
+      const c = s.match(/^(\d{4})(\d{2})(\d{2})$/);
+      if (c) return `${c[1]}-${c[2]}-${c[3]}`;
+    }
+
+    const iso = excelSerialToIso(v);
+    if (iso) return iso;
+  }
+
   const s = strip(v);
   // yyyymmdd
   const c1 = s.match(/^(\d{4})(\d{2})(\d{2})$/);
@@ -43,7 +74,9 @@ export function applyFastNormalizers(
   const { dateCols = [], naabCols = [] } = opts;
 
   for (const c of dateCols) {
-    if (typeof out[c] === "string") out[c] = normalizeDateFast(out[c]);
+    if (c in out && out[c] !== undefined && out[c] !== null) {
+      out[c] = normalizeDateFast(out[c]);
+    }
   }
   for (const c of naabCols) {
     const val = out[c];
