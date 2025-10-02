@@ -1687,11 +1687,64 @@ export type Database = {
         Args: { naab: string }
         Returns: {
           bull_id: string
+          bwc: number
+          ccr: number
+          cfp: number
+          cm_dollar: number
           code: string
+          company: string
+          da: number
+          dce: number
+          dfm: number
+          dpr: number
+          dsb: number
+          f_sav: number
+          fi: number
+          flc: number
+          fls: number
+          fm_dollar: number
           found: boolean
+          fta: number
+          ftl: number
+          ftp: number
+          fua: number
+          gfi: number
+          gm_dollar: number
+          h_liv: number
+          hcr: number
+          hhp_dollar: number
+          ket: number
+          liv: number
+          mast: number
+          met: number
+          mf: number
           name: string
-          ptas: Json
-          suggestions: string[]
+          nm_dollar: number
+          pl: number
+          ptaf: number
+          ptaf_pct: number
+          ptam: number
+          ptap: number
+          ptap_pct: number
+          ptat: number
+          rfi: number
+          rlr: number
+          rls: number
+          rp: number
+          rtp: number
+          rua: number
+          ruh: number
+          ruw: number
+          rw: number
+          sce: number
+          scs: number
+          ssb: number
+          sta: number
+          str: number
+          tpi: number
+          ucl: number
+          udc: number
+          udp: number
         }[]
       }
       get_bulls_by_naab_list: {
@@ -1965,9 +2018,63 @@ export type Database = {
         Args: { limit_count?: number; q: string }
         Returns: {
           bull_id: string
+          bwc: number
+          ccr: number
+          cfp: number
+          cm_dollar: number
           code: string
+          company: string
+          da: number
+          dce: number
+          dfm: number
+          dpr: number
+          dsb: number
+          f_sav: number
+          fi: number
+          flc: number
+          fls: number
+          fm_dollar: number
+          fta: number
+          ftl: number
+          ftp: number
+          fua: number
+          gfi: number
+          gm_dollar: number
+          h_liv: number
+          hcr: number
+          hhp_dollar: number
+          ket: number
+          liv: number
+          mast: number
+          met: number
+          mf: number
           name: string
-          ptas: Json
+          nm_dollar: number
+          pl: number
+          ptaf: number
+          ptaf_pct: number
+          ptam: number
+          ptap: number
+          ptap_pct: number
+          ptat: number
+          rfi: number
+          rlr: number
+          rls: number
+          rp: number
+          rtp: number
+          rua: number
+          ruh: number
+          ruw: number
+          rw: number
+          sce: number
+          scs: number
+          ssb: number
+          sta: number
+          str: number
+          tpi: number
+          ucl: number
+          udc: number
+          udp: number
         }[]
       }
       set_default_farm: {
