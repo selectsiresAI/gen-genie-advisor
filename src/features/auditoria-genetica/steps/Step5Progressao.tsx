@@ -1,11 +1,23 @@
 "use client";
-import { useMemo, useState } from "react";
+
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RefreshCw } from "lucide-react";
-import { ResponsiveContainer, ComposedChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Area, Line, ReferenceLine } from "recharts";
-import { useAGFilters } from "../store";
+import {
+  Area,
+  CartesianGrid,
+  ComposedChart,
+  Legend,
+  Line,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { PTA_CATALOG } from "../ptas";
 import { useFemales } from "../hooks";
-import { mean } from "@/lib/number";
+import { useAGFilters } from "../store";
 
 type SeriesPoint = { year: number; n: number; mean: number };
 
@@ -18,27 +30,30 @@ type TraitCardProps = {
   domainTicks: number[];
 };
 
+const mean = (values: number[]) =>
+  values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+
 function computeSlope(points: SeriesPoint[]) {
   if (points.length < 2) return 0;
-  const xs = points.map((p) => p.year);
-  const ys = points.map((p) => p.mean);
+  const xs = points.map((point) => point.year);
+  const ys = points.map((point) => point.mean);
   const mx = mean(xs);
   const my = mean(ys);
   const varianceX = mean(xs.map((x) => (x - mx) ** 2));
   if (!varianceX) return 0;
-  const covariance = mean(xs.map((x, i) => (x - mx) * (ys[i] - my)));
+  const covariance = mean(xs.map((x, index) => (x - mx) * (ys[index] - my)));
   return Math.round(covariance / varianceX);
 }
 
 function computeTrend(points: SeriesPoint[]) {
   if (points.length < 2) return [] as Array<{ year: number; trend: number }>;
-  const xs = points.map((p) => p.year);
-  const ys = points.map((p) => p.mean);
+  const xs = points.map((point) => point.year);
+  const ys = points.map((point) => point.mean);
   const mx = mean(xs);
   const my = mean(ys);
   const varianceX = mean(xs.map((x) => (x - mx) ** 2));
   if (!varianceX) return [];
-  const covariance = mean(xs.map((x, i) => (x - mx) * (ys[i] - my)));
+  const covariance = mean(xs.map((x, index) => (x - mx) * (ys[index] - my)));
   const slope = covariance / varianceX;
   const intercept = my - slope * mx;
   const firstYear = xs[0];
@@ -50,7 +65,7 @@ function computeTrend(points: SeriesPoint[]) {
 }
 
 function TraitCard({ traitKey, traitLabel, data, showFarmMean, showTrend, domainTicks }: TraitCardProps) {
-  const farmMean = Math.round(mean(data.map((d) => d.mean)));
+  const farmMean = Math.round(mean(data.map((point) => point.mean)));
   const slope = computeSlope(data);
   const chartData = data.map((point, index) => ({
     year: point.year,
@@ -71,7 +86,12 @@ function TraitCard({ traitKey, traitLabel, data, showFarmMean, showTrend, domain
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={chartData} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis type="number" dataKey="year" domain={[domainTicks[0], domainTicks[domainTicks.length - 1]]} ticks={domainTicks} />
+            <XAxis
+              type="number"
+              dataKey="year"
+              domain={[domainTicks[0], domainTicks[domainTicks.length - 1]]}
+              ticks={domainTicks}
+            />
             <YAxis />
             <Tooltip />
             <Legend />
@@ -101,37 +121,35 @@ function TraitCard({ traitKey, traitLabel, data, showFarmMean, showTrend, domain
   );
 }
 
-const PTA_OPTIONS = [
-  { key: "tpi", label: "TPI" },
-  { key: "nm_dollar", label: "NM$" },
-  { key: "hhp_dollar", label: "HHP$®" },
-  { key: "ptam", label: "PTAM" },
-  { key: "ptaf", label: "PTAF" },
-  { key: "ptap", label: "PTAP" },
-];
-
 export default function Step5Progressao() {
   const { farmId, ptasSelecionadas, setPTAs } = useAGFilters();
   const { data: females = [], isLoading } = useFemales(farmId);
   const [showFarmMean, setShowFarmMean] = useState(true);
   const [showTrend, setShowTrend] = useState(true);
 
+  useEffect(() => {
+    if (!ptasSelecionadas?.length) {
+      setPTAs(["hhp_dollar", "tpi", "nm_dollar"]);
+    }
+  }, [ptasSelecionadas, setPTAs]);
+
   const domainTicks = useMemo(() => {
-    const set = new Set<number>();
+    const years = new Set<number>();
     females.forEach((female: any) => {
       const birthDate = female?.birth_date ? new Date(female.birth_date) : undefined;
       const year = birthDate?.getFullYear();
       if (Number.isFinite(year)) {
-        set.add(year as number);
+        years.add(year as number);
       }
     });
-    const values = Array.from(set).sort((a, b) => a - b);
+    const values = Array.from(years).sort((a, b) => a - b);
     return values.length ? values : [new Date().getFullYear()];
   }, [females]);
 
   const seriesByKey = useMemo(() => {
     const years = domainTicks;
     const output: Record<string, SeriesPoint[]> = {};
+
     ptasSelecionadas.forEach((key) => {
       const byYear = new Map<number, number[]>();
       females.forEach((female: any) => {
@@ -144,6 +162,7 @@ export default function Step5Progressao() {
           byYear.set(year as number, bucket);
         }
       });
+
       output[key] = years
         .map((year) => {
           const values = byYear.get(year) ?? [];
@@ -155,8 +174,16 @@ export default function Step5Progressao() {
         })
         .filter((point) => point.n > 0);
     });
+
     return output;
   }, [ptasSelecionadas, females, domainTicks]);
+
+  const options = useMemo(
+    () => PTA_CATALOG.slice().sort((a, b) => (a.preferOrder ?? 999) - (b.preferOrder ?? 999)),
+    []
+  );
+
+  const labelOf = (key: string) => PTA_CATALOG.find((item) => item.key === key)?.label ?? key.toUpperCase();
 
   return (
     <div className="space-y-4">
@@ -165,8 +192,8 @@ export default function Step5Progressao() {
           <CardTitle>Progressão Genética — Seleção de PTAs</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-2 items-center">
-            {PTA_OPTIONS.map((pta) => {
+          <div className="flex flex-wrap gap-2">
+            {options.map((pta) => {
               const active = ptasSelecionadas.includes(pta.key);
               return (
                 <button
@@ -181,6 +208,7 @@ export default function Step5Progressao() {
                   className={`px-3 py-2 rounded-xl border text-sm ${
                     active ? "bg-emerald-50 border-emerald-300" : "hover:bg-gray-50"
                   }`}
+                  title={pta.group}
                 >
                   {pta.label}
                 </button>
@@ -219,7 +247,7 @@ export default function Step5Progressao() {
           {ptasSelecionadas.map((key) => {
             const data = seriesByKey[key];
             if (!data?.length) return null;
-            const label = PTA_OPTIONS.find((pta) => pta.key === key)?.label ?? key.toUpperCase();
+            const label = labelOf(key);
             return (
               <TraitCard
                 key={key}
