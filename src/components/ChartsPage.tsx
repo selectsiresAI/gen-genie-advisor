@@ -11,10 +11,6 @@ import { ArrowLeft, Settings, Download, RefreshCw, Users, TrendingUp, BarChart3,
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-// Constants
-const YEARS_FIXED = [2021, 2022, 2023, 2024, 2025];
-const YEARS = [2021, 2022, 2023, 2024, 2025];
-
 type RawRow = Record<string, any>;
 
 function coerceYear(v: any): number | null {
@@ -172,122 +168,103 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
     }
   };
 
-  // Processar dados para gráficos de tendência - VERSÃO DEFENSIVA
   const processedTrendData = useMemo(() => {
-    if (!females || !Array.isArray(females) || females.length === 0) return [];
+    if (!Array.isArray(females) || females.length === 0 || selectedPTAs.length === 0) return [];
+    let rows: any[] = [];
 
-    let processedData: any[] = [];
-    
     if (groupBy === 'year') {
-      // Normaliza dados por ano com segurança
-      const byYear = new Map<number, { year: number; n: number; values: number[] }>();
-      
-      females.forEach(female => {
-        if (!female) return;
-        
-        const birthYear = coerceYear(female.birth_date ? new Date(female.birth_date).getFullYear() : null);
-        if (!birthYear) return;
-        
-        if (!byYear.has(birthYear)) {
-          byYear.set(birthYear, { year: birthYear, n: 0, values: [] });
+      const byYear = new Map<number, { n: number; sums: Record<string, number>; counts: Record<string, number> }>();
+      females.forEach((female) => {
+        const year = female?.birth_date ? new Date(female.birth_date).getFullYear() : undefined;
+        if (!Number.isFinite(year)) return;
+        if (!byYear.has(year as number)) {
+          byYear.set(year as number, { n: 0, sums: {}, counts: {} });
         }
-        
-        const yearData = byYear.get(birthYear)!;
-        yearData.n++;
-        
-        selectedPTAs.forEach(pta => {
-          const value = pickNumber(female, [pta], NaN);
+        const slot = byYear.get(year as number)!;
+        slot.n++;
+        selectedPTAs.forEach((ptaKey) => {
+          const value = Number(female?.[ptaKey]);
           if (Number.isFinite(value)) {
-            yearData.values.push(value);
+            slot.sums[ptaKey] = (slot.sums[ptaKey] ?? 0) + value;
+            slot.counts[ptaKey] = (slot.counts[ptaKey] ?? 0) + 1;
           }
         });
       });
-      
-      // Constrói array final para o range fixo
-      processedData = YEARS_FIXED.map(year => {
-        const entry = byYear.get(year);
-        const count = entry?.n || 0;
-        const values = entry?.values || [];
-        const meanVal = values.length > 0 ? mean(values) : 0;
-        
-        const result: any = { year, count };
-        selectedPTAs.forEach(pta => {
-          const ptaValues = values.length > 0 ? values : [];
-          result[pta] = ptaValues.length > 0 ? meanVal : null;
+      rows = Array.from(byYear.entries())
+        .sort((a, b) => a[0] - b[0])
+        .map(([year, { n, sums, counts }]) => {
+          const row: any = { year, count: n };
+          selectedPTAs.forEach((ptaKey) => {
+            const count = counts[ptaKey] ?? 0;
+            row[ptaKey] = count > 0 ? sums[ptaKey] / count : null;
+          });
+          return row;
         });
-        
-        return result;
-      }).filter(d => d && typeof d === 'object' && (d.count || 0) > 0);
-    }
-    
-    else if (groupBy === 'category') {
-      const byCategory = new Map<string, { category: string; n: number; values: number[] }>();
-      
-      females.forEach(female => {
-        if (!female) return;
-        
-        const category = female.category || 'Sem Categoria';
-        
+    } else if (groupBy === 'category') {
+      const byCategory = new Map<string, { n: number; sums: Record<string, number>; counts: Record<string, number> }>();
+      females.forEach((female) => {
+        const category = (female?.category || 'Sem Categoria') as string;
         if (!byCategory.has(category)) {
-          byCategory.set(category, { category, n: 0, values: [] });
+          byCategory.set(category, { n: 0, sums: {}, counts: {} });
         }
-        
-        const catData = byCategory.get(category)!;
-        catData.n++;
-        
-        selectedPTAs.forEach(pta => {
-          const value = pickNumber(female, [pta], NaN);
+        const slot = byCategory.get(category)!;
+        slot.n++;
+        selectedPTAs.forEach((ptaKey) => {
+          const value = Number(female?.[ptaKey]);
           if (Number.isFinite(value)) {
-            catData.values.push(value);
+            slot.sums[ptaKey] = (slot.sums[ptaKey] ?? 0) + value;
+            slot.counts[ptaKey] = (slot.counts[ptaKey] ?? 0) + 1;
           }
         });
       });
-      
-      processedData = Array.from(byCategory.values()).map(catData => {
-        const result: any = { name: catData.category, count: catData.n };
-        selectedPTAs.forEach(pta => {
-          const values = catData.values;
-          result[pta] = values.length > 0 ? mean(values) : null;
+      rows = Array.from(byCategory.entries()).map(([name, { n, sums, counts }]) => {
+        const row: any = { name, count: n };
+        selectedPTAs.forEach((ptaKey) => {
+          const count = counts[ptaKey] ?? 0;
+          row[ptaKey] = count > 0 ? sums[ptaKey] / count : null;
         });
-        return result;
-      }).filter(d => d && typeof d === 'object' && (d.count || 0) > 0);
-    }
-    
-    else if (groupBy === 'parity') {
-      const byParity = new Map<string, { parity: string; n: number; values: number[] }>();
-      
-      females.forEach(female => {
-        if (!female) return;
-        
-        const parity = String(female.parity_order || 'Primípara');
-        
+        return row;
+      });
+    } else if (groupBy === 'parity') {
+      const byParity = new Map<string, { n: number; sums: Record<string, number>; counts: Record<string, number> }>();
+      females.forEach((female) => {
+        const parity = String(female?.parity_order ?? '1');
         if (!byParity.has(parity)) {
-          byParity.set(parity, { parity, n: 0, values: [] });
+          byParity.set(parity, { n: 0, sums: {}, counts: {} });
         }
-        
-        const parData = byParity.get(parity)!;
-        parData.n++;
-        
-        selectedPTAs.forEach(pta => {
-          const value = pickNumber(female, [pta], NaN);
+        const slot = byParity.get(parity)!;
+        slot.n++;
+        selectedPTAs.forEach((ptaKey) => {
+          const value = Number(female?.[ptaKey]);
           if (Number.isFinite(value)) {
-            parData.values.push(value);
+            slot.sums[ptaKey] = (slot.sums[ptaKey] ?? 0) + value;
+            slot.counts[ptaKey] = (slot.counts[ptaKey] ?? 0) + 1;
           }
         });
       });
-      
-      processedData = Array.from(byParity.values()).map(parData => {
-        const result: any = { name: parData.parity, count: parData.n };
-        selectedPTAs.forEach(pta => {
-          const values = parData.values;
-          result[pta] = values.length > 0 ? mean(values) : null;
+      rows = Array.from(byParity.entries()).map(([name, { n, sums, counts }]) => {
+        const row: any = { name, count: n };
+        selectedPTAs.forEach((ptaKey) => {
+          const count = counts[ptaKey] ?? 0;
+          row[ptaKey] = count > 0 ? sums[ptaKey] / count : null;
         });
-        return result;
-      }).filter(d => d && typeof d === 'object' && (d.count || 0) > 0);
+        return row;
+      });
     }
-    
-    return processedData;
+    return rows;
   }, [females, selectedPTAs, groupBy]);
+
+  const domainTicks = useMemo(() => {
+    const years = new Set<number>();
+    females.forEach((female) => {
+      const year = female?.birth_date ? new Date(female.birth_date).getFullYear() : undefined;
+      if (Number.isFinite(year)) {
+        years.add(year as number);
+      }
+    });
+    const sorted = Array.from(years).sort((a, b) => a - b);
+    return sorted.length ? sorted : [new Date().getFullYear()];
+  }, [females]);
 
 
 
@@ -295,38 +272,30 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
   // Dados para gráfico de distribuição
   const distributionData = useMemo(() => {
     if (!females.length || selectedPTAs.length === 0) return [];
-    
     const firstPTA = selectedPTAs[0];
     const values = females
-      .map(f => Number(f[firstPTA]))
-      .filter(v => !isNaN(v) && v !== null);
-    
-    if (values.length === 0) return [];
-    
+      .map((female) => Number(female?.[firstPTA]))
+      .filter((value) => Number.isFinite(value));
+    if (!values.length) return [];
     const min = Math.min(...values);
     const max = Math.max(...values);
+    if (min === max) {
+      return [{ range: `${min.toFixed(1)}`, count: values.length, percentage: 100 }];
+    }
     const bucketCount = 10;
     const bucketSize = (max - min) / bucketCount;
-    
-    const buckets = Array(bucketCount).fill(0).map((_, i) => ({
-      range: `${(min + i * bucketSize).toFixed(1)} - ${(min + (i + 1) * bucketSize).toFixed(1)}`,
+    const buckets = Array.from({ length: bucketCount }, (_, index) => ({
+      range: `${(min + index * bucketSize).toFixed(1)} - ${(min + (index + 1) * bucketSize).toFixed(1)}`,
       count: 0,
-      percentage: 0
+      percentage: 0,
     }));
-    
-    values.forEach(value => {
+    values.forEach((value) => {
       const bucketIndex = Math.min(Math.floor((value - min) / bucketSize), bucketCount - 1);
-      if (buckets[bucketIndex]) {
-        buckets[bucketIndex].count++;
-      }
+      buckets[bucketIndex].count++;
     });
-    
-    buckets.forEach(bucket => {
-      if (bucket && typeof bucket === 'object' && typeof bucket.count === 'number') {
-        bucket.percentage = (bucket.count / values.length) * 100;
-      }
+    buckets.forEach((bucket) => {
+      bucket.percentage = (bucket.count / values.length) * 100;
     });
-    
     return buckets;
   }, [females, selectedPTAs]);
 
@@ -503,35 +472,47 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
                         <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                         <XAxis dataKey={groupBy === 'year' ? 'year' : 'name'} stroke="#666" fontSize={12} />
                         <YAxis stroke="#666" fontSize={12} />
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: 'rgba(255, 255, 255, 0.95)', 
-                            border: 'none', 
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            border: 'none',
                             borderRadius: '8px',
                             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
                           }}
                           formatter={(value: any) => [Number(value).toFixed(2), '']}
                         />
                         <Legend />
-                        {selectedPTAs.slice(0, 2).map((pta, index) => (
-                          <Bar
-                            key={pta}
-                            dataKey={pta}
-                            fill={CHART_COLORS[index]}
-                            name={availablePTAs.find(p => p.key === pta)?.label || pta}
-                            opacity={0.7}
-                          />
-                        ))}
-                        {selectedPTAs.slice(2, 4).map((pta, index) => (
-                          <Line
-                            key={pta}
-                            type="monotone"
-                            dataKey={pta}
-                            stroke={CHART_COLORS[index + 2]}
-                            strokeWidth={3}
-                            name={availablePTAs.find(p => p.key === pta)?.label || pta}
-                          />
-                        ))}
+                        {selectedPTAs.map((ptaKey, index) => {
+                          const color = CHART_COLORS[index % CHART_COLORS.length];
+                          const name = availablePTAs.find((p) => p.key === ptaKey)?.label || ptaKey;
+                          if (chartType === 'bar') {
+                            return <Bar key={ptaKey} dataKey={ptaKey} fill={color} name={name} opacity={0.8} />;
+                          }
+                          if (chartType === 'area') {
+                            return (
+                              <Area
+                                key={ptaKey}
+                                type="monotone"
+                                dataKey={ptaKey}
+                                name={name}
+                                stroke={color}
+                                fill={color}
+                                fillOpacity={0.15}
+                              />
+                            );
+                          }
+                          return (
+                            <Line
+                              key={ptaKey}
+                              type="monotone"
+                              dataKey={ptaKey}
+                              stroke={color}
+                              strokeWidth={3}
+                              name={name}
+                              dot={false}
+                            />
+                          );
+                        })}
                       </ComposedChart>
                     </ResponsiveContainer>
                   ) : (
@@ -654,8 +635,8 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
 
             {/* Panorama View */}
             <TabsContent value="panorama" className="space-y-4">
-              <PanoramaRebanhoView 
-                females={females} 
+              <PanoramaRebanhoView
+                females={females}
                 selectedPTAs={selectedPTAs}
                 setSelectedPTAs={setSelectedPTAs}
                 availablePTAs={availablePTAs}
@@ -665,6 +646,7 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
                 setShowTrendLine={setShowTrendLine}
                 loading={loading}
                 farmName={farm?.farm_name}
+                domainTicks={domainTicks}
               />
             </TabsContent>
           </Tabs>
@@ -672,71 +654,6 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
       </div>
     </div>
   );
-};
-
-// Lista completa de PTAs para o Panorama
-const ALL_PTAS_PANORAMA = [
-  "HHP$®","TPI","NM$","CM$","FM$","GM$","F SAV","PTAM","CFP","PTAF","PTAF%","PTAP","PTAP%","PL","DPR","LIV","SCS","MAST","MET","RP","DA","KET","MF","PTAT","UDC","FLC","SCE","DCE","SSB","DSB","H LIV","CCR","HCR","FI","GL","EFC","BWC","STA","STR","DFM","RUA","RLS","RTP","FTL","RW","RLR","FTA","FLS","FUA","RUH","RUW","UCL","UDP","FTP","RFI","GFI"
-];
-
-// Mapeamento de rótulos para chaves de banco
-const PTA_TO_KEY_MAP: Record<string, string> = {
-  "HHP$®": "hhp_dollar",
-  "TPI": "tpi",
-  "NM$": "nm_dollar",
-  "CM$": "cm_dollar",
-  "FM$": "fm_dollar",
-  "GM$": "gm_dollar",
-  "F SAV": "f_sav",
-  "PTAM": "ptam",
-  "CFP": "cfp",
-  "PTAF": "ptaf",
-  "PTAF%": "ptaf_pct",
-  "PTAP": "ptap",
-  "PTAP%": "ptap_pct",
-  "PL": "pl",
-  "DPR": "dpr",
-  "LIV": "liv",
-  "SCS": "scs",
-  "MAST": "mast",
-  "MET": "met",
-  "RP": "rp",
-  "DA": "da",
-  "KET": "ket",
-  "MF": "mf",
-  "PTAT": "ptat",
-  "UDC": "udc",
-  "FLC": "flc",
-  "SCE": "sce",
-  "DCE": "dce",
-  "SSB": "ssb",
-  "DSB": "dsb",
-  "H LIV": "h_liv",
-  "CCR": "ccr",
-  "HCR": "hcr",
-  "FI": "fi",
-  "GL": "gl",
-  "EFC": "efc",
-  "BWC": "bwc",
-  "STA": "sta",
-  "STR": "str",
-  "DFM": "dfm",
-  "RUA": "rua",
-  "RLS": "rls",
-  "RTP": "rtp",
-  "FTL": "ftl",
-  "RW": "rw",
-  "RLR": "rlr",
-  "FTA": "fta",
-  "FLS": "fls",
-  "FUA": "fua",
-  "RUH": "ruh",
-  "RUW": "ruw",
-  "UCL": "ucl",
-  "UDP": "udp",
-  "FTP": "ftp",
-  "RFI": "rfi",
-  "GFI": "gfi"
 };
 
 // Utility functions
@@ -762,16 +679,18 @@ const H2: Record<string, number> = {
 };
 
 // Componente Card para cada característica
-function TraitCard({ 
-  trait, 
-  data, 
-  showFarmMean, 
-  showTrend 
-}: { 
-  trait: string; 
-  data: Array<{year:number;n:number;mean:number}>; 
-  showFarmMean: boolean; 
-  showTrend: boolean; 
+function TraitCard({
+  trait,
+  data,
+  showFarmMean,
+  showTrend,
+  domainTicks,
+}: {
+  trait: string;
+  data: Array<{year:number;n:number;mean:number}>;
+  showFarmMean: boolean;
+  showTrend: boolean;
+  domainTicks: number[];
 }) {
   const colorMean = "#111827"; // preto/cinza-900
   const colorFarmMean = "#22C3EE"; // azul claro para média da fazenda
@@ -831,7 +750,7 @@ function TraitCard({
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="year" type="number" domain={[2021, 2025]} ticks={[2021,2022,2023,2024,2025]} tickMargin={6} />
+            <XAxis dataKey="year" type="number" domain={[domainTicks[0], domainTicks[domainTicks.length - 1]]} ticks={domainTicks} tickMargin={6} />
             <YAxis tickMargin={6} />
             <Tooltip
               content={({ active, payload, label }) => {
@@ -932,76 +851,74 @@ const PanoramaRebanhoView: React.FC<{
   setShowTrendLine: (show: boolean) => void;
   loading: boolean;
   farmName?: string;
-}> = ({ 
-  females, 
-  selectedPTAs, 
-  setSelectedPTAs, 
-  availablePTAs, 
-  showFarmAverage, 
+  domainTicks: number[];
+}> = ({
+  females,
+  selectedPTAs,
+  setSelectedPTAs,
+  availablePTAs,
+  showFarmAverage,
   setShowFarmAverage,
   showTrendLine,
   setShowTrendLine,
   loading,
-  farmName 
+  farmName,
+  domainTicks,
 }) => {
-  const [showFarmMean, setShowFarmMean] = useState(true);
-  const [showTrend, setShowTrend] = useState(true);
   const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState<string[]>(["TPI", "NM$"]);
 
   const filteredPTAs = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return ALL_PTAS_PANORAMA;
-    return ALL_PTAS_PANORAMA.filter((t) => t.toLowerCase().includes(q));
-  }, [search]);
+    const query = search.trim().toLowerCase();
+    if (!query) return availablePTAs;
+    return availablePTAs.filter((pta: any) => {
+      const label = String(pta.label ?? "").toLowerCase();
+      const description = String(pta.description ?? "").toLowerCase();
+      return label.includes(query) || description.includes(query);
+    });
+  }, [search, availablePTAs]);
 
-  function toggle(t: string) {
-    setSelected((prev) => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
-  }
+  const toggle = (key: string) => {
+    setSelectedPTAs((prev) =>
+      prev.includes(key) ? prev.filter((item) => item !== key) : [...prev, key]
+    );
+  };
 
-  function reset() { setSelected(["TPI", "NM$"]); }
-  function selectAll() { setSelected([...ALL_PTAS_PANORAMA]); }
-  function clearAll() { setSelected([]); }
+  const reset = () => setSelectedPTAs(["tpi", "nm_dollar"]);
+  const selectAll = () => setSelectedPTAs(availablePTAs.map((pta: any) => pta.key));
+  const clearAll = () => setSelectedPTAs([]);
 
   // Processar dados do Supabase
   const seriesByTrait = useMemo(() => {
     if (!females || !females.length) return {};
-    
-    const out: Record<string, Array<{year:number;n:number;mean:number}>> = {};
-    
-    for (const trait of selected) {
-      const dbKey = PTA_TO_KEY_MAP[trait];
-      if (!dbKey) continue;
-      
-      // Agrupar dados por ano
-      const dataByYear: { [key: string]: number[] } = {};
-      
-      females.forEach(female => {
-        if (!female || !female.birth_date) return;
-        const year = new Date(female.birth_date).getFullYear();
-        const value = Number(female[dbKey]);
-        
-        if (!isNaN(value) && value !== null && year >= 2021 && year <= 2025) {
-          if (!dataByYear[year]) dataByYear[year] = [];
-          dataByYear[year].push(value);
+
+    const out: Record<string, Array<{ year: number; n: number; mean: number }>> = {};
+
+    selectedPTAs.forEach((key) => {
+      const byYear = new Map<number, number[]>();
+      females.forEach((female) => {
+        const year = female?.birth_date ? new Date(female.birth_date).getFullYear() : undefined;
+        const value = Number(female?.[key]);
+        if (Number.isFinite(year) && Number.isFinite(value)) {
+          const list = byYear.get(year as number) ?? [];
+          list.push(value as number);
+          byYear.set(year as number, list);
         }
       });
-      
-      // Calcular médias por ano
-      const series = YEARS.map(year => {
-        const values = dataByYear[year] || [];
-        return {
-          year,
-          n: values.length,
-          mean: values.length > 0 ? mean(values) : 0
-        };
-      }).filter(d => d.n > 0);
-      
-      out[trait] = series;
-    }
-    
+
+      out[key] = domainTicks
+        .map((year) => {
+          const values = byYear.get(year) ?? [];
+          return {
+            year,
+            n: values.length,
+            mean: values.length ? mean(values) : 0,
+          };
+        })
+        .filter((entry) => entry.n > 0);
+    });
+
     return out;
-  }, [selected, females]);
+  }, [selectedPTAs, females, domainTicks]);
 
   return (
     <div className="w-full max-w-7xl mx-auto p-4 space-y-4">
@@ -1011,25 +928,25 @@ const PanoramaRebanhoView: React.FC<{
           <h2 className="text-xl font-semibold">Gráficos — Panorama do Rebanho</h2>
           <div className="ml-auto flex items-center gap-2">
             <label className="text-sm flex items-center gap-2">
-              <input 
-                type="checkbox" 
-                className="accent-black" 
-                checked={showFarmMean} 
-                onChange={(e) => setShowFarmMean(e.target.checked)} 
+              <input
+                type="checkbox"
+                className="accent-black"
+                checked={showFarmAverage}
+                onChange={(e) => setShowFarmAverage(e.target.checked)}
               />
               Mostrar média da fazenda
             </label>
             <label className="text-sm flex items-center gap-2">
-              <input 
-                type="checkbox" 
-                className="accent-black" 
-                checked={showTrend} 
-                onChange={(e) => setShowTrend(e.target.checked)} 
+              <input
+                type="checkbox"
+                className="accent-black"
+                checked={showTrendLine}
+                onChange={(e) => setShowTrendLine(e.target.checked)}
               />
               Mostrar tendência genética
             </label>
-            <button 
-              onClick={reset} 
+            <button
+              onClick={reset}
               className="px-3 py-2 rounded-xl border text-sm hover:bg-gray-50"
             >
               Resetar seleção
@@ -1057,22 +974,22 @@ const PanoramaRebanhoView: React.FC<{
           </button>
         </div>
         <div className="mt-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-52 overflow-auto pr-2">
-          {filteredPTAs.map((t) => {
-            const on = selected.includes(t);
+          {filteredPTAs.map((pta: any) => {
+            const active = selectedPTAs.includes(pta.key);
             return (
-              <label 
-                key={t} 
+              <label
+                key={pta.key}
                 className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer ${
-                  on ? "bg-emerald-50 border-emerald-300" : "bg-white border-gray-200 hover:bg-gray-50"
+                  active ? "bg-emerald-50 border-emerald-300" : "bg-white border-gray-200 hover:bg-gray-50"
                 }`}
               >
-                <input 
-                  type="checkbox" 
-                  className="accent-black" 
-                  checked={on} 
-                  onChange={() => toggle(t)} 
+                <input
+                  type="checkbox"
+                  className="accent-black"
+                  checked={active}
+                  onChange={() => toggle(pta.key)}
                 />
-                <span className="text-sm">{t}</span>
+                <span className="text-sm">{pta.label}</span>
               </label>
             );
           })}
@@ -1087,7 +1004,7 @@ const PanoramaRebanhoView: React.FC<{
             <p className="text-sm text-muted-foreground">Carregando dados...</p>
           </div>
         </div>
-      ) : selected.length === 0 ? (
+      ) : selectedPTAs.length === 0 ? (
         <div className="bg-white rounded-2xl shadow p-8 text-center text-muted-foreground">
           <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
           <p className="text-lg font-medium mb-2">Nenhuma característica selecionada</p>
@@ -1095,16 +1012,18 @@ const PanoramaRebanhoView: React.FC<{
         </div>
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
-          {selected.map((t) => {
-            const data = seriesByTrait[t];
+          {selectedPTAs.map((key) => {
+            const data = seriesByTrait[key];
             if (!data || data.length === 0) return null;
+            const label = availablePTAs.find((pta: any) => pta.key === key)?.label || key.toUpperCase();
             return (
-              <TraitCard 
-                key={t} 
-                trait={t} 
-                data={data} 
-                showFarmMean={showFarmMean} 
-                showTrend={showTrend} 
+              <TraitCard
+                key={key}
+                trait={label}
+                data={data}
+                showFarmMean={showFarmAverage}
+                showTrend={showTrendLine}
+                domainTicks={domainTicks}
               />
             );
           })}
