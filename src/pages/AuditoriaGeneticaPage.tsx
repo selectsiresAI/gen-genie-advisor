@@ -1,17 +1,17 @@
 "use client";
 import { useEffect, useState } from "react";
-import AGLayout from "./AGLayout";
-import { AGStepper } from "./Stepper";
-import { useAGFilters } from "./store";
-import Step1Parentesco from "./steps/Step1Parentesco";
-import Step2TopParents from "./steps/Step2TopParents";
-import Step3QuartisOverview from "./steps/Step3QuartisOverview";
-import Step4MediaLinear from "./steps/Step4MediaLinear";
-import Step5Progressao from "./steps/Step5Progressao";
-import Step6ProgressCompare from "./steps/Step6ProgressCompare";
-import Step7QuartisIndices from "./steps/Step7QuartisIndices";
-import Step8Benchmark from "./steps/Step8Benchmark";
-import Step9Distribuicao from "./steps/Step9Distribuicao";
+import AGLayout from "@/features/auditoria/AGLayout";
+import { AGStepper } from "@/features/auditoria/Stepper";
+import { useAGFilters } from "@/features/auditoria/store";
+import Step1Parentesco from "@/features/auditoria/steps/Step1Parentesco";
+import Step2TopParents from "@/features/auditoria/steps/Step2TopParents";
+import Step3QuartisOverview from "@/features/auditoria/steps/Step3QuartisOverview";
+import Step4MediaLinear from "@/features/auditoria/steps/Step4MediaLinear";
+import Step5Progressao from "@/features/auditoria/steps/Step5Progressao";
+import Step6ProgressCompare from "@/features/auditoria/steps/Step6ProgressCompare";
+import Step7QuartisIndices from "@/features/auditoria/steps/Step7QuartisIndices";
+import Step8Benchmark from "@/features/auditoria/steps/Step8Benchmark";
+import Step9Distribuicao from "@/features/auditoria/steps/Step9Distribuicao";
 
 type FarmLike = {
   farm_id?: string;
