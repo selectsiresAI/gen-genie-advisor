@@ -5,6 +5,7 @@ import AGLayout from "./AGLayout";
 import { AGStepper } from "./Stepper";
 import { useAGFilters } from "./store";
 import Step5Progressao from "./steps/Step5Progressao";
+import Step8Benchmark from "./steps/Step8Benchmark";
 import Step9Distribuicao from "./steps/Step9Distribuicao";
 
 type FarmLike = {
@@ -51,9 +52,7 @@ export default function AuditoriaGeneticaPage({ farm, onBack }: AuditoriaGenetic
         {active === 6 && (
           <Card className="p-6">Step 7 — Quartis – Índices (HHP$ vs outro) — manter modelo EUA — pendente.</Card>
         )}
-        {active === 7 && (
-          <Card className="p-6">Step 8 — Genetic Benchmark (EUA/BR, Top10/5/1, Média) — pendente de view SQL.</Card>
-        )}
+        {active === 7 && <Step8Benchmark />}
         {active === 8 && <Step9Distribuicao />}
       </div>
     </AGLayout>
