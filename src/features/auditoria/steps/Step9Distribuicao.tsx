@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { PTA_CATALOG } from "../ptas";
+import { PTA_CATALOG } from "@/lib/pta";
 import { useFemales } from "../hooks";
 import { useAGFilters } from "../store";
 

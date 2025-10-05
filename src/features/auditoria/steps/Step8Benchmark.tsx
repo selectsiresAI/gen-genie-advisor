@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAGFilters } from "../store";
-import { PTA_CATALOG } from "../ptas";
+import { PTA_CATALOG } from "@/lib/pta";
 
 type BenchmarkRow = {
   trait_key: string;

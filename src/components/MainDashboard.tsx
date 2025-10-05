@@ -23,7 +23,7 @@ import SegmentationPage from './SegmentationPage';
 import { usePlanStore } from '@/hooks/usePlanStore';
 import { useHerdStore } from '@/hooks/useHerdStore';
 import ConversaoPage from '@/pages/tools/conversao';
-import AuditoriaGeneticaPage from '@/features/auditoria-genetica/AuditoriaGeneticaPage';
+import AuditoriaGeneticaPage from '@/pages/AuditoriaGeneticaPage';
 
 interface MainDashboardProps {
   user: User;
