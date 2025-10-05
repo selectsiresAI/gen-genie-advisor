@@ -12,9 +12,9 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useAGFilters } from "../store";
 import { PTA_CATALOG } from "../ptas";
+import { TraitMultiSelect, TraitOption } from "../components/TraitMultiSelect";
 
 type BenchmarkRow = {
   trait_key: string;
@@ -115,9 +115,12 @@ export default function Step8Benchmark() {
     []
   );
 
-  const availableBadges = useMemo(() => {
+  const traitOptions: TraitOption[] = useMemo(() => {
     return ptaOptions
-      .map((key) => ({ key, label: catalogLabels.get(key) ?? key.toUpperCase() }))
+      .map((key) => ({
+        value: key,
+        label: catalogLabels.get(key) ?? key.toUpperCase(),
+      }))
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [catalogLabels, ptaOptions]);
 
@@ -176,32 +179,11 @@ export default function Step8Benchmark() {
           </Button>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {availableBadges.map(({ key, label }) => {
-            const active = traits.includes(key);
-            return (
-              <Badge
-                key={key}
-                variant={active ? "default" : "outline"}
-                className="cursor-pointer"
-                onClick={() =>
-                  setTraits((prev) =>
-                    active
-                      ? prev.filter((trait) => trait !== key)
-                      : [...prev, key]
-                  )
-                }
-              >
-                {label}
-              </Badge>
-            );
-          })}
-          {availableBadges.length === 0 && (
-            <span className="text-sm text-muted-foreground">
-              Nenhuma PTA disponível.
-            </span>
-          )}
-        </div>
+        <TraitMultiSelect
+          options={traitOptions}
+          value={traits}
+          onChange={setTraits}
+        />
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
