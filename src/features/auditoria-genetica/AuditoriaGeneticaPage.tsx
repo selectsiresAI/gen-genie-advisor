@@ -1,10 +1,15 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Card } from "@/components/ui/card";
 import AGLayout from "./AGLayout";
 import { AGStepper } from "./Stepper";
 import { useAGFilters } from "./store";
+import Step1Parentesco from "./steps/Step1Parentesco";
+import Step2TopParents from "./steps/Step2TopParents";
+import Step3QuartisOverview from "./steps/Step3QuartisOverview";
+import Step4MediaLinear from "./steps/Step4MediaLinear";
 import Step5Progressao from "./steps/Step5Progressao";
+import Step6ProgressCompare from "./steps/Step6ProgressCompare";
+import Step7QuartisIndices from "./steps/Step7QuartisIndices";
 import Step8Benchmark from "./steps/Step8Benchmark";
 import Step9Distribuicao from "./steps/Step9Distribuicao";
 
@@ -33,25 +38,13 @@ export default function AuditoriaGeneticaPage({ farm, onBack }: AuditoriaGenetic
     <AGLayout onBack={onBack} farmName={farm?.farm_name}>
       <AGStepper active={active} onChange={setActive} />
       <div className="space-y-4">
-        {active === 0 && (
-          <Card className="p-6">Step 1 — Parentesco (donuts + % Completo/Incompleto/Desconhecido) — pendente de view SQL.</Card>
-        )}
-        {active === 1 && (
-          <Card className="p-6">Step 2 — Top Pais/Avós (barras horizontais + filtros) — pendente de view SQL.</Card>
-        )}
-        {active === 2 && (
-          <Card className="p-6">Step 3 — Quartis (Overview) — boxplots + histograma — pendente de view SQL.</Card>
-        )}
-        {active === 3 && (
-          <Card className="p-6">Step 4 — Média Linear (novilhas vs vacas) — pendente de view SQL.</Card>
-        )}
+        {active === 0 && <Step1Parentesco />}
+        {active === 1 && <Step2TopParents />}
+        {active === 2 && <Step3QuartisOverview />}
+        {active === 3 && <Step4MediaLinear />}
         {active === 4 && <Step5Progressao />}
-        {active === 5 && (
-          <Card className="p-6">Step 6 — Comparação de Progressão (grupos, radar) — pendente de view SQL.</Card>
-        )}
-        {active === 6 && (
-          <Card className="p-6">Step 7 — Quartis – Índices (HHP$ vs outro) — manter modelo EUA — pendente.</Card>
-        )}
+        {active === 5 && <Step6ProgressCompare />}
+        {active === 6 && <Step7QuartisIndices />}
         {active === 7 && <Step8Benchmark />}
         {active === 8 && <Step9Distribuicao />}
       </div>
