@@ -21,10 +21,24 @@ type FarmLike = {
 interface AuditoriaGeneticaPageProps {
   farm?: FarmLike | null;
   onBack: () => void;
+  initialStep?: number;
+  onStepChange?: (step: number) => void;
 }
 
-export default function AuditoriaGeneticaPage({ farm, onBack }: AuditoriaGeneticaPageProps) {
-  const [active, setActive] = useState(0);
+const TOTAL_STEPS = 9;
+
+function clampStep(step: number) {
+  if (Number.isNaN(step)) return 0;
+  return Math.min(Math.max(step, 0), TOTAL_STEPS - 1);
+}
+
+export default function AuditoriaGeneticaPage({
+  farm,
+  onBack,
+  initialStep = 0,
+  onStepChange,
+}: AuditoriaGeneticaPageProps) {
+  const [active, setActive] = useState(() => clampStep(initialStep));
   const { setFarmId } = useAGFilters();
 
   useEffect(() => {
@@ -34,9 +48,19 @@ export default function AuditoriaGeneticaPage({ farm, onBack }: AuditoriaGenetic
     };
   }, [farm?.farm_id, setFarmId]);
 
+  useEffect(() => {
+    setActive(clampStep(initialStep));
+  }, [initialStep]);
+
+  const handleStepChange = (step: number) => {
+    const normalized = clampStep(step);
+    setActive(normalized);
+    onStepChange?.(normalized);
+  };
+
   return (
     <AGLayout onBack={onBack} farmName={farm?.farm_name}>
-      <AGStepper active={active} onChange={setActive} />
+      <AGStepper active={active} onChange={handleStepChange} />
       <div className="space-y-4">
         {active === 0 && <Step1Parentesco />}
         {active === 1 && <Step2TopParents />}
