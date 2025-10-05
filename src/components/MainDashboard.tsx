@@ -23,6 +23,7 @@ import SegmentationPage from './SegmentationPage';
 import { usePlanStore } from '@/hooks/usePlanStore';
 import { useHerdStore } from '@/hooks/useHerdStore';
 import ConversaoPage from '@/pages/tools/conversao';
+import AuditoriaGeneticaPage from '@/features/auditoria-genetica/AuditoriaGeneticaPage';
 
 interface MainDashboardProps {
   user: User;
@@ -51,7 +52,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'farm' | 'herd' | 'segmentation' | 'bulls' | 'nexus' | 'charts' | 'botijao' | 'sms' | 'metas' | 'plano' | 'arquivos' | 'conversao'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'farm' | 'herd' | 'segmentation' | 'bulls' | 'nexus' | 'charts' | 'auditoria' | 'botijao' | 'sms' | 'metas' | 'plano' | 'arquivos' | 'conversao'>('dashboard');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [totalFarms, setTotalFarms] = useState(0);
   const [totalAnimals, setTotalAnimals] = useState(0);
@@ -355,6 +356,25 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Visualizar gráficos e relatórios estatísticos do desempenho do rebanho</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('auditoria')}>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Target className="w-5 h-5 text-primary" />
+                        Auditoria Genética
+                      </CardTitle>
+                      <CardDescription>
+                        Nova jornada com 9 passos sequenciais
+                      </CardDescription>
+                    </CardHeader>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Explorar a auditoria genética completa do rebanho em nove etapas guiadas</p>
                 </TooltipContent>
               </Tooltip>
 
@@ -676,6 +696,11 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
             <ChartsPage farm={selectedFarm!} onBack={handleBackToDashboard} onNavigateToHerd={handleNavigateToHerd} />
           </div>;
       }
+      if (currentView === 'auditoria') {
+        return <div className="min-h-screen bg-background">
+            <AuditoriaGeneticaPage farm={selectedFarm} onBack={handleBackToDashboard} />
+          </div>;
+      }
       if (currentView === 'bulls') {
         return <div className="min-h-screen bg-background">
             <BullSearchPage farm={selectedFarm} onBack={handleBackToDashboard} onBullsSelected={selectedBulls => {
@@ -713,7 +738,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
               Dashboard
             </Button>
             <h1 className="text-xl font-semibold">
-              {selectedFarm?.farm_name} - {currentView === 'herd' ? 'Rebanho' : currentView === 'segmentation' ? 'Segmentação' : currentView === 'bulls' ? 'Catálogo de Touros' : currentView === 'charts' ? 'Gráficos' : 'Módulo'}
+              {selectedFarm?.farm_name} - {currentView === 'herd' ? 'Rebanho' : currentView === 'segmentation' ? 'Segmentação' : currentView === 'bulls' ? 'Catálogo de Touros' : currentView === 'charts' ? 'Gráficos' : currentView === 'auditoria' ? 'Auditoria Genética' : 'Módulo'}
             </h1>
           </div>
         </div>
@@ -724,10 +749,11 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
               {currentView === 'segmentation' && <BarChart3 className="w-8 h-8 text-muted-foreground" />}
               {currentView === 'bulls' && <Beef className="w-8 h-8 text-muted-foreground" />}
               {currentView === 'charts' && <TrendingUp className="w-8 h-8 text-muted-foreground" />}
+              {currentView === 'auditoria' && <Target className="w-8 h-8 text-muted-foreground" />}
             </div>
             <h2 className="text-2xl font-bold">Módulo em Desenvolvimento</h2>
             <p className="text-muted-foreground max-w-md mx-auto">
-              Este módulo estará disponível em breve. Você poderá {currentView === 'herd' ? 'gerenciar seu rebanho e cadastrar fêmeas' : currentView === 'segmentation' ? 'segmentar animais por performance genética' : currentView === 'bulls' ? 'explorar o catálogo de touros e fazer seleções' : currentView === 'charts' ? 'visualizar gráficos e estatísticas do rebanho' : 'usar esta funcionalidade'}.
+              Este módulo estará disponível em breve. Você poderá {currentView === 'herd' ? 'gerenciar seu rebanho e cadastrar fêmeas' : currentView === 'segmentation' ? 'segmentar animais por performance genética' : currentView === 'bulls' ? 'explorar o catálogo de touros e fazer seleções' : currentView === 'charts' ? 'visualizar gráficos e estatísticas do rebanho' : currentView === 'auditoria' ? 'navegar pela auditoria genética completa do rebanho' : 'usar esta funcionalidade'}.
             </p>
           </div>
         </div>
