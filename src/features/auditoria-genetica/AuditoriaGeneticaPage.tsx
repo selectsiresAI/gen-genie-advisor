@@ -14,12 +14,15 @@ import Step8Benchmark from "./steps/Step8Benchmark";
 import Step9Distribuicao from "./steps/Step9Distribuicao";
 import { clampStep } from "./constants";
 import type { FarmLike } from "./types";
+import { cn } from "@/lib/utils";
 
 interface AuditoriaGeneticaPageProps {
   farm?: FarmLike | null;
   onBack: () => void;
   initialStep?: number;
   onStepChange?: (step: number) => void;
+  statusMessage?: string;
+  statusTone?: "info" | "warning" | "error";
 }
 
 export default function AuditoriaGeneticaPage({
@@ -27,6 +30,8 @@ export default function AuditoriaGeneticaPage({
   onBack,
   initialStep = 0,
   onStepChange,
+  statusMessage,
+  statusTone = "info",
 }: AuditoriaGeneticaPageProps) {
   const [active, setActive] = useState(() => clampStep(initialStep));
   const { setFarmId } = useAGFilters();
@@ -50,6 +55,18 @@ export default function AuditoriaGeneticaPage({
 
   return (
     <AGLayout onBack={onBack} farmName={farm?.farm_name}>
+      {statusMessage && (
+        <div
+          className={cn(
+            "mb-4 rounded-md border px-4 py-3 text-sm",
+            statusTone === "info" && "border-primary/30 bg-primary/10 text-primary",
+            statusTone === "warning" && "border-amber-200 bg-amber-50 text-amber-900",
+            statusTone === "error" && "border-destructive/40 bg-destructive/10 text-destructive",
+          )}
+        >
+          {statusMessage}
+        </div>
+      )}
       <AGStepper active={active} onChange={handleStepChange} />
       <div className="space-y-4">
         {active === 0 && <Step1Parentesco />}

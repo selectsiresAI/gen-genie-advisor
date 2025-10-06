@@ -10,8 +10,10 @@ type LoadedFarm = FarmLike | null;
 
 type LoadState = "idle" | "loading" | "success" | "error";
 
+const isClient = () => typeof window !== "undefined";
+
 const getQueryParam = (name: string) => {
-  if (typeof window === "undefined") return null;
+  if (!isClient()) return null;
   const params = new URLSearchParams(window.location.search);
   return params.get(name);
 };
@@ -24,9 +26,12 @@ export default function AuditoriaGeneticaPage() {
   const [step, setStep] = useState(readStepFromQuery);
   const [farmIdParam, setFarmIdParam] = useState(() => getQueryParam("farmId"));
   const [farmNameParam, setFarmNameParam] = useState(() => getQueryParam("farmName"));
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const hasFallbackFarm = Boolean(farm);
+  const bannerTone = errorMessage ? (loadState === "error" ? "error" : "warning") : undefined;
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (!isClient()) return;
 
     const handlePopState = () => {
       setStep(readStepFromQuery());
@@ -44,11 +49,13 @@ export default function AuditoriaGeneticaPage() {
     if (!farmIdParam) {
       setFarm(farmNameParam ? { farm_name: farmNameParam } : null);
       setLoadState("success");
+      setErrorMessage(null);
       return;
     }
 
     let isMounted = true;
     setLoadState("loading");
+    setErrorMessage(null);
 
     async function loadFarm() {
       try {
@@ -56,8 +63,16 @@ export default function AuditoriaGeneticaPage() {
         if (!isMounted) return;
         if (error) {
           console.error("Erro ao carregar fazendas", error);
-          setFarm(farmNameParam ? { farm_id: farmIdParam, farm_name: farmNameParam } : null);
-          setLoadState("error");
+          const fallbackFarm = farmNameParam
+            ? { farm_id: farmIdParam, farm_name: farmNameParam }
+            : null;
+          setFarm(fallbackFarm);
+          setLoadState(fallbackFarm ? "success" : "error");
+          setErrorMessage(
+            fallbackFarm
+              ? "Não foi possível carregar as informações da fazenda. Usando dados locais disponíveis."
+              : "Não foi possível carregar as informações da fazenda. Tente novamente mais tarde.",
+          );
           return;
         }
 
@@ -65,15 +80,33 @@ export default function AuditoriaGeneticaPage() {
         const found = farms.find((item) => item.farm_id === farmIdParam);
         if (found) {
           setFarm(found);
+          setLoadState("success");
+          setErrorMessage(null);
         } else {
-          setFarm(farmNameParam ? { farm_id: farmIdParam, farm_name: farmNameParam } : null);
+          const fallbackFarm = farmNameParam
+            ? { farm_id: farmIdParam, farm_name: farmNameParam }
+            : null;
+          setFarm(fallbackFarm);
+          setLoadState(fallbackFarm ? "success" : "error");
+          setErrorMessage(
+            fallbackFarm
+              ? "Não encontramos a fazenda no Supabase. Mostrando os dados fornecidos pela URL."
+              : "Não encontramos a fazenda solicitada. Verifique o link e tente novamente.",
+          );
         }
-        setLoadState("success");
       } catch (err) {
         console.error("Erro inesperado ao carregar fazenda", err);
         if (isMounted) {
-          setFarm(farmNameParam ? { farm_id: farmIdParam, farm_name: farmNameParam } : null);
-          setLoadState("error");
+          const fallbackFarm = farmNameParam
+            ? { farm_id: farmIdParam, farm_name: farmNameParam }
+            : null;
+          setFarm(fallbackFarm);
+          setLoadState(fallbackFarm ? "success" : "error");
+          setErrorMessage(
+            fallbackFarm
+              ? "Encontramos um problema ao carregar a fazenda. Mostrando dados fornecidos pela URL."
+              : "Encontramos um problema ao carregar a fazenda. Tente novamente mais tarde.",
+          );
         }
       }
     }
@@ -86,7 +119,7 @@ export default function AuditoriaGeneticaPage() {
   }, [farmIdParam, farmNameParam]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (!isClient()) return;
     const params = new URLSearchParams(window.location.search);
     params.set("step", String(step));
     if (farm?.farm_id) {
@@ -99,7 +132,10 @@ export default function AuditoriaGeneticaPage() {
     } else {
       params.delete("farmName");
     }
-    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    const queryString = params.toString();
+    const newUrl = queryString
+      ? `${window.location.pathname}?${queryString}`
+      : window.location.pathname;
     window.history.replaceState(null, "", newUrl);
 
     if (farmIdParam !== (farm?.farm_id ?? null)) {
@@ -111,7 +147,7 @@ export default function AuditoriaGeneticaPage() {
   }, [step, farm?.farm_id, farm?.farm_name, farmIdParam, farmNameParam]);
 
   const handleBack = () => {
-    if (typeof window === "undefined") return;
+    if (!isClient()) return;
     if (window.history.length > 1) {
       window.history.back();
     } else {
@@ -130,12 +166,34 @@ export default function AuditoriaGeneticaPage() {
     );
   }
 
+  if (loadState === "error" && !hasFallbackFarm) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="max-w-md space-y-4 text-center">
+          <h1 className="text-2xl font-semibold">Não foi possível abrir a Auditoria Genética</h1>
+          <p className="text-muted-foreground">
+            {errorMessage ?? "Ocorreu um erro desconhecido ao carregar as informações da fazenda."}
+          </p>
+          <button
+            type="button"
+            onClick={handleBack}
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90"
+          >
+            Voltar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <AuditoriaGeneticaFeature
       farm={farm ?? undefined}
       onBack={handleBack}
       initialStep={step}
       onStepChange={setStep}
+      statusMessage={errorMessage ?? undefined}
+      statusTone={bannerTone}
     />
   );
 }
