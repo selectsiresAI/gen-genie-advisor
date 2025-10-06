@@ -61,7 +61,7 @@ type Props = {
 };
 
 export default function Step9Distribuicao({ farmId: farmIdProp, allTraits }: Props = {}) {
-  const { farmId: storeFarmId, ptasSelecionadas } = useAGFilters();
+  const { farmId: storeFarmId, ptasSelecionadas, setPTAs } = useAGFilters();
 
   const farmId = useMemo(() => {
     const id = farmIdProp ?? storeFarmId;
@@ -99,6 +99,12 @@ export default function Step9Distribuicao({ farmId: farmIdProp, allTraits }: Pro
       return arraysEqual(current, merged) ? current : merged;
     });
   }, [ptasSelecionadas, traitOptions]);
+
+  useEffect(() => {
+    if (!arraysEqual(ptasSelecionadas, traits)) {
+      setPTAs(traits);
+    }
+  }, [traits, ptasSelecionadas, setPTAs]);
 
   useEffect(() => {
     if (!farmId || !traits.length) {
