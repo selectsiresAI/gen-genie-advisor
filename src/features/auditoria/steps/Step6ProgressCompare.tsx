@@ -5,6 +5,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   RadarChart,
   PolarGrid,
   PolarAngleAxis,
@@ -143,6 +150,32 @@ function detectCategoryColumn(rows: any[]): string | null {
   return null;
 }
 
+function listCategoryColumns(rows: any[]): string[] {
+  if (!rows.length) return [];
+  const seenKeys = new Set<string>();
+  for (const row of rows) {
+    if (!row || typeof row !== "object") continue;
+    for (const key of Object.keys(row)) {
+      seenKeys.add(key);
+    }
+  }
+
+  const asArray = Array.from(seenKeys);
+  const hasStrings = (key: string) =>
+    rows.some((row) => {
+      const value = row?.[key];
+      return typeof value === "string" && value.trim().length > 0;
+    });
+
+  const stringCols = asArray.filter(hasStrings);
+  const prioritized = [
+    ...stringCols.filter((key) => CATEGORY_NAME_CANDIDATES.some((c) => norm(c) === norm(key))),
+    ...stringCols.filter((key) => !CATEGORY_NAME_CANDIDATES.some((c) => norm(c) === norm(key))),
+  ];
+
+  return Array.from(new Set(prioritized));
+}
+
 /* ================== Tipos ================== */
 type MeansByCategory = Record<string, Record<string, number | null>>;
 
@@ -155,17 +188,19 @@ export default function Step6ProgressCompare() {
   const [categoryCol, setCategoryCol] = useState<string>("");
 
   const [rows, setRows] = useState<any[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categoryColumns, setCategoryColumns] = useState<string[]>([]);
 
   const [groupA, setGroupA] = useState<string>("Novilha");
   const [groupB, setGroupB] = useState<string>("Primípara");
+  const [groupAUserSet, setGroupAUserSet] = useState(false);
+  const [groupBUserSet, setGroupBUserSet] = useState(false);
 
   const [tableTraits, setTableTraits] = useState<string[]>(DEFAULT_TABLE_TRAITS);
   const [chartTraits, setChartTraits] = useState<string[]>(DEFAULT_CHART_TRAITS);
 
   /* -------- fetch com fallback rebanho → females_denorm → ... -------- */
   const fetchData = useCallback(async () => {
-    if (!farmId) { setRows([]); setCategories([]); setSourceTable(""); setCategoryCol(""); return; }
+    if (!farmId) { setRows([]); setCategoryColumns([]); setSourceTable(""); setCategoryCol(""); return; }
     setLoading(true);
 
     let gotRows: any[] = [];
@@ -194,37 +229,84 @@ export default function Step6ProgressCompare() {
 
     setSourceTable(usedTable);
     setRows(gotRows);
+    setCategoryColumns(listCategoryColumns(gotRows));
 
     // categoria
     const catKey = detectCategoryColumn(gotRows);
     setCategoryCol(catKey || "");
-
-    const cats = catKey
-      ? Array.from(
-          new Set(
-            gotRows
-              .map((r) => r?.[catKey])
-              .filter((c: any) => typeof c === "string" && c.trim().length > 0)
-          )
-        )
-      : [];
-
-    const ordered = [
-      ...AGE_VALUES.filter((c) => cats.includes(c)),
-      ...cats.filter((c) => !AGE_VALUES.includes(c as any)),
-    ];
-    setCategories(ordered);
-
-    if (!ordered.includes(groupA) || !ordered.includes(groupB)) {
-      setGroupA(ordered[0] || "Grupo A");
-      setGroupB(ordered[1] || ordered[0] || "Grupo B");
-    }
 
     setLoading(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [farmId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  useEffect(() => {
+    if (!categoryColumns.length) {
+      if (categoryCol) setCategoryCol("");
+      return;
+    }
+    if (!categoryCol || !categoryColumns.includes(categoryCol)) {
+      setCategoryCol(categoryColumns[0]);
+    }
+  }, [categoryColumns, categoryCol]);
+
+  useEffect(() => {
+    setGroupAUserSet(false);
+    setGroupBUserSet(false);
+  }, [categoryCol, sourceTable, farmId]);
+
+  const categories = useMemo(() => {
+    if (!rows.length || !categoryCol) return [];
+    const raw = Array.from(
+      new Set(
+        rows
+          .map((r) => r?.[categoryCol])
+          .filter((c: any) => typeof c === "string" && c.trim().length > 0)
+      )
+    );
+    const ordered = [
+      ...AGE_VALUES.filter((c) => raw.includes(c)),
+      ...raw.filter((c) => !AGE_VALUES.includes(c as any)),
+    ];
+    return ordered;
+  }, [rows, categoryCol]);
+
+  const displayCategories = useMemo(() => {
+    const seen = new Set<string>();
+    const ordered: string[] = [];
+    const push = (value: string) => {
+      if (!seen.has(value)) {
+        seen.add(value);
+        ordered.push(value);
+      }
+    };
+    AGE_VALUES.forEach((value) => push(value));
+    categories.forEach((value) => push(value));
+    return ordered;
+  }, [categories]);
+
+  useEffect(() => {
+    if (!categories.length) return;
+    setGroupA((prev) => {
+      if (groupAUserSet && prev) {
+        return prev;
+      }
+      if (prev && categories.includes(prev)) {
+        return prev;
+      }
+      return categories[0];
+    });
+    setGroupB((prev) => {
+      if (groupBUserSet && prev) {
+        return prev;
+      }
+      if (prev && categories.includes(prev)) {
+        return prev;
+      }
+      return categories[1] || categories[0];
+    });
+  }, [categories, groupAUserSet, groupBUserSet]);
 
   /* -------- médias por categoria -------- */
   const meansByCategory: MeansByCategory = useMemo(() => {
@@ -255,14 +337,25 @@ export default function Step6ProgressCompare() {
     return out;
   }, [rows, categoryCol]);
 
+  const traitsWithData = useMemo(() => {
+    const set = new Set<string>();
+    Object.values(meansByCategory).forEach((map) => {
+      if (!map) return;
+      Object.entries(map).forEach(([key, value]) => {
+        if (value != null) {
+          set.add(key);
+        }
+      });
+    });
+    return set;
+  }, [meansByCategory]);
+
   /* -------- dados para tabela e radar -------- */
   const view = useMemo(() => {
     const A = meansByCategory[groupA] || {};
     const B = meansByCategory[groupB] || {};
 
-    // só inclui PTAs que de fato apareceram ao menos em uma categoria (evita colunas vazias)
-    const presentTrait = (k: string) =>
-      Object.values(meansByCategory).some((m) => m && m[k] != null);
+    const presentTrait = (k: string) => traitsWithData.has(k);
 
     const tTraits = tableTraits.filter(presentTrait);
     const cTraits = chartTraits.filter(presentTrait);
@@ -272,7 +365,7 @@ export default function Step6ProgressCompare() {
         { label: groupA, ...Object.fromEntries(tTraits.map((k) => [k, A[k] ?? null])) },
         { label: groupB, ...Object.fromEntries(tTraits.map((k) => [k, B[k] ?? null])) },
         {
-          label: "Change",
+          label: "Diferença (A - B)",
           ...Object.fromEntries(tTraits.map((k) => [k, A[k] != null && B[k] != null ? (A[k]! - B[k]!) : null])),
         },
       ],
@@ -285,7 +378,7 @@ export default function Step6ProgressCompare() {
     }));
 
     return { table, radar, tTraits, cTraits };
-  }, [meansByCategory, groupA, groupB, tableTraits, chartTraits]);
+  }, [meansByCategory, groupA, groupB, tableTraits, chartTraits, traitsWithData]);
 
   /* -------- UI helpers -------- */
   const traitBadges = (
@@ -298,17 +391,19 @@ export default function Step6ProgressCompare() {
         .sort((a, b) => a.label.localeCompare(b.label))
         .map(({ key, label }) => {
           const on = source.includes(key);
-          const enabled = view.tTraits?.includes(key) || view.cTraits?.includes(key) || true;
+          const hasData = traitsWithData.has(key);
+          const disabled = !hasData && !on;
           return (
             <Badge
               key={key}
               variant={on ? "default" : "outline"}
-              className={`cursor-pointer ${enabled ? "" : "opacity-40 pointer-events-none"}`}
-              onClick={() =>
+              className={`cursor-pointer ${disabled ? "opacity-40 pointer-events-none" : ""}`}
+              onClick={() => {
+                if (disabled) return;
                 setSource((prev) =>
                   on ? prev.filter((t) => t !== key) : [...prev, key]
-                )
-              }
+                );
+              }}
             >
               {label}
             </Badge>
@@ -316,6 +411,16 @@ export default function Step6ProgressCompare() {
         })}
     </div>
   );
+
+  const updateGroupA = useCallback((value: string) => {
+    setGroupA(value);
+    setGroupAUserSet(true);
+  }, []);
+
+  const updateGroupB = useCallback((value: string) => {
+    setGroupB(value);
+    setGroupBUserSet(true);
+  }, []);
 
   /* -------- Render -------- */
   return (
@@ -328,30 +433,114 @@ export default function Step6ProgressCompare() {
       </CardHeader>
 
       <CardContent className="space-y-6">
+        {/* Seletores principais */}
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="space-y-2">
+            <div className="text-sm font-semibold">Coluna de categoria</div>
+            <Select
+              value={categoryCol || (categoryColumns[0] ?? "")}
+              onValueChange={(value) => setCategoryCol(value)}
+              disabled={categoryColumns.length === 0}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue
+                  placeholder={
+                    categoryColumns.length === 0
+                      ? "Nenhuma coluna identificada"
+                      : "Selecione a coluna"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {categoryColumns.length === 0 && (
+                  <SelectItem value="" disabled>
+                    Sem colunas disponíveis
+                  </SelectItem>
+                )}
+                {categoryColumns.map((column) => (
+                  <SelectItem key={column} value={column}>
+                    {column}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-sm font-semibold">Grupo A</div>
+            <Select
+              value={groupA || ""}
+              onValueChange={(value) => updateGroupA(value)}
+              disabled={displayCategories.length === 0}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Selecione a categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                {displayCategories.map((category) => (
+                  <SelectItem key={`ga-select-${category}`} value={category}>
+                    {category}
+                    {!categories.includes(category) ? " (sem dados)" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-sm font-semibold">Grupo B</div>
+            <Select
+              value={groupB || ""}
+              onValueChange={(value) => updateGroupB(value)}
+              disabled={displayCategories.length === 0}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Selecione a categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                {displayCategories.map((category) => (
+                  <SelectItem key={`gb-select-${category}`} value={category}>
+                    {category}
+                    {!categories.includes(category) ? " (sem dados)" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
         {/* Atalhos: Categoria A vs Categoria B */}
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium">Atalhos:</span>
-          {categories.map((c) => (
-            <Badge
-              key={`ga-${c}`}
-              variant={groupA === c ? "default" : "outline"}
-              className="cursor-pointer"
-              onClick={() => setGroupA(c)}
-            >
-              {c}
-            </Badge>
-          ))}
-          <span className="mx-2 uppercase tracking-wide text-xs text-muted-foreground">VS</span>
-          {categories.map((c) => (
-            <Badge
-              key={`gb-${c}`}
-              variant={groupB === c ? "default" : "outline"}
-              className="cursor-pointer"
-              onClick={() => setGroupB(c)}
-            >
-              {c}
-            </Badge>
-          ))}
+          {categories.length === 0 ? (
+            <span className="text-xs text-muted-foreground">
+              Nenhuma categoria disponível para a coluna selecionada.
+            </span>
+          ) : (
+            <>
+              {categories.map((c) => (
+                <Badge
+                  key={`ga-${c}`}
+                  variant={groupA === c ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => updateGroupA(c)}
+                >
+                  {c}
+                </Badge>
+              ))}
+              <span className="mx-2 uppercase tracking-wide text-xs text-muted-foreground">VS</span>
+              {categories.map((c) => (
+                <Badge
+                  key={`gb-${c}`}
+                  variant={groupB === c ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => updateGroupB(c)}
+                >
+                  {c}
+                </Badge>
+              ))}
+            </>
+          )}
         </div>
 
         {/* Seletores de PTAs */}
@@ -381,7 +570,7 @@ export default function Step6ProgressCompare() {
               <table className="w-full text-sm border-collapse">
                 <thead>
                   <tr className="border-b">
-                    <th className="py-2 px-2 text-left font-semibold">Group</th>
+                    <th className="py-2 px-2 text-left font-semibold">Categoria</th>
                     {view.tTraits.map((t) => (
                       <th key={`th-${t}`} className="py-2 px-2 text-left font-semibold">
                         {(PTA_LABELS[t] ?? t).toUpperCase()}
