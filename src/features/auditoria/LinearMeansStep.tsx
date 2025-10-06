@@ -82,6 +82,12 @@ const numberFormatter = new Intl.NumberFormat("pt-BR", {
 });
 
 const labelMap = new Map(PTA_CATALOG.map((item) => [item.key, item.label] as const));
+const LINEAR_MEANS_LABEL_OVERRIDES = new Map(
+  Array.from(LINEAR_MEANS_DEFAULT_TRAITS, (key) => [key, key.toUpperCase()] as const),
+);
+
+const getTraitLabel = (key: string) =>
+  LINEAR_MEANS_LABEL_OVERRIDES.get(key) ?? labelMap.get(key) ?? key.toUpperCase();
 
 const NOVILHAS_MATCHERS = ["nov", "nvl"];
 const VACAS_MATCHERS = ["vac", "vlh"];
@@ -232,7 +238,7 @@ export default function LinearMeansStep({
     () =>
       orderedKeys.map((key) => ({
         key,
-        label: labelMap.get(key) ?? key.toUpperCase(),
+        label: getTraitLabel(key),
       })),
     [orderedKeys],
   );
@@ -283,7 +289,7 @@ export default function LinearMeansStep({
       }
 
       const existing = traitMap.get(row.trait_key);
-      const label = labelMap.get(row.trait_key) ?? row.trait_key.toUpperCase();
+      const label = getTraitLabel(row.trait_key);
 
       if (!existing) {
         traitMap.set(row.trait_key, {
