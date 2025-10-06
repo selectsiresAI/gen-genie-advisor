@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -22,6 +21,7 @@ import {
   Tooltip,
 } from "recharts";
 import { useAGFilters } from "../store";
+import { useFemales } from "../hooks";
 
 /* ================== PTAs suportadas ================== */
 const PTA_LABELS: Record<string, string> = {
@@ -64,9 +64,6 @@ const PTA_SYNONYMS: Record<string, string[]> = {
   cfp: ["cfp"],
 };
 
-/* ============= Tabelas e colunas candidatas ============= */
-const TABLE_CANDIDATES = ["rebanho", "females_denorm", "female_denorm", "females", "female"];
-const FARM_COLS = ["farm_id", "id_fazenda", "fazenda_id", "farmId"];
 const CATEGORY_NAME_CANDIDATES = [
   "Categoria",
   "categoria",
@@ -84,7 +81,28 @@ const DEFAULT_CHART_TRAITS = [
   "hhp_dollar", "ptam", "ptaf", "ptap", "fi", "ccr", "hcr", "pl", "liv", "scs", "ptat", "udc",
 ];
 
-const AGE_VALUES = ["Bezerra", "Novilha", "Primípara", "Secundípara", "Multípara"] as const;
+const CATEGORY_ORDER = ["Bezerra", "Novilha", "Primípara", "Secundípara", "Multípara"] as const;
+const CATEGORY_SYNONYMS: Record<string, string[]> = {
+  Bezerra: ["bezerra", "bezerras", "calf", "calves"],
+  Novilha: ["novilha", "novilhas", "heifer", "heifers"],
+  "Primípara": ["primipara", "primiparas", "primiparous", "primipara1"],
+  "Secundípara": ["secundipara", "secundiparas", "secondipara", "segundipara"],
+  "Multípara": ["multipara", "multiparas", "multípara", "multíparas", "cow", "cows", "vaca", "vacas"],
+};
+const AUTO_CATEGORY_COLUMN = "__auto__";
+const CATEGORY_COLUMN_LABELS: Record<string, string> = {
+  [AUTO_CATEGORY_COLUMN]: "Classificação automática (Bezerra → Multípara)",
+};
+
+function sortCategories(input: string[]): string[] {
+  const orderMap = new Map(CATEGORY_ORDER.map((label, index) => [label, index]));
+  return [...new Set(input)].sort((a, b) => {
+    const idxA = orderMap.has(a) ? orderMap.get(a)! : CATEGORY_ORDER.length;
+    const idxB = orderMap.has(b) ? orderMap.get(b)! : CATEGORY_ORDER.length;
+    if (idxA !== idxB) return idxA - idxB;
+    return a.localeCompare(b);
+  });
+}
 
 /* ================== Helpers ================== */
 const norm = (s: any) =>
@@ -95,6 +113,89 @@ const norm = (s: any) =>
 const PTA_SYNONYMS_NORM: Record<string, string[]> = Object.fromEntries(
   Object.entries(PTA_SYNONYMS).map(([k, list]) => [k, Array.from(new Set(list.map(norm)))])
 );
+
+const CATEGORY_NORMALIZATION: Record<string, string> = (() => {
+  const entries: [string, string][] = [];
+  for (const label of CATEGORY_ORDER) {
+    entries.push([norm(label), label]);
+  }
+  Object.entries(CATEGORY_SYNONYMS).forEach(([label, variants]) => {
+    const canonical = (label as typeof CATEGORY_ORDER[number]) || label;
+    entries.push([norm(label), canonical]);
+    variants.forEach((variant) => {
+      entries.push([norm(variant), canonical]);
+    });
+  });
+  const map: Record<string, string> = {};
+  for (const [key, value] of entries) {
+    if (!map[key]) map[key] = value;
+  }
+  return map;
+})();
+
+function canonicalCategoryLabel(value: any): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const normalized = norm(trimmed);
+  if (CATEGORY_NORMALIZATION[normalized]) {
+    return CATEGORY_NORMALIZATION[normalized];
+  }
+  for (const [canonical, variants] of Object.entries(CATEGORY_SYNONYMS)) {
+    const canonicalNorm = norm(canonical);
+    if (normalized.includes(canonicalNorm)) return canonical as typeof CATEGORY_ORDER[number];
+    if (variants.some((variant) => normalized.includes(norm(variant)))) {
+      return canonical as typeof CATEGORY_ORDER[number];
+    }
+  }
+  return trimmed;
+}
+
+function autoCategoryFromRow(row: any): string | null {
+  const parity = Number.isFinite(Number(row?.parity_order)) ? Number(row.parity_order) : null;
+  const birthDateRaw = row?.birth_date;
+  if (birthDateRaw) {
+    const birthDate = new Date(birthDateRaw);
+    if (!Number.isNaN(birthDate.getTime())) {
+      const today = new Date();
+      const msPerDay = 1000 * 60 * 60 * 24;
+      const daysDiff = Math.floor((today.getTime() - birthDate.getTime()) / msPerDay);
+      if (daysDiff <= 90 && (parity == null || parity === 0)) return "Bezerra";
+      if (daysDiff > 90 && (parity == null || parity === 0)) return "Novilha";
+    }
+  }
+  if (parity === 0) return "Novilha";
+  if (parity === 1) return "Primípara";
+  if (parity === 2) return "Secundípara";
+  if (parity != null && parity >= 3) return "Multípara";
+  return null;
+}
+
+function resolveCategoryForRow(row: any, column: string | null | undefined): string | null {
+  const candidates: Array<string | null> = [];
+  if (column) {
+    if (column === AUTO_CATEGORY_COLUMN) {
+      candidates.push(autoCategoryFromRow(row));
+    } else {
+      candidates.push(canonicalCategoryLabel(row?.[column]));
+    }
+  }
+  candidates.push(canonicalCategoryLabel(row?.category));
+  candidates.push(canonicalCategoryLabel(row?.Categoria));
+  candidates.push(canonicalCategoryLabel(row?.categoria));
+  candidates.push(canonicalCategoryLabel(row?.Category));
+  candidates.push(canonicalCategoryLabel(row?.age_group));
+  candidates.push(canonicalCategoryLabel(row?.grupo));
+  candidates.push(canonicalCategoryLabel(row?.paridade));
+  candidates.push(autoCategoryFromRow(row));
+
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim().length > 0) {
+      return candidate;
+    }
+  }
+  return null;
+}
 
 function toNumber(x: any): number | null {
   if (x == null) return null;
@@ -138,7 +239,7 @@ function detectCategoryColumn(rows: any[]): string | null {
     if (CATEGORY_NAME_CANDIDATES.some((c) => norm(c) === nk)) return key;
   }
   // 2) por conteúdo (procura coluna com valores entre as categorias conhecidas)
-  const known = new Set(AGE_VALUES.map(norm));
+  const known = new Set(CATEGORY_ORDER.map((label) => norm(label)));
   for (const key of keys) {
     let hits = 0;
     for (let i = 0; i < Math.min(rows.length, 300); i++) {
@@ -168,9 +269,23 @@ function listCategoryColumns(rows: any[]): string[] {
     });
 
   const stringCols = asArray.filter(hasStrings);
+  const looksLikeCategory = (key: string) => {
+    if (CATEGORY_NAME_CANDIDATES.some((c) => norm(c) === norm(key))) return true;
+    let recognized = 0;
+    for (let i = 0; i < Math.min(rows.length, 300); i++) {
+      const raw = rows[i]?.[key];
+      if (typeof raw !== "string") continue;
+      if (canonicalCategoryLabel(raw)) {
+        recognized++;
+        if (recognized >= 3) return true;
+      }
+    }
+    return recognized >= 3;
+  };
+
   const prioritized = [
-    ...stringCols.filter((key) => CATEGORY_NAME_CANDIDATES.some((c) => norm(c) === norm(key))),
-    ...stringCols.filter((key) => !CATEGORY_NAME_CANDIDATES.some((c) => norm(c) === norm(key))),
+    ...stringCols.filter((key) => looksLikeCategory(key)),
+    ...stringCols.filter((key) => !looksLikeCategory(key)),
   ];
 
   return Array.from(new Set(prioritized));
@@ -183,159 +298,134 @@ type MeansByCategory = Record<string, Record<string, number | null>>;
 export default function Step6ProgressCompare() {
   const { farmId } = useAGFilters();
 
-  const [loading, setLoading] = useState(false);
-  const [sourceTable, setSourceTable] = useState<string>("");
-  const [categoryCol, setCategoryCol] = useState<string>("");
+  const {
+    data: femaleData = [],
+    isLoading,
+    error,
+  } = useFemales(farmId ? String(farmId) : undefined);
 
-  const [rows, setRows] = useState<any[]>([]);
-  const [categoryColumns, setCategoryColumns] = useState<string[]>([]);
+  const rows = useMemo(() => {
+    if (!Array.isArray(femaleData)) return [];
+    return femaleData.filter((item) => item && typeof item === "object");
+  }, [femaleData]);
 
-  const [groupA, setGroupA] = useState<string>("Novilha");
-  const [groupB, setGroupB] = useState<string>("Primípara");
-  const [groupAUserSet, setGroupAUserSet] = useState(false);
-  const [groupBUserSet, setGroupBUserSet] = useState(false);
+  const categoryColumns = useMemo(() => {
+    const detected = listCategoryColumns(rows);
+    const unique = new Set<string>([AUTO_CATEGORY_COLUMN, ...detected]);
+    return Array.from(unique);
+  }, [rows]);
+
+  const detectedCategoryColumn = useMemo(() => detectCategoryColumn(rows), [rows]);
+
+  const [categoryCol, setCategoryCol] = useState<string>(AUTO_CATEGORY_COLUMN);
+  const [categoryColUserSet, setCategoryColUserSet] = useState(false);
+
+  useEffect(() => {
+    if (!categoryColumns.length) {
+      if (categoryCol !== AUTO_CATEGORY_COLUMN) {
+        setCategoryCol(AUTO_CATEGORY_COLUMN);
+      }
+      return;
+    }
+
+    const preferred =
+      (!categoryColUserSet && detectedCategoryColumn && categoryColumns.includes(detectedCategoryColumn)
+        ? detectedCategoryColumn
+        : null) || categoryCol;
+
+    if (preferred && categoryColumns.includes(preferred)) {
+      if (categoryCol !== preferred) {
+        setCategoryCol(preferred);
+      }
+      return;
+    }
+
+    const fallback = categoryColumns.find((column) => column !== undefined) || AUTO_CATEGORY_COLUMN;
+    if (categoryCol !== fallback) {
+      setCategoryCol(fallback);
+    }
+  }, [categoryColumns, categoryCol, detectedCategoryColumn, categoryColUserSet]);
+
+  useEffect(() => {
+    setCategoryColUserSet(false);
+  }, [farmId]);
 
   const [tableTraits, setTableTraits] = useState<string[]>(DEFAULT_TABLE_TRAITS);
   const [chartTraits, setChartTraits] = useState<string[]>(DEFAULT_CHART_TRAITS);
 
-  /* -------- fetch com fallback rebanho → females_denorm → ... -------- */
-  const fetchData = useCallback(async () => {
-    if (!farmId) { setRows([]); setCategoryColumns([]); setSourceTable(""); setCategoryCol(""); return; }
-    setLoading(true);
-
-    let gotRows: any[] = [];
-    let usedTable = "";
-    // tenta cada tabela
-    for (const table of TABLE_CANDIDATES) {
-      // tenta cada coluna de fazenda
-      let res: any = { data: [], error: null };
-      for (const fcol of FARM_COLS) {
-        res = await supabase.from(table).select("*").eq(fcol as any, farmId).limit(100000);
-        if (!res.error && Array.isArray(res.data) && res.data.length > 0) break;
-      }
-      // se nada com filtro, tenta sem (caso RLS permita)
-      if ((!res.data || res.data.length === 0) && !res.error) {
-        res = await supabase.from(table).select("*").limit(20000);
-      }
-      if (!res.error && Array.isArray(res.data) && res.data.length > 0) {
-        gotRows = res.data.filter((r: any) => r && typeof r === "object");
-        usedTable = table;
-        // precisamos garantir que existe coluna de categoria com valores
-        const catKey = detectCategoryColumn(gotRows);
-        if (catKey) break; // ok, tabela válida
-        // caso não tenha categoria válida, continua tentando as demais tabelas
-      }
-    }
-
-    setSourceTable(usedTable);
-    setRows(gotRows);
-    setCategoryColumns(listCategoryColumns(gotRows));
-
-    // categoria
-    const catKey = detectCategoryColumn(gotRows);
-    setCategoryCol(catKey || "");
-
-    setLoading(false);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [farmId]);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  useEffect(() => {
-    if (!categoryColumns.length) {
-      if (categoryCol) setCategoryCol("");
-      return;
-    }
-    if (!categoryCol || !categoryColumns.includes(categoryCol)) {
-      setCategoryCol(categoryColumns[0]);
-    }
-  }, [categoryColumns, categoryCol]);
-
-  useEffect(() => {
-    setGroupAUserSet(false);
-    setGroupBUserSet(false);
-  }, [categoryCol, sourceTable, farmId]);
-
-  const categories = useMemo(() => {
-    if (!rows.length || !categoryCol) return [];
-    const raw = Array.from(
-      new Set(
-        rows
-          .map((r) => r?.[categoryCol])
-          .filter((c: any) => typeof c === "string" && c.trim().length > 0)
-      )
-    );
-    const ordered = [
-      ...AGE_VALUES.filter((c) => raw.includes(c)),
-      ...raw.filter((c) => !AGE_VALUES.includes(c as any)),
-    ];
-    return ordered;
+  const categorizedRows = useMemo(() => {
+    if (!rows.length) return [];
+    return rows
+      .map((row) => {
+        const category = resolveCategoryForRow(row, categoryCol);
+        return category ? { category, row } : null;
+      })
+      .filter((item): item is { category: string; row: any } => Boolean(item));
   }, [rows, categoryCol]);
 
-  const displayCategories = useMemo(() => {
-    const seen = new Set<string>();
-    const ordered: string[] = [];
-    const push = (value: string) => {
-      if (!seen.has(value)) {
-        seen.add(value);
-        ordered.push(value);
-      }
-    };
-    AGE_VALUES.forEach((value) => push(value));
-    categories.forEach((value) => push(value));
-    return ordered;
-  }, [categories]);
+  const availableCategories = useMemo(
+    () => sortCategories(categorizedRows.map((item) => item.category)),
+    [categorizedRows]
+  );
+
+  const selectableCategories = useMemo(() => {
+    const extras = availableCategories.filter((cat) => !CATEGORY_ORDER.includes(cat as any));
+    return [...CATEGORY_ORDER, ...extras];
+  }, [availableCategories]);
+
+  const [enabledCategories, setEnabledCategories] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!categories.length) return;
-    setGroupA((prev) => {
-      if (groupAUserSet && prev) {
-        return prev;
-      }
-      if (prev && categories.includes(prev)) {
-        return prev;
-      }
-      return categories[0];
-    });
-    setGroupB((prev) => {
-      if (groupBUserSet && prev) {
-        return prev;
-      }
-      if (prev && categories.includes(prev)) {
-        return prev;
-      }
-      return categories[1] || categories[0];
-    });
-  }, [categories, groupAUserSet, groupBUserSet]);
+    if (!availableCategories.length) {
+      setEnabledCategories((prev) => (prev.length ? [] : prev));
+      return;
+    }
 
-  /* -------- médias por categoria -------- */
+    setEnabledCategories((prev) => {
+      const validPrev = prev.filter((cat) => availableCategories.includes(cat));
+      if (validPrev.length === prev.length && validPrev.length > 0) {
+        return prev;
+      }
+      if (validPrev.length > 0) {
+        return validPrev;
+      }
+      return [...availableCategories];
+    });
+  }, [availableCategories]);
+
+  const filteredRows = useMemo(() => {
+    if (!categorizedRows.length) return [];
+    if (!enabledCategories.length) return categorizedRows;
+    const active = new Set(enabledCategories);
+    return categorizedRows.filter(({ category }) => active.has(category));
+  }, [categorizedRows, enabledCategories]);
+
   const meansByCategory: MeansByCategory = useMemo(() => {
-    if (!rows.length || !categoryCol) return {};
+    if (!filteredRows.length) return {};
     const acc: Record<string, Record<string, { sum: number; n: number }>> = {};
 
-    for (const r of rows) {
-      const cat = (r?.[categoryCol] as string) || "Sem categoria";
-      if (!acc[cat]) acc[cat] = {};
+    for (const { category, row } of filteredRows) {
+      if (!acc[category]) acc[category] = {};
       for (const key of ALL_PTA_KEYS) {
-        const v = resolveTraitValue(r, key);
+        const v = resolveTraitValue(row, key);
         if (v != null) {
-          if (!acc[cat][key]) acc[cat][key] = { sum: 0, n: 0 };
-          acc[cat][key].sum += v;
-          acc[cat][key].n += 1;
+          if (!acc[category][key]) acc[category][key] = { sum: 0, n: 0 };
+          acc[category][key].sum += v;
+          acc[category][key].n += 1;
         }
       }
     }
 
     const out: MeansByCategory = {};
-    for (const [cat, map] of Object.entries(acc)) {
-      out[cat] = {};
+    for (const [category, map] of Object.entries(acc)) {
+      out[category] = {};
       for (const key of ALL_PTA_KEYS) {
-        const b = map[key];
-        out[cat][key] = b && b.n > 0 ? b.sum / b.n : null;
+        const bucket = map[key];
+        out[category][key] = bucket && bucket.n > 0 ? bucket.sum / bucket.n : null;
       }
     }
     return out;
-  }, [rows, categoryCol]);
+  }, [filteredRows]);
 
   const traitsWithData = useMemo(() => {
     const set = new Set<string>();
@@ -350,15 +440,55 @@ export default function Step6ProgressCompare() {
     return set;
   }, [meansByCategory]);
 
-  /* -------- dados para tabela e radar -------- */
+  const [groupA, setGroupA] = useState<string>("Novilha");
+  const [groupB, setGroupB] = useState<string>("Primípara");
+  const [groupAUserSet, setGroupAUserSet] = useState(false);
+  const [groupBUserSet, setGroupBUserSet] = useState(false);
+
+  useEffect(() => {
+    setGroupAUserSet(false);
+    setGroupBUserSet(false);
+  }, [categoryCol, farmId]);
+
+  const activeCategories = useMemo(
+    () => sortCategories(enabledCategories.length ? enabledCategories : availableCategories),
+    [enabledCategories, availableCategories]
+  );
+
+  useEffect(() => {
+    if (!activeCategories.length) return;
+
+    setGroupA((prev) => {
+      const hasPrev = prev && activeCategories.includes(prev);
+      if (hasPrev && groupAUserSet) return prev;
+      if (hasPrev) return prev;
+      return activeCategories[0];
+    });
+
+    setGroupB((prev) => {
+      const hasPrev = prev && activeCategories.includes(prev);
+      if (hasPrev && groupBUserSet) return prev;
+      if (hasPrev) return prev;
+      return activeCategories[1] || activeCategories[0];
+    });
+  }, [activeCategories, groupAUserSet, groupBUserSet]);
+
+  const availableTableTraits = useMemo(
+    () => tableTraits.filter((trait) => traitsWithData.has(trait)),
+    [tableTraits, traitsWithData]
+  );
+
+  const availableChartTraits = useMemo(
+    () => chartTraits.filter((trait) => traitsWithData.has(trait)),
+    [chartTraits, traitsWithData]
+  );
+
   const view = useMemo(() => {
     const A = meansByCategory[groupA] || {};
     const B = meansByCategory[groupB] || {};
 
-    const presentTrait = (k: string) => traitsWithData.has(k);
-
-    const tTraits = tableTraits.filter(presentTrait);
-    const cTraits = chartTraits.filter(presentTrait);
+    const tTraits = availableTableTraits;
+    const cTraits = availableChartTraits;
 
     const table = {
       rows: [
@@ -366,7 +496,9 @@ export default function Step6ProgressCompare() {
         { label: groupB, ...Object.fromEntries(tTraits.map((k) => [k, B[k] ?? null])) },
         {
           label: "Diferença (A - B)",
-          ...Object.fromEntries(tTraits.map((k) => [k, A[k] != null && B[k] != null ? (A[k]! - B[k]!) : null])),
+          ...Object.fromEntries(
+            tTraits.map((k) => [k, A[k] != null && B[k] != null ? (A[k]! - B[k]!) : null])
+          ),
         },
       ],
     };
@@ -378,9 +510,8 @@ export default function Step6ProgressCompare() {
     }));
 
     return { table, radar, tTraits, cTraits };
-  }, [meansByCategory, groupA, groupB, tableTraits, chartTraits, traitsWithData]);
+  }, [meansByCategory, groupA, groupB, availableTableTraits, availableChartTraits]);
 
-  /* -------- UI helpers -------- */
   const traitBadges = (
     source: string[],
     setSource: (updater: (prev: string[]) => string[]) => void
@@ -422,13 +553,33 @@ export default function Step6ProgressCompare() {
     setGroupBUserSet(true);
   }, []);
 
-  /* -------- Render -------- */
+  const sourceTable = "females_denorm";
+  const categoryColumnLabel = categoryCol
+    ? CATEGORY_COLUMN_LABELS[categoryCol] ?? categoryCol
+    : "";
+
+  const quickCategories = activeCategories;
+
+  const toggleCategory = (category: string, hasData: boolean) => {
+    if (!hasData) return;
+    setEnabledCategories((prev) => {
+      const exists = prev.includes(category);
+      if (exists) {
+        if (prev.length <= 1) return prev;
+        return prev.filter((cat) => cat !== category);
+      }
+      return sortCategories([...prev, category]);
+    });
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>
           Comparação por Categoria (Step 6)
-          {sourceTable ? ` — fonte: ${sourceTable}${categoryCol ? "." + categoryCol : ""}` : ""}
+          {rows.length > 0
+            ? ` — fonte: ${sourceTable}${categoryCol ? `.${categoryCol}` : ""}`
+            : ""}
         </CardTitle>
       </CardHeader>
 
@@ -438,28 +589,20 @@ export default function Step6ProgressCompare() {
           <div className="space-y-2">
             <div className="text-sm font-semibold">Coluna de categoria</div>
             <Select
-              value={categoryCol || (categoryColumns[0] ?? "")}
-              onValueChange={(value) => setCategoryCol(value)}
-              disabled={categoryColumns.length === 0}
+              value={categoryCol}
+              onValueChange={(value) => {
+                setCategoryCol(value);
+                setCategoryColUserSet(true);
+              }}
+              disabled={categoryColumns.length <= 1 && categoryColumns[0] === AUTO_CATEGORY_COLUMN}
             >
               <SelectTrigger className="w-full">
-                <SelectValue
-                  placeholder={
-                    categoryColumns.length === 0
-                      ? "Nenhuma coluna identificada"
-                      : "Selecione a coluna"
-                  }
-                />
+                <SelectValue placeholder="Selecione a coluna" />
               </SelectTrigger>
               <SelectContent>
-                {categoryColumns.length === 0 && (
-                  <SelectItem value="" disabled>
-                    Sem colunas disponíveis
-                  </SelectItem>
-                )}
                 {categoryColumns.map((column) => (
                   <SelectItem key={column} value={column}>
-                    {column}
+                    {CATEGORY_COLUMN_LABELS[column] ?? column}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -470,17 +613,21 @@ export default function Step6ProgressCompare() {
             <div className="text-sm font-semibold">Grupo A</div>
             <Select
               value={groupA || ""}
-              onValueChange={(value) => updateGroupA(value)}
-              disabled={displayCategories.length === 0}
+              onValueChange={updateGroupA}
+              disabled={activeCategories.length === 0}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecione a categoria" />
               </SelectTrigger>
               <SelectContent>
-                {displayCategories.map((category) => (
-                  <SelectItem key={`ga-select-${category}`} value={category}>
+                {availableCategories.map((category) => (
+                  <SelectItem
+                    key={`ga-select-${category}`}
+                    value={category}
+                    disabled={!enabledCategories.includes(category)}
+                  >
                     {category}
-                    {!categories.includes(category) ? " (sem dados)" : ""}
+                    {!enabledCategories.includes(category) ? " (filtro desligado)" : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -491,17 +638,21 @@ export default function Step6ProgressCompare() {
             <div className="text-sm font-semibold">Grupo B</div>
             <Select
               value={groupB || ""}
-              onValueChange={(value) => updateGroupB(value)}
-              disabled={displayCategories.length === 0}
+              onValueChange={updateGroupB}
+              disabled={activeCategories.length === 0}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecione a categoria" />
               </SelectTrigger>
               <SelectContent>
-                {displayCategories.map((category) => (
-                  <SelectItem key={`gb-select-${category}`} value={category}>
+                {availableCategories.map((category) => (
+                  <SelectItem
+                    key={`gb-select-${category}`}
+                    value={category}
+                    disabled={!enabledCategories.includes(category)}
+                  >
                     {category}
-                    {!categories.includes(category) ? " (sem dados)" : ""}
+                    {!enabledCategories.includes(category) ? " (filtro desligado)" : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -509,34 +660,59 @@ export default function Step6ProgressCompare() {
           </div>
         </div>
 
+        {/* Filtro de categorias */}
+        <div className="space-y-2">
+          <div className="text-sm font-semibold">Categorias consideradas</div>
+          <div className="flex flex-wrap gap-2">
+            {selectableCategories.map((category) => {
+              const hasData = availableCategories.includes(category);
+              const active = enabledCategories.includes(category);
+              return (
+                <Badge
+                  key={`filter-${category}`}
+                  variant={active ? "default" : "outline"}
+                  className={`cursor-pointer ${hasData ? "" : "opacity-40 pointer-events-none"}`}
+                  onClick={() => toggleCategory(category, hasData)}
+                >
+                  {category}
+                  {!hasData ? " (sem dados)" : ""}
+                </Badge>
+              );
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Ative as categorias com dados disponíveis para habilitar a comparação.
+          </p>
+        </div>
+
         {/* Atalhos: Categoria A vs Categoria B */}
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium">Atalhos:</span>
-          {categories.length === 0 ? (
+          {quickCategories.length === 0 ? (
             <span className="text-xs text-muted-foreground">
-              Nenhuma categoria disponível para a coluna selecionada.
+              Nenhuma categoria disponível com dados.
             </span>
           ) : (
             <>
-              {categories.map((c) => (
+              {quickCategories.map((category) => (
                 <Badge
-                  key={`ga-${c}`}
-                  variant={groupA === c ? "default" : "outline"}
+                  key={`ga-${category}`}
+                  variant={groupA === category ? "default" : "outline"}
                   className="cursor-pointer"
-                  onClick={() => updateGroupA(c)}
+                  onClick={() => updateGroupA(category)}
                 >
-                  {c}
+                  {category}
                 </Badge>
               ))}
               <span className="mx-2 uppercase tracking-wide text-xs text-muted-foreground">VS</span>
-              {categories.map((c) => (
+              {quickCategories.map((category) => (
                 <Badge
-                  key={`gb-${c}`}
-                  variant={groupB === c ? "default" : "outline"}
+                  key={`gb-${category}`}
+                  variant={groupB === category ? "default" : "outline"}
                   className="cursor-pointer"
-                  onClick={() => updateGroupB(c)}
+                  onClick={() => updateGroupB(category)}
                 >
-                  {c}
+                  {category}
                 </Badge>
               ))}
             </>
@@ -553,24 +729,32 @@ export default function Step6ProgressCompare() {
           {traitBadges(chartTraits, (fn) => setChartTraits(fn))}
         </div>
 
-        {loading && (
-          <div className="py-6 text-center text-muted-foreground">Carregando dados…</div>
-        )}
-
-        {!loading && (!rows.length || !categoryCol) && (
-          <div className="py-6 text-center text-muted-foreground">
-            Sem dados com categoria em {TABLE_CANDIDATES.join(", ")} para esta fazenda.
+        {error && (
+          <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+            Erro ao carregar dados do rebanho. Tente novamente mais tarde.
           </div>
         )}
 
-        {!loading && rows.length > 0 && categoryCol && (
+        {isLoading && (
+          <div className="py-6 text-center text-muted-foreground">Carregando dados…</div>
+        )}
+
+        {!isLoading && (!rows.length || !filteredRows.length) && (
+          <div className="py-6 text-center text-muted-foreground">
+            Sem dados categorizados disponíveis em {sourceTable} para esta fazenda.
+          </div>
+        )}
+
+        {!isLoading && filteredRows.length > 0 && (
           <div className="space-y-8">
             {/* Tabela */}
             <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
+              <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b">
-                    <th className="py-2 px-2 text-left font-semibold">Categoria</th>
+                    <th className="py-2 px-2 text-left font-semibold">
+                      Categoria {categoryColumnLabel ? `(${categoryColumnLabel})` : ""}
+                    </th>
                     {view.tTraits.map((t) => (
                       <th key={`th-${t}`} className="py-2 px-2 text-left font-semibold">
                         {(PTA_LABELS[t] ?? t).toUpperCase()}
@@ -587,7 +771,12 @@ export default function Step6ProgressCompare() {
                         const isChange = idx === 2;
                         const isPos = (val ?? 0) > 0;
                         return (
-                          <td key={`td-${t}`} className={`py-2 px-2 ${isChange ? (isPos ? "text-green-600" : "text-red-600") : ""}`}>
+                          <td
+                            key={`td-${t}`}
+                            className={`py-2 px-2 ${
+                              isChange ? (isPos ? "text-green-600" : "text-red-600") : ""
+                            }`}
+                          >
                             {val == null ? "-" : Number(val).toFixed(2)}
                           </td>
                         );
@@ -601,7 +790,7 @@ export default function Step6ProgressCompare() {
             {/* Radar */}
             {view.radar.length > 0 && (
               <div>
-                <h4 className="text-sm font-semibold mb-2">Rate of Change</h4>
+                <h4 className="mb-2 text-sm font-semibold">Rate of Change</h4>
                 <ResponsiveContainer width="100%" height={420}>
                   <RadarChart data={view.radar}>
                     <PolarGrid />
