@@ -28,7 +28,7 @@ export default function Step1Parentesco() {
         setRows([]);
         return;
       }
-      const { data, error } = await supabase.rpc("ag_parentage_overview", {
+      const { data, error } = await (supabase.rpc as any)("ag_parentage_overview", {
         p_farm: farmId,
       });
       if (!active) return;

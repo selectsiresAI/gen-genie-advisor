@@ -45,9 +45,9 @@ export default function TopParentsStep({ farmId }: Props) {
 
   const load = useCallback(
     async (kind: 'sire' | 'mgs') => {
-      const { data, error } = await supabase.rpc('ag_top_parents', {
+      const { data, error } = await (supabase.rpc as any)('ag_top_parents', {
         p_farm: farmId,
-        p_group_by: kind, // 'sire' | 'mgs'
+        p_group_by: kind,
         p_min_birth_year: null,
         p_max_birth_year: null,
         p_top_n: topN,

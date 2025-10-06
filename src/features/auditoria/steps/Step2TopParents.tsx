@@ -47,7 +47,7 @@ export default function Step2TopParents() {
       return;
     }
     setLoading(true);
-    const { data, error } = await supabase.rpc("ag_top_parents", {
+    const { data, error } = await (supabase.rpc as any)("ag_top_parents", {
       p_farm: farmId,
       p_parent_type: role,
       p_year_from: yearFrom,

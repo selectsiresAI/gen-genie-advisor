@@ -7,7 +7,7 @@ export function useFemales(farmId?: string | number) {
     queryKey: ["females_denorm", farmId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .rpc("get_females_denorm", { target_farm_id: farmId });
+        .rpc("get_females_denorm", { target_farm_id: String(farmId) });
       if (error) throw error;
       return data || [];
     },

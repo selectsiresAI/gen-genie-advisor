@@ -843,7 +843,7 @@ function TraitCard({
 const PanoramaRebanhoView: React.FC<{
   females: any[];
   selectedPTAs: string[];
-  setSelectedPTAs: (ptas: string[]) => void;
+  setSelectedPTAs: React.Dispatch<React.SetStateAction<string[]>>;
   availablePTAs: any[];
   showFarmAverage: boolean;
   setShowFarmAverage: (show: boolean) => void;

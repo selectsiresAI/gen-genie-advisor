@@ -32,7 +32,7 @@ export default function Step6ProgressCompare() {
   useEffect(() => {
     let active = true;
     async function loadColumns() {
-      const { data, error } = await supabase.rpc("ag_list_pta_columns");
+      const { data, error } = await (supabase.rpc as any)("ag_list_pta_columns");
       if (!active) return;
       if (error) {
         console.error("Failed to list PTA columns", error);
@@ -55,7 +55,7 @@ export default function Step6ProgressCompare() {
       setRows([]);
       return;
     }
-    const { data, error } = await supabase.rpc("ag_progress_compare", {
+    const { data, error } = await (supabase.rpc as any)("ag_progress_compare", {
       p_farm: farmId,
       p_traits: traits,
       p_grouping: groupBy,

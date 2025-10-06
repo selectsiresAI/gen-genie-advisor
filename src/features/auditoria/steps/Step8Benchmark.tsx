@@ -44,7 +44,7 @@ export default function Step8Benchmark() {
     let active = true;
     (async () => {
       setErr(null);
-      const { data, error } = await supabase.rpc("ag_list_pta_columns");
+      const { data, error } = await (supabase.rpc as any)("ag_list_pta_columns");
       if (!active) return;
       if (error) {
         console.error("ag_list_pta_columns error:", error);
@@ -101,10 +101,10 @@ export default function Step8Benchmark() {
     setLoading(true);
     setErr(null);
 
-    const { data, error } = await supabase.rpc("ag_genetic_benchmark", {
+    const { data, error } = await (supabase.rpc as any)("ag_genetic_benchmark", {
       p_farm: farmId,
       p_traits: traits,
-      p_region: region, // se seu backend usar 'US', o RPC deve mapear 'EUA' -> 'US'
+      p_region: region,
       p_top: Number(topPct),
     });
 

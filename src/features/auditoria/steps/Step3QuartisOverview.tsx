@@ -44,7 +44,7 @@ export default function Step3QuartisOverview() {
 
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase.rpc("ag_list_pta_columns");
+      const { data, error } = await (supabase.rpc as any)("ag_list_pta_columns");
       if (!alive.current) return;
       if (error) {
         console.error("Failed to list PTA columns", error);
@@ -80,7 +80,7 @@ export default function Step3QuartisOverview() {
     setLoading(true);
     setErrMsg(null);
 
-    const { data, error } = await supabase.rpc("ag_quartis_overview", {
+    const { data, error } = await (supabase.rpc as any)("ag_quartis_overview", {
       p_farm: farmId,
       p_index: baseIndex,
       p_traits: traits,

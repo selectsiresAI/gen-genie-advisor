@@ -50,7 +50,7 @@ export default function Step4MediaLinear() {
     let cancelled = false;
     (async () => {
       setErr(null);
-      const { data, error } = await supabase.rpc("ag_list_pta_columns");
+      const { data, error } = await (supabase.rpc as any)("ag_list_pta_columns");
       if (cancelled || !aliveRef.current) return;
 
       if (error) {
@@ -91,7 +91,7 @@ export default function Step4MediaLinear() {
       };
       if (normalize) args.p_scope = "farm";
 
-      const { data, error } = await supabase.rpc("ag_linear_means", args);
+      const { data, error } = await (supabase.rpc as any)("ag_linear_means", args);
 
       if (cancelled || !aliveRef.current) return;
       setLoading(false);
