@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RefreshCw } from "lucide-react";
 import {
@@ -30,31 +30,50 @@ type TraitCardProps = {
   domainTicks: number[];
 };
 
-const mean = (values: number[]) =>
-  values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+const avg = (values: number[]) =>
+  values.length ? values.reduce((s, v) => s + v, 0) / values.length : 0;
 
-function computeSlope(points: SeriesPoint[]) {
+function getYearFromBirth(birth: unknown): number | null {
+  if (!birth) return null;
+  if (birth instanceof Date) return birth.getFullYear();
+  if (typeof birth === "number") {
+    const d = new Date(birth);
+    return Number.isFinite(d.getTime()) ? d.getFullYear() : null;
+  }
+  if (typeof birth === "string") {
+    const str = birth.trim();
+    if (/^\d{8}$/.test(str)) {
+      const y = Number(str.slice(0, 4));
+      return Number.isFinite(y) ? y : null;
+    }
+    const d = new Date(str);
+    return Number.isFinite(d.getTime()) ? d.getFullYear() : null;
+  }
+  return null;
+}
+
+function computeSlope(points: SeriesPoint[]): number {
   if (points.length < 2) return 0;
-  const xs = points.map((point) => point.year);
-  const ys = points.map((point) => point.mean);
-  const mx = mean(xs);
-  const my = mean(ys);
-  const varianceX = mean(xs.map((x) => (x - mx) ** 2));
-  if (!varianceX) return 0;
-  const covariance = mean(xs.map((x, index) => (x - mx) * (ys[index] - my)));
-  return Math.round(covariance / varianceX);
+  const xs = points.map((p) => p.year);
+  const ys = points.map((p) => p.mean);
+  const mx = avg(xs);
+  const my = avg(ys);
+  const varX = avg(xs.map((x) => (x - mx) ** 2));
+  if (!varX) return 0;
+  const cov = avg(xs.map((x, i) => (x - mx) * (ys[i] - my)));
+  return Math.round((cov / varX) * 10) / 10;
 }
 
 function computeTrend(points: SeriesPoint[]) {
   if (points.length < 2) return [] as Array<{ year: number; trend: number }>;
-  const xs = points.map((point) => point.year);
-  const ys = points.map((point) => point.mean);
-  const mx = mean(xs);
-  const my = mean(ys);
-  const varianceX = mean(xs.map((x) => (x - mx) ** 2));
-  if (!varianceX) return [];
-  const covariance = mean(xs.map((x, index) => (x - mx) * (ys[index] - my)));
-  const slope = covariance / varianceX;
+  const xs = points.map((p) => p.year);
+  const ys = points.map((p) => p.mean);
+  const mx = avg(xs);
+  const my = avg(ys);
+  const varX = avg(xs.map((x) => (x - mx) ** 2));
+  if (!varX) return [];
+  const cov = avg(xs.map((x, i) => (x - mx) * (ys[i] - my)));
+  const slope = cov / varX;
   const intercept = my - slope * mx;
   const firstYear = xs[0];
   const lastYear = xs[xs.length - 1];
@@ -64,14 +83,29 @@ function computeTrend(points: SeriesPoint[]) {
   ];
 }
 
-function TraitCard({ traitKey, traitLabel, data, showFarmMean, showTrend, domainTicks }: TraitCardProps) {
-  const farmMean = Math.round(mean(data.map((point) => point.mean)));
+const TraitCard = memo(function TraitCard({
+  traitKey,
+  traitLabel,
+  data,
+  showFarmMean,
+  showTrend,
+  domainTicks,
+}: TraitCardProps) {
+  const totals = data.reduce(
+    (acc, p) => {
+      acc.sum += p.mean * p.n;
+      acc.n += p.n;
+      return acc;
+    },
+    { sum: 0, n: 0 }
+  );
+  const farmMean = totals.n ? Math.round(totals.sum / totals.n) : 0;
   const slope = computeSlope(data);
-  const chartData = data.map((point, index) => ({
-    year: point.year,
-    n: point.n,
-    mean: Math.round(point.mean),
-    delta: Math.round(index === 0 ? 0 : point.mean - data[index - 1].mean),
+  const chartData = data.map((p, i) => ({
+    year: p.year,
+    n: p.n,
+    mean: Math.round(p.mean),
+    delta: Math.round(i === 0 ? 0 : p.mean - data[i - 1].mean),
     farmMean,
   }));
   const trend = showTrend ? computeTrend(data) : [];
@@ -80,11 +114,17 @@ function TraitCard({ traitKey, traitLabel, data, showFarmMean, showTrend, domain
     <div className="rounded-2xl shadow overflow-hidden bg-white">
       <div className="bg-black text-white px-4 py-2 text-sm font-semibold flex items-center justify-between">
         <div className="truncate">{traitLabel}</div>
-        <div className="text-xs opacity-90">Tendência: {slope >= 0 ? "+" : ""}{slope}/ano</div>
+        <div className="text-xs opacity-90">
+          Tendência: {slope >= 0 ? "+" : ""}
+          {slope}/ano
+        </div>
       </div>
       <div className="p-3 h-64">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+          <ComposedChart
+            data={chartData}
+            margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
+          >
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis
               type="number"
@@ -93,9 +133,23 @@ function TraitCard({ traitKey, traitLabel, data, showFarmMean, showTrend, domain
               ticks={domainTicks}
             />
             <YAxis />
-            <Tooltip />
+            <Tooltip
+              formatter={(value: any, name: string) => {
+                if (name === "mean") return [value, "Média anual"];
+                if (name === "delta") return [value, "Δ vs ano ant."];
+                if (name === "trend") return [value, "Tendência"];
+                if (name === "n") return [value, "N"];
+                return [value, name];
+              }}
+              labelFormatter={(label) => `Ano ${label}`}
+            />
             <Legend />
-            <Area type="monotone" dataKey="mean" fill="rgba(0,0,0,0.08)" stroke="none" />
+            <Area
+              type="monotone"
+              dataKey="mean"
+              fill="rgba(0,0,0,0.08)"
+              stroke="none"
+            />
             <Line
               type="monotone"
               dataKey="mean"
@@ -108,82 +162,92 @@ function TraitCard({ traitKey, traitLabel, data, showFarmMean, showTrend, domain
                 y={farmMean}
                 stroke="#22C3EE"
                 strokeDasharray="6 6"
-                label={{ value: `Média ${farmMean}`, position: "insideTopLeft" }}
+                label={{
+                  value: `Média ${farmMean}`,
+                  position: "insideTopLeft",
+                }}
               />
             )}
             {showTrend && trend.length === 2 && (
-              <Line type="linear" dataKey="trend" name="Tendência" stroke="#10B981" dot={false} data={trend} />
+              <Line
+                type="linear"
+                dataKey="trend"
+                name="Tendência"
+                stroke="#10B981"
+                dot={false}
+                data={trend as any}
+              />
             )}
           </ComposedChart>
         </ResponsiveContainer>
       </div>
     </div>
   );
-}
+});
 
 export default function Step5Progressao() {
-  const { farmId, ptasSelecionadas, setPTAs } = useAGFilters();
+  const { farmId, ptasSelecionadas = [], setPTAs } = useAGFilters();
   const { data: females = [], isLoading } = useFemales(farmId);
   const [showFarmMean, setShowFarmMean] = useState(true);
   const [showTrend, setShowTrend] = useState(true);
 
   useEffect(() => {
-    if (!ptasSelecionadas?.length) {
+    if (!ptasSelecionadas.length) {
       setPTAs(["hhp_dollar", "tpi", "nm_dollar"]);
     }
-  }, [ptasSelecionadas, setPTAs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const domainTicks = useMemo(() => {
-    const years = new Set<number>();
-    females.forEach((female: any) => {
-      const birthDate = female?.birth_date ? new Date(female.birth_date) : undefined;
-      const year = birthDate?.getFullYear();
-      if (Number.isFinite(year)) {
-        years.add(year as number);
-      }
-    });
-    const values = Array.from(years).sort((a, b) => a - b);
-    return values.length ? values : [new Date().getFullYear()];
+    const years: number[] = [];
+    for (const f of females as any[]) {
+      const y = getYearFromBirth((f as any)?.birth_date);
+      if (Number.isFinite(y)) years.push(y as number);
+    }
+    if (!years.length) return [new Date().getFullYear()];
+    const min = Math.min(...years);
+    const max = Math.max(...years);
+    const ticks: number[] = [];
+    for (let y = min; y <= max; y++) ticks.push(y);
+    return ticks;
   }, [females]);
 
   const seriesByKey = useMemo(() => {
     const years = domainTicks;
-    const output: Record<string, SeriesPoint[]> = {};
+    const out: Record<string, SeriesPoint[]> = {};
 
-    ptasSelecionadas.forEach((key) => {
+    for (const key of ptasSelecionadas) {
       const byYear = new Map<number, number[]>();
-      females.forEach((female: any) => {
-        const birthDate = female?.birth_date ? new Date(female.birth_date) : undefined;
-        const year = birthDate?.getFullYear();
-        const value = Number(female?.[key]);
-        if (Number.isFinite(year) && Number.isFinite(value)) {
-          const bucket = byYear.get(year as number) ?? [];
-          bucket.push(value as number);
-          byYear.set(year as number, bucket);
+      for (const f of females as any[]) {
+        const y = getYearFromBirth((f as any)?.birth_date);
+        const v = Number((f as any)?.[key]);
+        if (Number.isFinite(y) && Number.isFinite(v)) {
+          const arr = byYear.get(y as number) ?? [];
+          arr.push(v);
+          byYear.set(y as number, arr);
         }
-      });
+      }
 
-      output[key] = years
-        .map((year) => {
-          const values = byYear.get(year) ?? [];
-          return {
-            year,
-            n: values.length,
-            mean: values.length ? mean(values) : 0,
-          };
+      out[key] = years
+        .map((y) => {
+          const arr = byYear.get(y) ?? [];
+          return { year: y, n: arr.length, mean: arr.length ? avg(arr) : 0 };
         })
-        .filter((point) => point.n > 0);
-    });
-
-    return output;
+        .filter((p) => p.n > 0);
+    }
+    return out;
   }, [ptasSelecionadas, females, domainTicks]);
 
   const options = useMemo(
-    () => PTA_CATALOG.slice().sort((a, b) => (a.preferOrder ?? 999) - (b.preferOrder ?? 999)),
+    () =>
+      PTA_CATALOG.slice().sort(
+        (a, b) => (a.preferOrder ?? 999) - (b.preferOrder ?? 999)
+      ),
     []
   );
 
-  const labelOf = (key: string) => PTA_CATALOG.find((item) => item.key === key)?.label ?? key.toUpperCase();
+  const labelOf = (key: string) =>
+    PTA_CATALOG.find((i) => i.key === key)?.label ?? key.toUpperCase();
 
   return (
     <div className="space-y-4">
@@ -201,12 +265,14 @@ export default function Step5Progressao() {
                   onClick={() =>
                     setPTAs(
                       active
-                        ? ptasSelecionadas.filter((key) => key !== pta.key)
+                        ? ptasSelecionadas.filter((k: string) => k !== pta.key)
                         : [...ptasSelecionadas, pta.key]
                     )
                   }
                   className={`px-3 py-2 rounded-xl border text-sm ${
-                    active ? "bg-emerald-50 border-emerald-300" : "hover:bg-gray-50"
+                    active
+                      ? "bg-emerald-50 border-emerald-300"
+                      : "hover:bg-gray-50"
                   }`}
                   title={pta.group}
                 >
@@ -220,7 +286,7 @@ export default function Step5Progressao() {
                   type="checkbox"
                   className="accent-black"
                   checked={showFarmMean}
-                  onChange={(event) => setShowFarmMean(event.target.checked)}
+                  onChange={(e) => setShowFarmMean(e.target.checked)}
                 />
                 Mostrar média da fazenda
               </label>
@@ -229,7 +295,7 @@ export default function Step5Progressao() {
                   type="checkbox"
                   className="accent-black"
                   checked={showTrend}
-                  onChange={(event) => setShowTrend(event.target.checked)}
+                  onChange={(e) => setShowTrend(e.target.checked)}
                 />
                 Mostrar tendência
               </label>
