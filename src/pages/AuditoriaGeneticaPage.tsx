@@ -1,21 +1,27 @@
 "use client";
-import { useEffect, useState } from "react";
+
+import { useEffect, useMemo, useState } from "react";
 import AGLayout from "@/features/auditoria/AGLayout";
 import { AGStepper } from "@/features/auditoria/Stepper";
 import { useAGFilters } from "@/features/auditoria/store";
-import Step1Parentesco from "@/features/auditoria/steps/Step1Parentesco";
-import Step2TopParents from "@/features/auditoria/steps/Step2TopParents";
-import Step3QuartisOverview from "@/features/auditoria/steps/Step3QuartisOverview";
-import Step4MediaLinear from "@/features/auditoria/steps/Step4MediaLinear";
-import Step5Progressao from "@/features/auditoria/steps/Step5Progressao";
-import Step6ProgressCompare from "@/features/auditoria/steps/Step6ProgressCompare";
-import Step7QuartisIndices from "@/features/auditoria/steps/Step7QuartisIndices";
-import Step8Benchmark from "@/features/auditoria/steps/Step8Benchmark";
-import Step9Distribuicao from "@/features/auditoria/steps/Step9Distribuicao";
+
+// Use o barrel para evitar conflitos entre branches:
+// src/features/auditoria/steps/index.ts deve exportar todos os Steps.
+import {
+  Step1Parentesco,
+  Step2TopParents,
+  Step3QuartisOverview,
+  Step4MediaLinear,
+  Step5Progressao,
+  Step6ProgressCompare,
+  Step7QuartisIndices,
+  Step8Benchmark,
+  Step9Distribuicao,
+} from "@/features/auditoria/steps";
 
 type FarmLike = {
-  farm_id?: string;
-  farm_name?: string;
+  farm_id?: string | null;
+  farm_name?: string | null;
 };
 
 interface AuditoriaGeneticaPageProps {
@@ -24,29 +30,52 @@ interface AuditoriaGeneticaPageProps {
 }
 
 export default function AuditoriaGeneticaPage({ farm, onBack }: AuditoriaGeneticaPageProps) {
-  const [active, setActive] = useState(0);
+  const [active, setActive] = useState<number>(0);
   const { setFarmId } = useAGFilters();
 
+  // Array único mantém a ordem/índice dos steps estável entre branches
+  const steps = useMemo(
+    () => [
+      { key: "parentesco", node: <Step1Parentesco /> },
+      { key: "top-parents", node: <Step2TopParents /> },
+      { key: "quartis-overview", node: <Step3QuartisOverview /> },
+      { key: "media-linear", node: <Step4MediaLinear /> },
+      { key: "progressao", node: <Step5Progressao /> },
+      { key: "progress-compare", node: <Step6ProgressCompare /> },
+      { key: "quartis-indices", node: <Step7QuartisIndices /> },
+      { key: "benchmark", node: <Step8Benchmark /> },
+      { key: "distribuicao", node: <Step9Distribuicao /> },
+    ],
+    []
+  );
+
+  // Ao trocar a fazenda: atualiza o store e reseta para o primeiro step
   useEffect(() => {
-    setFarmId(farm?.farm_id);
-    return () => {
-      setFarmId(undefined);
-    };
+    const id = farm?.farm_id ?? undefined;
+    setFarmId(id);
+    setActive(0);
+    return () => setFarmId(undefined);
   }, [farm?.farm_id, setFarmId]);
 
+  const hasFarm = Boolean(farm?.farm_id);
+
   return (
-    <AGLayout onBack={onBack} farmName={farm?.farm_name}>
-      <AGStepper active={active} onChange={setActive} />
+    <AGLayout onBack={onBack} farmName={farm?.farm_name ?? undefined}>
+      {/* Se o seu AGStepper exigir props extras, descomente uma das linhas abaixo */}
+      <AGStepper
+        active={active}
+        onChange={setActive}
+        // total={steps.length}
+        // steps={steps.map((s) => s.key)}
+      />
       <div className="space-y-4">
-        {active === 0 && <Step1Parentesco />}
-        {active === 1 && <Step2TopParents />}
-        {active === 2 && <Step3QuartisOverview />}
-        {active === 3 && <Step4MediaLinear />}
-        {active === 4 && <Step5Progressao />}
-        {active === 5 && <Step6ProgressCompare />}
-        {active === 6 && <Step7QuartisIndices />}
-        {active === 7 && <Step8Benchmark />}
-        {active === 8 && <Step9Distribuicao />}
+        {!hasFarm ? (
+          <div className="text-sm text-muted-foreground border rounded-lg p-4">
+            Selecione uma fazenda para iniciar a Auditoria Genética.
+          </div>
+        ) : (
+          steps[Math.min(active, steps.length - 1)].node
+        )}
       </div>
     </AGLayout>
   );
