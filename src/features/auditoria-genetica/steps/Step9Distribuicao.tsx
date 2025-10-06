@@ -26,31 +26,84 @@ const PTA_LABEL_MAP: Record<string, string> = PTA_CATALOG.reduce(
 
 const ALL_PTA_KEYS = PTA_CATALOG.map((item) => item.key);
 
-export default function Step9Distribuicao() {
-  const { farmId, ptasSelecionadas } = useAGFilters();
+const ensureValidTraits = (candidate: string[], available: string[]): string[] => {
+  if (!available.length) {
+    return [];
+  }
+
+  const orderedUnique: string[] = [];
+  for (const key of candidate) {
+    if (available.includes(key) && !orderedUnique.includes(key)) {
+      orderedUnique.push(key);
+    }
+  }
+
+  if (!orderedUnique.length) {
+    const fallback = available.find((item) => item === "hhp_dollar") ?? available[0];
+    return fallback ? [fallback] : [];
+  }
+
+  const withoutHhp = orderedUnique.filter((key) => key !== "hhp_dollar");
+  if (orderedUnique.includes("hhp_dollar")) {
+    return ["hhp_dollar", ...withoutHhp];
+  }
+
+  const fallback = available.find((item) => item === "hhp_dollar");
+  return fallback ? [fallback, ...withoutHhp] : orderedUnique;
+};
+
+const arraysEqual = (a: string[], b: string[]) =>
+  a.length === b.length && a.every((value, index) => value === b[index]);
+
+type Props = {
+  farmId?: string | number;
+  allTraits?: string[];
+};
+
+export default function Step9Distribuicao({ farmId: farmIdProp, allTraits }: Props = {}) {
+  const { farmId: storeFarmId, ptasSelecionadas } = useAGFilters();
+
+  const farmId = useMemo(() => {
+    const id = farmIdProp ?? storeFarmId;
+    if (id === undefined || id === null) {
+      return undefined;
+    }
+    return typeof id === "number" ? id.toString() : String(id);
+  }, [farmIdProp, storeFarmId]);
+
+  const traitOptions = useMemo(
+    () => (allTraits && allTraits.length ? Array.from(new Set(allTraits)) : ALL_PTA_KEYS),
+    [allTraits],
+  );
+
   const [bucketCount, setBucketCount] = useState(20);
-  const [traits, setTraits] = useState<string[]>(() => {
-    const defaults = ptasSelecionadas.length ? ptasSelecionadas : ["hhp_dollar"];
-    return defaults.includes("hhp_dollar") ? defaults : ["hhp_dollar", ...defaults];
-  });
+  const [traits, setTraits] = useState<string[]>(() =>
+    ensureValidTraits(
+      ptasSelecionadas.length ? ptasSelecionadas : ["hhp_dollar"],
+      traitOptions,
+    ),
+  );
   const [series, setSeries] = useState<Record<string, HistogramPoint[]>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [additionSelectKey, setAdditionSelectKey] = useState(0);
 
   useEffect(() => {
-    const defaults = ptasSelecionadas.length ? ptasSelecionadas : ["hhp_dollar"];
+    const fromStore = ensureValidTraits(
+      ptasSelecionadas.length ? ptasSelecionadas : ["hhp_dollar"],
+      traitOptions,
+    );
+
     setTraits((current) => {
-      const merged = Array.from(new Set([...(current.length ? current : []), ...defaults]));
-      if (!merged.includes("hhp_dollar")) {
-        merged.unshift("hhp_dollar");
-      }
-      return merged;
+      const sanitizedCurrent = ensureValidTraits(current, traitOptions);
+      const merged = ensureValidTraits([...sanitizedCurrent, ...fromStore], traitOptions);
+      return arraysEqual(current, merged) ? current : merged;
     });
-  }, [ptasSelecionadas]);
+  }, [ptasSelecionadas, traitOptions]);
 
   useEffect(() => {
     if (!farmId || !traits.length) {
       setSeries({});
+      setIsLoading(false);
       return;
     }
 
@@ -100,8 +153,8 @@ export default function Step9Distribuicao() {
   }, [farmId, traits, bucketCount]);
 
   const availableForAddition = useMemo(
-    () => ALL_PTA_KEYS.filter((key) => !traits.includes(key)),
-    [traits],
+    () => traitOptions.filter((key) => !traits.includes(key)),
+    [traitOptions, traits],
   );
 
   const labelOf = (key: string) => PTA_LABEL_MAP[key] ?? key.toUpperCase();
@@ -117,16 +170,21 @@ export default function Step9Distribuicao() {
           <div className="flex flex-wrap items-center gap-3">
             <label className="text-sm font-medium text-muted-foreground">PTA principal</label>
             <Select
-              value={mainTrait}
+              value={mainTrait ?? undefined}
               onValueChange={(value) =>
-                setTraits((current) => [value, ...current.filter((item) => item !== value)])
+                setTraits((current) => {
+                  const filtered = current.filter((item) => item !== value);
+                  const next = ensureValidTraits([value, ...filtered], traitOptions);
+                  return arraysEqual(current, next) ? current : next;
+                })
               }
+              disabled={!traitOptions.length}
             >
               <SelectTrigger className="w-56">
                 <SelectValue placeholder="Selecione a PTA" />
               </SelectTrigger>
               <SelectContent>
-                {ALL_PTA_KEYS.map((key) => (
+                {traitOptions.map((key) => (
                   <SelectItem key={key} value={key}>
                     {labelOf(key)}
                   </SelectItem>
@@ -138,11 +196,16 @@ export default function Step9Distribuicao() {
               <Select
                 key={additionSelectKey}
                 onValueChange={(value) => {
-                  setTraits((current) =>
-                    current.includes(value) ? current : [...current, value],
-                  );
+                  setTraits((current) => {
+                    if (current.includes(value)) {
+                      return current;
+                    }
+                    const next = ensureValidTraits([...current, value], traitOptions);
+                    return arraysEqual(current, next) ? current : next;
+                  });
                   setAdditionSelectKey((current) => current + 1);
                 }}
+                disabled={!traitOptions.length}
               >
                 <SelectTrigger className="w-56">
                   <SelectValue placeholder="Adicionar PTA" />
@@ -184,7 +247,13 @@ export default function Step9Distribuicao() {
                     type="button"
                     className="text-xs text-muted-foreground hover:text-destructive"
                     onClick={() =>
-                      setTraits((current) => current.filter((item) => item !== key))
+                      setTraits((current) => {
+                        const next = ensureValidTraits(
+                          current.filter((item) => item !== key),
+                          traitOptions,
+                        );
+                        return arraysEqual(current, next) ? current : next;
+                      })
                     }
                   >
                     Remover
