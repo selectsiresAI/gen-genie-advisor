@@ -24,84 +24,110 @@ type BenchmarkRow = {
 };
 
 type Region = "BR" | "EUA";
-
-type TopPercent = 1 | 5 | 10;
+/** Mantemos como string para não conflitar com <Select> do shadcn */
+type TopPercent = "1" | "5" | "10";
 
 const DEFAULT_TRAITS: string[] = ["tpi", "nm_dollar", "hhp_dollar"];
 
 export default function Step8Benchmark() {
   const { farmId } = useAGFilters();
   const [region, setRegion] = useState<Region>("BR");
-  const [topPct, setTopPct] = useState<TopPercent>(5);
+  const [topPct, setTopPct] = useState<TopPercent>("5");
   const [ptaOptions, setPtaOptions] = useState<string[]>([]);
   const [traits, setTraits] = useState<string[]>(DEFAULT_TRAITS);
   const [rows, setRows] = useState<BenchmarkRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
+  // Carrega colunas PTA disponíveis
   useEffect(() => {
     let active = true;
-    async function loadColumns() {
+    (async () => {
+      setErr(null);
       const { data, error } = await supabase.rpc("ag_list_pta_columns");
       if (!active) return;
       if (error) {
-        console.error("Failed to load PTA catalog", error);
+        console.error("ag_list_pta_columns error:", error);
+        setErr("Falha ao carregar a lista de PTAs.");
         setPtaOptions([]);
+        setTraits([]);
         return;
       }
-      const columns = Array.isArray(data)
-        ? data.map((item: { column_name?: string }) => String(item.column_name))
+      const columns: string[] = Array.isArray(data)
+        ? data
+            .map((item: { column_name?: unknown }) =>
+              item && typeof (item as any).column_name === "string"
+                ? String((item as any).column_name)
+                : null
+            )
+            .filter((v): v is string => !!v)
         : [];
+
       setPtaOptions(columns);
-      const defaults = DEFAULT_TRAITS.filter((key) => columns.includes(key));
-      if (defaults.length) {
+
+      const defaults = DEFAULT_TRAITS.filter((k) => columns.includes(k));
+      if (defaults.length > 0) {
         setTraits(defaults);
-      } else if (columns.length) {
+      } else if (columns.length > 0) {
         setTraits(columns.slice(0, Math.min(3, columns.length)));
       } else {
         setTraits([]);
       }
-    }
-    loadColumns();
+    })();
     return () => {
       active = false;
     };
   }, []);
 
+  const catalogLabels = useMemo(
+    () => new Map(PTA_CATALOG.map((i) => [i.key, i.label] as const)),
+    []
+  );
+
+  const availableBadges = useMemo(() => {
+    return ptaOptions
+      .map((key) => ({
+        key,
+        label: catalogLabels.get(key) ?? key.toUpperCase(),
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+  }, [catalogLabels, ptaOptions]);
+
   const fetchData = useCallback(async () => {
-    if (!farmId || !traits.length) {
+    if (!farmId || traits.length === 0) {
       setRows([]);
       return;
     }
     setLoading(true);
+    setErr(null);
+
     const { data, error } = await supabase.rpc("ag_genetic_benchmark", {
       p_farm: farmId,
       p_traits: traits,
-      p_region: region,
-      p_top: topPct,
+      p_region: region, // se seu backend usar 'US', o RPC deve mapear 'EUA' -> 'US'
+      p_top: Number(topPct),
     });
+
     if (error) {
-      console.error("Failed to load benchmark data", error);
+      console.error("ag_genetic_benchmark error:", error);
+      setErr("Falha ao carregar o benchmark genético.");
       setRows([]);
       setLoading(false);
       return;
     }
+
     const parsed: BenchmarkRow[] = Array.isArray(data)
       ? data.map((entry: Record<string, unknown>) => ({
-          trait_key: String(entry.trait_key),
+          trait_key: String(entry.trait_key ?? ""),
           farm_value:
-            entry.farm_value === null || entry.farm_value === undefined
-              ? null
-              : Number(entry.farm_value),
+            entry.farm_value == null ? null : Number(entry.farm_value),
           benchmark_top:
-            entry.benchmark_top === null || entry.benchmark_top === undefined
-              ? null
-              : Number(entry.benchmark_top),
+            entry.benchmark_top == null ? null : Number(entry.benchmark_top),
           benchmark_avg:
-            entry.benchmark_avg === null || entry.benchmark_avg === undefined
-              ? null
-              : Number(entry.benchmark_avg),
+            entry.benchmark_avg == null ? null : Number(entry.benchmark_avg),
         }))
       : [];
+
     setRows(parsed);
     setLoading(false);
   }, [farmId, traits, region, topPct]);
@@ -110,16 +136,8 @@ export default function Step8Benchmark() {
     fetchData();
   }, [fetchData]);
 
-  const catalogLabels = useMemo(
-    () => new Map(PTA_CATALOG.map((item) => [item.key, item.label])),
-    []
-  );
-
-  const availableBadges = useMemo(() => {
-    return ptaOptions
-      .map((key) => ({ key, label: catalogLabels.get(key) ?? key.toUpperCase() }))
-      .sort((a, b) => a.label.localeCompare(b.label));
-  }, [catalogLabels, ptaOptions]);
+  const formatNumber = (v: number | null) =>
+    v == null ? "—" : Math.round(v).toLocaleString("pt-BR");
 
   return (
     <Card>
@@ -130,10 +148,7 @@ export default function Step8Benchmark() {
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Região:</span>
-            <Select
-              value={region}
-              onValueChange={(value) => setRegion(value as Region)}
-            >
+            <Select value={region} onValueChange={(v) => setRegion(v as Region)}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Região" />
               </SelectTrigger>
@@ -146,12 +161,7 @@ export default function Step8Benchmark() {
 
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Top %:</span>
-            <Select
-              value={String(topPct)}
-              onValueChange={(value) =>
-                setTopPct(Number(value) as TopPercent)
-              }
-            >
+            <Select value={topPct} onValueChange={(v) => setTopPct(v as TopPercent)}>
               <SelectTrigger className="w-[120px]">
                 <SelectValue placeholder="Top %" />
               </SelectTrigger>
@@ -163,45 +173,43 @@ export default function Step8Benchmark() {
             </Select>
           </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchData}
-            disabled={loading}
-          >
-            <RefreshCw
-              className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}
-            />
+          <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             Atualizar
           </Button>
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {availableBadges.map(({ key, label }) => {
-            const active = traits.includes(key);
-            return (
-              <Badge
-                key={key}
-                variant={active ? "default" : "outline"}
-                className="cursor-pointer"
-                onClick={() =>
-                  setTraits((prev) =>
-                    active
-                      ? prev.filter((trait) => trait !== key)
-                      : [...prev, key]
-                  )
-                }
-              >
-                {label}
-              </Badge>
-            );
-          })}
-          {availableBadges.length === 0 && (
+          {availableBadges.length > 0 ? (
+            availableBadges.map(({ key, label }) => {
+              const active = traits.includes(key);
+              return (
+                <Badge
+                  key={key}
+                  variant={active ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() =>
+                    setTraits((prev) =>
+                      active ? prev.filter((t) => t !== key) : [...prev, key]
+                    )
+                  }
+                >
+                  {label}
+                </Badge>
+              );
+            })
+          ) : (
             <span className="text-sm text-muted-foreground">
               Nenhuma PTA disponível.
             </span>
           )}
         </div>
+
+        {err && (
+          <div className="text-sm text-red-600">
+            {err} Tente “Atualizar” ou revise permissões do Supabase.
+          </div>
+        )}
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -214,34 +222,25 @@ export default function Step8Benchmark() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
-                <tr key={row.trait_key} className="border-b">
-                  <td className="py-2 font-medium">
-                    {catalogLabels.get(row.trait_key) ?? row.trait_key.toUpperCase()}
-                  </td>
-                  <td className="py-2">
-                    {row.farm_value === null
-                      ? "N/A"
-                      : Math.round(row.farm_value)}
-                  </td>
-                  <td className="py-2">
-                    {row.benchmark_top === null
-                      ? "—"
-                      : Math.round(row.benchmark_top)}
-                  </td>
-                  <td className="py-2">
-                    {row.benchmark_avg === null
-                      ? "—"
-                      : Math.round(row.benchmark_avg)}
-                  </td>
-                </tr>
-              ))}
-              {rows.length === 0 && (
+              {rows.length > 0 ? (
+                rows.map((row) => (
+                  <tr key={row.trait_key} className="border-b">
+                    <td className="py-2 font-medium">
+                      {catalogLabels.get(row.trait_key) ??
+                        row.trait_key.toUpperCase()}
+                    </td>
+                    <td className="py-2">
+                      {row.farm_value == null
+                        ? "N/A"
+                        : formatNumber(row.farm_value)}
+                    </td>
+                    <td className="py-2">{formatNumber(row.benchmark_top)}</td>
+                    <td className="py-2">{formatNumber(row.benchmark_avg)}</td>
+                  </tr>
+                ))
+              ) : (
                 <tr>
-                  <td
-                    colSpan={4}
-                    className="py-6 text-center text-muted-foreground"
-                  >
+                  <td colSpan={4} className="py-6 text-center text-muted-foreground">
                     {loading ? "Carregando dados..." : "Nenhum resultado."}
                   </td>
                 </tr>
