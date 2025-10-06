@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { useAGFilters } from "../store";
 
+const DEFAULT_TRAITS = ["ptam", "ptaf", "ptap"] as const;
+
 interface Row {
   index_label: "IndexA" | "IndexB";
   group_label: "Top25" | "Bottom25";
@@ -22,7 +24,7 @@ export default function Step7QuartisIndices() {
   const [indexA, setIndexA] = useState("hhp_dollar");
   const [indexB, setIndexB] = useState("nm_dollar");
   const [ptaOptions, setPtaOptions] = useState<string[]>([]);
-  const [traits, setTraits] = useState<string[]>(["ptam", "ptaf", "ptap"]);
+  const [traits, setTraits] = useState<string[]>([...DEFAULT_TRAITS]);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -40,6 +42,24 @@ export default function Step7QuartisIndices() {
         ? data.map((item: { column_name?: string }) => String(item.column_name))
         : [];
       setPtaOptions(cols);
+      setTraits((current) => {
+        const sanitized = current.filter((trait) => cols.includes(trait));
+        if (sanitized.length) {
+          const unchanged =
+            sanitized.length === current.length &&
+            sanitized.every((trait, index) => trait === current[index]);
+          return unchanged ? current : sanitized;
+        }
+        const defaults = DEFAULT_TRAITS.filter((trait) => cols.includes(trait));
+        if (defaults.length) {
+          return defaults;
+        }
+        if (cols.length === 0) {
+          return [];
+        }
+        const fallbackSize = Math.min(DEFAULT_TRAITS.length, cols.length);
+        return cols.slice(0, fallbackSize);
+      });
     }
     loadColumns();
     return () => {
