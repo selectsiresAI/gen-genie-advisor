@@ -12,9 +12,9 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useAGFilters } from "../store";
 import { PTA_CATALOG } from "../ptas";
+import { PTAMultiSelect } from "../components/PTAMultiSelect";
 
 type BenchmarkRow = {
   trait_key: string;
@@ -115,10 +115,10 @@ export default function Step8Benchmark() {
     []
   );
 
-  const traitBadges = useMemo(() => {
+  const traitOptions = useMemo(() => {
     return ptaOptions
       .map((key) => ({
-        key,
+        value: key,
         label: catalogLabels.get(key) ?? key.toUpperCase(),
       }))
       .sort((a, b) => a.label.localeCompare(b.label));
@@ -179,32 +179,17 @@ export default function Step8Benchmark() {
           </Button>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {traitBadges.map(({ key, label }) => {
-            const selected = traits.includes(key);
-            return (
-              <Badge
-                key={key}
-                variant={selected ? "default" : "outline"}
-                className="cursor-pointer"
-                onClick={() =>
-                  setTraits((prev) =>
-                    selected
-                      ? prev.filter((item) => item !== key)
-                      : [...prev, key]
-                  )
-                }
-              >
-                {label}
-              </Badge>
-            );
-          })}
-          {traitBadges.length === 0 && (
-            <span className="text-sm text-muted-foreground">
-              Nenhuma PTA disponível.
-            </span>
-          )}
-        </div>
+        <PTAMultiSelect
+          options={traitOptions}
+          value={traits}
+          onChange={setTraits}
+          placeholder={
+            traitOptions.length
+              ? "Selecione PTAs para o benchmark"
+              : "Nenhuma PTA disponível"
+          }
+          disabled={traitOptions.length === 0}
+        />
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
