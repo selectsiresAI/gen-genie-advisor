@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import {
@@ -13,244 +12,206 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from "recharts";
-import { useAGFilters } from "../store";
+import { useAGFilters } from "@/features/auditoria/store";
 import { PTA_CATALOG } from "@/lib/pta";
 
-type BenchmarkRow = {
+type TopPct = 10 | 5 | 1;
+
+type ResultRow = {
   trait_key: string;
-  farm_value: number | null;
-  benchmark_top: number | null;
-  benchmark_avg: number | null;
+  n_total: number;
+  n_top: number;
+  herd_mean: number | null;
+  top_mean: number | null;
 };
 
-type Region = "BR" | "EUA";
-/** Mantemos como string para não conflitar com <Select> do shadcn */
-type TopPercent = "1" | "5" | "10";
+const TOP_PCT_OPTS: TopPct[] = [10, 5, 1];
 
-const DEFAULT_TRAITS: string[] = ["tpi", "nm_dollar", "hhp_dollar"];
-
-export default function Step8Benchmark() {
+export default function Step8GeneticBenchmark() {
   const { farmId } = useAGFilters();
-  const [region, setRegion] = useState<Region>("BR");
-  const [topPct, setTopPct] = useState<TopPercent>("5");
-  const [ptaOptions, setPtaOptions] = useState<string[]>([]);
-  const [traits, setTraits] = useState<string[]>(DEFAULT_TRAITS);
-  const [rows, setRows] = useState<BenchmarkRow[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const [region, setRegion] = useState<"Brasil" | "USA" | "EU">("Brasil");
+  const [topPct, setTopPct] = useState<TopPct>(5);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [rows, setRows] = useState<ResultRow[]>([]);
 
-  // Carrega colunas PTA disponíveis
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      setErr(null);
-      const { data, error } = await (supabase.rpc as any)("ag_list_pta_columns");
-      if (!active) return;
-      if (error) {
-        console.error("ag_list_pta_columns error:", error);
-        setErr("Falha ao carregar a lista de PTAs.");
-        setPtaOptions([]);
-        setTraits([]);
-        return;
-      }
-      const columns: string[] = Array.isArray(data)
-        ? data
-            .map((item: { column_name?: unknown }) =>
-              item && typeof (item as any).column_name === "string"
-                ? String((item as any).column_name)
-                : null
-            )
-            .filter((v): v is string => !!v)
-        : [];
-
-      setPtaOptions(columns);
-
-      const defaults = DEFAULT_TRAITS.filter((k) => columns.includes(k));
-      if (defaults.length > 0) {
-        setTraits(defaults);
-      } else if (columns.length > 0) {
-        setTraits(columns.slice(0, Math.min(3, columns.length)));
-      } else {
-        setTraits([]);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const catalogLabels = useMemo(
-    () => new Map(PTA_CATALOG.map((i) => [i.key, i.label] as const)),
+  // PTAs que vamos considerar (ajuste aqui se quiser limitar)
+  const traitKeys = useMemo(
+    () =>
+      Object.keys(PTA_CATALOG ?? {}).filter(
+        // mantém apenas traits numéricas usuais no females_denorm
+        (k) => !k.endsWith("_label") && !k.endsWith("_class")
+      ),
     []
   );
 
-  const availableBadges = useMemo(() => {
-    return ptaOptions
-      .map((key) => ({
-        key,
-        label: catalogLabels.get(key) ?? key.toUpperCase(),
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
-  }, [catalogLabels, ptaOptions]);
+  async function loadData() {
+    setIsLoading(true);
+    setErrorMsg(null);
 
-  const fetchData = useCallback(async () => {
-    if (!farmId || traits.length === 0) {
+    try {
+      if (!farmId) {
+        setRows([]);
+        setErrorMsg("Selecione um rebanho para carregar os dados.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Monta select com as colunas de interesse
+      const selectCols = ["id", ...traitKeys].join(",");
+
+      const { data, error } = await supabase
+        .from("females_denorm")
+        .select(selectCols)
+        .eq("farm_id", farmId);
+
+      if (error) {
+        // Mensagem amigável p/ erro de permissão ou RLS
+        setErrorMsg(
+          "Falha ao carregar a lista de PTAs. Tente “Atualizar”. Se persistir, verifique as permissões do Supabase (RLS/Policy)."
+        );
+        setRows([]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Calcula médias do rebanho e do Top%
+      const newRows: ResultRow[] = [];
+
+      traitKeys.forEach((trait_key) => {
+        const vals = (data || [])
+          .map((r: any) => (r?.[trait_key] === null ? undefined : Number(r?.[trait_key])))
+          .filter((v: number | undefined): v is number => Number.isFinite(v as number));
+
+        if (vals.length === 0) {
+          return; // sem dados para este trait
+        }
+
+        const n_total = vals.length;
+        const herd_mean =
+          n_total > 0 ? vals.reduce((a, b) => a + b, 0) / n_total : null;
+
+        // Top% -> ordenar desc e pegar “ceil(n * pct)”
+        const sortedDesc = [...vals].sort((a, b) => b - a);
+        const k = Math.max(1, Math.ceil((topPct / 100) * n_total));
+        const topSlice = sortedDesc.slice(0, k);
+        const top_mean =
+          topSlice.length > 0
+            ? topSlice.reduce((a, b) => a + b, 0) / topSlice.length
+            : null;
+
+        newRows.push({
+          trait_key,
+          n_total,
+          n_top: topSlice.length,
+          herd_mean,
+          top_mean,
+        });
+      });
+
+      // Remove traits sem dados e ordena por maior top_mean
+      const filtered = newRows
+        .filter((r) => r.herd_mean !== null && r.top_mean !== null)
+        .sort((a, b) => (b.top_mean as number) - (a.top_mean as number));
+
+      setRows(filtered);
+    } catch (e: any) {
+      setErrorMsg("Erro inesperado ao processar os dados.");
       setRows([]);
-      return;
+    } finally {
+      setIsLoading(false);
     }
-    setLoading(true);
-    setErr(null);
+  }
 
-    const { data, error } = await (supabase.rpc as any)("ag_genetic_benchmark", {
-      p_farm: farmId,
-      p_traits: traits,
-      p_region: region,
-      p_top: Number(topPct),
-    });
-
-    if (error) {
-      console.error("ag_genetic_benchmark error:", error);
-      setErr("Falha ao carregar o benchmark genético.");
-      setRows([]);
-      setLoading(false);
-      return;
-    }
-
-    const parsed: BenchmarkRow[] = Array.isArray(data)
-      ? data.map((entry: Record<string, unknown>) => ({
-          trait_key: String(entry.trait_key ?? ""),
-          farm_value:
-            entry.farm_value == null ? null : Number(entry.farm_value),
-          benchmark_top:
-            entry.benchmark_top == null ? null : Number(entry.benchmark_top),
-          benchmark_avg:
-            entry.benchmark_avg == null ? null : Number(entry.benchmark_avg),
-        }))
-      : [];
-
-    setRows(parsed);
-    setLoading(false);
-  }, [farmId, traits, region, topPct]);
-
+  // Recarrega ao mudar rebanho, região (se desejar usar futuramente) ou Top%
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const formatNumber = (v: number | null) =>
-    v == null ? "—" : Math.round(v).toLocaleString("pt-BR");
-
-  const chartDataByTrait = useMemo(() => {
-    return rows.map((row) => ({
-      trait: catalogLabels.get(row.trait_key) ?? row.trait_key.toUpperCase(),
-      "Example Dairy": row.farm_value || 0,
-      [`${region} Top ${topPct}%`]: row.benchmark_top || 0,
-      [`${region} Breed Average`]: row.benchmark_avg || 0,
-    }));
-  }, [rows, catalogLabels, region, topPct]);
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [farmId, region, topPct]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Genetic Benchmark</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Região:</span>
-            <Select value={region} onValueChange={(v) => setRegion(v as Region)}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Região" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="BR">Brasil</SelectItem>
-                <SelectItem value="EUA">EUA</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Top %:</span>
-            <Select value={topPct} onValueChange={(v) => setTopPct(v as TopPercent)}>
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="Top %" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">Top 10%</SelectItem>
-                <SelectItem value="5">Top 5%</SelectItem>
-                <SelectItem value="1">Top 1%</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            Atualizar
-          </Button>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="w-48">
+          <Select
+            value={region}
+            onValueChange={(v) => setRegion(v as any)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Região" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Brasil">Brasil</SelectItem>
+              <SelectItem value="USA">USA</SelectItem>
+              <SelectItem value="EU">EU</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {availableBadges.length > 0 ? (
-            availableBadges.map(({ key, label }) => {
-              const active = traits.includes(key);
-              return (
-                <Badge
-                  key={key}
-                  variant={active ? "default" : "outline"}
-                  className="cursor-pointer"
-                  onClick={() =>
-                    setTraits((prev) =>
-                      active ? prev.filter((t) => t !== key) : [...prev, key]
-                    )
-                  }
-                >
-                  {label}
-                </Badge>
-              );
-            })
-          ) : (
-            <span className="text-sm text-muted-foreground">
-              Nenhuma PTA disponível.
-            </span>
-          )}
+        <div className="w-40">
+          <Select
+            value={`${topPct}`}
+            onValueChange={(v) => setTopPct(Number(v) as TopPct)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Top %" />
+            </SelectTrigger>
+            <SelectContent>
+              {TOP_PCT_OPTS.map((p) => (
+                <SelectItem key={p} value={`${p}`}>{`Top ${p}%`}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        {err && (
-          <div className="text-sm text-red-600">
-            {err} Tente "Atualizar" ou revise permissões do Supabase.
-          </div>
-        )}
+        <Button onClick={loadData} disabled={isLoading}>
+          {isLoading ? "Carregando..." : "Atualizar"}
+        </Button>
 
-        {loading && (
-          <div className="py-6 text-center text-muted-foreground">Carregando dados...</div>
+        {farmId && (
+          <Badge variant="secondary" className="ml-2">
+            Rebanho: {farmId}
+          </Badge>
         )}
+      </div>
 
-        {!loading && rows.length === 0 && !err && (
-          <div className="py-6 text-center text-muted-foreground">Nenhum resultado.</div>
-        )}
+      {errorMsg && (
+        <div className="text-sm text-red-600">{errorMsg}</div>
+      )}
 
-        {!loading && rows.length > 0 && (
-          <div className="grid gap-6">
-            {chartDataByTrait.map((data, idx) => (
-              <div key={idx}>
-                <h4 className="text-sm font-semibold mb-2">{data.trait}</h4>
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={[data]} layout="horizontal">
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="category" dataKey="trait" hide />
-                    <YAxis type="number" />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="Example Dairy" fill="hsl(var(--muted))" />
-                    <Bar dataKey={`${region} Top ${topPct}%`} fill="hsl(var(--muted-foreground))" />
-                    <Bar dataKey={`${region} Breed Average`} fill="hsl(var(--foreground))" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      {!errorMsg && !isLoading && rows.length === 0 && (
+        <div className="text-sm text-muted-foreground">
+          Nenhuma PTA disponível.
+        </div>
+      )}
+
+      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {rows.map((r) => {
+          const label =
+            (PTA_CATALOG as any)?.[r.trait_key]?.label ?? r.trait_key.toUpperCase();
+          return (
+            <Card key={r.trait_key}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">{label}</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm">
+                <div className="flex items-center justify-between">
+                  <span>Média do rebanho</span>
+                  <strong>
+                    {r.herd_mean !== null ? r.herd_mean.toFixed(2) : "—"}
+                  </strong>
+                </div>
+                <div className="flex items-center justify-between mt-1">
+                  <span>{`Média Top ${topPct}% (${r.n_top}/${r.n_total})`}</span>
+                  <strong>
+                    {r.top_mean !== null ? r.top_mean.toFixed(2) : "—"}
+                  </strong>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
   );
 }
