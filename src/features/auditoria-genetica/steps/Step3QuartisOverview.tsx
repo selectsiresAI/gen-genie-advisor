@@ -18,7 +18,7 @@ import {
   Tooltip,
   CartesianGrid,
   Bar,
-  Customized,
+  LabelList,
 } from "recharts";
 import { useAGFilters } from "../store";
 import { PTA_CATALOG } from "../ptas";
@@ -35,15 +35,6 @@ interface QuartileRow {
   n: number | null;
 }
 
-interface BoxplotStats {
-  trait_key: string;
-  p0: number;
-  p25: number;
-  p50: number;
-  p75: number;
-  p100: number;
-}
-
 interface HistogramBin {
   bin_from: number;
   bin_to: number;
@@ -54,6 +45,15 @@ const TRAIT_LABELS = PTA_CATALOG.reduce<Record<string, string>>((map, item) => {
   map[item.key] = item.label;
   return map;
 }, {});
+
+const CATEGORIA_LABELS: Record<string, string> = {
+  bezerra: "Bezerra",
+  novilha: "Novilha",
+  primipara: "Primípara",
+  secundipara: "Secundípara",
+  multipara: "Multípara",
+  todas: "Todas as fêmeas",
+};
 
 const ensureIndexKey = (value?: string | number): IndexKey => {
   if (typeof value === "string") {
@@ -66,17 +66,21 @@ const ensureIndexKey = (value?: string | number): IndexKey => {
 };
 
 export default function Step3QuartisOverview() {
-  const { farmId, indiceBase, setIndiceBase, ptasSelecionadas } = useAGFilters();
+  const { farmId, indiceBase, setIndiceBase, ptasSelecionadas, categoria } = useAGFilters();
   const [indexKey, setIndexKey] = useState<IndexKey>(() => ensureIndexKey(indiceBase));
   const [tableRows, setTableRows] = useState<QuartileRow[]>([]);
-  const [boxData, setBoxData] = useState<BoxplotStats[]>([]);
   const [histData, setHistData] = useState<HistogramBin[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const traits = useMemo(
+  const selectedTraits = useMemo(
     () => (ptasSelecionadas.length ? [...ptasSelecionadas] : [...DEFAULT_TRAITS]),
     [ptasSelecionadas]
   );
+
+  const displayTraits = useMemo(() => {
+    const traitsWithIndex = [indexKey, ...selectedTraits];
+    return traitsWithIndex.filter((trait, position) => traitsWithIndex.indexOf(trait) === position);
+  }, [indexKey, selectedTraits]);
 
   useEffect(() => {
     setIndexKey(ensureIndexKey(indiceBase));
@@ -86,10 +90,9 @@ export default function Step3QuartisOverview() {
     let active = true;
 
     async function fetchData() {
-      if (!farmId || !traits.length) {
+      if (!farmId || !displayTraits.length) {
         if (active) {
           setTableRows([]);
-          setBoxData([]);
           setHistData([]);
           setLoading(false);
         }
@@ -103,7 +106,7 @@ export default function Step3QuartisOverview() {
           supabase.rpc("ag_quartis_overview", {
             p_farm: farmId,
             p_index_key: indexKey,
-            p_traits: traits,
+            p_traits: displayTraits,
           }),
         ]);
 
@@ -117,40 +120,6 @@ export default function Step3QuartisOverview() {
         } else {
           setTableRows(Array.isArray(quartisData) ? (quartisData as QuartileRow[]) : []);
         }
-
-        const boxResults = await Promise.all(
-          traits.map(async (trait) => {
-            const { data, error } = await supabase.rpc("ag_boxplot_stats", {
-              p_farm: farmId,
-              p_trait: trait,
-            });
-
-            if (error) {
-              console.error(`Failed to load boxplot stats for ${trait}`, error);
-              return null;
-            }
-
-            const stats = Array.isArray(data) && data[0] ? data[0] : null;
-            if (!stats) {
-              return null;
-            }
-
-            return {
-              trait_key: trait,
-              p0: Number(stats.p0 ?? 0),
-              p25: Number(stats.p25 ?? 0),
-              p50: Number(stats.p50 ?? 0),
-              p75: Number(stats.p75 ?? 0),
-              p100: Number(stats.p100 ?? 0),
-            } as BoxplotStats;
-          })
-        );
-
-        if (!active) {
-          return;
-        }
-
-        setBoxData(boxResults.filter(Boolean) as BoxplotStats[]);
 
         const { data: histDataRaw, error: histError } = await supabase.rpc(
           "ag_trait_histogram",
@@ -183,7 +152,7 @@ export default function Step3QuartisOverview() {
     return () => {
       active = false;
     };
-  }, [farmId, indexKey, traits]);
+  }, [farmId, indexKey, displayTraits]);
 
   const histogramData = useMemo(
     () =>
@@ -218,140 +187,142 @@ export default function Step3QuartisOverview() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Quartis — Tabela</CardTitle>
+        <CardHeader className="border-b pb-4">
+          <CardTitle className="text-lg font-semibold">
+            Índice: {TRAIT_LABELS[indexKey] ?? indexKey.toUpperCase()}
+          </CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr>
-                <th className="p-2 text-left">Grupo</th>
-                {traits.map((trait) => (
-                  <th key={trait} className="p-2 text-right">
-                    {TRAIT_LABELS[trait] ?? trait.toUpperCase()}
-                  </th>
-                ))}
-                <th className="p-2 text-right">N</th>
-              </tr>
-            </thead>
-            <tbody>
-              {["Top25", "Bottom25", "Average"].map((group) => {
-                const slice = tableRows.filter((row) => row.group_label === group);
-                const byTrait: Record<string, number> = {};
-                slice.forEach((row) => {
-                  if (typeof row.mean_value === "number") {
-                    byTrait[row.trait_key] = row.mean_value;
-                  }
-                });
-                const count = slice[0]?.n ?? null;
-                return (
-                  <tr key={group} className={group !== "Average" ? "bg-muted/20" : ""}>
-                    <td className="p-2 font-medium">{group}</td>
-                    {traits.map((trait) => (
-                      <td key={trait} className="p-2 text-right">
-                        {byTrait[trait] != null ? byTrait[trait].toFixed(2) : "-"}
-                      </td>
+        <CardContent className="flex flex-col gap-6 pt-6 md:flex-row">
+          <div className="md:w-3/4">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-border text-sm">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="p-3 text-left font-medium uppercase tracking-wide text-muted-foreground">
+                      Quartil
+                    </th>
+                    <th className="p-3 text-right font-medium uppercase tracking-wide text-muted-foreground">
+                      Contagem
+                    </th>
+                    {displayTraits.map((trait) => (
+                      <th
+                        key={trait}
+                        className="p-3 text-right font-medium uppercase tracking-wide text-muted-foreground"
+                      >
+                        {TRAIT_LABELS[trait] ?? trait.toUpperCase()}
+                      </th>
                     ))}
-                    <td className="p-2 text-right">{count ?? "-"}</td>
                   </tr>
-                );
-              })}
-              {!tableRows.length && (
-                <tr>
-                  <td
-                    colSpan={traits.length + 2}
-                    className="p-6 text-center text-muted-foreground"
-                  >
-                    {loading ? "Carregando dados..." : "Sem dados."}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {["Top25", "Bottom25", "Average"].map((group) => {
+                    const slice = tableRows.filter((row) => row.group_label === group);
+                    const byTrait: Record<string, number> = {};
+                    slice.forEach((row) => {
+                      if (typeof row.mean_value === "number") {
+                        byTrait[row.trait_key] = row.mean_value;
+                      }
+                    });
+                    const count = slice[0]?.n ?? null;
+
+                    const rowBg =
+                      group === "Top25"
+                        ? "bg-emerald-50"
+                        : group === "Bottom25"
+                        ? "bg-rose-50"
+                        : "bg-white";
+
+                    return (
+                      <tr key={group} className={rowBg}>
+                        <td className="p-3 font-semibold text-foreground">
+                          {group === "Top25"
+                            ? "Top 25%"
+                            : group === "Bottom25"
+                            ? "Bottom 25%"
+                            : "Average"}
+                        </td>
+                        <td className="p-3 text-right font-medium">{count ?? "-"}</td>
+                        {displayTraits.map((trait) => (
+                          <td key={trait} className="p-3 text-right">
+                            {byTrait[trait] != null ? byTrait[trait].toFixed(2) : "-"}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
+                  {!tableRows.length && (
+                    <tr>
+                      <td
+                        colSpan={displayTraits.length + 2}
+                        className="p-6 text-center text-muted-foreground"
+                      >
+                        {loading ? "Carregando dados..." : "Sem dados."}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div className="md:w-1/4">
+            <div className="grid gap-4 rounded-lg border bg-muted/40 p-4 text-sm">
+              <div>
+                <span className="block text-xs font-medium uppercase text-muted-foreground">
+                  Tabela
+                </span>
+                <span className="text-base font-semibold">
+                  {TRAIT_LABELS[indexKey] ?? indexKey.toUpperCase()}
+                </span>
+              </div>
+              <div>
+                <span className="block text-xs font-medium uppercase text-muted-foreground">
+                  População
+                </span>
+                <span className="text-base font-semibold">
+                  {CATEGORIA_LABELS[categoria] ?? categoria}
+                </span>
+              </div>
+              <div>
+                <span className="block text-xs font-medium uppercase text-muted-foreground">
+                  Quartis
+                </span>
+                <ul className="mt-1 space-y-1 text-sm">
+                  <li>Top 25%</li>
+                  <li>Bottom 25%</li>
+                  <li>Average</li>
+                </ul>
+              </div>
+              <div>
+                <span className="block text-xs font-medium uppercase text-muted-foreground">
+                  Traits
+                </span>
+                <ul className="mt-1 space-y-1 text-sm">
+                  {selectedTraits.map((trait) => (
+                    <li key={trait}>{TRAIT_LABELS[trait] ?? trait.toUpperCase()}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Boxplots — {TRAIT_LABELS[indexKey] ?? indexKey.toUpperCase()}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={420}>
-            <ComposedChart data={boxData} margin={{ left: 20, right: 20, top: 20, bottom: 40 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="trait_key"
-                tickFormatter={(key) => TRAIT_LABELS[key as string] ?? String(key).toUpperCase()}
-                interval={0}
-                angle={-40}
-                textAnchor="end"
-                height={80}
-              />
-              <YAxis />
-              <Tooltip formatter={(value: unknown) => Number(value ?? 0).toFixed(2)} />
-              <Customized
-                component={({ xAxisMap, yAxisMap, offset }: any) => {
-                  const xKey = Object.keys(xAxisMap)[0];
-                  const yKey = Object.keys(yAxisMap)[0];
-                  const xMap = xAxisMap[xKey];
-                  const yMap = yAxisMap[yKey];
-
-                  return (
-                    <g>
-                      {boxData.map((entry, index) => {
-                        const cx = xMap.scale(index) + xMap.bandwidth / 2 + offset.left;
-                        const yMin = yMap.scale(entry.p100) + offset.top;
-                        const yMax = yMap.scale(entry.p0) + offset.top;
-                        const yQ1 = yMap.scale(entry.p25) + offset.top;
-                        const yMed = yMap.scale(entry.p50) + offset.top;
-                        const yQ3 = yMap.scale(entry.p75) + offset.top;
-                        const boxWidth = Math.max(12, xMap.bandwidth * 0.5);
-
-                        return (
-                          <g key={entry.trait_key}>
-                            <line x1={cx} x2={cx} y1={yQ3} y2={yMin} stroke="#333" />
-                            <line x1={cx} x2={cx} y1={yQ1} y2={yMax} stroke="#333" />
-                            <rect
-                              x={cx - boxWidth / 2}
-                              width={boxWidth}
-                              y={Math.min(yQ1, yQ3)}
-                              height={Math.abs(yQ3 - yQ1)}
-                              fill="#bbb"
-                              stroke="#333"
-                            />
-                            <line
-                              x1={cx - boxWidth / 2}
-                              x2={cx + boxWidth / 2}
-                              y1={yMed}
-                              y2={yMed}
-                              stroke="#000"
-                            />
-                          </g>
-                        );
-                      })}
-                    </g>
-                  );
-                }}
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>
+        <CardHeader className="border-b pb-4">
+          <CardTitle className="text-lg font-semibold">
             Distribuição — {TRAIT_LABELS[indexKey] ?? indexKey.toUpperCase()}
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={260}>
-            <ComposedChart data={histogramData}>
+        <CardContent className="pt-6">
+          <ResponsiveContainer width="100%" height={320}>
+            <ComposedChart data={histogramData} barCategoryGap="8%">
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="x" angle={-45} textAnchor="end" height={70} />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="count" fill="#e11" />
+              <YAxis allowDecimals={false} />
+              <Tooltip formatter={(value: unknown) => Number(value ?? 0).toFixed(0)} />
+              <Bar dataKey="count" fill="#6B7280" radius={[4, 4, 0, 0]}>
+                <LabelList dataKey="count" position="top" fill="#374151" fontSize={12} />
+              </Bar>
             </ComposedChart>
           </ResponsiveContainer>
         </CardContent>
