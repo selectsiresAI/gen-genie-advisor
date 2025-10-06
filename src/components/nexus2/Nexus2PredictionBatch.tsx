@@ -16,38 +16,41 @@ import {
   mapBullRecord,
   type PredictionResult
 } from '@/services/prediction.service';
-import { read, utils, writeFileXLSX } from 'xlsx';
+import {
+  applyFastNormalizers,
+  normalizeNaabHOFast,
+  parseCsvQuick,
+  parseXlsxQuick
+} from '@/utils/nexus2-normalizers';
+import { utils, writeFileXLSX } from 'xlsx';
 
 const ACCEPTED_EXTENSIONS = '.csv,.xlsx,.xls';
-const REQUIRED_HEADERS = ['naab_pai', 'naab_avo_materno', 'naab_bisavo_materno'] as const;
+const REQUIRED_COLUMNS = [
+  'ID_Fazenda',
+  'Nome',
+  'Data_de_Nascimento',
+  'naab_pai',
+  'naab_avo_materno',
+  'naab_bisavo_materno'
+] as const;
 
-const normalizeNaab = (value: string) => {
-  // Remove espaços, hífens e converte para uppercase
-  let normalized = value.trim().replace(/[\s-]/g, '').toUpperCase();
-  
-  // Remove zeros à esquerda antes das letras (007HO -> 7HO, 011HO -> 11HO)
-  normalized = normalized.replace(/^0+([1-9]\d*[A-Z]+)/, '$1');
-  normalized = normalized.replace(/^0+([A-Z]+)/, '$1');
-  
-  return normalized;
-};
+const fixHeader = (h: string) => h.replace(/[,;:.]+$/g, '');
 
-const normalizeHeaderName = (value: unknown) => {
-  const stringValue = String(value ?? '').trim();
-
-  if (!stringValue) {
-    return '';
+const cleanNaab = (value: string) => {
+  const normalized = normalizeNaabHOFast(value);
+  if (normalized) {
+    return normalized;
   }
-
-  return stringValue
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/([a-z])([A-Z])/g, '$1_$2')
-    .replace(/[^\w]+/g, '_')
-    .replace(/_+/g, '_')
-    .replace(/^_|_$/g, '')
-    .toLowerCase();
+  return value.trim().replace(/[\s-]/g, '').toUpperCase();
 };
+
+async function readFileFast(file: File) {
+  if (file.name.toLowerCase().endsWith('.csv')) {
+    const text = await file.text();
+    return parseCsvQuick(text);
+  }
+  return parseXlsxQuick(file);
+}
 
 interface BatchRow {
   lineNumber: number;
@@ -151,77 +154,69 @@ const Nexus2PredictionBatch: React.FC = () => {
   );
 
   const parseFile = async (file: File) => {
-    const extension = file.name.split('.').pop()?.toLowerCase();
-    const workbook =
-      extension === 'csv'
-        ? read(await file.text(), { type: 'string' })
-        : read(await file.arrayBuffer(), { type: 'array' });
+    const { headers: rawHeaders, rows: rawRows } = await readFileFast(file);
 
-    if (!workbook.SheetNames.length) {
+    if (!rawHeaders.length) {
       throw new Error('emptyWorkbook');
     }
 
-    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    const headerRows = utils.sheet_to_json<string[]>(worksheet, {
-      header: 1,
-      range: 0,
-      blankrows: false
+    const sanitizedHeaders = rawHeaders.map(fixHeader);
+    const alias: Record<string, string> = {
+      id_fazenda: 'ID_Fazenda',
+      idfazenda: 'ID_Fazenda',
+      fazenda_id: 'ID_Fazenda',
+      nome: 'Nome',
+      name: 'Nome',
+      data_de_nascimento: 'Data_de_Nascimento',
+      data_nascimento: 'Data_de_Nascimento',
+      datanascimento: 'Data_de_Nascimento',
+      naab_pai: 'naab_pai',
+      'naab_pai,': 'naab_pai',
+      naabpai: 'naab_pai',
+      naab_avo_materno: 'naab_avo_materno',
+      naabavomaterno: 'naab_avo_materno',
+      naab_bisavo_materno: 'naab_bisavo_materno',
+      naabbisavomaterno: 'naab_bisavo_materno'
+    };
+
+    const canonicalHeaders = sanitizedHeaders.map((header) => {
+      const key = header.toLowerCase();
+      return alias[key] ?? header;
     });
 
-    if (!headerRows.length) {
-      throw new Error('emptyWorkbook');
-    }
-
-    const header = headerRows[0]?.map((value) => normalizeHeaderName(value)) ?? [];
-    const missingHeaders = REQUIRED_HEADERS.filter((column) => !header.includes(column));
+    const missingHeaders = REQUIRED_COLUMNS.filter((column) => !canonicalHeaders.includes(column));
 
     if (missingHeaders.length) {
       throw new Error('invalidHeader');
     }
 
-    const findHeaderIndex = (candidates: string[]) => {
-      for (const candidate of candidates) {
-        const normalized = normalizeHeaderName(candidate);
-        const index = header.indexOf(normalized);
-        if (index !== -1) {
-          return index;
-        }
-      }
-      return -1;
-    };
+    const canonRows = rawRows.map((row) => {
+      const output: Record<string, any> = {};
+      sanitizedHeaders.forEach((header, index) => {
+        const canonical = alias[header.toLowerCase()] ?? header;
+        const sourceKey = rawHeaders[index];
+        output[canonical] = row[header] ?? row[sourceKey] ?? row[canonical] ?? '';
+      });
+      return output;
+    });
 
-    const indexMap = {
-      idFazenda: findHeaderIndex(['id_fazenda', 'idfazenda']),
-      nome: findHeaderIndex(['nome', 'name']),
-      dataNascimento: findHeaderIndex(['data_de_nascimento', 'data_nascimento', 'datanascimento']),
-      naabPai: findHeaderIndex(['naab_pai', 'naabpai']),
-      naabAvoMaterno: findHeaderIndex(['naab_avo_materno', 'naabavomaterno']),
-      naabBisavoMaterno: findHeaderIndex(['naab_bisavo_materno', 'naabbisavomaterno'])
-    };
+    const normalizedRecords = canonRows.map((record) =>
+      applyFastNormalizers(record, {
+        dateCols: ['Data_de_Nascimento'],
+        naabCols: ['naab_pai', 'naab_avo_materno', 'naab_bisavo_materno']
+      })
+    );
 
-    const dataRows = headerRows.slice(1);
-
-    const getCellValue = (row: (string | number | null | undefined)[], index: number) => {
-      if (index === -1) {
-        return '';
-      }
-
-      const value = row?.[index];
-
-      if (value === undefined || value === null) {
-        return '';
-      }
-
-      return String(value).trim();
-    };
-
-    const normalizedRows: BatchRow[] = dataRows.map((row, index) => {
-      const idFazenda = getCellValue(row, indexMap.idFazenda);
-      const nome = getCellValue(row, indexMap.nome);
-      const dataNascimento = getCellValue(row, indexMap.dataNascimento);
-      const naabPai = normalizeNaab(getCellValue(row, indexMap.naabPai));
-      const naabAvoMaterno = normalizeNaab(getCellValue(row, indexMap.naabAvoMaterno));
-      const naabBisavoMaterno = normalizeNaab(getCellValue(row, indexMap.naabBisavoMaterno));
+    const batchRows: BatchRow[] = normalizedRecords.map((record, index) => {
+      const idFazenda = String(record.ID_Fazenda ?? '').trim();
+      const nome = String(record.Nome ?? '').trim();
+      const dataNascimento = String(record.Data_de_Nascimento ?? '').trim();
+      const naabPaiRaw = String(record.naab_pai ?? '');
+      const naabAvoMaternoRaw = String(record.naab_avo_materno ?? '');
+      const naabBisavoMaternoRaw = String(record.naab_bisavo_materno ?? '');
+      const naabPai = naabPaiRaw ? cleanNaab(naabPaiRaw) : '';
+      const naabAvoMaterno = naabAvoMaternoRaw ? cleanNaab(naabAvoMaternoRaw) : '';
+      const naabBisavoMaterno = naabBisavoMaternoRaw ? cleanNaab(naabBisavoMaternoRaw) : '';
       const lineNumber = index + 2;
       const errors: string[] = [];
       const fieldErrors: BatchRow['fieldErrors'] = {};
@@ -286,7 +281,7 @@ const Nexus2PredictionBatch: React.FC = () => {
       }
     };
 
-    for (const row of normalizedRows) {
+    for (const row of batchRows) {
       const sire = row.fieldErrors.sire ? null : await resolveBull(row.naabPai);
       const mgs = row.fieldErrors.mgs ? null : await resolveBull(row.naabAvoMaterno);
       const mmgs = row.fieldErrors.mmgs ? null : await resolveBull(row.naabBisavoMaterno);
@@ -312,7 +307,7 @@ const Nexus2PredictionBatch: React.FC = () => {
       row.status = row.errors.length === 0 && !hasFieldErrors ? 'valid' : 'invalid';
     }
 
-    return normalizedRows;
+    return batchRows;
   };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
