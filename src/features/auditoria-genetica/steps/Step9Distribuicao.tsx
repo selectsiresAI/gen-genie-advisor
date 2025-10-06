@@ -55,48 +55,26 @@ const ensureValidTraits = (candidate: string[], available: string[]): string[] =
 const arraysEqual = (a: string[], b: string[]) =>
   a.length === b.length && a.every((value, index) => value === b[index]);
 
-type Props = {
-  farmId?: string | number;
-  allTraits?: string[];
-};
+export default function Step9Distribuicao() {
+  const { farmId, ptasSelecionadas, setPTAs } = useAGFilters();
 
-export default function Step9Distribuicao({ farmId: farmIdProp, allTraits }: Props = {}) {
-  const { farmId: storeFarmId, ptasSelecionadas, setPTAs } = useAGFilters();
-
-  const farmId = useMemo(() => {
-    const id = farmIdProp ?? storeFarmId;
-    if (id === undefined || id === null) {
-      return undefined;
-    }
-    return typeof id === "number" ? id.toString() : String(id);
-  }, [farmIdProp, storeFarmId]);
-
-  const traitOptions = useMemo(
-    () => (allTraits && allTraits.length ? Array.from(new Set(allTraits)) : ALL_PTA_KEYS),
-    [allTraits],
-  );
+  const traitOptions = ALL_PTA_KEYS;
 
   const [bucketCount, setBucketCount] = useState(20);
   const [traits, setTraits] = useState<string[]>(() =>
-    ensureValidTraits(
-      ptasSelecionadas.length ? ptasSelecionadas : ["hhp_dollar"],
-      traitOptions,
-    ),
+    ensureValidTraits(ptasSelecionadas.length ? ptasSelecionadas : ["hhp_dollar"], traitOptions),
   );
   const [series, setSeries] = useState<Record<string, HistogramPoint[]>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [additionSelectKey, setAdditionSelectKey] = useState(0);
 
   useEffect(() => {
-    const fromStore = ensureValidTraits(
-      ptasSelecionadas.length ? ptasSelecionadas : ["hhp_dollar"],
-      traitOptions,
-    );
-
     setTraits((current) => {
-      const sanitizedCurrent = ensureValidTraits(current, traitOptions);
-      const merged = ensureValidTraits([...sanitizedCurrent, ...fromStore], traitOptions);
-      return arraysEqual(current, merged) ? current : merged;
+      const fromStore = ensureValidTraits(
+        ptasSelecionadas.length ? ptasSelecionadas : ["hhp_dollar"],
+        traitOptions,
+      );
+      return arraysEqual(current, fromStore) ? current : fromStore;
     });
   }, [ptasSelecionadas, traitOptions]);
 
@@ -165,6 +143,14 @@ export default function Step9Distribuicao({ farmId: farmIdProp, allTraits }: Pro
 
   const labelOf = (key: string) => PTA_LABEL_MAP[key] ?? key.toUpperCase();
   const mainTrait = traits[0];
+
+  if (!traits.length) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-muted-foreground">Nenhuma PTA disponível.</CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -244,6 +230,8 @@ export default function Step9Distribuicao({ farmId: farmIdProp, allTraits }: Pro
       <div className="grid gap-4 md:grid-cols-2">
         {traits.map((key) => {
           const data = series[key] ?? [];
+          const isTraitLoading = isLoading && !data.length;
+
           return (
             <Card key={key}>
               <CardHeader className="flex-row items-start justify-between space-y-0">
@@ -267,7 +255,7 @@ export default function Step9Distribuicao({ farmId: farmIdProp, allTraits }: Pro
                 )}
               </CardHeader>
               <CardContent>
-                {isLoading && !data.length ? (
+                {isTraitLoading ? (
                   <div className="flex h-[200px] items-center justify-center text-muted-foreground">
                     Carregando...
                   </div>
