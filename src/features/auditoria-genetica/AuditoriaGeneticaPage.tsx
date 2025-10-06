@@ -12,24 +12,14 @@ import Step6ProgressCompare from "./steps/Step6ProgressCompare";
 import Step7QuartisIndices from "./steps/Step7QuartisIndices";
 import Step8Benchmark from "./steps/Step8Benchmark";
 import Step9Distribuicao from "./steps/Step9Distribuicao";
-
-type FarmLike = {
-  farm_id?: string;
-  farm_name?: string;
-};
+import { clampStep } from "./constants";
+import type { FarmLike } from "./types";
 
 interface AuditoriaGeneticaPageProps {
   farm?: FarmLike | null;
   onBack: () => void;
   initialStep?: number;
   onStepChange?: (step: number) => void;
-}
-
-const TOTAL_STEPS = 9;
-
-function clampStep(step: number) {
-  if (Number.isNaN(step)) return 0;
-  return Math.min(Math.max(step, 0), TOTAL_STEPS - 1);
 }
 
 export default function AuditoriaGeneticaPage({

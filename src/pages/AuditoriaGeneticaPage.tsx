@@ -2,23 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import AuditoriaGeneticaFeature from "@/features/auditoria-genetica/AuditoriaGeneticaPage";
+import { clampStep } from "@/features/auditoria-genetica/constants";
+import type { FarmLike } from "@/features/auditoria-genetica/types";
 import { supabase } from "@/integrations/supabase/client";
-
-interface FarmLike {
-  farm_id?: string;
-  farm_name?: string;
-}
 
 type LoadedFarm = FarmLike | null;
 
 type LoadState = "idle" | "loading" | "success" | "error";
-
-const TOTAL_STEPS = 9;
-
-function clampStep(step: number) {
-  if (Number.isNaN(step)) return 0;
-  return Math.min(Math.max(step, 0), TOTAL_STEPS - 1);
-}
 
 function getQueryParam(name: string) {
   if (typeof window === "undefined") return null;
