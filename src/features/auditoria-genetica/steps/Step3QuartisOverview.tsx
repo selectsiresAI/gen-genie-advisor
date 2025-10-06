@@ -90,21 +90,21 @@ export default function Step3QuartisOverview() {
     [ptasSelecionadas]
   );
 
-  const displayTraits = useMemo(() => {
-    const traitsWithIndex = [indexKey, ...selectedTraits];
-    return traitsWithIndex.filter((trait, position) => traitsWithIndex.indexOf(trait) === position);
-  }, [indexKey, selectedTraits]);
+  const displayTraits = useMemo(
+    () => [indexKey, ...selectedTraits].filter((trait, position, array) => array.indexOf(trait) === position),
+    [indexKey, selectedTraits]
+  );
 
   useEffect(() => {
     setIndexKey(ensureIndexKey(indiceBase));
   }, [indiceBase]);
 
   useEffect(() => {
-    let active = true;
+    let isActive = true;
 
-    async function fetchData() {
+    const loadData = async () => {
       if (!farmId || !displayTraits.length) {
-        if (active) {
+        if (isActive) {
           setTableRows([]);
           setHistData([]);
           setBoxData([]);
@@ -114,91 +114,84 @@ export default function Step3QuartisOverview() {
       }
 
       setLoading(true);
+      setTableRows([]);
+      setHistData([]);
+      setBoxData([]);
 
       try {
-        const [{ data: quartisData, error: quartisError }] = await Promise.all([
+        const [quartisResponse, histogramResponse, boxResponses] = await Promise.all([
           supabase.rpc("ag_quartis_overview", {
             p_farm: farmId,
             p_index_key: indexKey,
             p_traits: displayTraits,
           }),
-        ]);
-
-        if (!active) {
-          return;
-        }
-
-        if (quartisError) {
-          console.error("Failed to load quartile overview", quartisError);
-          setTableRows([]);
-        } else {
-          setTableRows(Array.isArray(quartisData) ? (quartisData as QuartileRow[]) : []);
-        }
-
-        const boxResponses = await Promise.all(
-          displayTraits.map(async (trait) => {
-            const { data, error } = await supabase.rpc("ag_boxplot_stats", {
-              p_farm: farmId,
-              p_trait: trait,
-            });
-
-            if (error) {
-              console.error(`Failed to load boxplot for ${trait}`, error);
-              return null;
-            }
-
-            const point = Array.isArray(data) ? (data[0] as Partial<BoxPlotPoint> | undefined) : undefined;
-            if (!point) {
-              return null;
-            }
-
-            return {
-              trait_key: trait,
-              p0: point.p0 ?? null,
-              p25: point.p25 ?? null,
-              p50: point.p50 ?? null,
-              p75: point.p75 ?? null,
-              p100: point.p100 ?? null,
-            } satisfies BoxPlotPoint;
-          })
-        );
-
-        if (!active) {
-          return;
-        }
-
-        setBoxData(boxResponses.filter(Boolean) as BoxPlotPoint[]);
-
-        const { data: histDataRaw, error: histError } = await supabase.rpc(
-          "ag_trait_histogram",
-          {
+          supabase.rpc("ag_trait_histogram", {
             p_farm: farmId,
             p_trait: indexKey,
             p_bins: 20,
-          }
-        );
+          }),
+          Promise.all(
+            displayTraits.map(async (trait) => {
+              const { data, error } = await supabase.rpc("ag_boxplot_stats", {
+                p_farm: farmId,
+                p_trait: trait,
+              });
 
-        if (!active) {
+              if (error) {
+                console.error(`Failed to load boxplot for ${trait}`, error);
+                return null;
+              }
+
+              const point = Array.isArray(data) ? (data[0] as Partial<BoxPlotPoint> | undefined) : undefined;
+
+              if (!point) {
+                return null;
+              }
+
+              return {
+                trait_key: trait,
+                p0: point.p0 ?? null,
+                p25: point.p25 ?? null,
+                p50: point.p50 ?? null,
+                p75: point.p75 ?? null,
+                p100: point.p100 ?? null,
+              } satisfies BoxPlotPoint;
+            })
+          ),
+        ]);
+
+        if (!isActive) {
           return;
         }
 
-        if (histError) {
-          console.error("Failed to load histogram", histError);
+        if (quartisResponse.error) {
+          console.error("Failed to load quartile overview", quartisResponse.error);
+          setTableRows([]);
+        } else {
+          setTableRows(Array.isArray(quartisResponse.data) ? (quartisResponse.data as QuartileRow[]) : []);
+        }
+
+        if (histogramResponse.error) {
+          console.error("Failed to load histogram", histogramResponse.error);
           setHistData([]);
         } else {
-          setHistData(Array.isArray(histDataRaw) ? (histDataRaw as HistogramBin[]) : []);
+          setHistData(
+            Array.isArray(histogramResponse.data) ? (histogramResponse.data as HistogramBin[]) : []
+          );
         }
+
+        setBoxData(boxResponses.filter(Boolean) as BoxPlotPoint[]);
       } finally {
-        if (active) {
+        if (isActive) {
           setLoading(false);
         }
       }
-    }
+    };
 
-    fetchData();
+    loadData();
 
     return () => {
-      active = false;
+      isActive = false;
     };
   }, [farmId, indexKey, displayTraits]);
 
