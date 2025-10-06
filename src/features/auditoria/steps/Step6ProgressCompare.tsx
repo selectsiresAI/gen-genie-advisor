@@ -16,9 +16,7 @@ import {
 } from "recharts";
 import { useAGFilters } from "../store";
 
-/* =========================================================
-   PTAs suportadas (adicione aqui se quiser mais colunas)
-   ========================================================= */
+/* ========= PTAs suportadas (adicione/ajuste aqui) ========= */
 const PTA_LABELS: Record<string, string> = {
   hhp_dollar: "HHP$",
   tpi: "TPI",
@@ -39,11 +37,7 @@ const PTA_LABELS: Record<string, string> = {
 };
 const ALL_PTA_KEYS = Object.keys(PTA_LABELS);
 
-/* =========================================================
-   Mapeamento de sinônimos (rebanho vs females_denorm)
-   - Comparação é feita em formato "normalizado"
-   - Pode adicionar nomes conforme seu schema
-   ========================================================= */
+/* ========= Sinônimos (para quando colunas vierem com nomes diferentes) ========= */
 const PTA_SYNONYMS: Record<string, string[]> = {
   hhp_dollar: ["hhp_dollar", "hhp$", "hhp"],
   nm_dollar: ["nm_dollar", "nm$", "nm", "netmerit", "meritoliquido"],
@@ -63,72 +57,65 @@ const PTA_SYNONYMS: Record<string, string[]> = {
   cfp: ["cfp"],
 };
 
-/* Campos possíveis para categoria e fazenda */
-const CATEGORY_CANDIDATES = [
-  "Categoria",
-  "categoria",
-  "category",
-  "Category",
-  "age_group",
-  "agegroup",
-  "coarse",
-  "coarse_group",
-  "grupo",
-  "label",
-];
-
-const FARM_CANDIDATES = ["farm_id", "id_fazenda", "farmId", "fazenda_id"];
-
-/* Tabelas candidatas (na ordem de prioridade) */
-const TABLE_CANDIDATES = ["rebanho", "females_denorm", "female_denorm"];
-
-/* Defaults para UI (como nas imagens) */
+/* ========= Constantes da UI ========= */
 const DEFAULT_TABLE_TRAITS = ["hhp_dollar", "ptam", "cfp", "fi", "pl", "scs", "mast"];
 const DEFAULT_CHART_TRAITS = [
-  "hhp_dollar",
-  "ptam",
-  "ptaf",
-  "ptap",
-  "fi",
-  "ccr",
-  "hcr",
-  "pl",
-  "liv",
-  "scs",
-  "ptat",
-  "udc",
+  "hhp_dollar", "ptam", "ptaf", "ptap", "fi", "ccr", "hcr", "pl", "liv", "scs", "ptat", "udc",
 ];
+
 const AGE_SHORTCUTS = ["Bezerra", "Novilha", "Primípara", "Secundípara", "Multípara"] as const;
 
-/* Helpers de normalização */
+/* ========= Helpers ========= */
 const norm = (s: any) =>
   String(s ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/[^a-z0-9]/g, "");
 
 const PTA_SYNONYMS_NORM: Record<string, string[]> = Object.fromEntries(
   Object.entries(PTA_SYNONYMS).map(([k, list]) => [k, Array.from(new Set(list.map(norm)))])
 );
 
-/* ---------- Tipos ---------- */
-type CatMeans = Record<string, Record<string, number | null>>; // categoria -> trait -> média
+function toNumber(x: any): number | null {
+  if (x == null) return null;
+  const v = Number(String(x).replace(",", "."));
+  return Number.isFinite(v) ? v : null;
+}
 
-type TraitColumnMap = Record<string, string>;
+function resolveTraitValue(row: any, canonical: string): number | null {
+  const normMap: Record<string, any> = {};
+  for (const k of Object.keys(row)) normMap[norm(k)] = row[k];
+  const cands = PTA_SYNONYMS_NORM[canonical] || [norm(canonical)];
+  for (const nk of cands) {
+    if (nk in normMap) {
+      const v = toNumber(normMap[nk]);
+      if (v != null) return v;
+    }
+    if (nk.endsWith("dollar")) {
+      const alt = nk.replace("dollar", "");
+      if (alt in normMap) {
+        const v2 = toNumber(normMap[alt]);
+        if (v2 != null) return v2;
+      }
+    } else {
+      const alt = nk + "dollar";
+      if (alt in normMap) {
+        const v3 = toNumber(normMap[alt]);
+        if (v3 != null) return v3;
+      }
+    }
+  }
+  return null;
+}
 
-type NormalizedRow = Record<string, string | number | null> & { category: string };
+/* ========= Tipagem ========= */
+type MeansByCategory = Record<string, Record<string, number | null>>;
 
 export default function Step6ProgressCompare() {
   const { farmId } = useAGFilters();
 
   const [loading, setLoading] = useState(false);
-  const [rows, setRows] = useState<NormalizedRow[]>([]);
-  const [sourceTable, setSourceTable] = useState<string>("");
-  const [categoryColumn, setCategoryColumn] = useState<string>("");
+  const [rows, setRows] = useState<any[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
-  const [availableTraits, setAvailableTraits] = useState<string[]>([]);
-  const [traitColumnMap, setTraitColumnMap] = useState<TraitColumnMap>({});
 
   const [groupA, setGroupA] = useState<string>("Novilha");
   const [groupB, setGroupB] = useState<string>("Primípara");
@@ -136,342 +123,207 @@ export default function Step6ProgressCompare() {
   const [tableTraits, setTableTraits] = useState<string[]>(DEFAULT_TABLE_TRAITS);
   const [chartTraits, setChartTraits] = useState<string[]>(DEFAULT_CHART_TRAITS);
 
-  /* =========================
-     Fetch com fallback:
-     rebanho -> females_denorm -> female_denorm
-     ========================= */
-  const fetchAnyTable = useCallback(
-    async (farm: string | number) => {
-      const tryTable = async (table: string) => {
-        let query = supabase.from(table).select("*").limit(100000);
-
-        for (const col of FARM_CANDIDATES) {
-          const q = await query.eq(col as any, farm);
-          if (!q.error && Array.isArray(q.data) && q.data.length > 0) {
-            return { data: q.data, table };
-          }
-        }
-
-        const q2 = await supabase.from(table).select("*").limit(20000);
-        if (!q2.error && Array.isArray(q2.data) && q2.data.length > 0) {
-          return { data: q2.data, table };
-        }
-
-        return { data: [] as any[], table };
-      };
-
-      for (const t of TABLE_CANDIDATES) {
-        try {
-          const { data, table } = await tryTable(t);
-          if (data.length) {
-            return { rows: data, table };
-          }
-        } catch {
-          /* tabela pode não existir; segue para próxima */
-        }
-      }
-      return { rows: [] as any[], table: "" };
-    },
-    []
-  );
-
-  const fetchData = useCallback(async () => {
+  /* =========================================================
+     1) FETCH: exclusivamente da tabela REBANHO e coluna Categoria
+     ========================================================= */
+  const fetchRebanho = useCallback(async () => {
     if (!farmId) {
-      setRows([]);
-      setCategories([]);
-      setSourceTable("");
-      setCategoryColumn("");
-      setAvailableTraits([]);
-      setTraitColumnMap({});
-      return;
+      setRows([]); setCategories([]); return;
     }
     setLoading(true);
 
-    try {
-      const { rows: data, table } = await fetchAnyTable(farmId);
-      setSourceTable(table);
-
-      const sane = (data || []).filter((row) => row && typeof row === "object");
-      if (!sane.length) {
-        setRows([]);
-        setCategories([]);
-        setCategoryColumn("");
-        setAvailableTraits([]);
-        setTraitColumnMap({});
-        return;
-      }
-
-      const allKeys = Array.from(
-        new Set(
-          sane.flatMap((row) => Object.keys(row ?? {}))
-        )
-      );
-
-      let detectedCategory = "";
-      for (const key of allKeys) {
-        const normalizedKey = norm(key);
-        if (CATEGORY_CANDIDATES.some((candidate) => norm(candidate) === normalizedKey)) {
-          detectedCategory = key;
-          break;
-        }
-      }
-      if (!detectedCategory) {
-        detectedCategory =
-          allKeys.find((key) => norm(key).includes("categoria")) ||
-          allKeys.find((key) => norm(key).includes("category")) ||
-          "";
-      }
-
-      const traitMap: TraitColumnMap = {};
-      for (const key of allKeys) {
-        const normalizedKey = norm(key);
-        for (const [trait, synonyms] of Object.entries(PTA_SYNONYMS_NORM)) {
-          if (synonyms.includes(normalizedKey) && !traitMap[trait]) {
-            traitMap[trait] = key;
-          }
-        }
-      }
-
-      const recognizedTraits = ALL_PTA_KEYS.filter((trait) => traitMap[trait]);
-
-      const normalizedRows: NormalizedRow[] = sane.map((row) => {
-        const rawCategory = detectedCategory ? row[detectedCategory] : undefined;
-        const category = rawCategory != null && String(rawCategory).trim().length > 0
-          ? String(rawCategory).trim()
-          : "Sem categoria";
-
-        const out: NormalizedRow = { category };
-        for (const trait of recognizedTraits) {
-          const column = traitMap[trait];
-          const raw = column ? row[column] : null;
-          const value = Number(raw);
-          out[trait] = Number.isFinite(value) ? value : null;
-        }
-        return out;
-      });
-
-      const cats = Array.from(
-        new Set(
-          normalizedRows
-            .map((row) => row.category)
-            .filter((category) => typeof category === "string" && category.trim().length > 0)
-        )
-      );
-
-      const orderedCategories = [
-        ...AGE_SHORTCUTS.filter((c) => cats.includes(c)),
-        ...cats.filter((c) => !AGE_SHORTCUTS.includes(c as any)),
-      ];
-
-      setRows(normalizedRows);
-      setCategories(orderedCategories);
-      setCategoryColumn(detectedCategory);
-      setAvailableTraits(recognizedTraits);
-      setTraitColumnMap(traitMap);
-
-      setGroupA((prev) => (orderedCategories.includes(prev) ? prev : orderedCategories[0] || "Grupo A"));
-      setGroupB((prev) =>
-        orderedCategories.includes(prev)
-          ? prev
-          : orderedCategories[1] || orderedCategories[0] || "Grupo B"
-      );
-
-      setTableTraits((prev) => {
-        const filtered = prev.filter((trait) => recognizedTraits.includes(trait));
-        if (filtered.length) return filtered;
-        const defaults = DEFAULT_TABLE_TRAITS.filter((trait) => recognizedTraits.includes(trait));
-        if (defaults.length) return defaults;
-        return recognizedTraits.slice(0, Math.min(7, recognizedTraits.length));
-      });
-
-      setChartTraits((prev) => {
-        const filtered = prev.filter((trait) => recognizedTraits.includes(trait));
-        if (filtered.length) return filtered;
-        const defaults = DEFAULT_CHART_TRAITS.filter((trait) => recognizedTraits.includes(trait));
-        if (defaults.length) return defaults;
-        return recognizedTraits.slice(0, Math.min(12, recognizedTraits.length));
-      });
-    } catch (error) {
-      console.error("Erro ao buscar dados de progresso:", error);
-      setRows([]);
-      setCategories([]);
-      setCategoryColumn("");
-      setAvailableTraits([]);
-      setTraitColumnMap({});
-    } finally {
-      setLoading(false);
+    // Buscar tudo (evita erro quando schema varia)
+    // Filtra por farm_id; fallback para id_fazenda.
+    let q = await supabase.from("rebanho").select("*").eq("farm_id", farmId).limit(100000);
+    if (!q.error && Array.isArray(q.data) && q.data.length === 0) {
+      q = await supabase.from("rebanho").select("*").eq("id_fazenda", farmId).limit(100000);
     }
-  }, [farmId, fetchAnyTable]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (q.error) {
+      console.error("Erro ao buscar rebanho:", q.error);
+      setRows([]); setCategories([]); setLoading(false);
+      return;
+    }
 
-  /* -------------------- Médias por Categoria -------------------- */
-  const meansByCategory: CatMeans = useMemo(() => {
+    const data = (q.data || []).filter((r: any) => r && typeof r === "object");
+
+    // *** PONTO-CHAVE: usar exatamente a coluna "Categoria" ***
+    const cats = Array.from(
+      new Set(
+        data
+          .map((r: any) => r?.Categoria)
+          .filter((c: any) => typeof c === "string" && c.trim().length > 0)
+      )
+    );
+
+    // Ordena: atalhos primeiro, depois demais categorias
+    const ordered = [
+      ...AGE_SHORTCUTS.filter((c) => cats.includes(c)),
+      ...cats.filter((c) => !AGE_SHORTCUTS.includes(c as any)),
+    ];
+
+    setRows(data);
+    setCategories(ordered);
+
+    // Ajusta grupos se defaults não existirem
+    if (!ordered.includes(groupA) || !ordered.includes(groupB)) {
+      setGroupA(ordered[0] || "Grupo A");
+      setGroupB(ordered[1] || ordered[0] || "Grupo B");
+    }
+
+    setLoading(false);
+  }, [farmId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { fetchRebanho(); }, [fetchRebanho]);
+
+  /* =========================================================
+     2) MÉDIAS por Categoria (usando rebanho.Categoria)
+     ========================================================= */
+  const meansByCategory: MeansByCategory = useMemo(() => {
     if (!rows.length) return {};
-    const traitKeys = availableTraits.length ? availableTraits : ALL_PTA_KEYS;
     const acc: Record<string, Record<string, { sum: number; n: number }>> = {};
 
-    for (const row of rows) {
-      const category = row.category || "Sem categoria";
-      if (!acc[category]) acc[category] = {};
-      for (const trait of traitKeys) {
-        const raw = row[trait];
-        const value = Number(raw);
-        if (Number.isFinite(value)) {
-          if (!acc[category][trait]) acc[category][trait] = { sum: 0, n: 0 };
-          acc[category][trait].sum += value;
-          acc[category][trait].n += 1;
+    for (const r of rows) {
+      const cat = (r?.Categoria as string) || "Sem categoria";
+      if (!acc[cat]) acc[cat] = {};
+      for (const key of ALL_PTA_KEYS) {
+        const val = resolveTraitValue(r, key);
+        if (val != null) {
+          if (!acc[cat][key]) acc[cat][key] = { sum: 0, n: 0 };
+          acc[cat][key].sum += val;
+          acc[cat][key].n += 1;
         }
       }
     }
 
-    const out: CatMeans = {};
-    for (const [category, traitMapAcc] of Object.entries(acc)) {
-      out[category] = {};
-      for (const trait of traitKeys) {
-        const bucket = traitMapAcc[trait];
-        out[category][trait] = bucket && bucket.n > 0 ? bucket.sum / bucket.n : null;
+    const out: MeansByCategory = {};
+    for (const [cat, map] of Object.entries(acc)) {
+      out[cat] = {};
+      for (const k of ALL_PTA_KEYS) {
+        const s = map[k];
+        out[cat][k] = s && s.n > 0 ? s.sum / s.n : null;
       }
     }
     return out;
-  }, [rows, availableTraits]);
+  }, [rows]);
 
-  /* --------------- Dados combinados para Tabela / Radar --------------- */
+  /* =========================================================
+     3) Dados para Tabela e Radar (Categoria A vs Categoria B)
+     ========================================================= */
   const pair = useMemo(() => {
-    const traitKeys = availableTraits.length ? availableTraits : ALL_PTA_KEYS;
     const A = meansByCategory[groupA] || {};
     const B = meansByCategory[groupB] || {};
 
-    const tableTraitsOrdered = tableTraits.filter((trait) => traitKeys.includes(trait));
-    const chartTraitsOrdered = chartTraits.filter((trait) => traitKeys.includes(trait));
+    const tTraits = tableTraits.slice();
+    const cTraits = chartTraits.slice();
 
     const table = {
       rows: [
-        { label: groupA, ...Object.fromEntries(tableTraitsOrdered.map((trait) => [trait, A[trait] ?? null])) },
-        { label: groupB, ...Object.fromEntries(tableTraitsOrdered.map((trait) => [trait, B[trait] ?? null])) },
+        { label: groupA, ...Object.fromEntries(tTraits.map((k) => [k, A[k] ?? null])) },
+        { label: groupB, ...Object.fromEntries(tTraits.map((k) => [k, B[k] ?? null])) },
         {
           label: "Change",
           ...Object.fromEntries(
-            tableTraitsOrdered.map((trait) => {
-              const a = A[trait];
-              const b = B[trait];
-              const diff = a != null && b != null ? a - b : null;
-              return [trait, diff];
+            tTraits.map((k) => {
+              const a = A[k]; const b = B[k];
+              return [k, a != null && b != null ? a - b : null];
             })
           ),
         },
       ],
     };
 
-    const radar = chartTraitsOrdered.map((trait) => ({
-      trait: (PTA_LABELS[trait] ?? trait).toUpperCase(),
-      "Group A": (A[trait] ?? 0) as number,
-      "Group B": (B[trait] ?? 0) as number,
+    const radar = cTraits.map((k) => ({
+      trait: (PTA_LABELS[k] ?? k).toUpperCase(),
+      "Group A": (A[k] ?? 0) as number,
+      "Group B": (B[k] ?? 0) as number,
     }));
 
     return { table, radar };
-  }, [meansByCategory, groupA, groupB, tableTraits, chartTraits, availableTraits]);
+  }, [meansByCategory, groupA, groupB, tableTraits, chartTraits]);
 
-  /* --------------------------- UI helpers --------------------------- */
+  /* =========================================================
+     4) UI
+     ========================================================= */
   const traitBadges = (
     source: string[],
     setSource: (updater: (prev: string[]) => string[]) => void
-  ) => {
-    const hasAvailable = availableTraits.length > 0;
-
-    return (
-      <div className="flex flex-wrap gap-2">
-        {ALL_PTA_KEYS.map((key) => {
-          const label = PTA_LABELS[key] || key.toUpperCase();
-          const enabled = !hasAvailable || availableTraits.includes(key);
-          const active = source.includes(key);
+  ) => (
+    <div className="flex flex-wrap gap-2">
+      {ALL_PTA_KEYS
+        .map((key) => ({ key, label: PTA_LABELS[key] || key.toUpperCase() }))
+        .sort((a, b) => a.label.localeCompare(b.label))
+        .map(({ key, label }) => {
+          const on = source.includes(key);
           return (
             <Badge
               key={key}
-              variant={active ? "default" : "outline"}
-              className={`cursor-pointer ${!enabled ? "opacity-40 pointer-events-none" : ""}`}
+              variant={on ? "default" : "outline"}
+              className="cursor-pointer"
               onClick={() =>
-                enabled
-                  ? setSource((prev) =>
-                      active ? prev.filter((trait) => trait !== key) : [...prev, key]
-                    )
-                  : undefined
+                setSource((prev) =>
+                  on ? prev.filter((t) => t !== key) : [...prev, key]
+                )
               }
             >
               {label}
             </Badge>
           );
         })}
-      </div>
-    );
-  };
+    </div>
+  );
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Comparação por Categoria (Step 6)</CardTitle>
+        <CardTitle>Comparação por Categoria (Step 6) — fonte: rebanho.Categoria</CardTitle>
       </CardHeader>
 
       <CardContent className="space-y-6">
-        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-          <span>Fonte: {sourceTable || "—"}</span>
-          {categoryColumn && <span>Coluna de categoria: {categoryColumn}</span>}
-          {Object.keys(traitColumnMap).length > 0 && (
-            <span>
-              PTAs mapeadas: {Object.entries(traitColumnMap)
-                .map(([trait, column]) => `${PTA_LABELS[trait] ?? trait}⇢${column}`)
-                .join(", ")}
-            </span>
-          )}
-        </div>
-
-        {/* Atalhos de categoria (carregam dados) */}
+        {/* Atalhos: Categoria A vs Categoria B */}
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium">Atalhos:</span>
-          {categories.map((category) => (
+          {categories.map((c) => (
             <Badge
-              key={`ga-${category}`}
-              variant={groupA === category ? "default" : "outline"}
+              key={`ga-${c}`}
+              variant={groupA === c ? "default" : "outline"}
               className="cursor-pointer"
-              onClick={() => setGroupA(category)}
+              onClick={() => setGroupA(c)}
             >
-              {category}
+              {c}
             </Badge>
           ))}
           <span className="mx-2 uppercase tracking-wide text-xs text-muted-foreground">vs</span>
-          {categories.map((category) => (
+          {categories.map((c) => (
             <Badge
-              key={`gb-${category}`}
-              variant={groupB === category ? "default" : "outline"}
+              key={`gb-${c}`}
+              variant={groupB === c ? "default" : "outline"}
               className="cursor-pointer"
-              onClick={() => setGroupB(category)}
+              onClick={() => setGroupB(c)}
             >
-              {category}
+              {c}
             </Badge>
           ))}
         </div>
 
-        {/* Seletor: PTAs para Tabela */}
+        {/* Seletores de PTAs */}
         <div className="space-y-2">
           <div className="text-sm font-semibold">PTAs para Tabela:</div>
           {traitBadges(tableTraits, (fn) => setTableTraits(fn))}
         </div>
-
-        {/* Seletor: PTAs para Gráfico */}
         <div className="space-y-2">
           <div className="text-sm font-semibold">PTAs para Gráfico:</div>
           {traitBadges(chartTraits, (fn) => setChartTraits(fn))}
         </div>
 
         {loading && (
-          <div className="py-6 text-center text-muted-foreground">Carregando dados...</div>
+          <div className="py-6 text-center text-muted-foreground">Carregando dados…</div>
         )}
 
         {!loading && (!categories.length || !rows.length) && (
           <div className="py-6 text-center text-muted-foreground">
-            Sem dados de rebanho para esta fazenda.
+            Sem dados em <span className="font-semibold">rebanho</span> para esta fazenda
+            ou a coluna <span className="font-semibold">Categoria</span> não contém valores.
           </div>
         )}
 
@@ -479,42 +331,31 @@ export default function Step6ProgressCompare() {
           <div className="space-y-8">
             {/* Tabela comparativa */}
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-sm">
+              <table className="w-full text-sm border-collapse">
                 <thead>
                   <tr className="border-b">
-                    <th className="px-2 py-2 text-left font-semibold">Group</th>
-                    {tableTraits.map((trait) => (
-                      <th key={`th-${trait}`} className="px-2 py-2 text-left font-semibold">
-                        {(PTA_LABELS[trait] ?? trait).toUpperCase()}
+                    <th className="py-2 px-2 text-left font-semibold">Group</th>
+                    {tableTraits.map((t) => (
+                      <th key={`th-${t}`} className="py-2 px-2 text-left font-semibold">
+                        {(PTA_LABELS[t] ?? t).toUpperCase()}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {pair.table.rows.map((row, index) => (
-                    <tr
-                      key={`row-${index}-${row.label}`}
-                      className={`border-b ${index === 2 ? "bg-muted/30" : ""}`}
-                    >
-                      <td className="px-2 py-2 font-medium">{row.label}</td>
-                      {tableTraits.map((trait) => {
-                        const value = row[trait] as number | null | undefined;
-                        const isChangeRow = index === 2;
-                        const isPositive = (value ?? 0) > 0;
+                  {pair.table.rows.map((r: any, idx: number) => (
+                    <tr key={`row-${idx}-${r.label}`} className={`border-b ${idx === 2 ? "bg-muted/30" : ""}`}>
+                      <td className="py-2 px-2 font-medium">{r.label}</td>
+                      {tableTraits.map((t) => {
+                        const val = r[t] as number | null | undefined;
+                        const isChange = idx === 2;
+                        const isPositive = (val ?? 0) > 0;
                         return (
                           <td
-                            key={`td-${trait}`}
-                            className={`px-2 py-2 ${
-                              isChangeRow
-                                ? isPositive
-                                  ? "text-green-600"
-                                  : value == null
-                                  ? ""
-                                  : "text-red-600"
-                                : ""
-                            }`}
+                            key={`td-${t}`}
+                            className={`py-2 px-2 ${isChange ? (isPositive ? "text-green-600" : "text-red-600") : ""}`}
                           >
-                            {value == null ? "-" : Number(value).toFixed(2)}
+                            {val == null ? "-" : Number(val).toFixed(2)}
                           </td>
                         );
                       })}
@@ -524,10 +365,10 @@ export default function Step6ProgressCompare() {
               </table>
             </div>
 
-            {/* Radar “Rate of Change” (comparação direta) */}
+            {/* Radar */}
             {pair.radar.length > 0 && (
               <div>
-                <h4 className="mb-2 text-sm font-semibold">Rate of Change</h4>
+                <h4 className="text-sm font-semibold mb-2">Rate of Change</h4>
                 <ResponsiveContainer width="100%" height={420}>
                   <RadarChart data={pair.radar}>
                     <PolarGrid />
@@ -559,4 +400,3 @@ export default function Step6ProgressCompare() {
     </Card>
   );
 }
-
