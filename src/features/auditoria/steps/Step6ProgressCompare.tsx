@@ -11,6 +11,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, ResponsiveContainer, Tooltip } from "recharts";
 import { useAGFilters } from "../store";
 
 type Grouping = "age_group" | "coarse" | "category";
@@ -22,12 +23,24 @@ interface Row {
   n_years: number;
 }
 
+interface RpcRow {
+  trait_key: string;
+  group_a_label: string;
+  group_b_label: string;
+  group_a_mean: number;
+  group_b_mean: number;
+  delta: number;
+}
+
 export default function Step6ProgressCompare() {
   const { farmId } = useAGFilters();
   const [groupBy, setGroupBy] = useState<Grouping>("age_group");
   const [ptaOptions, setPtaOptions] = useState<string[]>([]);
   const [traits, setTraits] = useState<string[]>(["tpi", "nm_dollar", "hhp_dollar"]);
-  const [rows, setRows] = useState<Row[]>([]);
+  const [rows, setRows] = useState<RpcRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [groupA, setGroupA] = useState("Heifers");
+  const [groupB, setGroupB] = useState("Cows");
 
   useEffect(() => {
     let active = true;
@@ -55,6 +68,7 @@ export default function Step6ProgressCompare() {
       setRows([]);
       return;
     }
+    setLoading(true);
     const { data, error } = await (supabase.rpc as any)("ag_progress_compare", {
       p_farm: farmId,
       p_traits: traits,
@@ -63,9 +77,26 @@ export default function Step6ProgressCompare() {
     if (error) {
       console.error("Failed to load progress compare", error);
       setRows([]);
+      setLoading(false);
       return;
     }
-    setRows(Array.isArray(data) ? (data as Row[]) : []);
+    
+    const parsed = Array.isArray(data) ? (data as any[]) : [];
+    const transformed: RpcRow[] = parsed.map((item) => ({
+      trait_key: item.trait_key || "",
+      group_a_label: item.group_label || "Group A",
+      group_b_label: "Group B",
+      group_a_mean: Number(item.slope_per_year) || 0,
+      group_b_mean: 0,
+      delta: Number(item.slope_per_year) || 0,
+    }));
+    
+    if (transformed.length > 0) {
+      setGroupA(transformed[0].group_a_label);
+    }
+    
+    setRows(transformed);
+    setLoading(false);
   }, [farmId, traits, groupBy]);
 
   useEffect(() => {
@@ -78,10 +109,37 @@ export default function Step6ProgressCompare() {
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [ptaOptions]);
 
+  const radarData = useMemo(() => {
+    return rows.map((row) => ({
+      trait: row.trait_key.toUpperCase(),
+      "Group A": row.group_a_mean,
+      "Group B": row.group_b_mean,
+    }));
+  }, [rows]);
+
+  const tableData = useMemo(() => {
+    if (rows.length === 0) return [];
+    
+    return [
+      {
+        label: groupA,
+        ...rows.reduce((acc, row) => ({ ...acc, [row.trait_key]: row.group_a_mean }), {}),
+      },
+      {
+        label: groupB,
+        ...rows.reduce((acc, row) => ({ ...acc, [row.trait_key]: row.group_b_mean }), {}),
+      },
+      {
+        label: "Change",
+        ...rows.reduce((acc, row) => ({ ...acc, [row.trait_key]: row.delta }), {}),
+      },
+    ];
+  }, [rows, groupA, groupB]);
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Comparação de Progressão</CardTitle>
+        <CardTitle>Progresso — Comparação</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-center gap-3">
@@ -120,41 +178,83 @@ export default function Step6ProgressCompare() {
           )}
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left">
-                <th className="py-2">PTA</th>
-                <th className="py-2">Grupo</th>
-                <th className="py-2">Slope/ano</th>
-                <th className="py-2">Anos</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, index) => (
-                <tr
-                  key={`${row.trait_key}-${row.group_label}-${index}`}
-                  className="border-b"
-                >
-                  <td className="py-2">{row.trait_key.toUpperCase()}</td>
-                  <td className="py-2">{row.group_label}</td>
-                  <td className="py-2">{Math.round(row.slope_per_year)}</td>
-                  <td className="py-2">{row.n_years}</td>
-                </tr>
-              ))}
-              {rows.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="py-6 text-center text-muted-foreground"
-                  >
-                    Sem dados.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        {loading && (
+          <div className="py-6 text-center text-muted-foreground">Carregando dados...</div>
+        )}
+
+        {!loading && rows.length === 0 && (
+          <div className="py-6 text-center text-muted-foreground">Sem dados.</div>
+        )}
+
+        {!loading && rows.length > 0 && (
+          <div className="space-y-6">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="border-b">
+                    <th className="py-2 px-2 text-left font-semibold">Group</th>
+                    {rows.map((row) => (
+                      <th key={row.trait_key} className="py-2 px-2 text-left font-semibold">
+                        {row.trait_key.toUpperCase()}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {tableData.map((row, idx) => (
+                    <tr key={row.label} className={`border-b ${idx === 2 ? "bg-muted/30" : ""}`}>
+                      <td className="py-2 px-2 font-medium">{row.label}</td>
+                      {traits.map((t) => {
+                        const val = row[t] as number | undefined;
+                        const isChange = row.label === "Change";
+                        const isPositive = val && val > 0;
+                        return (
+                          <td
+                            key={t}
+                            className={`py-2 px-2 ${
+                              isChange && isPositive ? "text-green-600" : ""
+                            }`}
+                          >
+                            {val != null ? Math.round(val) : "-"}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {radarData.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold mb-2">Rate of Change</h4>
+                <ResponsiveContainer width="100%" height={400}>
+                  <RadarChart data={radarData}>
+                    <PolarGrid />
+                    <PolarAngleAxis dataKey="trait" />
+                    <PolarRadiusAxis />
+                    <Radar
+                      name="Group A"
+                      dataKey="Group A"
+                      stroke="hsl(var(--primary))"
+                      fill="hsl(var(--primary))"
+                      fillOpacity={0.3}
+                    />
+                    <Radar
+                      name="Group B"
+                      dataKey="Group B"
+                      stroke="hsl(var(--muted-foreground))"
+                      fill="hsl(var(--muted-foreground))"
+                      fillOpacity={0.3}
+                    />
+                    <Legend />
+                    <Tooltip />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

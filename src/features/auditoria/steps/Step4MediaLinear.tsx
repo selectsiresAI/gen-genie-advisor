@@ -11,6 +11,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from "recharts";
 import { useAGFilters } from "../store";
 
 type Mode = "coarse" | "full";
@@ -140,6 +141,23 @@ export default function Step4MediaLinear() {
     [ptaOptions]
   );
 
+  const chartData = useMemo(() => {
+    const traitMap = new Map<string, { [group: string]: number }>();
+    
+    rows.forEach((row) => {
+      if (!traitMap.has(row.trait_key)) {
+        traitMap.set(row.trait_key, {});
+      }
+      traitMap.get(row.trait_key)![row.group_label] = row.mean_value;
+    });
+
+    return Array.from(traitMap.entries()).map(([trait, groups]) => ({
+      trait: trait.toUpperCase(),
+      ...groups,
+      avgValue: Object.values(groups).reduce((a, b) => a + b, 0) / Object.values(groups).length,
+    }));
+  }, [rows]);
+
   return (
     <Card>
       <CardHeader>
@@ -193,55 +211,41 @@ export default function Step4MediaLinear() {
           )}
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left">
-                <th className="py-2">PTA</th>
-                <th className="py-2">Grupo</th>
-                <th className="py-2">Média</th>
-                <th className="py-2">N</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr
-                  key={`${row.trait_key}-${row.group_label}`}
-                  className="border-b"
-                >
-                  <td className="py-2">{row.trait_key.toUpperCase()}</td>
-                  <td className="py-2">{row.group_label}</td>
-                  <td className="py-2">{Math.round(Number(row.mean_value))}</td>
-                  <td className="py-2">{row.n}</td>
-                </tr>
-              ))}
+        {loading && (
+          <div className="py-6 text-center text-muted-foreground">Carregando…</div>
+        )}
 
-              {loading && (
-                <tr>
-                  <td colSpan={4} className="py-6 text-center text-muted-foreground">
-                    Carregando…
-                  </td>
-                </tr>
-              )}
+        {err && (
+          <div className="py-6 text-center text-destructive">{err}</div>
+        )}
 
-              {!loading && rows.length === 0 && !err && (
-                <tr>
-                  <td colSpan={4} className="py-6 text-center text-muted-foreground">
-                    Sem dados.
-                  </td>
-                </tr>
-              )}
+        {!loading && !err && rows.length === 0 && (
+          <div className="py-6 text-center text-muted-foreground">Sem dados.</div>
+        )}
 
-              {err && (
-                <tr>
-                  <td colSpan={4} className="py-6 text-center text-destructive">
-                    {err}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        {!loading && !err && chartData.length > 0 && (
+          <ResponsiveContainer width="100%" height={Math.max(400, chartData.length * 25)}>
+            <BarChart
+              data={chartData}
+              layout="vertical"
+              margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis type="number" />
+              <YAxis dataKey="trait" type="category" width={90} />
+              <Tooltip />
+              <Bar dataKey="avgValue" fill="hsl(var(--muted))">
+                <LabelList dataKey="avgValue" position="right" formatter={(val: number) => val.toFixed(2)} />
+                {chartData.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={entry.avgValue >= 0 ? "hsl(var(--muted))" : "hsl(var(--muted-foreground))"}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </CardContent>
     </Card>
   );

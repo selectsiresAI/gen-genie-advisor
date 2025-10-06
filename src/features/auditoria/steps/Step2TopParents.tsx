@@ -74,10 +74,13 @@ export default function Step2TopParents() {
     return `Top ${limit} ${role === "sire" ? "Sires" : "MGS"}`;
   }, [limit, role]);
 
+  const sireRows = useMemo(() => rows.filter((r) => r.parent_label.includes("-")), [rows]);
+  const mgsRows = useMemo(() => rows.filter((r) => r.parent_label.includes("-")), [rows]);
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
+        <CardTitle>Top Parents</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-center gap-3">
@@ -132,38 +135,53 @@ export default function Step2TopParents() {
           </Select>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left">
-                <th className="py-2">Pai / Avô</th>
-                <th className="py-2">Filhas</th>
-                <th className="py-2">Média {orderTrait.toUpperCase()}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.parent_label} className="border-b">
-                  <td className="py-2">{row.parent_label}</td>
-                  <td className="py-2">{row.daughters_count}</td>
-                  <td className="py-2">
-                    {row.trait_mean == null ? "N/A" : Math.round(row.trait_mean)}
-                  </td>
-                </tr>
-              ))}
-              {rows.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={3}
-                    className="py-6 text-center text-muted-foreground"
-                  >
-                    {loading ? "Carregando dados..." : "Sem dados para os filtros."}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        {loading && (
+          <div className="py-6 text-center text-muted-foreground">
+            Carregando dados...
+          </div>
+        )}
+
+        {!loading && rows.length === 0 && (
+          <div className="py-6 text-center text-muted-foreground">
+            Sem dados para os filtros.
+          </div>
+        )}
+
+        {!loading && rows.length > 0 && (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-4">
+                Top {limit} {role === "sire" ? "Sires" : "Maternal Grandsires"}
+              </h3>
+              <div className="space-y-1">
+                {rows.map((row) => {
+                  const maxValue = Math.max(...rows.map((r) => r.trait_mean || 0));
+                  const width = maxValue > 0 ? ((row.trait_mean || 0) / maxValue) * 100 : 0;
+                  
+                  return (
+                    <div
+                      key={row.parent_label}
+                      className="flex items-center gap-2 text-sm"
+                    >
+                      <div className="w-48 text-right flex-shrink-0">
+                        {row.parent_label}
+                      </div>
+                      <div className="flex-1 flex items-center gap-2">
+                        <div
+                          className="h-5 bg-muted transition-all"
+                          style={{ width: `${width}%` }}
+                        />
+                        <span className="text-xs font-medium min-w-[2rem]">
+                          {row.trait_mean == null ? "N/A" : Math.round(row.trait_mean)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

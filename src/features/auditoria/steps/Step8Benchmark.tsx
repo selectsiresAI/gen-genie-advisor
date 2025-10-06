@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from "recharts";
 import { useAGFilters } from "../store";
 import { PTA_CATALOG } from "@/lib/pta";
 
@@ -139,6 +140,15 @@ export default function Step8Benchmark() {
   const formatNumber = (v: number | null) =>
     v == null ? "—" : Math.round(v).toLocaleString("pt-BR");
 
+  const chartDataByTrait = useMemo(() => {
+    return rows.map((row) => ({
+      trait: catalogLabels.get(row.trait_key) ?? row.trait_key.toUpperCase(),
+      "Example Dairy": row.farm_value || 0,
+      [`${region} Top ${topPct}%`]: row.benchmark_top || 0,
+      [`${region} Breed Average`]: row.benchmark_avg || 0,
+    }));
+  }, [rows, catalogLabels, region, topPct]);
+
   return (
     <Card>
       <CardHeader>
@@ -207,47 +217,39 @@ export default function Step8Benchmark() {
 
         {err && (
           <div className="text-sm text-red-600">
-            {err} Tente “Atualizar” ou revise permissões do Supabase.
+            {err} Tente "Atualizar" ou revise permissões do Supabase.
           </div>
         )}
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left">
-                <th className="py-2">PTA / Índice</th>
-                <th className="py-2">Fazenda</th>
-                <th className="py-2">Top {topPct}% ({region})</th>
-                <th className="py-2">Média ({region})</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length > 0 ? (
-                rows.map((row) => (
-                  <tr key={row.trait_key} className="border-b">
-                    <td className="py-2 font-medium">
-                      {catalogLabels.get(row.trait_key) ??
-                        row.trait_key.toUpperCase()}
-                    </td>
-                    <td className="py-2">
-                      {row.farm_value == null
-                        ? "N/A"
-                        : formatNumber(row.farm_value)}
-                    </td>
-                    <td className="py-2">{formatNumber(row.benchmark_top)}</td>
-                    <td className="py-2">{formatNumber(row.benchmark_avg)}</td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={4} className="py-6 text-center text-muted-foreground">
-                    {loading ? "Carregando dados..." : "Nenhum resultado."}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        {loading && (
+          <div className="py-6 text-center text-muted-foreground">Carregando dados...</div>
+        )}
+
+        {!loading && rows.length === 0 && !err && (
+          <div className="py-6 text-center text-muted-foreground">Nenhum resultado.</div>
+        )}
+
+        {!loading && rows.length > 0 && (
+          <div className="grid gap-6">
+            {chartDataByTrait.map((data, idx) => (
+              <div key={idx}>
+                <h4 className="text-sm font-semibold mb-2">{data.trait}</h4>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={[data]} layout="horizontal">
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="category" dataKey="trait" hide />
+                    <YAxis type="number" />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="Example Dairy" fill="hsl(var(--muted))" />
+                    <Bar dataKey={`${region} Top ${topPct}%`} fill="hsl(var(--muted-foreground))" />
+                    <Bar dataKey={`${region} Breed Average`} fill="hsl(var(--foreground))" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

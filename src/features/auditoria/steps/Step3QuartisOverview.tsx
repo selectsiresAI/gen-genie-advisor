@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { useAGFilters } from "../store";
 
 type GroupLabel = "Top25" | "Bottom25" | "TOP25" | "BOTTOM25" | "top25" | "bottom25";
@@ -117,6 +118,48 @@ export default function Step3QuartisOverview() {
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [ptaOptions]);
 
+  const tableData = useMemo(() => {
+    const groups = ["Top25", "Bottom25", "Average"] as const;
+    return groups.map((group) => {
+      const groupRows = rows.filter((r) => r.group_label === group);
+      const result: any = { group };
+      groupRows.forEach((r) => {
+        result[r.trait_key] = r.mean_value;
+        result[`${r.trait_key}_n`] = r.n;
+      });
+      const counts = groupRows.map((r) => r.n);
+      result.count = counts.length > 0 ? Math.round(counts.reduce((a, b) => a + b, 0) / counts.length) : 0;
+      return result;
+    });
+  }, [rows]);
+
+  const histogramData = useMemo(() => {
+    const top25Rows = rows.filter((r) => r.group_label === "Top25");
+    const bottom25Rows = rows.filter((r) => r.group_label === "Bottom25");
+    
+    if (top25Rows.length === 0 && bottom25Rows.length === 0) return [];
+
+    const allValues = [...top25Rows, ...bottom25Rows].map((r) => r.mean_value);
+    const min = Math.min(...allValues);
+    const max = Math.max(...allValues);
+    const binCount = 20;
+    const binSize = (max - min) / binCount;
+
+    const bins = Array.from({ length: binCount }, (_, i) => ({
+      range: Math.round(min + i * binSize),
+      count: 0,
+    }));
+
+    allValues.forEach((val) => {
+      const binIndex = Math.min(Math.floor((val - min) / binSize), binCount - 1);
+      if (binIndex >= 0 && binIndex < bins.length) {
+        bins[binIndex].count++;
+      }
+    });
+
+    return bins;
+  }, [rows]);
+
   return (
     <Card>
       <CardHeader>
@@ -160,35 +203,66 @@ export default function Step3QuartisOverview() {
 
         {errMsg && <div className="text-sm text-destructive">{errMsg}</div>}
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left">
-                <th className="py-2">Grupo</th>
-                <th className="py-2">PTA</th>
-                <th className="py-2">Média</th>
-                <th className="py-2">N</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, i) => (
-                <tr key={`${row.group_label}-${row.trait_key}-${i}`} className="border-b">
-                  <td className="py-2">{row.group_label}</td>
-                  <td className="py-2">{row.trait_key.toUpperCase()}</td>
-                  <td className="py-2">{Math.round(row.mean_value)}</td>
-                  <td className="py-2">{row.n}</td>
-                </tr>
-              ))}
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="py-6 text-center text-muted-foreground">
-                    {loading ? "Carregando dados..." : "Sem dados."}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        {loading && (
+          <div className="py-6 text-center text-muted-foreground">Carregando dados...</div>
+        )}
+
+        {!loading && rows.length > 0 && (
+          <div className="space-y-6">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="border-b">
+                    <th className="py-2 px-2 text-left font-semibold">Quartile</th>
+                    <th className="py-2 px-2 text-left font-semibold">Count</th>
+                    <th className="py-2 px-2 text-left font-semibold">{baseIndex.toUpperCase()}</th>
+                    {traits.map((t) => (
+                      <th key={t} className="py-2 px-2 text-left font-semibold">
+                        {t.toUpperCase()}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {tableData.map((row, idx) => (
+                    <tr key={row.group} className="border-b">
+                      <td className="py-2 px-2">{row.group}</td>
+                      <td className="py-2 px-2">{row.count}</td>
+                      <td className="py-2 px-2">{row[baseIndex] ? Math.round(row[baseIndex]) : "-"}</td>
+                      {traits.map((t) => (
+                        <td key={t} className="py-2 px-2">
+                          {row[t] != null ? Math.round(row[t]) : "-"}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {histogramData.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold mb-2">{baseIndex.toUpperCase()} Distribution</h4>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={histogramData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="range"
+                      label={{ value: baseIndex.toUpperCase(), position: "insideBottom", offset: -5 }}
+                    />
+                    <YAxis label={{ value: "Count of Females", angle: -90, position: "insideLeft" }} />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="hsl(var(--muted))" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+        )}
+
+        {!loading && rows.length === 0 && !errMsg && (
+          <div className="py-6 text-center text-muted-foreground">Sem dados.</div>
+        )}
       </CardContent>
     </Card>
   );

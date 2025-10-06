@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { useAGFilters } from "../store";
 
 const DEFAULT_TRAITS = ["ptam", "ptaf", "ptap"] as const;
@@ -99,6 +100,58 @@ export default function Step7QuartisIndices() {
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [ptaOptions]);
 
+  const COLORS = ["#666", "#888", "#aaa", "#ccc", "#ddd", "#eee"];
+
+  const pieDataA = useMemo(() => {
+    const topRows = rows.filter((r) => r.index_label === "IndexA" && r.group_label === "Top25");
+    const total = topRows.reduce((sum, r) => sum + Math.abs(r.mean_value), 0);
+    return topRows.map((r) => ({
+      name: r.trait_key.toUpperCase(),
+      value: Math.abs(r.mean_value),
+      percentage: total > 0 ? (Math.abs(r.mean_value) / total) * 100 : 0,
+    }));
+  }, [rows]);
+
+  const pieDataB = useMemo(() => {
+    const topRows = rows.filter((r) => r.index_label === "IndexB" && r.group_label === "Top25");
+    const total = topRows.reduce((sum, r) => sum + Math.abs(r.mean_value), 0);
+    return topRows.map((r) => ({
+      name: r.trait_key.toUpperCase(),
+      value: Math.abs(r.mean_value),
+      percentage: total > 0 ? (Math.abs(r.mean_value) / total) * 100 : 0,
+    }));
+  }, [rows]);
+
+  const tableDataByIndex = useMemo(() => {
+    const groups = ["Top25", "Bottom25", "Difference"] as const;
+    const indexMap = new Map<string, any>();
+
+    ["IndexA", "IndexB"].forEach((idx) => {
+      const indexRows = rows.filter((r) => r.index_label === idx);
+      const groupData = groups.map((group) => {
+        const groupRows = indexRows.filter((r) => r.group_label === group);
+        const result: any = { index: idx, group };
+        groupRows.forEach((r) => {
+          result[r.trait_key] = r.mean_value;
+        });
+        return result;
+      });
+      indexMap.set(idx, groupData);
+    });
+
+    const diffData: any = { index: "Difference", group: "Difference" };
+    const top25A = rows.filter((r) => r.index_label === "IndexA" && r.group_label === "Top25");
+    const top25B = rows.filter((r) => r.index_label === "IndexB" && r.group_label === "Top25");
+    
+    traits.forEach((t) => {
+      const valA = top25A.find((r) => r.trait_key === t)?.mean_value || 0;
+      const valB = top25B.find((r) => r.trait_key === t)?.mean_value || 0;
+      diffData[t] = valA - valB;
+    });
+
+    return [...(indexMap.get("IndexA") || []), ...(indexMap.get("IndexB") || []), diffData];
+  }, [rows, traits]);
+
   return (
     <Card>
       <CardHeader>
@@ -147,43 +200,115 @@ export default function Step7QuartisIndices() {
           )}
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left">
-                <th className="py-2">Índice</th>
-                <th className="py-2">Grupo</th>
-                <th className="py-2">PTA</th>
-                <th className="py-2">Média</th>
-                <th className="py-2">N</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, index) => (
-                <tr
-                  key={`${row.index_label}-${row.group_label}-${row.trait_key}-${index}`}
-                  className="border-b"
-                >
-                  <td className="py-2">{row.index_label}</td>
-                  <td className="py-2">{row.group_label}</td>
-                  <td className="py-2">{row.trait_key.toUpperCase()}</td>
-                  <td className="py-2">{Math.round(row.mean_value)}</td>
-                  <td className="py-2">{row.n}</td>
-                </tr>
-              ))}
-              {rows.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="py-6 text-center text-muted-foreground"
-                  >
-                    {loading ? "Carregando dados..." : "Sem dados."}
-                  </td>
-                </tr>
+        {loading && (
+          <div className="py-6 text-center text-muted-foreground">Carregando dados...</div>
+        )}
+
+        {!loading && rows.length === 0 && (
+          <div className="py-6 text-center text-muted-foreground">Sem dados.</div>
+        )}
+
+        {!loading && rows.length > 0 && (
+          <div className="space-y-6">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="border-b">
+                    <th className="py-2 px-2 text-left font-semibold">Index</th>
+                    <th className="py-2 px-2 text-left font-semibold">Group</th>
+                    {traits.map((t) => (
+                      <th key={t} className="py-2 px-2 text-left font-semibold">
+                        {t.toUpperCase()}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {tableDataByIndex.map((row, idx) => (
+                    <tr
+                      key={`${row.index}-${row.group}-${idx}`}
+                      className={`border-b ${
+                        row.index === "Difference" ? "bg-muted/30 font-semibold" : ""
+                      }`}
+                    >
+                      <td className="py-2 px-2">{row.index === "IndexA" ? indexA.toUpperCase() : row.index === "IndexB" ? indexB.toUpperCase() : row.index}</td>
+                      <td className="py-2 px-2">{row.group}</td>
+                      {traits.map((t) => {
+                        const val = row[t] as number | undefined;
+                        const isPositive = val && val > 0;
+                        const isDiff = row.index === "Difference";
+                        return (
+                          <td
+                            key={t}
+                            className={`py-2 px-2 ${
+                              isDiff && isPositive ? "text-green-600" : ""
+                            }`}
+                          >
+                            {val != null ? Math.round(val) : "-"}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              {pieDataA.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-2 text-center">{indexA.toUpperCase()}</h4>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={pieDataA}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={(entry: any) => `${Number(entry.percentage).toFixed(0)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {pieDataA.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               )}
-            </tbody>
-          </table>
-        </div>
+
+              {pieDataB.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-2 text-center">{indexB.toUpperCase()}</h4>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={pieDataB}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={(entry: any) => `${Number(entry.percentage).toFixed(0)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {pieDataB.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
