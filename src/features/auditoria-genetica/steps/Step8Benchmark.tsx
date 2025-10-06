@@ -11,10 +11,10 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAGFilters } from "../store";
 import { PTA_CATALOG } from "../ptas";
-import { PTAMultiSelect } from "../components/PTAMultiSelect";
 
 type BenchmarkRow = {
   trait_key: string;
@@ -118,7 +118,7 @@ export default function Step8Benchmark() {
   const traitOptions = useMemo(() => {
     return ptaOptions
       .map((key) => ({
-        value: key,
+        key,
         label: catalogLabels.get(key) ?? key.toUpperCase(),
       }))
       .sort((a, b) => a.label.localeCompare(b.label));
@@ -179,17 +179,42 @@ export default function Step8Benchmark() {
           </Button>
         </div>
 
-        <PTAMultiSelect
-          options={traitOptions}
-          value={traits}
-          onChange={setTraits}
-          placeholder={
-            traitOptions.length
-              ? "Selecione PTAs para o benchmark"
-              : "Nenhuma PTA disponível"
-          }
-          disabled={traitOptions.length === 0}
-        />
+        <div className="space-y-2">
+          <span className="text-sm text-muted-foreground">
+            Selecione as PTAs para comparar:
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {traitOptions.map(({ key, label }) => {
+              const active = traits.includes(key);
+              return (
+                <Badge
+                  key={key}
+                  variant={active ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() =>
+                    setTraits((prev) =>
+                      active
+                        ? prev.filter((trait) => trait !== key)
+                        : [...prev, key]
+                    )
+                  }
+                >
+                  {label}
+                </Badge>
+              );
+            })}
+            {traitOptions.length === 0 && (
+              <span className="text-sm text-muted-foreground">
+                Nenhuma PTA disponível.
+              </span>
+            )}
+            {traitOptions.length > 0 && traits.length === 0 && (
+              <span className="text-sm text-muted-foreground">
+                Nenhuma PTA selecionada.
+              </span>
+            )}
+          </div>
+        </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
