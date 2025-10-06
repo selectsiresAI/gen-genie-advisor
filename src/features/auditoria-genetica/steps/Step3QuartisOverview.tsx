@@ -58,6 +58,14 @@ const TRAIT_LABELS = PTA_CATALOG.reduce<Record<string, string>>((map, item) => {
 
 const traitLabel = (key: string) => TRAIT_LABELS[key] ?? key.toUpperCase();
 
+const formatValue = (value: number | null | undefined, fractionDigits = 2) => {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return "-";
+  }
+
+  return value.toFixed(fractionDigits);
+};
+
 const CATEGORIA_LABELS: Record<string, string> = {
   bezerra: "Bezerra",
   novilha: "Novilha",
@@ -197,10 +205,17 @@ export default function Step3QuartisOverview() {
 
   const histogramData = useMemo(
     () =>
-      histData.map((bin) => ({
-        x: `${bin.bin_from.toFixed(1)}–${bin.bin_to.toFixed(1)}`,
-        count: bin.bin_count,
-      })),
+      histData.map((bin, index) => {
+        const binFrom = typeof bin.bin_from === "number" ? bin.bin_from : 0;
+        const binTo = typeof bin.bin_to === "number" ? bin.bin_to : binFrom;
+        const binCount = typeof bin.bin_count === "number" ? bin.bin_count : 0;
+
+        return {
+          key: `${binFrom}-${binTo}-${index}`,
+          x: `${binFrom.toFixed(1)}–${binTo.toFixed(1)}`,
+          count: binCount,
+        };
+      }),
     [histData]
   );
 
@@ -285,7 +300,7 @@ export default function Step3QuartisOverview() {
                         <td className="p-3 text-right font-medium">{count ?? "-"}</td>
                         {displayTraits.map((trait) => (
                           <td key={trait} className="p-3 text-right">
-                            {byTrait[trait] != null ? byTrait[trait].toFixed(2) : "-"}
+                            {formatValue(byTrait[trait])}
                           </td>
                         ))}
                       </tr>
@@ -365,7 +380,7 @@ export default function Step3QuartisOverview() {
                   textAnchor="end"
                   height={70}
                 />
-                <YAxis tickFormatter={(value) => value.toFixed(0)} />
+                <YAxis tickFormatter={(value) => (typeof value === "number" ? value.toFixed(0) : String(value))} />
                 <Tooltip
                   formatter={(value: unknown, _name: unknown, payload: { trait_key: string }) => [
                     Number(value ?? 0).toFixed(2),
@@ -374,8 +389,14 @@ export default function Step3QuartisOverview() {
                 />
                 <Customized
                   component={({ xAxisMap, yAxisMap, offset }: any) => {
-                    const xMap = xAxisMap[Object.keys(xAxisMap)[0]];
-                    const yMap = yAxisMap[Object.keys(yAxisMap)[0]];
+                    const xAxisKey = Object.keys(xAxisMap)[0];
+                    const yAxisKey = Object.keys(yAxisMap)[0];
+                    const xMap = xAxisMap[xAxisKey];
+                    const yMap = yAxisMap[yAxisKey];
+
+                    if (!xMap || !yMap || typeof xMap.bandwidth !== "number") {
+                      return null;
+                    }
 
                     const boxes = boxData
                       .filter(
@@ -387,30 +408,55 @@ export default function Step3QuartisOverview() {
                           point.p100 != null
                       )
                       .map((point) => {
-                        const cx = xMap.scale(point.trait_key) + xMap.bandwidth / 2 + offset.left;
+                        const xValue = xMap.scale(point.trait_key);
+                        if (typeof xValue !== "number") {
+                          return null;
+                        }
+
                         const bandwidth = Math.max(12, xMap.bandwidth * 0.5);
-                        const y0 = yMap.scale(point.p0 as number) + offset.top;
-                        const y25 = yMap.scale(point.p25 as number) + offset.top;
-                        const y50 = yMap.scale(point.p50 as number) + offset.top;
-                        const y75 = yMap.scale(point.p75 as number) + offset.top;
-                        const y100 = yMap.scale(point.p100 as number) + offset.top;
+                        const cx = xValue + xMap.bandwidth / 2 + offset.left;
+                        const toY = (raw: number | null) => {
+                          if (typeof raw !== "number") {
+                            return null;
+                          }
+
+                          const value = yMap.scale(raw);
+                          return typeof value === "number" ? value + offset.top : null;
+                        };
+
+                        const y0 = toY(point.p0);
+                        const y25 = toY(point.p25);
+                        const y50 = toY(point.p50);
+                        const y75 = toY(point.p75);
+                        const y100 = toY(point.p100);
+
+                        if ([y0, y25, y50, y75, y100].some((v) => typeof v !== "number")) {
+                          return null;
+                        }
 
                         return (
                           <g key={point.trait_key}>
-                            <line x1={cx} x2={cx} y1={y75} y2={y100} stroke="#4B5563" />
-                            <line x1={cx} x2={cx} y1={y25} y2={y0} stroke="#4B5563" />
+                            <line x1={cx} x2={cx} y1={y75 as number} y2={y100 as number} stroke="#4B5563" />
+                            <line x1={cx} x2={cx} y1={y25 as number} y2={y0 as number} stroke="#4B5563" />
                             <rect
                               x={cx - bandwidth / 2}
-                              y={Math.min(y25, y75)}
+                              y={Math.min(y25 as number, y75 as number)}
                               width={bandwidth}
-                              height={Math.abs(y75 - y25)}
+                              height={Math.abs((y75 as number) - (y25 as number))}
                               fill="#D1D5DB"
                               stroke="#4B5563"
                             />
-                            <line x1={cx - bandwidth / 2} x2={cx + bandwidth / 2} y1={y50} y2={y50} stroke="#111827" />
+                            <line
+                              x1={cx - bandwidth / 2}
+                              x2={cx + bandwidth / 2}
+                              y1={y50 as number}
+                              y2={y50 as number}
+                              stroke="#111827"
+                            />
                           </g>
                         );
-                      });
+                      })
+                      .filter(Boolean);
 
                     return <g>{boxes}</g>;
                   }}
