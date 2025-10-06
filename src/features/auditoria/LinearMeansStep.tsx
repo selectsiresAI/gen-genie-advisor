@@ -92,6 +92,9 @@ const getTraitLabel = (key: string) =>
 const NOVILHAS_MATCHERS = ["nov", "nvl"];
 const VACAS_MATCHERS = ["vac", "vlh"];
 
+const isValidFarmId = (id: LinearMeansStepProps["farmId"]) =>
+  id !== undefined && id !== null && id !== "";
+
 export default function LinearMeansStep({
   farmId,
   defaultMode = "coarse",
@@ -217,7 +220,7 @@ export default function LinearMeansStep({
   }, [sortKeys]);
 
   const fetchData = useCallback(async () => {
-    if (farmId == null || traits.length === 0) {
+    if (!isValidFarmId(farmId) || traits.length === 0) {
       setRows([]);
       setLoading(false);
       return;
