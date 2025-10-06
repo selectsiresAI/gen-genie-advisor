@@ -16,9 +16,7 @@ import {
 } from "recharts";
 import { useAGFilters } from "../store";
 
-/* =========================================================
-   PTAs suportadas (adicione aqui se quiser mais colunas)
-   ========================================================= */
+/* ================== PTAs suportadas ================== */
 const PTA_LABELS: Record<string, string> = {
   hhp_dollar: "HHP$",
   tpi: "TPI",
@@ -39,11 +37,7 @@ const PTA_LABELS: Record<string, string> = {
 };
 const ALL_PTA_KEYS = Object.keys(PTA_LABELS);
 
-/* =========================================================
-   Mapeamento de sinônimos (rebanho vs females_denorm)
-   - Comparação é feita em formato "normalizado"
-   - Pode adicionar nomes conforme seu schema
-   ========================================================= */
+/* ============= Sinônimos comuns (nome de coluna pode variar) ============= */
 const PTA_SYNONYMS: Record<string, string[]> = {
   hhp_dollar: ["hhp_dollar", "hhp$", "hhp"],
   nm_dollar: ["nm_dollar", "nm$", "nm", "netmerit", "meritoliquido"],
@@ -63,72 +57,245 @@ const PTA_SYNONYMS: Record<string, string[]> = {
   cfp: ["cfp"],
 };
 
-/* Campos possíveis para categoria e fazenda */
-const CATEGORY_CANDIDATES = [
+/* ============= Tabelas/colunas candidatas ============= */
+const TABLE_CANDIDATES = ["rebanho", "females_denorm", "female_denorm", "females", "female"];
+const FARM_COLS = ["farm_id", "id_fazenda", "fazenda_id", "farmId"];
+const CATEGORY_NAME_CANDIDATES = [
   "Categoria",
   "categoria",
   "category",
-  "Category",
   "age_group",
   "agegroup",
   "coarse",
-  "coarse_group",
   "grupo",
-  "label",
+  "paridade",
+  "parity",
+  "order_of_calving",
+  "ordemparto",
+];
+const ID_CANDIDATES = [
+  "id",
+  "female_id",
+  "animal_id",
+  "id_animal",
+  "identificacao",
+  "identification",
+  "ident",
+  "brinco",
+  "tag",
+  "ear_tag",
 ];
 
-const FARM_CANDIDATES = ["farm_id", "id_fazenda", "farmId", "fazenda_id"];
-
-/* Tabelas candidatas (na ordem de prioridade) */
-const TABLE_CANDIDATES = ["rebanho", "females_denorm", "female_denorm"];
-
-/* Defaults para UI (como nas imagens) */
 const DEFAULT_TABLE_TRAITS = ["hhp_dollar", "ptam", "cfp", "fi", "pl", "scs", "mast"];
 const DEFAULT_CHART_TRAITS = [
-  "hhp_dollar",
-  "ptam",
-  "ptaf",
-  "ptap",
-  "fi",
-  "ccr",
-  "hcr",
-  "pl",
-  "liv",
-  "scs",
-  "ptat",
-  "udc",
+  "hhp_dollar", "ptam", "ptaf", "ptap", "fi", "ccr", "hcr", "pl", "liv", "scs", "ptat", "udc",
 ];
-const AGE_SHORTCUTS = ["Bezerra", "Novilha", "Primípara", "Secundípara", "Multípara"] as const;
 
-/* Helpers de normalização */
+const AGE_VALUES = ["Bezerra", "Novilha", "Primípara", "Secundípara", "Multípara"] as const;
+
+/* ================== Helpers ================== */
 const norm = (s: any) =>
   String(s ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/[^a-z0-9]/g, "");
 
 const PTA_SYNONYMS_NORM: Record<string, string[]> = Object.fromEntries(
   Object.entries(PTA_SYNONYMS).map(([k, list]) => [k, Array.from(new Set(list.map(norm)))])
 );
 
-/* ---------- Tipos ---------- */
-type CatMeans = Record<string, Record<string, number | null>>; // categoria -> trait -> média
+function toNumber(x: any): number | null {
+  if (x == null) return null;
+  const v = Number(String(x).replace(",", "."));
+  return Number.isFinite(v) ? v : null;
+}
 
-type TraitColumnMap = Record<string, string>;
+function resolveTraitValue(row: any, canonical: string): number | null {
+  const nm: Record<string, any> = {};
+  for (const k of Object.keys(row)) nm[norm(k)] = row[k];
 
-type NormalizedRow = Record<string, string | number | null> & { category: string };
+  const cands = PTA_SYNONYMS_NORM[canonical] || [norm(canonical)];
+  for (const k of cands) {
+    if (k in nm) {
+      const v = toNumber(nm[k]);
+      if (v != null) return v;
+    }
+    if (k.endsWith("dollar")) {
+      const alt = k.replace("dollar", "");
+      if (alt in nm) {
+        const v2 = toNumber(nm[alt]);
+        if (v2 != null) return v2;
+      }
+    } else {
+      const alt = k + "dollar";
+      if (alt in nm) {
+        const v3 = toNumber(nm[alt]);
+        if (v3 != null) return v3;
+      }
+    }
+  }
+  return null;
+}
 
+function detectColumn(keys: string[], candidates: string[]): string | null {
+  for (const k of keys) {
+    const nk = norm(k);
+    if (candidates.some((c) => norm(c) === nk)) return k;
+  }
+  return null;
+}
+
+function detectCategoryColumn(rows: any[]): string | null {
+  if (!rows.length) return null;
+  const keys = Object.keys(rows[0] ?? {});
+  // 1) por nome
+  const byName = detectColumn(keys, CATEGORY_NAME_CANDIDATES);
+  if (byName) return byName;
+  // 2) por conteúdo (valores típicos)
+  const known = new Set(AGE_VALUES.map(norm));
+  for (const key of keys) {
+    let hits = 0;
+    for (let i = 0; i < Math.min(rows.length, 300); i++) {
+      const v = rows[i]?.[key];
+      if (typeof v === "string" && known.has(norm(v))) hits++;
+    }
+    if (hits >= 3) return key;
+  }
+  return null;
+}
+
+function detectIdColumn(rows: any[]): string | null {
+  if (!rows.length) return null;
+  const keys = Object.keys(rows[0] ?? {});
+  const byName = detectColumn(keys, ID_CANDIDATES);
+  if (byName) return byName;
+  const idLike = keys.find((k) => norm(k) === "id");
+  return idLike || null;
+}
+
+/* ================== LocalStorage helpers ================== */
+// key preferida
+const prefKey = (farmId: string | number) => `ag:rebanho:categories:${farmId}`;
+// tenta a preferida + variantes conhecidas
+const knownKeys = (farmId: string | number) => [
+  prefKey(farmId),
+  `rebanho:categorias:${farmId}`,
+  `categories_rebanho_${farmId}`,
+  `female_categories_${farmId}`,
+  `ag:rebanho:list:${farmId}`,
+  `ag:females:list:${farmId}`,
+];
+
+type LSScanResult = {
+  map: Map<string, string>;
+  keysScanned: number;
+  pairsFound: number;
+};
+
+function scanLocalStorageForCategories(
+  farmId: string | number,
+  idCols: string[],
+  catCols: string[]
+): LSScanResult {
+  const res: LSScanResult = { map: new Map(), keysScanned: 0, pairsFound: 0 };
+  if (typeof window === "undefined") return res;
+
+  // 1) chaves conhecidas primeiro
+  const candidates = new Set<string>(knownKeys(farmId));
+
+  // 2) varre todas as chaves para tentar achar dumps da página rebanho
+  for (let i = 0; i < window.localStorage.length; i++) {
+    const k = window.localStorage.key(i);
+    if (k) candidates.add(k);
+  }
+
+  const idNorms = idCols.map(norm);
+  const catNorms = catCols.map(norm);
+  const knownCats = new Set(AGE_VALUES.map(norm));
+
+  for (const key of candidates) {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) continue;
+    res.keysScanned++;
+
+    try {
+      const data = JSON.parse(raw);
+
+      // caso 1: objeto { id: "Categoria", ... }
+      if (data && typeof data === "object" && !Array.isArray(data)) {
+        for (const [k, v] of Object.entries<any>(data)) {
+          if (typeof v === "string" && (knownCats.has(norm(v)) || catNorms.includes(norm(v)))) {
+            res.map.set(String(k), v);
+            res.pairsFound++;
+          }
+        }
+      }
+
+      // caso 2: array de objetos
+      if (Array.isArray(data)) {
+        for (const item of data) {
+          if (!item || typeof item !== "object") continue;
+          // tenta localizar um id e uma categoria no item
+          const idKey = Object.keys(item).find((c) => idNorms.includes(norm(c)));
+          const catKey = Object.keys(item).find((c) => catNorms.includes(norm(c))) ??
+            Object.keys(item).find((c) => knownCats.has(norm(item[c])));
+          const idVal = idKey ? item[idKey] : undefined;
+          const catVal = catKey ? item[catKey] : undefined;
+          if (idVal != null && typeof catVal === "string" && String(catVal).trim()) {
+            res.map.set(String(idVal), String(catVal));
+            res.pairsFound++;
+          }
+        }
+      }
+
+      // caso 3: objeto estilo { rows: [...] }
+      if (data && typeof data === "object" && Array.isArray((data as any).rows)) {
+        for (const item of (data as any).rows) {
+          if (!item || typeof item !== "object") continue;
+          const idKey = Object.keys(item).find((c) => idNorms.includes(norm(c)));
+          const catKey = Object.keys(item).find((c) => catNorms.includes(norm(c))) ??
+            Object.keys(item).find((c) => knownCats.has(norm(item[c])));
+          const idVal = idKey ? item[idKey] : undefined;
+          const catVal = catKey ? item[catKey] : undefined;
+          if (idVal != null && typeof catVal === "string" && String(catVal).trim()) {
+            res.map.set(String(idVal), String(catVal));
+            res.pairsFound++;
+          }
+        }
+      }
+    } catch {
+      // valor não-JSON, ignora
+    }
+  }
+
+  return res;
+}
+
+function writeCategoriesToLS(farmId: string | number, pairs: Array<{ id: string; cat: string }>) {
+  if (typeof window === "undefined" || !pairs.length) return;
+  const current = scanLocalStorageForCategories(farmId, [], []).map;
+  for (const { id, cat } of pairs) current.set(id, cat);
+  const obj: Record<string, string> = {};
+  current.forEach((v, k) => (obj[k] = v));
+  window.localStorage.setItem(prefKey(farmId), JSON.stringify(obj));
+}
+
+/* ================== Tipos ================== */
+type MeansByCategory = Record<string, Record<string, number | null>>;
+
+/* ================== Componente ================== */
 export default function Step6ProgressCompare() {
   const { farmId } = useAGFilters();
 
   const [loading, setLoading] = useState(false);
-  const [rows, setRows] = useState<NormalizedRow[]>([]);
   const [sourceTable, setSourceTable] = useState<string>("");
-  const [categoryColumn, setCategoryColumn] = useState<string>("");
+  const [categoryCol, setCategoryCol] = useState<string>("");
+  const [idCol, setIdCol] = useState<string>("");
+  const [usedLocalStorage, setUsedLocalStorage] = useState(false);
+  const [lsKeysScanned, setLsKeysScanned] = useState(0);
+  const [lsPairsApplied, setLsPairsApplied] = useState(0);
+
+  const [rows, setRows] = useState<any[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
-  const [availableTraits, setAvailableTraits] = useState<string[]>([]);
-  const [traitColumnMap, setTraitColumnMap] = useState<TraitColumnMap>({});
 
   const [groupA, setGroupA] = useState<string>("Novilha");
   const [groupB, setGroupB] = useState<string>("Primípara");
@@ -136,278 +303,249 @@ export default function Step6ProgressCompare() {
   const [tableTraits, setTableTraits] = useState<string[]>(DEFAULT_TABLE_TRAITS);
   const [chartTraits, setChartTraits] = useState<string[]>(DEFAULT_CHART_TRAITS);
 
-  /* =========================
-     Fetch com fallback:
-     rebanho -> females_denorm -> female_denorm
-     ========================= */
-  const fetchAnyTable = useCallback(
-    async (farm: string | number) => {
-      const tryTable = async (table: string) => {
-        let query = supabase.from(table).select("*").limit(100000);
-
-        for (const col of FARM_CANDIDATES) {
-          const q = await query.eq(col as any, farm);
-          if (!q.error && Array.isArray(q.data) && q.data.length > 0) {
-            return { data: q.data, table };
-          }
-        }
-
-        const q2 = await supabase.from(table).select("*").limit(20000);
-        if (!q2.error && Array.isArray(q2.data) && q2.data.length > 0) {
-          return { data: q2.data, table };
-        }
-
-        return { data: [] as any[], table };
-      };
-
-      for (const t of TABLE_CANDIDATES) {
-        try {
-          const { data, table } = await tryTable(t);
-          if (data.length) {
-            return { rows: data, table };
-          }
-        } catch {
-          /* tabela pode não existir; segue para próxima */
-        }
-      }
-      return { rows: [] as any[], table: "" };
-    },
-    []
-  );
-
+  /* -------- fetch com fallback + LS + heurística por paridade -------- */
   const fetchData = useCallback(async () => {
     if (!farmId) {
-      setRows([]);
-      setCategories([]);
-      setSourceTable("");
-      setCategoryColumn("");
-      setAvailableTraits([]);
-      setTraitColumnMap({});
+      setRows([]); setCategories([]); setSourceTable(""); setCategoryCol(""); setIdCol("");
+      setUsedLocalStorage(false); setLsKeysScanned(0); setLsPairsApplied(0);
       return;
     }
     setLoading(true);
 
-    try {
-      const { rows: data, table } = await fetchAnyTable(farmId);
-      setSourceTable(table);
+    let gotRows: any[] = [];
+    let usedTable = "";
+    let catKey: string | null = null;
+    let idKey: string | null = null;
 
-      const sane = (data || []).filter((row) => row && typeof row === "object");
-      if (!sane.length) {
-        setRows([]);
-        setCategories([]);
-        setCategoryColumn("");
-        setAvailableTraits([]);
-        setTraitColumnMap({});
-        return;
+    // 1) tenta carregar de banco
+    for (const table of TABLE_CANDIDATES) {
+      let res: any = { data: [], error: null };
+      for (const fcol of FARM_COLS) {
+        res = await supabase.from(table).select("*").eq(fcol as any, farmId).limit(100000);
+        if (!res.error && Array.isArray(res.data) && res.data.length > 0) break;
       }
-
-      const allKeys = Array.from(
-        new Set(
-          sane.flatMap((row) => Object.keys(row ?? {}))
-        )
-      );
-
-      let detectedCategory = "";
-      for (const key of allKeys) {
-        const normalizedKey = norm(key);
-        if (CATEGORY_CANDIDATES.some((candidate) => norm(candidate) === normalizedKey)) {
-          detectedCategory = key;
-          break;
-        }
+      if ((!res.data || res.data.length === 0) && !res.error) {
+        res = await supabase.from(table).select("*").limit(20000);
       }
-      if (!detectedCategory) {
-        detectedCategory =
-          allKeys.find((key) => norm(key).includes("categoria")) ||
-          allKeys.find((key) => norm(key).includes("category")) ||
-          "";
+      if (!res.error && Array.isArray(res.data) && res.data.length > 0) {
+        const candidateRows = res.data.filter((r: any) => r && typeof r === "object");
+        const candidateCat = detectCategoryColumn(candidateRows);
+        const candidateId = detectIdColumn(candidateRows);
+        gotRows = candidateRows;
+        usedTable = table;
+        catKey = candidateCat; // pode vir null
+        idKey = candidateId;
+        break;
       }
-
-      const traitMap: TraitColumnMap = {};
-      for (const key of allKeys) {
-        const normalizedKey = norm(key);
-        for (const [trait, synonyms] of Object.entries(PTA_SYNONYMS_NORM)) {
-          if (synonyms.includes(normalizedKey) && !traitMap[trait]) {
-            traitMap[trait] = key;
-          }
-        }
-      }
-
-      const recognizedTraits = ALL_PTA_KEYS.filter((trait) => traitMap[trait]);
-
-      const normalizedRows: NormalizedRow[] = sane.map((row) => {
-        const rawCategory = detectedCategory ? row[detectedCategory] : undefined;
-        const category = rawCategory != null && String(rawCategory).trim().length > 0
-          ? String(rawCategory).trim()
-          : "Sem categoria";
-
-        const out: NormalizedRow = { category };
-        for (const trait of recognizedTraits) {
-          const column = traitMap[trait];
-          const raw = column ? row[column] : null;
-          const value = Number(raw);
-          out[trait] = Number.isFinite(value) ? value : null;
-        }
-        return out;
-      });
-
-      const cats = Array.from(
-        new Set(
-          normalizedRows
-            .map((row) => row.category)
-            .filter((category) => typeof category === "string" && category.trim().length > 0)
-        )
-      );
-
-      const orderedCategories = [
-        ...AGE_SHORTCUTS.filter((c) => cats.includes(c)),
-        ...cats.filter((c) => !AGE_SHORTCUTS.includes(c as any)),
-      ];
-
-      setRows(normalizedRows);
-      setCategories(orderedCategories);
-      setCategoryColumn(detectedCategory);
-      setAvailableTraits(recognizedTraits);
-      setTraitColumnMap(traitMap);
-
-      setGroupA((prev) => (orderedCategories.includes(prev) ? prev : orderedCategories[0] || "Grupo A"));
-      setGroupB((prev) =>
-        orderedCategories.includes(prev)
-          ? prev
-          : orderedCategories[1] || orderedCategories[0] || "Grupo B"
-      );
-
-      setTableTraits((prev) => {
-        const filtered = prev.filter((trait) => recognizedTraits.includes(trait));
-        if (filtered.length) return filtered;
-        const defaults = DEFAULT_TABLE_TRAITS.filter((trait) => recognizedTraits.includes(trait));
-        if (defaults.length) return defaults;
-        return recognizedTraits.slice(0, Math.min(7, recognizedTraits.length));
-      });
-
-      setChartTraits((prev) => {
-        const filtered = prev.filter((trait) => recognizedTraits.includes(trait));
-        if (filtered.length) return filtered;
-        const defaults = DEFAULT_CHART_TRAITS.filter((trait) => recognizedTraits.includes(trait));
-        if (defaults.length) return defaults;
-        return recognizedTraits.slice(0, Math.min(12, recognizedTraits.length));
-      });
-    } catch (error) {
-      console.error("Erro ao buscar dados de progresso:", error);
-      setRows([]);
-      setCategories([]);
-      setCategoryColumn("");
-      setAvailableTraits([]);
-      setTraitColumnMap({});
-    } finally {
-      setLoading(false);
     }
-  }, [farmId, fetchAnyTable]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    // 2) se categoria veio nula → tenta LocalStorage
+    let applied = 0, scanned = 0;
+    if (!catKey || !gotRows.some((r) => r?.[catKey!])) {
+      const { map, keysScanned, pairsFound } = scanLocalStorageForCategories(
+        farmId,
+        idKey ? [idKey] : ID_CANDIDATES,
+        CATEGORY_NAME_CANDIDATES
+      );
+      scanned = keysScanned;
+      if (map.size && (idKey || ID_CANDIDATES.length)) {
+        const idCandidates = idKey ? [idKey] : ID_CANDIDATES;
+        gotRows = gotRows.map((r) => {
+          const foundIdKey = idCandidates.find((c) => norm(c) in Object.fromEntries(Object.keys(r).map(k => [norm(k), k])));
+          const realIdKey = foundIdKey
+            ? Object.keys(r).find((k) => norm(k) === norm(foundIdKey))!
+            : idKey || "id";
+          const idVal = r?.[realIdKey];
+          const fromLs = idVal != null ? map.get(String(idVal)) : undefined;
+          if (fromLs) {
+            applied++;
+            return { ...r, __category: fromLs };
+          }
+          return r;
+        });
+        if (applied > 0) {
+          catKey = "__category";
+          setUsedLocalStorage(true);
+          setLsKeysScanned(scanned);
+          setLsPairsApplied(applied);
+        } else {
+          setUsedLocalStorage(false);
+          setLsKeysScanned(scanned);
+          setLsPairsApplied(0);
+        }
+      } else {
+        setUsedLocalStorage(false);
+        setLsKeysScanned(scanned);
+        setLsPairsApplied(0);
+      }
+    } else {
+      setUsedLocalStorage(false);
+      setLsKeysScanned(0);
+      setLsPairsApplied(0);
+    }
 
-  /* -------------------- Médias por Categoria -------------------- */
-  const meansByCategory: CatMeans = useMemo(() => {
-    if (!rows.length) return {};
-    const traitKeys = availableTraits.length ? availableTraits : ALL_PTA_KEYS;
+    // 3) se ainda sem categoria, tenta heurística por paridade
+    if ((!catKey || !gotRows.some((r) => r?.[catKey!])) && gotRows.length) {
+      const keys = Object.keys(gotRows[0]);
+      const parityKey =
+        detectColumn(keys, ["parity", "paridade", "ordemparto", "order_of_calving"]) ||
+        keys.find((k) => norm(k).includes("parit") || norm(k).includes("ordem"));
+      if (parityKey) {
+        gotRows = gotRows.map((r) => {
+          const p = Number(r?.[parityKey]);
+          let cat: string | null = null;
+          if (Number.isFinite(p)) {
+            if (p >= 3) cat = "Multípara";
+            else if (p === 2) cat = "Secundípara";
+            else if (p === 1) cat = "Primípara";
+            else cat = "Novilha";
+          }
+          return cat ? { ...r, __category: cat } : r;
+        });
+        if (gotRows.some((r) => r?.__category)) catKey = "__category";
+      }
+    }
+
+    setSourceTable(usedTable);
+    setRows(gotRows);
+    setCategoryCol(catKey || "");
+    setIdCol(idKey || "");
+
+    // 4) se conseguiu categoria real de banco + temos ID, grava cache
+    if (catKey && catKey !== "__category" && idKey) {
+      const pairs: Array<{ id: string; cat: string }> = [];
+      for (const r of gotRows) {
+        const cid = r?.[idKey];
+        const ccat = r?.[catKey];
+        if (cid != null && typeof ccat === "string" && ccat.trim()) {
+          pairs.push({ id: String(cid), cat: ccat });
+        }
+      }
+      if (pairs.length) writeCategoriesToLS(farmId, pairs);
+    }
+
+    // 5) categorias distintas
+    const cats =
+      catKey && gotRows.length
+        ? Array.from(
+            new Set(
+              gotRows
+                .map((r) => r?.[catKey!])
+                .filter((c: any) => typeof c === "string" && c.trim().length > 0)
+            )
+          )
+        : [];
+
+    const ordered = [
+      ...AGE_VALUES.filter((c) => cats.includes(c)),
+      ...cats.filter((c) => !AGE_VALUES.includes(c as any)),
+    ];
+    setCategories(ordered);
+
+    if (!ordered.includes(groupA) || !ordered.includes(groupB)) {
+      setGroupA(ordered[0] || "Grupo A");
+      setGroupB(ordered[1] || ordered[0] || "Grupo B");
+    }
+
+    setLoading(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [farmId]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  /* -------- médias por categoria -------- */
+  const meansByCategory: MeansByCategory = useMemo(() => {
+    if (!rows.length || !categoryCol) return {};
     const acc: Record<string, Record<string, { sum: number; n: number }>> = {};
 
-    for (const row of rows) {
-      const category = row.category || "Sem categoria";
-      if (!acc[category]) acc[category] = {};
-      for (const trait of traitKeys) {
-        const raw = row[trait];
-        const value = Number(raw);
-        if (Number.isFinite(value)) {
-          if (!acc[category][trait]) acc[category][trait] = { sum: 0, n: 0 };
-          acc[category][trait].sum += value;
-          acc[category][trait].n += 1;
+    for (const r of rows) {
+      const cat = (r?.[categoryCol] as string) || "Sem categoria";
+      if (!acc[cat]) acc[cat] = {};
+      for (const key of ALL_PTA_KEYS) {
+        const v = resolveTraitValue(r, key);
+        if (v != null) {
+          if (!acc[cat][key]) acc[cat][key] = { sum: 0, n: 0 };
+          acc[cat][key].sum += v;
+          acc[cat][key].n += 1;
         }
       }
     }
 
-    const out: CatMeans = {};
-    for (const [category, traitMapAcc] of Object.entries(acc)) {
-      out[category] = {};
-      for (const trait of traitKeys) {
-        const bucket = traitMapAcc[trait];
-        out[category][trait] = bucket && bucket.n > 0 ? bucket.sum / bucket.n : null;
+    const out: MeansByCategory = {};
+    for (const [cat, map] of Object.entries(acc)) {
+      out[cat] = {};
+      for (const key of ALL_PTA_KEYS) {
+        const b = map[key];
+        out[cat][key] = b && b.n > 0 ? b.sum / b.n : null;
       }
     }
     return out;
-  }, [rows, availableTraits]);
+  }, [rows, categoryCol]);
 
-  /* --------------- Dados combinados para Tabela / Radar --------------- */
-  const pair = useMemo(() => {
-    const traitKeys = availableTraits.length ? availableTraits : ALL_PTA_KEYS;
+  /* -------- dados para tabela e radar -------- */
+  const view = useMemo(() => {
     const A = meansByCategory[groupA] || {};
     const B = meansByCategory[groupB] || {};
 
-    const tableTraitsOrdered = tableTraits.filter((trait) => traitKeys.includes(trait));
-    const chartTraitsOrdered = chartTraits.filter((trait) => traitKeys.includes(trait));
+    const presentPTAs = ALL_PTA_KEYS.filter((k) =>
+      Object.values(meansByCategory).some((m) => m && m[k] != null)
+    );
+
+    const tTraits = tableTraits.filter((k) => presentPTAs.includes(k));
+    const cTraits = chartTraits.filter((k) => presentPTAs.includes(k));
 
     const table = {
       rows: [
-        { label: groupA, ...Object.fromEntries(tableTraitsOrdered.map((trait) => [trait, A[trait] ?? null])) },
-        { label: groupB, ...Object.fromEntries(tableTraitsOrdered.map((trait) => [trait, B[trait] ?? null])) },
+        { label: groupA, ...Object.fromEntries(tTraits.map((k) => [k, A[k] ?? null])) },
+        { label: groupB, ...Object.fromEntries(tTraits.map((k) => [k, B[k] ?? null])) },
         {
           label: "Change",
           ...Object.fromEntries(
-            tableTraitsOrdered.map((trait) => {
-              const a = A[trait];
-              const b = B[trait];
-              const diff = a != null && b != null ? a - b : null;
-              return [trait, diff];
-            })
+            tTraits.map((k) => [k, A[k] != null && B[k] != null ? (A[k]! - B[k]!) : null])
           ),
         },
       ],
     };
 
-    const radar = chartTraitsOrdered.map((trait) => ({
-      trait: (PTA_LABELS[trait] ?? trait).toUpperCase(),
-      "Group A": (A[trait] ?? 0) as number,
-      "Group B": (B[trait] ?? 0) as number,
+    const radar = cTraits.map((k) => ({
+      trait: (PTA_LABELS[k] ?? k).toUpperCase(),
+      "Group A": (A[k] ?? 0) as number,
+      "Group B": (B[k] ?? 0) as number,
     }));
 
-    return { table, radar };
-  }, [meansByCategory, groupA, groupB, tableTraits, chartTraits, availableTraits]);
+    return { table, radar, presentPTAs };
+  }, [meansByCategory, groupA, groupB, tableTraits, chartTraits]);
 
-  /* --------------------------- UI helpers --------------------------- */
+  /* -------- UI helpers -------- */
   const traitBadges = (
     source: string[],
     setSource: (updater: (prev: string[]) => string[]) => void
-  ) => {
-    const hasAvailable = availableTraits.length > 0;
-
-    return (
-      <div className="flex flex-wrap gap-2">
-        {ALL_PTA_KEYS.map((key) => {
-          const label = PTA_LABELS[key] || key.toUpperCase();
-          const enabled = !hasAvailable || availableTraits.includes(key);
-          const active = source.includes(key);
+  ) => (
+    <div className="flex flex-wrap gap-2">
+      {ALL_PTA_KEYS
+        .map((key) => ({ key, label: PTA_LABELS[key] || key.toUpperCase() }))
+        .sort((a, b) => a.label.localeCompare(b.label))
+        .map(({ key, label }) => {
+          const on = source.includes(key);
+          const enabled = view.presentPTAs.includes(key);
           return (
             <Badge
               key={key}
-              variant={active ? "default" : "outline"}
-              className={`cursor-pointer ${!enabled ? "opacity-40 pointer-events-none" : ""}`}
+              variant={on ? "default" : "outline"}
+              className={`cursor-pointer ${enabled ? "" : "opacity-40 pointer-events-none"}`}
               onClick={() =>
-                enabled
-                  ? setSource((prev) =>
-                      active ? prev.filter((trait) => trait !== key) : [...prev, key]
-                    )
-                  : undefined
+                enabled &&
+                setSource((prev) => (on ? prev.filter((t) => t !== key) : [...prev, key]))
               }
             >
               {label}
             </Badge>
           );
         })}
-      </div>
-    );
-  };
+    </div>
+  );
 
+  /* -------- Render -------- */
   return (
     <Card>
       <CardHeader>
@@ -415,121 +553,124 @@ export default function Step6ProgressCompare() {
       </CardHeader>
 
       <CardContent className="space-y-6">
+        {/* DEBUG: fonte/coluna/contagem/LS/PTAs */}
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-          <span>Fonte: {sourceTable || "—"}</span>
-          {categoryColumn && <span>Coluna de categoria: {categoryColumn}</span>}
-          {Object.keys(traitColumnMap).length > 0 && (
-            <span>
-              PTAs mapeadas: {Object.entries(traitColumnMap)
-                .map(([trait, column]) => `${PTA_LABELS[trait] ?? trait}⇢${column}`)
-                .join(", ")}
-            </span>
-          )}
+          <span>Fonte: <b>{sourceTable || "—"}</b></span>
+          <span>Categoria: <b>{categoryCol || "—"}</b></span>
+          <span>ID: <b>{idCol || "—"}</b></span>
+          <span>Registros: <b>{rows.length}</b></span>
+          <span>
+            LocalStorage: <b>{usedLocalStorage ? `sim (${lsPairsApplied} aplicados / ${lsKeysScanned} chaves)` : "não"}</b>
+          </span>
+          <span>
+            PTAs com dados:&nbsp;
+            <b>
+              {view.presentPTAs.length
+                ? view.presentPTAs.map((k) => PTA_LABELS[k] ?? k).join(", ")
+                : "—"}
+            </b>
+          </span>
         </div>
 
-        {/* Atalhos de categoria (carregam dados) */}
+        {/* Atalhos: Categoria A vs Categoria B */}
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium">Atalhos:</span>
-          {categories.map((category) => (
+          {categories.map((c) => (
             <Badge
-              key={`ga-${category}`}
-              variant={groupA === category ? "default" : "outline"}
+              key={`ga-${c}`}
+              variant={groupA === c ? "default" : "outline"}
               className="cursor-pointer"
-              onClick={() => setGroupA(category)}
+              onClick={() => setGroupA(c)}
             >
-              {category}
+              {c}
             </Badge>
           ))}
-          <span className="mx-2 uppercase tracking-wide text-xs text-muted-foreground">vs</span>
-          {categories.map((category) => (
+          <span className="mx-2 uppercase tracking-wide text-xs text-muted-foreground">VS</span>
+          {categories.map((c) => (
             <Badge
-              key={`gb-${category}`}
-              variant={groupB === category ? "default" : "outline"}
+              key={`gb-${c}`}
+              variant={groupB === c ? "default" : "outline"}
               className="cursor-pointer"
-              onClick={() => setGroupB(category)}
+              onClick={() => setGroupB(c)}
             >
-              {category}
+              {c}
             </Badge>
           ))}
         </div>
 
-        {/* Seletor: PTAs para Tabela */}
+        {/* Seletores de PTAs */}
         <div className="space-y-2">
           <div className="text-sm font-semibold">PTAs para Tabela:</div>
           {traitBadges(tableTraits, (fn) => setTableTraits(fn))}
         </div>
-
-        {/* Seletor: PTAs para Gráfico */}
         <div className="space-y-2">
           <div className="text-sm font-semibold">PTAs para Gráfico:</div>
           {traitBadges(chartTraits, (fn) => setChartTraits(fn))}
         </div>
 
         {loading && (
-          <div className="py-6 text-center text-muted-foreground">Carregando dados...</div>
+          <div className="py-6 text-center text-muted-foreground">Carregando dados…</div>
         )}
 
-        {!loading && (!categories.length || !rows.length) && (
+        {!loading && (!rows.length || !categoryCol) && (
           <div className="py-6 text-center text-muted-foreground">
-            Sem dados de rebanho para esta fazenda.
+            Sem dados com categoria (nem em LocalStorage) nas tabelas {TABLE_CANDIDATES.join(", ")}.
           </div>
         )}
 
-        {!loading && categories.length > 0 && rows.length > 0 && (
+        {!loading && rows.length > 0 && categoryCol && (
           <div className="space-y-8">
-            {/* Tabela comparativa */}
+            {/* Tabela */}
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-sm">
+              <table className="w-full text-sm border-collapse">
                 <thead>
                   <tr className="border-b">
-                    <th className="px-2 py-2 text-left font-semibold">Group</th>
-                    {tableTraits.map((trait) => (
-                      <th key={`th-${trait}`} className="px-2 py-2 text-left font-semibold">
-                        {(PTA_LABELS[trait] ?? trait).toUpperCase()}
-                      </th>
-                    ))}
+                    <th className="py-2 px-2 text-left font-semibold">Group</th>
+                    {tableTraits
+                      .filter((k) => view.presentPTAs.includes(k))
+                      .map((t) => (
+                        <th key={`th-${t}`} className="py-2 px-2 text-left font-semibold">
+                          {(PTA_LABELS[t] ?? t).toUpperCase()}
+                        </th>
+                      ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {pair.table.rows.map((row, index) => (
+                  {view.table.rows.map((r: any, idx: number) => (
                     <tr
-                      key={`row-${index}-${row.label}`}
-                      className={`border-b ${index === 2 ? "bg-muted/30" : ""}`}
+                      key={`row-${idx}-${r.label}`}
+                      className={`border-b ${idx === 2 ? "bg-muted/30" : ""}`}
                     >
-                      <td className="px-2 py-2 font-medium">{row.label}</td>
-                      {tableTraits.map((trait) => {
-                        const value = row[trait] as number | null | undefined;
-                        const isChangeRow = index === 2;
-                        const isPositive = (value ?? 0) > 0;
-                        return (
-                          <td
-                            key={`td-${trait}`}
-                            className={`px-2 py-2 ${
-                              isChangeRow
-                                ? isPositive
-                                  ? "text-green-600"
-                                  : value == null
-                                  ? ""
-                                  : "text-red-600"
-                                : ""
-                            }`}
-                          >
-                            {value == null ? "-" : Number(value).toFixed(2)}
-                          </td>
-                        );
-                      })}
+                      <td className="py-2 px-2 font-medium">{r.label}</td>
+                      {tableTraits
+                        .filter((k) => view.presentPTAs.includes(k))
+                        .map((t) => {
+                          const val = r[t] as number | null | undefined;
+                          const isChange = idx === 2;
+                          const isPos = (val ?? 0) > 0;
+                          return (
+                            <td
+                              key={`td-${t}`}
+                              className={`py-2 px-2 ${
+                                isChange ? (isPos ? "text-green-600" : "text-red-600") : ""
+                              }`}
+                            >
+                              {val == null ? "-" : Number(val).toFixed(2)}
+                            </td>
+                          );
+                        })}
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            {/* Radar “Rate of Change” (comparação direta) */}
-            {pair.radar.length > 0 && (
+            {/* Radar */}
+            {view.radar.length > 0 && (
               <div>
-                <h4 className="mb-2 text-sm font-semibold">Rate of Change</h4>
+                <h4 className="text-sm font-semibold mb-2">Rate of Change</h4>
                 <ResponsiveContainer width="100%" height={420}>
-                  <RadarChart data={pair.radar}>
+                  <RadarChart data={view.radar}>
                     <PolarGrid />
                     <PolarAngleAxis dataKey="trait" />
                     <PolarRadiusAxis />
@@ -559,4 +700,3 @@ export default function Step6ProgressCompare() {
     </Card>
   );
 }
-
