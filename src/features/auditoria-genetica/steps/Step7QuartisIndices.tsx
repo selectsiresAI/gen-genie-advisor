@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { useAGFilters } from "../store";
@@ -49,8 +55,20 @@ interface GroupedOption {
 
 export default function Step7QuartisIndices() {
   const { farmId, categoria } = useAGFilters();
-  const [indexA, setIndexA] = useState("hhp_dollar");
-  const [indexB, setIndexB] = useState("nm_dollar");
+  const indexOptions = useMemo(
+    () =>
+      PTA_CATALOG.filter((item) => item.group === "Índices").map((item) => ({
+        key: item.key,
+        label: item.label,
+      })),
+    []
+  );
+  const [indexA, setIndexA] = useState(
+    () => indexOptions[0]?.key ?? "hhp_dollar"
+  );
+  const [indexB, setIndexB] = useState(
+    () => indexOptions[1]?.key ?? "nm_dollar"
+  );
   const [availableTraits, setAvailableTraits] = useState<string[]>([]);
   const [selectedTraits, setSelectedTraits] = useState<string[]>(["ptam", "ptaf", "ptap"]);
   const [rows, setRows] = useState<Row[]>([]);
@@ -98,7 +116,25 @@ export default function Step7QuartisIndices() {
       const firstAvailable = Array.from(availableSet).slice(0, MAX_PTAS);
       return firstAvailable.length ? firstAvailable : prev;
     });
-  }, [availableTraits]);
+
+    const validIndexA =
+      indexOptions.find((option) => option.key === indexA && availableSet.has(option.key))?.key ??
+      indexOptions.find((option) => availableSet.has(option.key))?.key ??
+      indexA;
+    const validIndexB =
+      indexOptions.find((option) => option.key === indexB && availableSet.has(option.key))?.key ??
+      indexOptions.find(
+        (option) => option.key !== validIndexA && availableSet.has(option.key)
+      )?.key ??
+      indexB;
+
+    if (validIndexA !== indexA) {
+      setIndexA(validIndexA);
+    }
+    if (validIndexB !== indexB) {
+      setIndexB(validIndexB);
+    }
+  }, [availableTraits, indexA, indexB, indexOptions]);
 
   const groupedOptions = useMemo<GroupedOption[]>(() => {
     if (!availableTraits.length) return [];
@@ -398,178 +434,264 @@ export default function Step7QuartisIndices() {
       <CardHeader>
         <CardTitle>Quartis — Índices (A vs B)</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-8">
-        <div className="flex flex-wrap items-center gap-3">
-          <Input
-            className="w-56"
-            value={indexA}
-            onChange={(event) => setIndexA(event.target.value)}
-            placeholder="Índice A (ex.: hhp_dollar)"
-          />
-          <Input
-            className="w-56"
-            value={indexB}
-            onChange={(event) => setIndexB(event.target.value)}
-            placeholder="Índice B (ex.: nm_dollar)"
-          />
-          <Button variant="outline" size="sm" onClick={load} disabled={loading}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            Atualizar
-          </Button>
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-            <span>Selecione até {MAX_PTAS} PTAs para comparar os índices.</span>
-            <span className="font-medium text-foreground">
-              Selecionadas: {selectedTraits.length}/{MAX_PTAS}
-            </span>
-          </div>
-          {groupedOptions.length === 0 ? (
-            <span className="text-sm text-muted-foreground">
-              Nenhuma PTA disponível.
-            </span>
-          ) : (
-            groupedOptions.map(({ group, items }) => (
-              <div key={group} className="space-y-2">
-                <h3 className="text-sm font-semibold text-foreground">{group}</h3>
-                <div className="flex flex-wrap gap-2">
-                  {items.map(({ key, label }) => {
-                    const active = selectedTraits.includes(key);
-                    return (
-                      <button
-                        key={key}
-                        onClick={() => toggleTrait(key)}
-                        className={`rounded-full border px-3 py-1 text-sm transition-colors ${
-                          active
-                            ? "border-foreground bg-foreground text-background"
-                            : "border-input bg-background hover:bg-muted"
-                        }`}
-                        type="button"
-                      >
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))
-          )}
-          {limitWarning && (
-            <p className="text-sm text-rose-600">
-              Você pode selecionar no máximo {MAX_PTAS} PTAs.
-            </p>
-          )}
-        </div>
-
-        {indexTables.length === 0 ? (
-          <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-            {loading
-              ? "Carregando dados..."
-              : "Selecione PTAs e atualize para ver os índices."}
-          </div>
-        ) : (
-          <div className="grid gap-6 lg:grid-cols-2">
-            {indexTables.map((table, tableIndex) => (
-              <div key={`${table.label}-${tableIndex}`} className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-foreground">{table.label}</h3>
-                  <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                    População: {categoriaLabel}
+      <CardContent>
+        <div className="space-y-6 lg:space-y-8">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+            <div className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Índice A
                   </span>
-                </div>
-
-                <div className="overflow-x-auto rounded-lg border">
-                  <table className="w-full min-w-[560px] text-sm">
-                    <thead className="bg-muted/60">
-                      <tr className="text-left">
-                        <th className="px-4 py-2">Grupo</th>
-                        <th className="px-4 py-2 text-right">N</th>
-                        {traitHeaders.map(({ key, label }) => (
-                          <th key={key} className="px-4 py-2 text-right">
-                            {label}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {table.rows.map((row) => (
-                        <tr key={row.key} className="border-t">
-                          <td className="px-4 py-2 font-medium text-foreground">
-                            {row.label}
-                          </td>
-                          <td
-                            className={`px-4 py-2 text-right ${
-                              row.key === "difference" &&
-                              row.count !== null &&
-                              row.count !== 0
-                                ? row.count > 0
-                                  ? "text-emerald-600"
-                                  : "text-rose-600"
-                                : ""
-                            }`}
-                          >
-                            {formatCount(row.count)}
-                          </td>
-                          {traitHeaders.map(({ key }) => {
-                            const value = row.values[key] ?? null;
-                            const highlight =
-                              row.key === "difference" && value !== null
-                                ? value > 0
-                                  ? "text-emerald-600 font-semibold"
-                                  : value < 0
-                                  ? "text-rose-600 font-semibold"
-                                  : "font-semibold"
-                                : "";
-                            return (
-                              <td
-                                key={key}
-                                className={`px-4 py-2 text-right ${highlight}`}
-                              >
-                                {formatMean(value)}
-                              </td>
-                            );
-                          })}
-                        </tr>
+                  <Select
+                    value={indexA}
+                    onValueChange={(value) => {
+                      setIndexA(value);
+                      if (value === indexB) {
+                        const alternative = indexOptions.find(
+                          (option) => option.key !== value
+                        );
+                        if (alternative) {
+                          setIndexB(alternative.key);
+                        }
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecione o índice A" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {indexOptions.map(({ key, label }) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
                       ))}
-                    </tbody>
-                  </table>
+                    </SelectContent>
+                  </Select>
                 </div>
-
-                <div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
-                  <p>
-                    Índice selecionado: {tableIndex === 0 ? indexALabel : indexBLabel}
-                  </p>
+                <div className="space-y-1">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Índice B
+                  </span>
+                  <Select
+                    value={indexB}
+                    onValueChange={(value) => {
+                      setIndexB(value);
+                      if (value === indexA) {
+                        const alternative = indexOptions.find(
+                          (option) => option.key !== value
+                        );
+                        if (alternative) {
+                          setIndexA(alternative.key);
+                        }
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecione o índice B" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {indexOptions.map(({ key, label }) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
 
-        <div className="rounded-lg border p-4">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            PTAs selecionadas por categoria
-          </h3>
-          {groupedSelectedTraits.length === 0 ? (
-            <p className="mt-3 text-sm text-muted-foreground">
-              Nenhuma PTA selecionada.
-            </p>
-          ) : (
-            <div className="mt-3 grid gap-4 md:grid-cols-2">
-              {groupedSelectedTraits.map(({ group, items }) => (
-                <div key={group} className="space-y-2">
-                  <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    {group}
-                  </h4>
-                  <ul className="space-y-1 text-sm text-muted-foreground">
-                    {items.map(({ key, label }) => (
-                      <li key={key}>{label}</li>
-                    ))}
-                  </ul>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>
+                  População analisada: <strong>{categoriaLabel}</strong>
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={load}
+                  disabled={loading}
+                  className="ml-auto"
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                  Atualizar
+                </Button>
+              </div>
+
+              {indexTables.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                  {loading
+                    ? "Carregando dados..."
+                    : "Selecione PTAs e atualize para ver os índices."}
                 </div>
-              ))}
+              ) : (
+                <div className="grid gap-6 lg:grid-cols-2">
+                  {indexTables.map((table, tableIndex) => (
+                    <div
+                      key={`${table.label}-${tableIndex}`}
+                      className="space-y-4 rounded-xl border bg-background p-4 shadow-sm"
+                    >
+                      <div className="space-y-1">
+                        <h3 className="text-lg font-semibold text-foreground">
+                          {table.label}
+                        </h3>
+                        <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                          Comparação Top 25% vs Bottom 25%
+                        </span>
+                      </div>
+
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-[520px] text-sm">
+                          <thead className="bg-muted/60">
+                            <tr className="text-left">
+                              <th className="px-4 py-2">Grupo</th>
+                              <th className="px-4 py-2 text-right">N</th>
+                              {traitHeaders.map(({ key, label }) => (
+                                <th key={key} className="px-4 py-2 text-right">
+                                  {label}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {table.rows.map((row) => (
+                              <tr
+                                key={row.key}
+                                className={`border-t ${
+                                  row.key === "difference"
+                                    ? "bg-amber-50/60 dark:bg-amber-950/30"
+                                    : ""
+                                }`}
+                              >
+                                <td className="px-4 py-2 font-medium text-foreground">
+                                  {row.label}
+                                </td>
+                                <td
+                                  className={`px-4 py-2 text-right ${
+                                    row.key === "difference" &&
+                                    row.count !== null &&
+                                    row.count !== 0
+                                      ? row.count > 0
+                                        ? "text-emerald-600"
+                                        : "text-rose-600"
+                                      : ""
+                                  }`}
+                                >
+                                  {formatCount(row.count)}
+                                </td>
+                                {traitHeaders.map(({ key }) => {
+                                  const value = row.values[key] ?? null;
+                                  const highlight =
+                                    row.key === "difference" && value !== null
+                                      ? value > 0
+                                        ? "text-emerald-600 font-semibold"
+                                        : value < 0
+                                        ? "text-rose-600 font-semibold"
+                                        : "font-semibold"
+                                      : "";
+                                  return (
+                                    <td
+                                      key={key}
+                                      className={`px-4 py-2 text-right ${highlight}`}
+                                    >
+                                      {formatMean(value)}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
+                        Índice selecionado: {tableIndex === 0 ? indexALabel : indexBLabel}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+
+            <aside className="space-y-6 rounded-xl border bg-muted/20 p-4">
+              <div className="space-y-1">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  PTAs comparadas
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Escolha até {MAX_PTAS} PTAs para compor a análise entre os índices.
+                </p>
+                <p className="text-xs font-medium text-foreground">
+                  Selecionadas: {selectedTraits.length}/{MAX_PTAS}
+                </p>
+              </div>
+
+              {groupedOptions.length === 0 ? (
+                <span className="text-sm text-muted-foreground">
+                  Nenhuma PTA disponível.
+                </span>
+              ) : (
+                <div className="space-y-4">
+                  {groupedOptions.map(({ group, items }) => (
+                    <div key={group} className="space-y-2">
+                      <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {group}
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {items.map(({ key, label }) => {
+                          const active = selectedTraits.includes(key);
+                          return (
+                            <button
+                              key={key}
+                              onClick={() => toggleTrait(key)}
+                              className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                                active
+                                  ? "border-foreground bg-foreground text-background"
+                                  : "border-input bg-background hover:bg-muted"
+                              }`}
+                              type="button"
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {limitWarning && (
+                <p className="text-xs font-medium text-rose-600">
+                  Você pode selecionar no máximo {MAX_PTAS} PTAs.
+                </p>
+              )}
+
+              <div className="rounded-lg border bg-background p-3">
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Selecionadas por categoria
+                </h4>
+                {groupedSelectedTraits.length === 0 ? (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Nenhuma PTA selecionada.
+                  </p>
+                ) : (
+                  <div className="mt-3 space-y-3">
+                    {groupedSelectedTraits.map(({ group, items }) => (
+                      <div key={group} className="space-y-1">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          {group}
+                        </p>
+                        <ul className="space-y-1 text-xs text-muted-foreground">
+                          {items.map(({ key, label }) => (
+                            <li key={key}>{label}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </aside>
+          </div>
         </div>
       </CardContent>
     </Card>
