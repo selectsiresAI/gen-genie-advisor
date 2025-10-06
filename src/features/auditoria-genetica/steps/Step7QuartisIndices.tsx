@@ -6,7 +6,6 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
-import { ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { useAGFilters } from "../store";
 import { PTA_CATALOG } from "../ptas";
 
@@ -33,18 +32,6 @@ const GROUP_LABEL_MAP: Record<string, string> = {
   Bottom: "Bottom 25%",
   "Bottom 25%": "Bottom 25%",
 };
-
-const PIE_COLORS = [
-  "#2563eb",
-  "#16a34a",
-  "#f97316",
-  "#dc2626",
-  "#7c3aed",
-  "#0891b2",
-  "#ca8a04",
-  "#9333ea",
-  "#0f172a",
-];
 
 interface Row {
   index_label: string;
@@ -235,137 +222,119 @@ export default function Step7QuartisIndices() {
 
   const indexTables = useMemo(() => {
     if (!rows.length) return [];
+
     const indices = new Map<
       string,
       {
         label: string;
+        order: number;
         groups: Map<
           string,
           {
             label: string;
             count: number | null;
             values: Map<string, number>;
-            categories: Map<string, string | null>;
           }
         >;
       }
     >();
 
     rows.forEach((row) => {
-      const indexEntry = indices.get(row.index_label) ?? {
-        label: row.index_label,
-        groups: new Map(),
-      };
-      indices.set(row.index_label, indexEntry);
+      if (!indices.has(row.index_label)) {
+        indices.set(row.index_label, {
+          label: row.index_label,
+          order: indices.size,
+          groups: new Map(),
+        });
+      }
+      const indexEntry = indices.get(row.index_label)!;
 
       const groupLabel = GROUP_LABEL_MAP[row.group_label] ?? row.group_label;
       const groupEntry = indexEntry.groups.get(groupLabel) ?? {
         label: groupLabel,
         count: row.n ?? null,
         values: new Map<string, number>(),
-        categories: new Map<string, string | null>(),
       };
+
       groupEntry.count = row.n ?? groupEntry.count ?? null;
       groupEntry.values.set(row.trait_key, row.mean_value);
-      groupEntry.categories.set(row.trait_key, row.category_label ?? null);
       indexEntry.groups.set(groupLabel, groupEntry);
     });
 
-    const toRow = (groupEntry?: {
-      label: string;
-      count: number | null;
-      values: Map<string, number>;
-    }) => {
-      const record: Record<string, number | null> = {};
-      traitHeaders.forEach(({ key }) => {
-        record[key] = groupEntry?.values.get(key) ?? null;
-      });
-      return record;
-    };
+    return Array.from(indices.values())
+      .sort((a, b) => a.order - b.order)
+      .map((indexEntry) => {
+        const top = indexEntry.groups.get("Top 25%");
+        const bottom = indexEntry.groups.get("Bottom 25%");
 
-    return Array.from(indices.values()).map((indexEntry) => {
-      const top = indexEntry.groups.get("Top 25%");
-      const bottom = indexEntry.groups.get("Bottom 25%");
+        const rowsForTable: Array<{
+          key: string;
+          label: string;
+          count: number | null;
+          values: Record<string, number | null>;
+        }> = [];
 
-      const tableRows: Array<{
-        key: string;
-        label: string;
-        count: number | null;
-        values: Record<string, number | null>;
-      }> = [];
-
-      const orderedGroups = Array.from(indexEntry.groups.values()).sort((a, b) => {
-        const order: Record<string, number> = {
-          "Top 25%": 0,
-          "Bottom 25%": 1,
+        const fillRow = (entry?: {
+          label: string;
+          count: number | null;
+          values: Map<string, number>;
+        }) => {
+          const record: Record<string, number | null> = {};
+          traitHeaders.forEach(({ key: traitKey }) => {
+            record[traitKey] = entry?.values.get(traitKey) ?? null;
+          });
+          return record;
         };
-        const ai = order[a.label] ?? 2;
-        const bi = order[b.label] ?? 2;
-        if (ai !== bi) return ai - bi;
-        return a.label.localeCompare(b.label, "pt-BR", { sensitivity: "accent" });
+
+        const orderedGroups = Array.from(indexEntry.groups.values()).sort((a, b) => {
+          const orderMap: Record<string, number> = {
+            "Top 25%": 0,
+            "Bottom 25%": 1,
+          };
+          const ai = orderMap[a.label] ?? 2;
+          const bi = orderMap[b.label] ?? 2;
+          if (ai !== bi) return ai - bi;
+          return a.label.localeCompare(b.label, "pt-BR", { sensitivity: "accent" });
+        });
+
+        orderedGroups.forEach((group) => {
+          rowsForTable.push({
+            key: group.label,
+            label: group.label,
+            count: group.count ?? null,
+            values: fillRow(group),
+          });
+        });
+
+        if (top && bottom) {
+          const diff: Record<string, number | null> = {};
+          traitHeaders.forEach(({ key: traitKey }) => {
+            const topValue = top.values.get(traitKey);
+            const bottomValue = bottom.values.get(traitKey);
+            if (topValue === undefined && bottomValue === undefined) {
+              diff[traitKey] = null;
+              return;
+            }
+            diff[traitKey] = (topValue ?? 0) - (bottomValue ?? 0);
+          });
+
+          rowsForTable.push({
+            key: "difference",
+            label: "Diferença",
+            count:
+              top.count !== null && bottom.count !== null
+                ? top.count - bottom.count
+                : null,
+            values: diff,
+          });
+        }
+
+        return {
+          label: indexEntry.label,
+          rows: rowsForTable,
+        };
       });
-
-      orderedGroups.forEach((groupEntry) => {
-        tableRows.push({
-          key: groupEntry.label,
-          label: groupEntry.label,
-          count: groupEntry.count ?? null,
-          values: toRow(groupEntry),
-        });
-      });
-
-      if (top && bottom) {
-        const difference: Record<string, number | null> = {};
-        traitHeaders.forEach(({ key }) => {
-          const topValue = top.values.get(key);
-          const bottomValue = bottom.values.get(key);
-          if (topValue === undefined && bottomValue === undefined) {
-            difference[key] = null;
-            return;
-          }
-          difference[key] =
-            (topValue ?? 0) - (bottomValue ?? 0);
-        });
-
-        tableRows.push({
-          key: "difference",
-          label: "Diferença",
-          count:
-            top.count !== null && bottom.count !== null
-              ? top.count - bottom.count
-              : null,
-          values: difference,
-        });
-      }
-
-      const categoryTotals = new Map<string, number>();
-      if (top && bottom) {
-        traitHeaders.forEach(({ key }) => {
-          const category =
-            top.categories.get(key) ??
-            bottom.categories.get(key) ??
-            traitDefinitions.get(key)?.group ??
-            "Outros";
-          const diff =
-            (top.values.get(key) ?? 0) - (bottom.values.get(key) ?? 0);
-          categoryTotals.set(
-            category,
-            (categoryTotals.get(category) ?? 0) + Math.abs(diff)
-          );
-        });
-      }
-
-      const pieData = Array.from(categoryTotals.entries())
-        .map(([name, value]) => ({ name, value }))
-        .sort((a, b) => b.value - a.value);
-
-      return {
-        label: indexEntry.label,
-        rows: tableRows,
-        pieData,
-      };
-    });
-  }, [rows, traitHeaders, traitDefinitions]);
+  }, [rows, traitHeaders]);
 
   const categoriaLabel = useMemo(() => {
     switch (categoria) {
@@ -411,12 +380,25 @@ export default function Step7QuartisIndices() {
     );
   }, [indexB]);
 
+  const groupedSelectedTraits = useMemo(() => {
+    const groups = new Map<string, Array<{ key: string; label: string }>>();
+    traitHeaders.forEach(({ key, label, group }) => {
+      const arr = groups.get(group) ?? [];
+      arr.push({ key, label });
+      groups.set(group, arr);
+    });
+    return Array.from(groups.entries()).map(([group, items]) => ({
+      group,
+      items,
+    }));
+  }, [traitHeaders]);
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Quartis — Índices (A vs B)</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-8">
         <div className="flex flex-wrap items-center gap-3">
           <Input
             className="w-56"
@@ -480,164 +462,114 @@ export default function Step7QuartisIndices() {
           )}
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-          <div className="space-y-6">
-            {indexTables.length === 0 ? (
-              <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                {loading ? "Carregando dados..." : "Selecione PTAs e atualize para ver os índices."}
-              </div>
-            ) : (
-              indexTables.map((indexTable, tableIndex) => (
-                <div key={indexTable.label} className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-foreground">
-                      Índice: {indexTable.label}
-                    </h3>
-                    <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                      {`Tabela ${tableIndex + 1}`}
-                    </span>
-                  </div>
-
-                  <div className="overflow-x-auto rounded-lg border">
-                    <table className="w-full min-w-[640px] text-sm">
-                      <thead className="bg-muted/60 text-left">
-                        <tr>
-                          <th className="px-4 py-2">Grupo</th>
-                          <th className="px-4 py-2">N</th>
-                          {traitHeaders.map(({ key, label }) => (
-                            <th key={key} className="px-4 py-2 text-right">
-                              {label}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {indexTable.rows.map((row) => (
-                          <tr key={row.key} className="border-t">
-                            <td className="px-4 py-2 font-medium text-foreground">
-                              {row.label}
-                            </td>
-                            <td
-                              className={`px-4 py-2 text-right ${
-                                row.key === "difference" &&
-                                row.count !== null &&
-                                row.count !== 0
-                                  ? row.count > 0
-                                    ? "text-emerald-600"
-                                    : "text-rose-600"
-                                  : ""
-                              }`}
-                            >
-                              {formatCount(row.count)}
-                            </td>
-                            {traitHeaders.map(({ key }) => {
-                              const value = row.values[key] ?? null;
-                              const highlight =
-                                row.key === "difference" && value !== null
-                                  ? value > 0
-                                    ? "text-emerald-600 font-semibold"
-                                    : value < 0
-                                    ? "text-rose-600 font-semibold"
-                                    : "font-semibold"
-                                  : "";
-                              return (
-                                <td key={key} className={`px-4 py-2 text-right ${highlight}`}>
-                                  {formatMean(value)}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {indexTable.pieData.length > 0 && (
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="rounded-lg border p-4">
-                        <h4 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                          Composição por categoria
-                        </h4>
-                        <div className="h-48">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie
-                                data={indexTable.pieData}
-                                dataKey="value"
-                                nameKey="name"
-                                innerRadius={40}
-                                outerRadius={80}
-                                paddingAngle={4}
-                              >
-                                {indexTable.pieData.map((entry, pieIndex) => (
-                                  <Cell
-                                    key={entry.name}
-                                    fill={PIE_COLORS[pieIndex % PIE_COLORS.length]}
-                                  />
-                                ))}
-                              </Pie>
-                              <Legend
-                                formatter={(value: string) => (
-                                  <span className="text-xs text-muted-foreground">{value}</span>
-                                )}
-                              />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+        {indexTables.length === 0 ? (
+          <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+            {loading
+              ? "Carregando dados..."
+              : "Selecione PTAs e atualize para ver os índices."}
+          </div>
+        ) : (
+          <div className="grid gap-6 lg:grid-cols-2">
+            {indexTables.map((table, tableIndex) => (
+              <div key={`${table.label}-${tableIndex}`} className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-foreground">{table.label}</h3>
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                    População: {categoriaLabel}
+                  </span>
                 </div>
-              ))
-            )}
+
+                <div className="overflow-x-auto rounded-lg border">
+                  <table className="w-full min-w-[560px] text-sm">
+                    <thead className="bg-muted/60">
+                      <tr className="text-left">
+                        <th className="px-4 py-2">Grupo</th>
+                        <th className="px-4 py-2 text-right">N</th>
+                        {traitHeaders.map(({ key, label }) => (
+                          <th key={key} className="px-4 py-2 text-right">
+                            {label}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {table.rows.map((row) => (
+                        <tr key={row.key} className="border-t">
+                          <td className="px-4 py-2 font-medium text-foreground">
+                            {row.label}
+                          </td>
+                          <td
+                            className={`px-4 py-2 text-right ${
+                              row.key === "difference" &&
+                              row.count !== null &&
+                              row.count !== 0
+                                ? row.count > 0
+                                  ? "text-emerald-600"
+                                  : "text-rose-600"
+                                : ""
+                            }`}
+                          >
+                            {formatCount(row.count)}
+                          </td>
+                          {traitHeaders.map(({ key }) => {
+                            const value = row.values[key] ?? null;
+                            const highlight =
+                              row.key === "difference" && value !== null
+                                ? value > 0
+                                  ? "text-emerald-600 font-semibold"
+                                  : value < 0
+                                  ? "text-rose-600 font-semibold"
+                                  : "font-semibold"
+                                : "";
+                            return (
+                              <td
+                                key={key}
+                                className={`px-4 py-2 text-right ${highlight}`}
+                              >
+                                {formatMean(value)}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
+                  <p>
+                    Índice selecionado: {tableIndex === 0 ? indexALabel : indexBLabel}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
+        )}
 
-          <div className="space-y-4">
-            <div className="rounded-lg border p-4">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Escolha de índices
-              </h3>
-              <table className="mt-3 w-full text-sm">
-                <tbody>
-                  <tr className="border-b">
-                    <td className="py-2 font-medium text-foreground">Tabela 1</td>
-                    <td className="py-2 text-right text-muted-foreground">{indexALabel}</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2 font-medium text-foreground">Tabela 2</td>
-                    <td className="py-2 text-right text-muted-foreground">{indexBLabel}</td>
-                  </tr>
-                </tbody>
-              </table>
+        <div className="rounded-lg border p-4">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            PTAs selecionadas por categoria
+          </h3>
+          {groupedSelectedTraits.length === 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              Nenhuma PTA selecionada.
+            </p>
+          ) : (
+            <div className="mt-3 grid gap-4 md:grid-cols-2">
+              {groupedSelectedTraits.map(({ group, items }) => (
+                <div key={group} className="space-y-2">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {group}
+                  </h4>
+                  <ul className="space-y-1 text-sm text-muted-foreground">
+                    {items.map(({ key, label }) => (
+                      <li key={key}>{label}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
             </div>
-
-            <div className="rounded-lg border p-4">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                População
-              </h3>
-              <p className="mt-3 text-sm text-muted-foreground">{categoriaLabel}</p>
-            </div>
-
-            <div className="rounded-lg border p-4">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                PTAs selecionadas
-              </h3>
-              {traitHeaders.length === 0 ? (
-                <p className="mt-3 text-sm text-muted-foreground">
-                  Nenhuma PTA selecionada.
-                </p>
-              ) : (
-                <ul className="mt-3 space-y-1 text-sm text-muted-foreground">
-                  {traitHeaders.map(({ key, label, group }) => (
-                    <li key={key} className="flex items-center justify-between">
-                      <span>{label}</span>
-                      <span className="text-xs uppercase tracking-wide">{group}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
+          )}
         </div>
       </CardContent>
     </Card>
