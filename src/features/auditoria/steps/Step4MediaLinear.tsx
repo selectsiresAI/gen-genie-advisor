@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import {
@@ -22,65 +22,123 @@ interface Row {
   n: number;
 }
 
+// PTAs padrão do Passo 4 (use minúsculas se as colunas do banco estiverem assim)
+const DEFAULT_TRAITS = [
+  "sta","str","dfm","rua","rls","rtp","ftl","rw","rlr","fta","fls","fua","ruh","ruw","ucl","udp","ftp"
+];
+
 export default function Step4MediaLinear() {
   const { farmId } = useAGFilters();
   const [mode, setMode] = useState<Mode>("coarse");
   const [normalize, setNormalize] = useState(false);
   const [ptaOptions, setPtaOptions] = useState<string[]>([]);
-  const [traits, setTraits] = useState<string[]>(["ptat", "udc", "flc"]);
+  const [traits, setTraits] = useState<string[]>(DEFAULT_TRAITS);
   const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
+  const aliveRef = useRef(true);
   useEffect(() => {
-    let active = true;
-    async function loadColumns() {
-      const { data, error } = await supabase.rpc("ag_list_pta_columns");
-      if (!active) return;
-      if (error) {
-        console.error("Failed to list PTA columns", error);
-        setPtaOptions([]);
-        return;
-      }
-      const cols = Array.isArray(data)
-        ? data.map((item: { column_name?: string }) => String(item.column_name))
-        : [];
-      setPtaOptions(cols);
-    }
-    loadColumns();
+    aliveRef.current = true;
     return () => {
-      active = false;
+      aliveRef.current = false;
     };
   }, []);
 
-  const fetchData = useCallback(async () => {
-    if (!farmId || traits.length === 0) {
-      setRows([]);
-      return;
-    }
-    const { data, error } = await supabase.rpc("ag_linear_means", {
-      p_farm: farmId,
-      p_traits: traits,
-      p_mode: mode,
-      p_normalize: normalize,
-      p_scope: normalize ? "farm" : null,
-      p_scope_id: null,
-    });
-    if (error) {
-      console.error("Failed to load linear means", error);
-      setRows([]);
-      return;
-    }
-    setRows(Array.isArray(data) ? (data as Row[]) : []);
+  // Carrega lista de PTAs
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setErr(null);
+      const { data, error } = await supabase.rpc("ag_list_pta_columns");
+      if (cancelled || !aliveRef.current) return;
+
+      if (error) {
+        console.error("Failed to list PTA columns", error);
+        setPtaOptions([]);
+        setErr("Falha ao carregar colunas de PTA.");
+        return;
+      }
+
+      const cols = Array.isArray(data)
+        ? (data
+            .map((item: any) => (item?.column_name ? String(item.column_name) : null))
+            .filter(Boolean) as string[])
+        : [];
+      setPtaOptions(cols);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Busca dados (com debounce)
+  const fetchData = useCallback(() => {
+    let cancelled = false;
+    const run = async () => {
+      if (!farmId || traits.length === 0) {
+        setRows([]);
+        return;
+      }
+      setLoading(true);
+      setErr(null);
+
+      const args: Record<string, any> = {
+        p_farm: farmId,
+        p_traits: traits,
+        p_mode: mode,
+        p_normalize: normalize,
+      };
+      if (normalize) args.p_scope = "farm";
+
+      const { data, error } = await supabase.rpc("ag_linear_means", args);
+
+      if (cancelled || !aliveRef.current) return;
+      setLoading(false);
+
+      if (error) {
+        console.error("Failed to load linear means", error);
+        setRows([]);
+        setErr("Falha ao carregar as médias.");
+        return;
+      }
+
+      const list = Array.isArray(data) ? data : [];
+      const parsed = list
+        .map((r: any) => ({
+          trait_key: String(r.trait_key),
+          group_label: String(r.group_label),
+          mean_value: Number(r.mean_value),
+          n: Number(r.n),
+        }))
+        .filter(
+          (r) =>
+            r.trait_key &&
+            r.group_label &&
+            Number.isFinite(r.mean_value) &&
+            Number.isFinite(r.n)
+        ) as Row[];
+
+      setRows(parsed);
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
   }, [farmId, traits, mode, normalize]);
 
   useEffect(() => {
-    fetchData();
+    const t = setTimeout(() => fetchData(), 250);
+    return () => clearTimeout(t);
   }, [fetchData]);
 
-  const badges = useMemo(() => {
-    return ptaOptions
-      .map((key) => ({ key, label: key.toUpperCase() }))
-      .sort((a, b) => a.label.localeCompare(b.label));
-  }, [ptaOptions]);
+  const badges = useMemo(
+    () =>
+      ptaOptions
+        .map((key) => ({ key, label: key.toUpperCase() }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    [ptaOptions]
+  );
 
   return (
     <Card>
@@ -89,8 +147,8 @@ export default function Step4MediaLinear() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-center gap-3">
-          <Select value={mode} onValueChange={(value) => setMode(value as Mode)}>
-            <SelectTrigger className="w-[180px]">
+          <Select value={mode} onValueChange={(v) => setMode(v as Mode)}>
+            <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Agrupamento" />
             </SelectTrigger>
             <SelectContent>
@@ -98,12 +156,13 @@ export default function Step4MediaLinear() {
               <SelectItem value="full">Grupos (Bezerra/…)</SelectItem>
             </SelectContent>
           </Select>
+
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
               className="accent-black"
               checked={normalize}
-              onChange={(event) => setNormalize(event.target.checked)}
+              onChange={(e) => setNormalize(e.target.checked)}
             />
             Normalizar pela média da fazenda
           </label>
@@ -119,7 +178,7 @@ export default function Step4MediaLinear() {
                 className="cursor-pointer"
                 onClick={() =>
                   setTraits((prev) =>
-                    on ? prev.filter((item) => item !== key) : [...prev, key]
+                    on ? prev.filter((i) => i !== key) : [...prev, key]
                   )
                 }
               >
@@ -128,7 +187,9 @@ export default function Step4MediaLinear() {
             );
           })}
           {badges.length === 0 && (
-            <span className="text-sm text-muted-foreground">Nenhuma PTA disponível.</span>
+            <span className="text-sm text-muted-foreground">
+              Nenhuma PTA disponível.
+            </span>
           )}
         </div>
 
@@ -143,24 +204,38 @@ export default function Step4MediaLinear() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, index) => (
+              {rows.map((row) => (
                 <tr
-                  key={`${row.trait_key}-${row.group_label}-${index}`}
+                  key={`${row.trait_key}-${row.group_label}`}
                   className="border-b"
                 >
                   <td className="py-2">{row.trait_key.toUpperCase()}</td>
                   <td className="py-2">{row.group_label}</td>
-                  <td className="py-2">{Math.round(row.mean_value)}</td>
+                  <td className="py-2">{Math.round(Number(row.mean_value))}</td>
                   <td className="py-2">{row.n}</td>
                 </tr>
               ))}
-              {rows.length === 0 && (
+
+              {loading && (
                 <tr>
-                  <td
-                    colSpan={4}
-                    className="py-6 text-center text-muted-foreground"
-                  >
+                  <td colSpan={4} className="py-6 text-center text-muted-foreground">
+                    Carregando…
+                  </td>
+                </tr>
+              )}
+
+              {!loading && rows.length === 0 && !err && (
+                <tr>
+                  <td colSpan={4} className="py-6 text-center text-muted-foreground">
                     Sem dados.
+                  </td>
+                </tr>
+              )}
+
+              {err && (
+                <tr>
+                  <td colSpan={4} className="py-6 text-center text-destructive">
+                    {err}
                   </td>
                 </tr>
               )}
