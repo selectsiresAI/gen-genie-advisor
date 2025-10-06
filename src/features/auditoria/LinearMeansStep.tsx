@@ -164,6 +164,26 @@ export default function LinearMeansStep({
     [orderMap],
   );
 
+  const buildPtaOptions = useCallback(
+    (columns: string[]) => {
+      const uniqueKeys = Array.from(new Set([...canonicalOrder, ...columns]));
+      return uniqueKeys.sort((a, b) => {
+        const indexA = canonicalOrder.indexOf(a);
+        const indexB = canonicalOrder.indexOf(b);
+        const hasIndexA = indexA !== -1;
+        const hasIndexB = indexB !== -1;
+
+        if (hasIndexA && hasIndexB) {
+          return indexA - indexB;
+        }
+        if (hasIndexA) return -1;
+        if (hasIndexB) return 1;
+        return a.localeCompare(b);
+      });
+    },
+    [canonicalOrder],
+  );
+
   useEffect(() => {
     let active = true;
     async function loadColumns() {
@@ -178,13 +198,13 @@ export default function LinearMeansStep({
       const cols = Array.isArray(data)
         ? data.map((item: { column_name?: string }) => String(item.column_name))
         : [];
-      setPtaOptions(sortKeys([...canonicalOrder, ...cols]));
+      setPtaOptions(buildPtaOptions(cols));
     }
     loadColumns();
     return () => {
       active = false;
     };
-  }, [canonicalOrder, sortKeys]);
+  }, [canonicalOrder, buildPtaOptions]);
 
   useEffect(() => {
     setTraits((prev) => {
