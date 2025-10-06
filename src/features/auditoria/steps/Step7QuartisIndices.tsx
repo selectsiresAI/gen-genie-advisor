@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
@@ -11,6 +17,14 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recha
 import { useAGFilters } from "../store";
 
 const DEFAULT_TRAITS = ["ptam", "ptaf", "ptap"] as const;
+
+const INDEX_OPTIONS = [
+  { label: "HHP$", value: "hhp_dollar" },
+  { label: "TPI", value: "tpi" },
+  { label: "NM$", value: "nm_dollar" },
+  { label: "FM$", value: "fm_dollar" },
+  { label: "CM$", value: "cm_dollar" },
+];
 
 interface Row {
   index_label: "IndexA" | "IndexB";
@@ -20,6 +34,11 @@ interface Row {
   n: number;
 }
 
+const getIndexDisplayLabel = (value: string) => {
+  const option = INDEX_OPTIONS.find((opt) => opt.value === value);
+  return option?.label ?? value.toUpperCase();
+};
+
 export default function Step7QuartisIndices() {
   const { farmId } = useAGFilters();
   const [indexA, setIndexA] = useState("hhp_dollar");
@@ -28,6 +47,12 @@ export default function Step7QuartisIndices() {
   const [traits, setTraits] = useState<string[]>([...DEFAULT_TRAITS]);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (farmId) {
+      console.log(`Índices A vs B carregados para farmId: ${farmId}`);
+    }
+  }, [farmId]);
 
   useEffect(() => {
     let active = true;
@@ -142,7 +167,7 @@ export default function Step7QuartisIndices() {
     const diffData: any = { index: "Difference", group: "Difference" };
     const top25A = rows.filter((r) => r.index_label === "IndexA" && r.group_label === "Top25");
     const top25B = rows.filter((r) => r.index_label === "IndexB" && r.group_label === "Top25");
-    
+
     traits.forEach((t) => {
       const valA = top25A.find((r) => r.trait_key === t)?.mean_value || 0;
       const valB = top25B.find((r) => r.trait_key === t)?.mean_value || 0;
@@ -159,18 +184,30 @@ export default function Step7QuartisIndices() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-center gap-3">
-          <Input
-            className="w-56"
-            value={indexA}
-            onChange={(event) => setIndexA(event.target.value)}
-            placeholder="Índice A (ex.: hhp_dollar)"
-          />
-          <Input
-            className="w-56"
-            value={indexB}
-            onChange={(event) => setIndexB(event.target.value)}
-            placeholder="Índice B (ex.: nm_dollar)"
-          />
+          <Select value={indexA} onValueChange={setIndexA}>
+            <SelectTrigger className="w-56">
+              <SelectValue placeholder="Índice A" />
+            </SelectTrigger>
+            <SelectContent>
+              {INDEX_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={indexB} onValueChange={setIndexB}>
+            <SelectTrigger className="w-56">
+              <SelectValue placeholder="Índice B" />
+            </SelectTrigger>
+            <SelectContent>
+              {INDEX_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button variant="outline" size="sm" onClick={load} disabled={loading}>
             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             Atualizar
@@ -231,7 +268,13 @@ export default function Step7QuartisIndices() {
                         row.index === "Difference" ? "bg-muted/30 font-semibold" : ""
                       }`}
                     >
-                      <td className="py-2 px-2">{row.index === "IndexA" ? indexA.toUpperCase() : row.index === "IndexB" ? indexB.toUpperCase() : row.index}</td>
+                      <td className="py-2 px-2">
+                        {row.index === "IndexA"
+                          ? getIndexDisplayLabel(indexA)
+                          : row.index === "IndexB"
+                          ? getIndexDisplayLabel(indexB)
+                          : row.index}
+                      </td>
                       <td className="py-2 px-2">{row.group}</td>
                       {traits.map((t) => {
                         const val = row[t] as number | undefined;
@@ -257,7 +300,9 @@ export default function Step7QuartisIndices() {
             <div className="grid md:grid-cols-2 gap-6">
               {pieDataA.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-semibold mb-2 text-center">{indexA.toUpperCase()}</h4>
+                  <h4 className="text-sm font-semibold mb-2 text-center">
+                    {getIndexDisplayLabel(indexA)}
+                  </h4>
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
@@ -283,7 +328,9 @@ export default function Step7QuartisIndices() {
 
               {pieDataB.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-semibold mb-2 text-center">{indexB.toUpperCase()}</h4>
+                  <h4 className="text-sm font-semibold mb-2 text-center">
+                    {getIndexDisplayLabel(indexB)}
+                  </h4>
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
