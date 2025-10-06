@@ -147,10 +147,8 @@ function detectColumn(keys: string[], candidates: string[]): string | null {
 function detectCategoryColumn(rows: any[]): string | null {
   if (!rows.length) return null;
   const keys = Object.keys(rows[0] ?? {});
-  // 1) por nome
   const byName = detectColumn(keys, CATEGORY_NAME_CANDIDATES);
   if (byName) return byName;
-  // 2) por conteúdo (valores típicos)
   const known = new Set(AGE_VALUES.map(norm));
   for (const key of keys) {
     let hits = 0;
@@ -173,9 +171,7 @@ function detectIdColumn(rows: any[]): string | null {
 }
 
 /* ================== LocalStorage helpers ================== */
-// key preferida
 const prefKey = (farmId: string | number) => `ag:rebanho:categories:${farmId}`;
-// tenta a preferida + variantes conhecidas
 const knownKeys = (farmId: string | number) => [
   prefKey(farmId),
   `rebanho:categorias:${farmId}`,
@@ -199,10 +195,7 @@ function scanLocalStorageForCategories(
   const res: LSScanResult = { map: new Map(), keysScanned: 0, pairsFound: 0 };
   if (typeof window === "undefined") return res;
 
-  // 1) chaves conhecidas primeiro
   const candidates = new Set<string>(knownKeys(farmId));
-
-  // 2) varre todas as chaves para tentar achar dumps da página rebanho
   for (let i = 0; i < window.localStorage.length; i++) {
     const k = window.localStorage.key(i);
     if (k) candidates.add(k);
@@ -220,7 +213,6 @@ function scanLocalStorageForCategories(
     try {
       const data = JSON.parse(raw);
 
-      // caso 1: objeto { id: "Categoria", ... }
       if (data && typeof data === "object" && !Array.isArray(data)) {
         for (const [k, v] of Object.entries<any>(data)) {
           if (typeof v === "string" && (knownCats.has(norm(v)) || catNorms.includes(norm(v)))) {
@@ -230,11 +222,9 @@ function scanLocalStorageForCategories(
         }
       }
 
-      // caso 2: array de objetos
       if (Array.isArray(data)) {
         for (const item of data) {
           if (!item || typeof item !== "object") continue;
-          // tenta localizar um id e uma categoria no item
           const idKey = Object.keys(item).find((c) => idNorms.includes(norm(c)));
           const catKey = Object.keys(item).find((c) => catNorms.includes(norm(c))) ??
             Object.keys(item).find((c) => knownCats.has(norm(item[c])));
@@ -247,7 +237,6 @@ function scanLocalStorageForCategories(
         }
       }
 
-      // caso 3: objeto estilo { rows: [...] }
       if (data && typeof data === "object" && Array.isArray((data as any).rows)) {
         for (const item of (data as any).rows) {
           if (!item || typeof item !== "object") continue;
@@ -262,9 +251,7 @@ function scanLocalStorageForCategories(
           }
         }
       }
-    } catch {
-      // valor não-JSON, ignora
-    }
+    } catch { /* ignore */ }
   }
 
   return res;
@@ -278,6 +265,22 @@ function writeCategoriesToLS(farmId: string | number, pairs: Array<{ id: string;
   current.forEach((v, k) => (obj[k] = v));
   window.localStorage.setItem(prefKey(farmId), JSON.stringify(obj));
 }
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Tooltip do radar exibindo os valores BRUTOS (não normalizados)
+function RadarTooltip(props: any) {
+  const { active, payload, label, groupA, groupB } = props;
+  if (!active || !payload?.length) return null;
+  const p = payload.find((pp: any) => pp.dataKey === "Group A")?.payload;
+  return (
+    <div className="rounded border bg-background px-3 py-2 text-xs shadow-sm">
+      <div className="font-medium mb-1">{label}</div>
+      <div>{groupA}: {p?.rawA == null ? "-" : Number(p.rawA).toFixed(2)}</div>
+      <div>{groupB}: {p?.rawB == null ? "-" : Number(p.rawB).toFixed(2)}</div>
+    </div>
+  );
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 /* ================== Tipos ================== */
 type MeansByCategory = Record<string, Record<string, number | null>>;
@@ -303,7 +306,6 @@ export default function Step6ProgressCompare() {
   const [tableTraits, setTableTraits] = useState<string[]>(DEFAULT_TABLE_TRAITS);
   const [chartTraits, setChartTraits] = useState<string[]>(DEFAULT_CHART_TRAITS);
 
-  /* -------- fetch com fallback + LS + heurística por paridade -------- */
   const fetchData = useCallback(async () => {
     if (!farmId) {
       setRows([]); setCategories([]); setSourceTable(""); setCategoryCol(""); setIdCol("");
@@ -317,7 +319,6 @@ export default function Step6ProgressCompare() {
     let catKey: string | null = null;
     let idKey: string | null = null;
 
-    // 1) tenta carregar de banco
     for (const table of TABLE_CANDIDATES) {
       let res: any = { data: [], error: null };
       for (const fcol of FARM_COLS) {
@@ -333,16 +334,15 @@ export default function Step6ProgressCompare() {
         const candidateId = detectIdColumn(candidateRows);
         gotRows = candidateRows;
         usedTable = table;
-        catKey = candidateCat; // pode vir null
+        catKey = candidateCat;
         idKey = candidateId;
         break;
       }
     }
 
-    // 2) se categoria veio nula → tenta LocalStorage
     let applied = 0, scanned = 0;
     if (!catKey || !gotRows.some((r) => r?.[catKey!])) {
-      const { map, keysScanned, pairsFound } = scanLocalStorageForCategories(
+      const { map, keysScanned } = scanLocalStorageForCategories(
         farmId,
         idKey ? [idKey] : ID_CANDIDATES,
         CATEGORY_NAME_CANDIDATES
@@ -384,7 +384,6 @@ export default function Step6ProgressCompare() {
       setLsPairsApplied(0);
     }
 
-    // 3) se ainda sem categoria, tenta heurística por paridade
     if ((!catKey || !gotRows.some((r) => r?.[catKey!])) && gotRows.length) {
       const keys = Object.keys(gotRows[0]);
       const parityKey =
@@ -411,7 +410,6 @@ export default function Step6ProgressCompare() {
     setCategoryCol(catKey || "");
     setIdCol(idKey || "");
 
-    // 4) se conseguiu categoria real de banco + temos ID, grava cache
     if (catKey && catKey !== "__category" && idKey) {
       const pairs: Array<{ id: string; cat: string }> = [];
       for (const r of gotRows) {
@@ -424,7 +422,6 @@ export default function Step6ProgressCompare() {
       if (pairs.length) writeCategoriesToLS(farmId, pairs);
     }
 
-    // 5) categorias distintas
     const cats =
       catKey && gotRows.length
         ? Array.from(
@@ -448,12 +445,10 @@ export default function Step6ProgressCompare() {
     }
 
     setLoading(false);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [farmId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  /* -------- médias por categoria -------- */
   const meansByCategory: MeansByCategory = useMemo(() => {
     if (!rows.length || !categoryCol) return {};
     const acc: Record<string, Record<string, { sum: number; n: number }>> = {};
@@ -482,7 +477,7 @@ export default function Step6ProgressCompare() {
     return out;
   }, [rows, categoryCol]);
 
-  /* -------- dados para tabela e radar -------- */
+  /* ------------------- Tabela + Radar normalizado ------------------- */
   const view = useMemo(() => {
     const A = meansByCategory[groupA] || {};
     const B = meansByCategory[groupB] || {};
@@ -507,11 +502,25 @@ export default function Step6ProgressCompare() {
       ],
     };
 
-    const radar = cTraits.map((k) => ({
-      trait: (PTA_LABELS[k] ?? k).toUpperCase(),
-      "Group A": (A[k] ?? 0) as number,
-      "Group B": (B[k] ?? 0) as number,
-    }));
+    // ---------- Normalização 0–100 por eixo ----------
+    const radar = cTraits.map((k) => {
+      const a = A[k] ?? 0;
+      const b = B[k] ?? 0;
+      const maxK = Math.max(1, Math.abs(a), Math.abs(b));
+      const toPct = (v: number) => (Math.abs(v) / maxK) * 100;
+
+      return {
+        trait: (PTA_LABELS[k] ?? k).toUpperCase(),
+        band25: 25,
+        band50: 50,
+        band75: 75,
+        band100: 100,
+        "Group A": toPct(a),
+        "Group B": toPct(b),
+        rawA: A[k] ?? null,
+        rawB: B[k] ?? null,
+      };
+    });
 
     return { table, radar, presentPTAs };
   }, [meansByCategory, groupA, groupB, tableTraits, chartTraits]);
@@ -545,7 +554,6 @@ export default function Step6ProgressCompare() {
     </div>
   );
 
-  /* -------- Render -------- */
   return (
     <Card>
       <CardHeader>
@@ -553,14 +561,14 @@ export default function Step6ProgressCompare() {
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {/* DEBUG: fonte/coluna/contagem/LS/PTAs */}
+        {/* DEBUG */}
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
           <span>Fonte: <b>{sourceTable || "—"}</b></span>
           <span>Categoria: <b>{categoryCol || "—"}</b></span>
           <span>ID: <b>{idCol || "—"}</b></span>
           <span>Registros: <b>{rows.length}</b></span>
           <span>
-            LocalStorage: <b>{usedLocalStorage ? `sim (${lsPairsApplied} aplicados / ${lsKeysScanned} chaves)` : "não"}</b>
+            LocalStorage: <b>{usedLocalStorage ? `sim (${lsPairsApplied} / ${lsKeysScanned})` : "não"}</b>
           </span>
           <span>
             PTAs com dados:&nbsp;
@@ -572,7 +580,7 @@ export default function Step6ProgressCompare() {
           </span>
         </div>
 
-        {/* Atalhos: Categoria A vs Categoria B */}
+        {/* Atalhos: A vs B */}
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium">Atalhos:</span>
           {categories.map((c) => (
@@ -608,9 +616,7 @@ export default function Step6ProgressCompare() {
           {traitBadges(chartTraits, (fn) => setChartTraits(fn))}
         </div>
 
-        {loading && (
-          <div className="py-6 text-center text-muted-foreground">Carregando dados…</div>
-        )}
+        {loading && <div className="py-6 text-center text-muted-foreground">Carregando dados…</div>}
 
         {!loading && (!rows.length || !categoryCol) && (
           <div className="py-6 text-center text-muted-foreground">
@@ -637,10 +643,7 @@ export default function Step6ProgressCompare() {
                 </thead>
                 <tbody>
                   {view.table.rows.map((r: any, idx: number) => (
-                    <tr
-                      key={`row-${idx}-${r.label}`}
-                      className={`border-b ${idx === 2 ? "bg-muted/30" : ""}`}
-                    >
+                    <tr key={`row-${idx}-${r.label}`} className={`border-b ${idx === 2 ? "bg-muted/30" : ""}`}>
                       <td className="py-2 px-2 font-medium">{r.label}</td>
                       {tableTraits
                         .filter((k) => view.presentPTAs.includes(k))
@@ -649,12 +652,7 @@ export default function Step6ProgressCompare() {
                           const isChange = idx === 2;
                           const isPos = (val ?? 0) > 0;
                           return (
-                            <td
-                              key={`td-${t}`}
-                              className={`py-2 px-2 ${
-                                isChange ? (isPos ? "text-green-600" : "text-red-600") : ""
-                              }`}
-                            >
+                            <td key={`td-${t}`} className={`py-2 px-2 ${isChange ? (isPos ? "text-green-600" : "text-red-600") : ""}`}>
                               {val == null ? "-" : Number(val).toFixed(2)}
                             </td>
                           );
@@ -665,31 +663,42 @@ export default function Step6ProgressCompare() {
               </table>
             </div>
 
-            {/* Radar */}
+            {/* Radar normalizado */}
             {view.radar.length > 0 && (
               <div>
                 <h4 className="text-sm font-semibold mb-2">Rate of Change</h4>
                 <ResponsiveContainer width="100%" height={420}>
-                  <RadarChart data={view.radar}>
-                    <PolarGrid />
-                    <PolarAngleAxis dataKey="trait" />
-                    <PolarRadiusAxis />
+                  <RadarChart data={view.radar} startAngle={90} endAngle={-270}>
+                    <PolarGrid gridType="circle" />
+                    <PolarAngleAxis dataKey="trait" tick={{ fontSize: 12 }} />
+                    <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
+
+                    {/* FAIXAS 100/75/50/25 */}
+                    <Radar dataKey="band100" stroke={false} fill="hsl(var(--muted-foreground))" fillOpacity={0.16} isAnimationActive={false} />
+                    <Radar dataKey="band75"  stroke={false} fill="hsl(var(--muted-foreground))" fillOpacity={0.12} isAnimationActive={false} />
+                    <Radar dataKey="band50"  stroke={false} fill="hsl(var(--muted-foreground))" fillOpacity={0.09} isAnimationActive={false} />
+                    <Radar dataKey="band25"  stroke={false} fill="hsl(var(--muted-foreground))" fillOpacity={0.06} isAnimationActive={false} />
+
                     <Radar
                       name={groupA}
                       dataKey="Group A"
                       stroke="hsl(var(--primary))"
+                      strokeWidth={2.5}
                       fill="hsl(var(--primary))"
-                      fillOpacity={0.28}
+                      fillOpacity={0.22}
                     />
                     <Radar
                       name={groupB}
                       dataKey="Group B"
                       stroke="hsl(var(--muted-foreground))"
+                      strokeWidth={3}
+                      strokeDasharray="6 6"
                       fill="hsl(var(--muted-foreground))"
-                      fillOpacity={0.22}
+                      fillOpacity={0.14}
                     />
+
                     <Legend />
-                    <Tooltip />
+                    <Tooltip content={(props) => <RadarTooltip {...props} groupA={groupA} groupB={groupB} />} />
                   </RadarChart>
                 </ResponsiveContainer>
               </div>
@@ -700,3 +709,4 @@ export default function Step6ProgressCompare() {
     </Card>
   );
 }
+
