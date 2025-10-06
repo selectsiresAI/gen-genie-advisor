@@ -197,7 +197,7 @@ export default function LinearMeansStep({
   }, [sortKeys]);
 
   const fetchData = useCallback(async () => {
-    if (!farmId || traits.length === 0) {
+    if (farmId == null || traits.length === 0) {
       setRows([]);
       setLoading(false);
       return;
