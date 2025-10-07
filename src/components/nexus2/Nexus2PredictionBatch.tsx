@@ -280,7 +280,26 @@ const Nexus2PredictionBatch: React.FC = () => {
         // Primeiro tenta busca exata
         let record = await getBullByNaab(naab);
         
-        // Se não encontrar, tenta buscar por prefixo (código parcial como 7HO, 007HO)
+        // Se não encontrar, tenta variações com H/HO
+        if (!record) {
+          const normalized = normalizeNaab(naab);
+          let variant: string | null = null;
+          
+          // Se termina com H, tenta HO
+          if (normalized.endsWith('H') && !normalized.endsWith('HO')) {
+            variant = normalized + 'O';
+          }
+          // Se termina com HO, tenta H
+          else if (normalized.endsWith('HO')) {
+            variant = normalized.slice(0, -1);
+          }
+          
+          if (variant) {
+            record = await getBullByNaab(variant);
+          }
+        }
+        
+        // Se ainda não encontrar, tenta buscar por prefixo (código parcial como 7HO, 007HO)
         if (!record) {
           const { data } = await supabase
             .rpc('search_bulls', { q: naab, limit_count: 10 });
