@@ -342,25 +342,6 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('charts')}>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <TrendingUp className="w-5 h-5 text-primary" />
-                        Gráficos
-                      </CardTitle>
-                      <CardDescription>
-                        Análises e estatísticas do rebanho
-                      </CardDescription>
-                    </CardHeader>
-                  </Card>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Visualizar gráficos e relatórios estatísticos do desempenho do rebanho</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
                   <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('auditoria')}>
                     <CardHeader className="pb-3">
                       <CardTitle className="flex items-center gap-2 text-base">
