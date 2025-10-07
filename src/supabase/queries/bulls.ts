@@ -102,13 +102,13 @@ export async function getBullByNaab(naab: string): Promise<BullsDenormSelection 
     throw new Error(error.message);
   }
 
-  if (!data || !data.found) {
+  if (!data || !(data as any).found) {
     return null;
   }
 
   // Mapear os dados do RPC para o formato esperado
-  const { bull_id, found, ...bullData } = data;
-  return { id: bull_id, ...bullData } as unknown as BullsDenormSelection;
+  const { bull_id, found, ...bullData } = data as any;
+  return { id: bull_id, ...bullData } as BullsDenormSelection;
 }
 
 export async function searchBulls(term: string, limit = 10): Promise<BullsDenormSelection[]> {

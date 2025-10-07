@@ -322,7 +322,7 @@ export default function Step6ProgressCompare() {
     for (const table of TABLE_CANDIDATES) {
       let res: any = { data: [], error: null };
       for (const fcol of FARM_COLS) {
-        res = await supabase.from(table).select("*").eq(fcol as any, farmId).limit(100000);
+        res = await (supabase as any).from(table).select("*").eq(fcol, farmId).limit(100000);
         if (!res.error && Array.isArray(res.data) && res.data.length > 0) break;
       }
       if ((!res.data || res.data.length === 0) && !res.error) {
@@ -674,10 +674,10 @@ export default function Step6ProgressCompare() {
                     <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
 
                     {/* FAIXAS 100/75/50/25 */}
-                    <Radar dataKey="band100" stroke={false} fill="hsl(var(--muted-foreground))" fillOpacity={0.16} isAnimationActive={false} />
-                    <Radar dataKey="band75"  stroke={false} fill="hsl(var(--muted-foreground))" fillOpacity={0.12} isAnimationActive={false} />
-                    <Radar dataKey="band50"  stroke={false} fill="hsl(var(--muted-foreground))" fillOpacity={0.09} isAnimationActive={false} />
-                    <Radar dataKey="band25"  stroke={false} fill="hsl(var(--muted-foreground))" fillOpacity={0.06} isAnimationActive={false} />
+                    <Radar dataKey="band100" stroke="none" fill="hsl(var(--muted-foreground))" fillOpacity={0.16} isAnimationActive={false} />
+                    <Radar dataKey="band75"  stroke="none" fill="hsl(var(--muted-foreground))" fillOpacity={0.12} isAnimationActive={false} />
+                    <Radar dataKey="band50"  stroke="none" fill="hsl(var(--muted-foreground))" fillOpacity={0.09} isAnimationActive={false} />
+                    <Radar dataKey="band25"  stroke="none" fill="hsl(var(--muted-foreground))" fillOpacity={0.06} isAnimationActive={false} />
 
                     <Radar
                       name={groupA}

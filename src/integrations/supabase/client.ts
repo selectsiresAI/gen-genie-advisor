@@ -1,13 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? (globalThis as any).__SB_URL__;
-const supabaseAnonKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? (globalThis as any).__SB_KEY__;
+const supabaseUrl = "https://gzvweejdtycxzxrjplpc.supabase.co";
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6dndlZWpkdHljeHp4cmpwbHBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg1NDgzMDIsImV4cCI6MjA3NDEyNDMwMn0.-1zb66szqJj5jf5rIrU8H3EzQb9p-5X91G3ZePnX9FQ";
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  // Evita crash silencioso
-  console.warn(
-    "[Supabase] Variáveis NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY ausentes."
-  );
-}
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);

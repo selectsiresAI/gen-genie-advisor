@@ -137,88 +137,89 @@ const fetchBullFromDatabase = async (naab: string): Promise<Bull | null> => {
     }
 
     if (data) {
-      console.log(`✅ Touro encontrado: ${data.name}`);
+      console.log(`✅ Touro encontrado: ${(data as any).name}`);
       
       // Converter dados do Supabase para o formato Bull
+      const bullData = data as any;
       const convertedBull: Bull = {
-        naab: data.code,
-        name: data.name || 'Nome não informado',
-        company: data.company || 'Empresa não informada',
+        naab: bullData.code,
+        name: bullData.name || 'Nome não informado',
+        company: bullData.company || 'Empresa não informada',
         ptas: {
           // Índices Econômicos
-          hhp_dollar: data.hhp_dollar ?? null,
-          tpi: data.tpi ?? null,
-          nm_dollar: data.nm_dollar ?? null,
-          cm_dollar: data.cm_dollar ?? null,
-          fm_dollar: data.fm_dollar ?? null,
-          gm_dollar: data.gm_dollar ?? null,
-          f_sav: data.f_sav ?? null,
+          hhp_dollar: bullData.hhp_dollar ?? null,
+          tpi: bullData.tpi ?? null,
+          nm_dollar: bullData.nm_dollar ?? null,
+          cm_dollar: bullData.cm_dollar ?? null,
+          fm_dollar: bullData.fm_dollar ?? null,
+          gm_dollar: bullData.gm_dollar ?? null,
+          f_sav: bullData.f_sav ?? null,
           
           // Produção de Leite
-          milk: data.ptam ?? null, // PTAM = Milk in Supabase
-          fat: data.ptaf ?? null,
-          protein: data.ptap ?? null,
-          ptam: data.ptam ?? null,
-          cfp: data.cfp ?? null,
-          ptaf: data.ptaf ?? null,
-          ptaf_pct: data.ptaf_pct ?? null,
-          ptap: data.ptap ?? null,
-          ptap_pct: data.ptap_pct ?? null,
-          pl: data.pl ?? null,
+          milk: bullData.ptam ?? null, // PTAM = Milk in Supabase
+          fat: bullData.ptaf ?? null,
+          protein: bullData.ptap ?? null,
+          ptam: bullData.ptam ?? null,
+          cfp: bullData.cfp ?? null,
+          ptaf: bullData.ptaf ?? null,
+          ptaf_pct: bullData.ptaf_pct ?? null,
+          ptap: bullData.ptap ?? null,
+          ptap_pct: bullData.ptap_pct ?? null,
+          pl: bullData.pl ?? null,
           
           // Fertilidade
-          dpr: data.dpr ?? null,
+          dpr: bullData.dpr ?? null,
           
           // Saúde e Longevidade
-          liv: data.liv ?? null,
-          scs: data.scs ?? null,
-          mast: data.mast ?? null,
-          met: data.met ?? null,
-          rp: data.rp ?? null,
-          da: data.da ?? null,
-          ket: data.ket ?? null,
-          mf: data.mf ?? null,
+          liv: bullData.liv ?? null,
+          scs: bullData.scs ?? null,
+          mast: bullData.mast ?? null,
+          met: bullData.met ?? null,
+          rp: bullData.rp ?? null,
+          da: bullData.da ?? null,
+          ket: bullData.ket ?? null,
+          mf: bullData.mf ?? null,
           
           // Conformação
-          ptat: data.ptat ?? null,
-          udc: data.udc ?? null,
-          flc: data.flc ?? null,
-          sce: data.sce ?? null,
-          dce: data.dce ?? null,
-          ssb: data.ssb ?? null,
-          dsb: data.dsb ?? null,
-          h_liv: data.h_liv ?? null,
+          ptat: bullData.ptat ?? null,
+          udc: bullData.udc ?? null,
+          flc: bullData.flc ?? null,
+          sce: bullData.sce ?? null,
+          dce: bullData.dce ?? null,
+          ssb: bullData.ssb ?? null,
+          dsb: bullData.dsb ?? null,
+          h_liv: bullData.h_liv ?? null,
           
           // Reprodução
-          ccr: data.ccr ?? null,
-          hcr: data.hcr ?? null,
+          ccr: bullData.ccr ?? null,
+          hcr: bullData.hcr ?? null,
           
           // Outras características
-          fi: data.fi ?? null,
-          bwc: data.bwc ?? null,
+          fi: bullData.fi ?? null,
+          bwc: bullData.bwc ?? null,
           
           // Conformação Detalhada
-          sta: data.sta ?? null,
-          str: data.str ?? null,
-          dfm: data.dfm ?? null,
-          rua: data.rua ?? null,
-          rls: data.rls ?? null,
-          rtp: data.rtp ?? null,
-          ftl: data.ftl ?? null,
-          rw: data.rw ?? null,
-          rlr: data.rlr ?? null,
-          fta: data.fta ?? null,
-          fls: data.fls ?? null,
-          fua: data.fua ?? null,
-          ruh: data.ruh ?? null,
-          ruw: data.ruw ?? null,
-          ucl: data.ucl ?? null,
-          udp: data.udp ?? null,
-          ftp: data.ftp ?? null,
+          sta: bullData.sta ?? null,
+          str: bullData.str ?? null,
+          dfm: bullData.dfm ?? null,
+          rua: bullData.rua ?? null,
+          rls: bullData.rls ?? null,
+          rtp: bullData.rtp ?? null,
+          ftl: bullData.ftl ?? null,
+          rw: bullData.rw ?? null,
+          rlr: bullData.rlr ?? null,
+          fta: bullData.fta ?? null,
+          fls: bullData.fls ?? null,
+          fua: bullData.fua ?? null,
+          ruh: bullData.ruh ?? null,
+          ruw: bullData.ruw ?? null,
+          ucl: bullData.ucl ?? null,
+          udp: bullData.udp ?? null,
+          ftp: bullData.ftp ?? null,
           
           // Eficiência Alimentar
-          rfi: data.rfi ?? null,
-          gfi: data.gfi ?? null
+          rfi: bullData.rfi ?? null,
+          gfi: bullData.gfi ?? null
         }
       };
       
