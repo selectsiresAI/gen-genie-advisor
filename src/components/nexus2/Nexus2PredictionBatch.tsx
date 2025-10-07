@@ -17,7 +17,7 @@ import {
   mapBullRecord,
   type PredictionResult
 } from '@/services/prediction.service';
-import { read, utils, writeFileXLSX } from 'xlsx';
+import { read, utils, writeFileXLSX, SSF } from 'xlsx';
 
 const ACCEPTED_EXTENSIONS = '.csv,.xlsx,.xls';
 const REQUIRED_HEADERS = ['naab_pai', 'naab_avo_materno', 'naab_bisavo_materno'] as const;
@@ -48,6 +48,37 @@ const normalizeHeaderName = (value: unknown) => {
     .replace(/_+/g, '_')
     .replace(/^_|_$/g, '')
     .toLowerCase();
+};
+
+const parseExcelDate = (value: string | number | null | undefined): string => {
+  if (value === undefined || value === null || value === '') {
+    return '';
+  }
+
+  // Se for um número (data do Excel)
+  if (typeof value === 'number' || !isNaN(Number(value))) {
+    try {
+      const date = SSF.parse_date_code(Number(value));
+      if (date) {
+        const day = String(date.d).padStart(2, '0');
+        const month = String(date.m).padStart(2, '0');
+        const year = date.y;
+        return `${day}/${month}/${year}`;
+      }
+    } catch (error) {
+      console.error('Erro ao converter data do Excel:', error);
+    }
+  }
+
+  // Se já for uma string de data, retorna como está
+  const stringValue = String(value).trim();
+  
+  // Se já está no formato DD/MM/YYYY, retorna como está
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(stringValue)) {
+    return stringValue;
+  }
+
+  return stringValue;
 };
 
 interface BatchRow {
@@ -219,7 +250,7 @@ const Nexus2PredictionBatch: React.FC = () => {
     const normalizedRows: BatchRow[] = dataRows.map((row, index) => {
       const idFazenda = getCellValue(row, indexMap.idFazenda);
       const nome = getCellValue(row, indexMap.nome);
-      const dataNascimento = getCellValue(row, indexMap.dataNascimento);
+      const dataNascimento = parseExcelDate(indexMap.dataNascimento !== -1 ? row?.[indexMap.dataNascimento] : '');
       const naabPai = normalizeNaab(getCellValue(row, indexMap.naabPai));
       const naabAvoMaterno = normalizeNaab(getCellValue(row, indexMap.naabAvoMaterno));
       const naabBisavoMaterno = normalizeNaab(getCellValue(row, indexMap.naabBisavoMaterno));
