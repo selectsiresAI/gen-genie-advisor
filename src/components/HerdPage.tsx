@@ -807,10 +807,10 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
                       </AlertDialog>
                     </div>
                   )}
-                  <ScrollArea className="h-[500px] w-full">
-                    <div className="min-w-[2000px]">
+                  <ScrollArea className="h-[600px] w-full rounded-md border">
+                    <div className="min-w-max">
                       <table className="w-full border-collapse">
-                        <thead className="sticky top-0 z-10">
+                        <thead className="sticky top-0 z-20 bg-muted">
                           <tr className="bg-muted">
                             <th className="border px-2 py-1 text-left text-xs bg-muted">
                               <input

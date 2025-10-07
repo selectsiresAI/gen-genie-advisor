@@ -1519,10 +1519,10 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
           {loading ? (
             <div className="text-sm" style={{ color: SS.black }}>Carregando…</div>
           ) : (
-            <ScrollArea className="h-[500px] w-full">
-              <div className="min-w-[2000px]">
+            <ScrollArea className="h-[600px] w-full rounded-md border" style={{ borderColor: SS.gray }}>
+              <div className="min-w-max">
                 <table className="w-full text-sm border-collapse">
-                  <thead className="sticky top-0 z-10">
+                  <thead className="sticky top-0 z-20">
                     <tr className="border-b" style={{ color: SS.black, borderColor: SS.gray, background: SS.gray }}>
                       <th className="border px-2 py-1 text-left text-xs" style={{ background: SS.gray }}>ID Fazenda</th>
                       <th className="border px-2 py-1 text-left text-xs" style={{ background: SS.gray }}>Nome</th>
