@@ -1520,7 +1520,7 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
             <div className="text-sm" style={{ color: SS.black }}>Carregando…</div>
           ) : (
             <ScrollArea className="h-[600px] w-full rounded-md border" style={{ borderColor: SS.gray }}>
-              <div className="min-w-max">
+              <div className="min-w-max pb-4">
                 <table className="w-full text-sm border-collapse">
                   <thead className="sticky top-0 z-20">
                     <tr className="border-b" style={{ color: SS.black, borderColor: SS.gray, background: SS.gray }}>
