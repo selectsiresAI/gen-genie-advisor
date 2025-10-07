@@ -28,6 +28,100 @@ type BatchResultColumn = {
   exportValue: (result: BatchResult) => string;
 };
 
+const formatBatchDate = (value: unknown): string => {
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  const formatDateParts = (date: Date) => {
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const year = date.getUTCFullYear();
+
+    return `${day}/${month}/${year}`;
+  };
+
+  const tryExcelSerial = (input: number) => {
+    if (!Number.isFinite(input)) {
+      return '';
+    }
+
+    const serial = Math.floor(input);
+    const excelEpoch = Date.UTC(1899, 11, 30);
+    const milliseconds = serial * 24 * 60 * 60 * 1000;
+    const date = new Date(excelEpoch + milliseconds);
+
+    return formatDateParts(date);
+  };
+
+  if (value instanceof Date) {
+    return formatDateParts(value);
+  }
+
+  if (typeof value === 'number') {
+    const formatted = tryExcelSerial(value);
+    return formatted || '';
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+
+    if (!trimmed) {
+      return '';
+    }
+
+    if (/^\d+(\.\d+)?$/.test(trimmed)) {
+      const formatted = tryExcelSerial(Number(trimmed));
+      if (formatted) {
+        return formatted;
+      }
+    }
+
+    const normalized = trimmed.replace(/-/g, '/');
+    const parts = normalized.split('/');
+
+    if (parts.length === 3) {
+      const [part1, part2, part3] = parts.map((part) => part.trim());
+
+      if (part1.length === 4) {
+        const year = Number(part1);
+        const month = Number(part2);
+        const day = Number(part3);
+
+        if (year && month && day) {
+          return formatDateParts(new Date(Date.UTC(year, month - 1, day)));
+        }
+      }
+
+      const day = Number(part1);
+      const month = Number(part2);
+      let year = Number(part3);
+
+      if (part3.length === 2 && !Number.isNaN(year)) {
+        year += year >= 70 ? 1900 : 2000;
+      }
+
+      if (!Number.isNaN(day) && !Number.isNaN(month) && !Number.isNaN(year)) {
+        return formatDateParts(new Date(Date.UTC(year, month - 1, day)));
+      }
+    }
+
+    const parsed = new Date(trimmed);
+
+    if (!Number.isNaN(parsed.getTime())) {
+      return formatDateParts(parsed);
+    }
+
+    return trimmed;
+  }
+
+  return '';
+};
+
 const BATCH_RESULT_BASE_COLUMNS: BatchResultColumn[] = [
   {
     header: 'ID_Fazenda',
@@ -41,8 +135,8 @@ const BATCH_RESULT_BASE_COLUMNS: BatchResultColumn[] = [
   },
   {
     header: 'Data_de_Nascimento',
-    render: (result) => result.dataNascimento || '—',
-    exportValue: (result) => result.dataNascimento || '—'
+    render: (result) => formatBatchDate(result.dataNascimento) || '—',
+    exportValue: (result) => formatBatchDate(result.dataNascimento) || '—'
   },
   {
     header: 'naab_pai',
@@ -373,10 +467,24 @@ const PedigreePredictor: React.FC = () => {
         const rowArray = jsonDataWithoutHeaders[i + 1]; // +1 because first row is headers
         
         // Try multiple ways to get the data
+        const rawBirthDate =
+          row.dataNascimento ||
+          row['dataNascimento'] ||
+          (rowArray ? rowArray[2] : '') ||
+          '';
+
+        const formattedBirthDate = formatBatchDate(rawBirthDate);
+
         const input: BatchInput = {
           idFazenda: row.idFazenda || row['idFazenda'] || (rowArray ? rowArray[0] : '') || '',
           nome: row.Nome || row.nome || row['Nome'] || (rowArray ? rowArray[1] : '') || '',
-          dataNascimento: row.dataNascimento || row['dataNascimento'] || (rowArray ? rowArray[2] : '') || '',
+          dataNascimento:
+            formattedBirthDate ||
+            (typeof rawBirthDate === 'string'
+              ? rawBirthDate.trim()
+              : rawBirthDate !== null && rawBirthDate !== undefined
+                ? String(rawBirthDate)
+                : ''),
           naabPai: row.naabPai || row['naabPai'] || (rowArray ? rowArray[3] : '') || '',
           naabAvoMaterno: row.naabAvoMaterno || row['naabAvoMaterno'] || (rowArray ? rowArray[4] : '') || '',
           naabBisavoMaterno: row.naabBisavoMaterno || row['naabBisavoMaterno'] || (rowArray ? rowArray[5] : '') || ''
