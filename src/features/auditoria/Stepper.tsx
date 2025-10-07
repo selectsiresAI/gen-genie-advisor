@@ -6,11 +6,9 @@ const steps = [
   "Parentesco",
   "Top Pais/Avós",
   "Quartis (Overview)",
-  "Média Linear",
   "Progressão Genética",
   "Comparação de Progressão",
   "Quartis – Índices",
-  "Genetic Benchmark",
   "Distribuição",
 ];
 

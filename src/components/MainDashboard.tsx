@@ -368,13 +368,13 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                         Auditoria Genética
                       </CardTitle>
                       <CardDescription>
-                        Nova jornada com 9 passos sequenciais
+                        Nova jornada com 7 passos sequenciais
                       </CardDescription>
                     </CardHeader>
                   </Card>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Explorar a auditoria genética completa do rebanho em nove etapas guiadas</p>
+                  <p>Explorar a auditoria genética completa do rebanho em sete etapas guiadas</p>
                 </TooltipContent>
               </Tooltip>
 
