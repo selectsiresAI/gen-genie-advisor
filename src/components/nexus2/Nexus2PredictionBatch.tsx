@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { getBullByNaab } from '@/supabase/queries/bulls';
+import { supabase } from '@/integrations/supabase/client';
 import {
   BullSummary,
   PREDICTION_TRAITS,
@@ -276,7 +277,27 @@ const Nexus2PredictionBatch: React.FC = () => {
       }
 
       try {
-        const record = await getBullByNaab(naab);
+        // Primeiro tenta busca exata
+        let record = await getBullByNaab(naab);
+        
+        // Se não encontrar, tenta buscar por prefixo (código parcial como 7HO, 007HO)
+        if (!record) {
+          const { data } = await supabase
+            .rpc('search_bulls', { q: naab, limit_count: 10 });
+          
+          if (data && data.length > 0) {
+            // Busca o primeiro touro cujo código começa com o NAAB fornecido
+            const match = data.find((bull: any) => {
+              const bullCode = normalizeNaab(bull.code);
+              return bullCode.startsWith(naab);
+            });
+            
+            if (match) {
+              record = { id: match.bull_id, ...match };
+            }
+          }
+        }
+        
         const bull = mapBullRecord(record);
         bullCache.set(naab, bull);
         return bull;
