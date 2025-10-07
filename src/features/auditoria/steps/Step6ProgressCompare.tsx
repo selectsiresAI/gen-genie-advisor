@@ -557,7 +557,7 @@ export default function Step6ProgressCompare() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Comparação por Categoria (Step 6)</CardTitle>
+        <CardTitle>Comparação por Categoria (Step 5)</CardTitle>
       </CardHeader>
 
       <CardContent className="space-y-6">

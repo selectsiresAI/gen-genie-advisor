@@ -23,7 +23,7 @@ export default function AGLayout({ children, onBack, farmName }: AGLayoutProps) 
           )}
           <div>
             <h1 className="text-xl font-semibold">Auditoria Genética{farmName ? ` — ${farmName}` : ""}</h1>
-            <p className="text-sm text-muted-foreground">9 passos sequenciais</p>
+            <p className="text-sm text-muted-foreground">7 passos sequenciais</p>
           </div>
         </div>
       </div>
