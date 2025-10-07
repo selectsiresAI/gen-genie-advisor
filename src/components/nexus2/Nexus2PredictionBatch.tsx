@@ -285,13 +285,13 @@ const Nexus2PredictionBatch: React.FC = () => {
           const normalized = normalizeNaab(naab);
           let variant: string | null = null;
           
-          // Se termina com H, tenta HO
-          if (normalized.endsWith('H') && !normalized.endsWith('HO')) {
-            variant = normalized + 'O';
+          // Se tem H seguido de dígitos (como 7H18299), substitui por HO (7HO18299)
+          if (/H\d/.test(normalized) && !/HO\d/.test(normalized)) {
+            variant = normalized.replace(/H(\d)/g, 'HO$1');
           }
-          // Se termina com HO, tenta H
-          else if (normalized.endsWith('HO')) {
-            variant = normalized.slice(0, -1);
+          // Se tem HO seguido de dígitos (como 7HO18299), substitui por H (7H18299)
+          else if (/HO\d/.test(normalized)) {
+            variant = normalized.replace(/HO(\d)/g, 'H$1');
           }
           
           if (variant) {
