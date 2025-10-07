@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,19 +33,27 @@ function safeCols(keys: string[]) {
 export default function Step3QuartisOverview() {
   const { farmId } = useAGFilters();
 
-  // Todas as PTAs disponíveis (filtra *_label/_class)
+  const traitCatalog = PTA_CATALOG ?? [];
   const allTraits = useMemo(
-    () =>
-      Object.keys(PTA_CATALOG ?? {}).filter(
-        (k) => !k.endsWith("_label") && !k.endsWith("_class")
-      ),
-    []
+    () => safeCols(traitCatalog.map((item) => item.key)),
+    [traitCatalog]
+  );
+  const labelMap = useMemo(() => {
+    const entries: Record<string, string> = {};
+    traitCatalog.forEach(({ key, label }) => {
+      if (key) entries[key] = label;
+    });
+    return entries;
+  }, [traitCatalog]);
+  const labelOf = useCallback(
+    (key: string) => labelMap[key] ?? key.toUpperCase(),
+    [labelMap]
   );
 
   // Seleção inicial: PTAM, HHP$ (mapeado p/ hhp_dollar) se existirem; senão, primeiras 6
   const initial = useMemo(() => {
     const prefs = safeCols(["ptam", "hhp_dollar"]);
-    const base = safeCols(allTraits).slice(0, 6);
+    const base = allTraits.slice(0, 6);
     const uniq = Array.from(new Set([...prefs, ...base]));
     return uniq;
   }, [allTraits]);
@@ -54,11 +62,6 @@ export default function Step3QuartisOverview() {
   const [rows, setRows] = useState<Row[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const selectCols = useMemo(() => {
-    const cols = ["farm_id", ...safeCols(selected)];
-    return Array.from(new Set(cols)).join(",");
-  }, [selected]);
 
   const toggleTrait = (k: string, on?: boolean) => {
     setSelected((prev) => {
@@ -69,7 +72,7 @@ export default function Step3QuartisOverview() {
     });
   };
 
-  const selectAll = () => setSelected(safeCols(allTraits));
+  const selectAll = () => setSelected(allTraits);
   const clearAll = () => setSelected([]);
 
   async function loadData() {
@@ -82,14 +85,15 @@ export default function Step3QuartisOverview() {
         setErrorMsg("Selecione um rebanho para carregar os dados.");
         return;
       }
-      if (selected.length === 0) {
+      const sanitized = safeCols(selected);
+      if (sanitized.length === 0) {
         setErrorMsg("Selecione ao menos uma PTA.");
         return;
       }
 
       const { data, error } = await supabase
         .from("females_denorm")
-        .select(selectCols)
+        .select(["farm_id", ...sanitized].join(","))
         .eq("farm_id", farmId);
 
       if (error) {
@@ -101,7 +105,7 @@ export default function Step3QuartisOverview() {
 
       const result: Row[] = [];
 
-      for (const trait of selected) {
+      for (const trait of sanitized) {
         const values = (data ?? [])
           .map((r: any) => (r?.[trait] == null ? undefined : Number(r?.[trait])))
           .filter((v: number | undefined): v is number => Number.isFinite(v as number));
@@ -173,8 +177,8 @@ export default function Step3QuartisOverview() {
           </div>
           <ScrollArea className="h-64 rounded border p-2">
             <div className="space-y-2">
-              {safeCols(allTraits).map((k) => {
-                const label = (PTA_CATALOG as any)?.[k]?.label ?? k.toUpperCase();
+              {allTraits.map((k) => {
+                const label = labelOf(k);
                 const checked = selected.includes(k);
                 return (
                   <label key={k} className="flex items-center gap-2 text-sm cursor-pointer">
@@ -217,8 +221,7 @@ export default function Step3QuartisOverview() {
               </thead>
               <tbody>
                 {rows.map((r) => {
-                  const label =
-                    (PTA_CATALOG as any)?.[r.trait_key]?.label ?? r.trait_key.toUpperCase();
+                  const label = labelOf(r.trait_key);
                   return (
                     <tr key={r.trait_key} className="border-b last:border-0">
                       <td className="py-2 pr-3">{label}</td>
