@@ -50,9 +50,16 @@ const formatBatchDate = (value: unknown): string => {
       return '';
     }
 
-    const serial = Math.floor(input);
     const excelEpoch = Date.UTC(1899, 11, 30);
-    const milliseconds = serial * 24 * 60 * 60 * 1000;
+    const millisecondsPerDay = 24 * 60 * 60 * 1000;
+
+    const serial = Math.floor(input);
+    const fractionalDay = input - serial;
+
+    // Excel incorrectly treats 1900 as a leap year. Serial numbers >= 60 include this fake day.
+    const adjustedSerial = serial > 59 ? serial - 1 : serial;
+    const milliseconds = adjustedSerial * millisecondsPerDay + Math.round(fractionalDay * millisecondsPerDay);
+
     const date = new Date(excelEpoch + milliseconds);
 
     return formatDateParts(date);
@@ -470,6 +477,11 @@ const PedigreePredictor: React.FC = () => {
         const rawBirthDate =
           row.dataNascimento ||
           row['dataNascimento'] ||
+          row['DataNascimento'] ||
+          row['Data_de_Nascimento'] ||
+          row['Data de Nascimento'] ||
+          row['data_nascimento'] ||
+          row['DATA_NASCIMENTO'] ||
           (rowArray ? rowArray[2] : '') ||
           '';
 
