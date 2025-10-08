@@ -6,11 +6,15 @@ import { Label } from "@/components/ui/label";
 import { Upload, FileText, AlertCircle } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { supabase } from '@/integrations/supabase/client';
+import { Progress } from "@/components/ui/progress";
+import Papa from "@/lib/papaparse";
 import { read, utils } from 'xlsx';
 import { parse as parseDateFn, isValid as isValidDate } from 'date-fns';
 
 const TARGET_TABLE = "females";
+const IMPORT_ENDPOINT = "/api/females/import";
+const MAX_IMPORT_ROWS = 10_000;
+const API_CHUNK_SIZE = 500;
 
 const canonicalColumns = [
   'id', 'farm_id', 'name', 'identifier', 'cdcb_id', 'sire_naab', 'mgs_naab', 'mmgs_naab', 'birth_date',
@@ -247,6 +251,25 @@ type FemaleOptionalColumn = Exclude<FemaleCanonicalColumn, 'id' | 'farm_id' | 'n
 type FemaleValue = string | number | boolean | null | Record<string, unknown>;
 type FemaleRow = Partial<Record<FemaleCanonicalColumn, FemaleValue>>;
 
+type ImportBatchResult = {
+  batch: number;
+  total: number;
+  inserted: number;
+  updated: number;
+  error?: string;
+};
+
+type ImportSummary = {
+  total_received: number;
+  total_success: number;
+  total_batches: number;
+  chunk_size: number;
+  inserted?: number;
+  updated?: number;
+  errors?: Array<{ batch: number; message: string }>;
+  batch_results?: ImportBatchResult[];
+};
+
 const toCanonicalValue = (
   canonicalKey: string,
   header: string,
@@ -267,38 +290,6 @@ const toCanonicalValue = (
   if (numericFields.has(canonicalKey)) return normalizeNumericValue(canonicalKey, value);
 
   return value as FemaleValue;
-};
-
-const splitCsvLine = (line: string, delimiter: string): string[] => {
-  const values: string[] = [];
-  let current = '';
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
-      else { inQuotes = !inQuotes; }
-    } else if (char === delimiter && !inQuotes) {
-      values.push(current.trim()); current = '';
-    } else {
-      current += char;
-    }
-  }
-  values.push(current.trim());
-  return values.map((value) => value.replace(/^["']|["']$/g, ''));
-};
-
-const detectDelimiter = (line: string): string => {
-  const candidates = [';', ',', '\t', '|'];
-  let bestDelimiter = ';';
-  let bestScore = 1;
-
-  for (const candidate of candidates) {
-    const parsed = splitCsvLine(line, candidate);
-    if (parsed.length > bestScore) { bestScore = parsed.length; bestDelimiter = candidate; }
-  }
-  return bestDelimiter === '\t' ? '\t' : bestDelimiter;
 };
 
 const isRowEmpty = (row: (string | number | null | undefined)[]) => {
@@ -419,49 +410,64 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [progress, setProgress] = useState({ total: 0, processed: 0, totalBatches: 0, completedBatches: 0 });
+  const [importSummary, setImportSummary] = useState<ImportSummary | null>(null);
+  const [batchResults, setBatchResults] = useState<ImportBatchResult[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast } = useToast();
 
   const optionalFields = canonicalColumns.filter((column) => !['id', 'farm_id', 'name'].includes(column)) as FemaleOptionalColumn[];
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setSelectedFile(file);
+    if (file) {
+      setSelectedFile(file);
+      setErrorMessage(null);
+      setImportSummary(null);
+      setBatchResults([]);
+      setProgress({ total: 0, processed: 0, totalBatches: 0, completedBatches: 0 });
+    }
     e.target.value = '';
   };
 
   const parseCsvFile = async (file: File): Promise<FemaleRow[]> => {
     return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const text = (event.target?.result as string) ?? '';
-          const normalizedText = text.replace(/\r\n/g, '\n');
-          const lines = normalizedText.split('\n');
-
-          const rows: (string | number | null | undefined)[][] = [];
-          let delimiter = ';';
-          let headerCaptured = false;
-
-          for (const rawLine of lines) {
-            if (!headerCaptured) {
-              if (rawLine.trim() === '') continue;
-              const headerLine = rawLine.replace(/^\uFEFF/, '');
-              delimiter = detectDelimiter(headerLine);
-              rows.push(splitCsvLine(headerLine, delimiter));
-              headerCaptured = true;
-            } else {
-              rows.push(splitCsvLine(rawLine, delimiter));
-            }
+      Papa.parse<Record<string, unknown>>(file, {
+        header: true,
+        skipEmptyLines: 'greedy',
+        worker: true,
+        complete: (result) => {
+          if (result.errors && result.errors.length > 0) {
+            const first = result.errors[0];
+            reject(new Error(first.message || 'Erro ao processar arquivo CSV'));
+            return;
           }
 
-          if (!headerCaptured) throw new Error('Arquivo deve conter pelo menos um cabeçalho e uma linha de dados');
-          resolve(buildRecordsFromRows(rows));
-        } catch (error) {
+          const header = result.meta.fields ?? [];
+          if (header.length === 0) {
+            reject(new Error('Arquivo deve conter pelo menos um cabeçalho válido.'));
+            return;
+          }
+
+          const rows: (string | number | null | undefined)[][] = [header];
+          result.data.forEach((row) => {
+            const normalizedRow = header.map((field) => {
+              const value = (row as Record<string, unknown>)[field];
+              return value === undefined ? null : value;
+            });
+            rows.push(normalizedRow);
+          });
+
+          try {
+            resolve(buildRecordsFromRows(rows));
+          } catch (error) {
+            reject(error instanceof Error ? error : new Error('Erro ao transformar dados do CSV'));
+          }
+        },
+        error: (error) => {
           reject(error instanceof Error ? error : new Error('Erro ao processar arquivo CSV'));
-        }
-      };
-      reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
-      reader.readAsText(file, 'utf-8');
+        },
+      });
     });
   };
 
@@ -500,10 +506,18 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
     }
 
     setIsUploading(true);
+    setErrorMessage(null);
+    setImportSummary(null);
+    setBatchResults([]);
+    setProgress({ total: 0, processed: 0, totalBatches: 0, completedBatches: 0 });
 
     try {
       const recordsData = await parseFileData(selectedFile);
       if (!recordsData || recordsData.length === 0) throw new Error('Nenhum dado válido encontrado no arquivo');
+
+      if (recordsData.length > MAX_IMPORT_ROWS) {
+        throw new Error(`Máximo de ${MAX_IMPORT_ROWS.toLocaleString('pt-BR')} linhas por operação. Divida o arquivo.`);
+      }
 
       // Montar registros para a tabela females
       type FemaleInsertRecord = FemaleRow & { farm_id: string; name: string | null };
@@ -534,41 +548,85 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
       // Validação mínima: nome obrigatório
       const invalidRows = recordsToInsert.filter(r => !r.name || String(r.name).trim() === '');
       if (invalidRows.length > 0) throw new Error(`${invalidRows.length} linha(s) sem nome válido encontrada(s)`);
+      const totalRows = recordsToInsert.length;
+      const expectedBatches = Math.max(1, Math.ceil(totalRows / API_CHUNK_SIZE));
 
-      const batchSize = 100;
-      let totalInserted = 0;
+      setProgress({ total: totalRows, processed: 0, totalBatches: expectedBatches, completedBatches: 0 });
 
-      for (let i = 0; i < recordsToInsert.length; i += batchSize) {
-        const chunk = recordsToInsert.slice(i, i + batchSize);
+      const response = await fetch(IMPORT_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          farmId,
+          rows: recordsToInsert,
+          targetTable: TARGET_TABLE,
+          onConflict: 'farm_id,identifier',
+        }),
+      });
 
-        // Escolha 1 (sem depender de índice único): INSERT
-        const { error } = await supabase.from(TARGET_TABLE).insert(chunk as any);
-        // Escolha 2 (se tiver índice único em farm_id,cdcb_id): use upsert
-        // const { error } = await supabase.from(TARGET_TABLE).upsert(chunk as Record<string, unknown>[], { onConflict: 'farm_id,cdcb_id' });
+      const payload = await response.json();
 
-        if (error) {
-          console.error('Supabase insertion error:', error);
-          const details = (error as { details?: string; hint?: string } | null | undefined)?.details
-            || (error as { details?: string; hint?: string } | null | undefined)?.hint;
-          const message = details ? `${(error as any).message} (${details})` : (error as any).message;
-          throw new Error(`Erro ao inserir dados: ${message}`);
+      if (!response.ok) {
+        const message = payload?.error ?? 'Não foi possível concluir o import.';
+        setErrorMessage(message);
+        throw new Error(message);
+      }
+
+      const summary: ImportSummary = payload;
+      const batches = Array.isArray(summary.batch_results) ? summary.batch_results : [];
+
+      setImportSummary(summary);
+      setBatchResults(batches);
+
+      let processed = 0;
+      let completedBatches = 0;
+      const totalBatches = summary.total_batches ?? expectedBatches;
+
+      if (batches.length > 0) {
+        for (const batch of batches) {
+          const processedInBatch = (batch.inserted ?? 0) + (batch.updated ?? 0);
+          processed += processedInBatch;
+          if (!batch.error) completedBatches += 1;
+
+          setProgress({
+            total: totalRows,
+            processed,
+            totalBatches,
+            completedBatches,
+          });
+
+          await new Promise((resolve) => setTimeout(resolve, 0));
         }
-        totalInserted += chunk.length;
+
+        setProgress({
+          total: totalRows,
+          processed: summary.total_success ?? processed,
+          totalBatches,
+          completedBatches,
+        });
+      } else {
+        setProgress({
+          total: totalRows,
+          processed: summary.total_success ?? 0,
+          totalBatches,
+          completedBatches: totalBatches - (summary.errors?.length ?? 0),
+        });
       }
 
       toast({
         title: "Fêmeas importadas com sucesso!",
-        description: `${totalInserted} fêmea(s) importada(s) para a fazenda ${farmName}`,
+        description: `${summary.total_success ?? 0} fêmea(s) processada(s) com sucesso na fazenda ${farmName}`,
       });
 
       setSelectedFile(null);
       if (onImportSuccess) onImportSuccess();
-      onClose();
     } catch (error) {
       console.error('Upload error:', error);
+      const message = error instanceof Error ? error.message : "Não foi possível processar o arquivo. Tente novamente.";
+      setErrorMessage(message);
       toast({
         title: "Erro no upload",
-        description: error instanceof Error ? error.message : "Não foi possível processar o arquivo. Tente novamente.",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -663,8 +721,89 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
           <div className="text-xs text-muted-foreground">
             <strong>Formatos aceitos:</strong> CSV, Excel (.xlsx, .xls)<br />
             <strong>Tamanho máximo:</strong> 10MB<br />
+            <strong>Limite por operação:</strong> 10.000 linhas<br />
             <strong>Codificação:</strong> UTF-8 (recomendado)
           </div>
+
+          {(progress.total > 0 || batchResults.length > 0 || importSummary || errorMessage) && (
+            <div className="space-y-3 rounded-lg border bg-muted/30 p-3">
+              {progress.total > 0 && (
+                <div className="space-y-2 text-sm">
+                  <div className="font-medium">Progresso do envio</div>
+                  <div className="text-muted-foreground">
+                    Processados: {progress.processed} / {progress.total}
+                  </div>
+                  <Progress value={progress.total ? Math.min(100, (progress.processed / progress.total) * 100) : 0} />
+                  <div className="text-muted-foreground">
+                    Lotes concluídos: {progress.completedBatches} / {progress.totalBatches}
+                  </div>
+                </div>
+              )}
+
+              {batchResults.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">Resumo por lote</div>
+                  <div className="max-h-48 overflow-y-auto overflow-x-auto rounded-md border">
+                    <table className="min-w-[420px] w-full text-xs">
+                      <thead className="bg-muted/60 text-muted-foreground">
+                        <tr>
+                          <th className="px-2 py-1 text-left">Lote</th>
+                          <th className="px-2 py-1 text-left">Registros</th>
+                          <th className="px-2 py-1 text-left">Inseridos</th>
+                          <th className="px-2 py-1 text-left">Atualizados</th>
+                          <th className="px-2 py-1 text-left">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {batchResults.map((batch) => (
+                          <tr key={batch.batch} className="odd:bg-background even:bg-muted/40">
+                            <td className="px-2 py-1 font-medium">{batch.batch}</td>
+                            <td className="px-2 py-1">{batch.total}</td>
+                            <td className="px-2 py-1">{batch.inserted}</td>
+                            <td className="px-2 py-1">{batch.updated}</td>
+                            <td className="px-2 py-1">
+                              {batch.error ? (
+                                <span className="text-destructive">Falha: {batch.error}</span>
+                              ) : (
+                                <span className="text-emerald-600">Sucesso</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {importSummary && (
+                <div className="space-y-1 text-xs">
+                  <div>Total recebido: {importSummary.total_received}</div>
+                  <div>Total processado com sucesso: {importSummary.total_success}</div>
+                  <div>Chunks configurados: {importSummary.chunk_size}</div>
+                  {typeof importSummary.inserted === 'number' && (
+                    <div>Inseridos: {importSummary.inserted}</div>
+                  )}
+                  {typeof importSummary.updated === 'number' && (
+                    <div>Atualizados: {importSummary.updated}</div>
+                  )}
+                  {importSummary.errors && importSummary.errors.length > 0 ? (
+                    <div className="text-destructive">
+                      {importSummary.errors.length} lote(s) com falha.
+                    </div>
+                  ) : (
+                    <div className="text-emerald-600">Todos os lotes concluídos sem erros.</div>
+                  )}
+                </div>
+              )}
+
+              {errorMessage && (
+                <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                  {errorMessage}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
