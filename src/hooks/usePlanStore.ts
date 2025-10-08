@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { TOOLSS_ALL_CLIENT_STORAGE_KEYS } from '@/constants/toolss';
 
 // Lista completa de PTAs disponíveis (fonte de verdade única)
 // Exatamente como aparecem no banco de fêmeas, na ordem especificada
@@ -205,13 +206,15 @@ function getFemalesByFarm(farmId: string): any[] {
     console.warn('Error parsing toolss.femalesByFarm from localStorage:', e);
   }
   
-  // Priority 4: Check ToolSSApp data format (toolss_clients_v2_with_500_females)
+  // Priority 4: Check ToolSSApp data format stored in known localStorage keys
   try {
-    const toolssData = localStorage.getItem("toolss_clients_v2_with_500_females");
-    if (toolssData) {
+    for (const storageKey of TOOLSS_ALL_CLIENT_STORAGE_KEYS) {
+      const toolssData = localStorage.getItem(storageKey);
+      if (!toolssData) continue;
+
       const clients = JSON.parse(toolssData);
-      console.log('🔍 Found ToolSSApp data, clients count:', clients.length);
-      
+      console.log(`🔍 Found ToolSSApp data in ${storageKey}, clients count:`, clients.length);
+
       for (const client of clients) {
         if (client.farms) {
           const farm = client.farms.find((f: any) => f.id === farmId);

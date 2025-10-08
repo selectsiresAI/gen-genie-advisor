@@ -1,3 +1,5 @@
+import { TOOLSS_ALL_CLIENT_STORAGE_KEYS } from "@/constants/toolss";
+
 // Utility to count categories in the female database
 export function countCategoriesInDatabase() {
   console.log('🔍 Iniciando contagem de categorias...');
@@ -35,12 +37,14 @@ export function countCategoriesInDatabase() {
     console.warn('⚠️ Error parsing localStorage:', e);
   }
   
-  // Also check toolss_clients_v2_with_500_females
+  // Also check ToolSS client datasets stored in known keys
   try {
-    const clientsData = localStorage.getItem("toolss_clients_v2_with_500_females");
-    if (clientsData) {
+    for (const storageKey of TOOLSS_ALL_CLIENT_STORAGE_KEYS) {
+      const clientsData = localStorage.getItem(storageKey);
+      if (!clientsData) continue;
+
       const clients = JSON.parse(clientsData);
-      console.log('👥 Clients with female data:', clients.length);
+      console.log(`👥 Clients with female data (${storageKey}):`, clients.length);
       for (const client of clients) {
         if (client.farms) {
           for (const farm of client.farms) {

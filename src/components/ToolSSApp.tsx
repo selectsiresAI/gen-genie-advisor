@@ -14,6 +14,7 @@ import SegmentationPage from "./SegmentationPage";
 import NexusApp from "./NexusApp";
 import PlanoApp from "./PlanoApp";
 import BotijaoVirtualPage from "./BotijaoVirtual";
+import { TOOLSS_CLIENT_STORAGE_KEY, TOOLSS_SEED_FEMALE_TARGET } from "@/constants/toolss";
 
 /**
  * ToolSS — MVP interativo (Lovable-ready)
@@ -332,11 +333,12 @@ function normalize(value: number, mean: number, sd: number) {
 }
 
 // ------------------------ Seed Data ------------------------
-// Generate 500 comprehensive females for Rebanho #1160
+// Generate 5000 comprehensive females for Rebanho #1160
 const generateComprehensiveFemales = (): Female[] => {
-  const females: Female[] = [];  
+  const females: Female[] = [];
   const years = [2021, 2022, 2023, 2024, 2025];
   const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  const femalesPerYear = Math.ceil(TOOLSS_SEED_FEMALE_TARGET / years.length);
   
   // Comprehensive sire names and lineages
   const sireData = [
@@ -371,8 +373,7 @@ const generateComprehensiveFemales = (): Female[] => {
   for (let yearIdx = 0; yearIdx < years.length; yearIdx++) {
     const year = years[yearIdx];
     
-    // 100 females per year
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < femalesPerYear && females.length < TOOLSS_SEED_FEMALE_TARGET; i++) {
       const month = months[Math.floor(Math.random() * months.length)];
       const day = Math.floor(Math.random() * 28) + 1;
       const nascimento = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
@@ -475,8 +476,11 @@ const generateComprehensiveFemales = (): Female[] => {
       
       counter++;
     }
+    if (females.length >= TOOLSS_SEED_FEMALE_TARGET) {
+      break;
+    }
   }
-  
+
   return females;
 };
 
@@ -686,7 +690,7 @@ const seedClients: Client[] = [{
 }];
 
 // ------------------------ Persistence ------------------------
-const STORAGE_KEY = "toolss_clients_v3_with_150_bulls"; // Changed key to force reload of new bull data
+const STORAGE_KEY = TOOLSS_CLIENT_STORAGE_KEY; // Changed key to force reload of dataset with 5000 fêmeas
 const SEGMENT_CFG_KEY = "toolss_segment_config_v1";
 function loadClients(): Client[] {
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -695,10 +699,10 @@ function loadClients(): Client[] {
     const loaded = JSON.parse(raw) as Client[];
     // Force reload if client 1160 doesn't have enough females or bulls
     const client1160 = loaded.find(c => c.id === 1160);
-    if (!client1160 || !client1160.farms[0] || 
-        client1160.farms[0].females.length < 500 || 
+    if (!client1160 || !client1160.farms[0] ||
+        client1160.farms[0].females.length < TOOLSS_SEED_FEMALE_TARGET ||
         client1160.farms[0].bulls.length < 150) {
-      console.log("🔄 Forcing reload of seed data with 500 females and 150 bulls...");
+      console.log(`🔄 Forcing reload of seed data with ${TOOLSS_SEED_FEMALE_TARGET} fêmeas e 150 touros...`);
       return seedClients;
     }
     return loaded;
