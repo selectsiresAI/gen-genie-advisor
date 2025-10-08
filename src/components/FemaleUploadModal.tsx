@@ -564,15 +564,48 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
         }),
       });
 
-      const payload = await response.json();
+      const contentType = response.headers.get('content-type') ?? '';
+      const clonedResponse = response.clone();
+      let payload: ImportSummary | { error?: string } | null = null;
+      let fallbackText: string | null = null;
+
+      if (contentType.includes('application/json')) {
+        try {
+          payload = await clonedResponse.json();
+        } catch (error) {
+          console.error('Falha ao interpretar resposta JSON do importador:', error);
+        }
+      }
+
+      if (!payload) {
+        try {
+          fallbackText = await response.text();
+        } catch (error) {
+          console.error('Falha ao ler texto da resposta do importador:', error);
+        }
+      }
 
       if (!response.ok) {
-        const message = payload?.error ?? 'Não foi possível concluir o import.';
+        const message = (payload && 'error' in payload && typeof payload.error === 'string')
+          ? payload.error
+          : fallbackText?.trim().slice(0, 500) || 'Não foi possível concluir o import.';
         setErrorMessage(message);
         throw new Error(message);
       }
 
-      const summary: ImportSummary = payload;
+      if (!payload) {
+        const message = fallbackText?.trim().slice(0, 500) || 'Resposta inesperada do servidor do importador.';
+        setErrorMessage(message);
+        throw new Error(message);
+      }
+
+      if (typeof (payload as ImportSummary).total_received !== 'number') {
+        const message = 'Resposta inesperada do servidor do importador.';
+        setErrorMessage(message);
+        throw new Error(message);
+      }
+
+      const summary: ImportSummary = payload as ImportSummary;
       const batches = Array.isArray(summary.batch_results) ? summary.batch_results : [];
 
       setImportSummary(summary);
