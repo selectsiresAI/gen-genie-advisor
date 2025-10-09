@@ -141,12 +141,29 @@ export const usePTAStore = create<PTAStoreState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      // Get all data for the herd using limit to fetch up to 10000 records
-      const { data, error } = await supabase
-        .rpc('get_females_denorm', { target_farm_id: herdId })
-        .limit(10000); // Fetch up to 10000 records explicitly
+      // Fetch ALL records by making paginated requests
+      let allData: any[] = [];
+      let page = 0;
+      const pageSize = 1000;
+      let hasMore = true;
 
-      if (error) throw error;
+      while (hasMore) {
+        const { data: pageData, error: pageError } = await supabase
+          .rpc('get_females_denorm', { target_farm_id: herdId })
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+
+        if (pageError) throw pageError;
+        
+        if (pageData && pageData.length > 0) {
+          allData = [...allData, ...pageData];
+          hasMore = pageData.length === pageSize;
+          page++;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      const data = allData;
 
       if (!data || data.length === 0) {
         set({ ptaMeansByCategory: {}, loading: false });

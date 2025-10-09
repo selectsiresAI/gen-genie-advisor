@@ -375,12 +375,29 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
     setLoading(true); 
     setError("");
     try {
-      // Use limit to fetch up to 10000 records (same as HerdPage)
-      const { data, error: err } = await supabase
-        .rpc('get_females_denorm', { target_farm_id: farm.farm_id })
-        .limit(10000); // Fetch up to 10000 records explicitly
+      // Fetch ALL records by making paginated requests (same as HerdPage)
+      let allData: any[] = [];
+      let page = 0;
+      const pageSize = 1000;
+      let hasMore = true;
 
-      if (err) throw err;
+      while (hasMore) {
+        const { data: pageData, error: err } = await supabase
+          .rpc('get_females_denorm', { target_farm_id: farm.farm_id })
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+
+        if (err) throw err;
+        
+        if (pageData && pageData.length > 0) {
+          allData = [...allData, ...pageData];
+          hasMore = pageData.length === pageSize;
+          page++;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      const data = allData;
       if (!data || !data.length) { 
         setAnimals([]); 
         return; 
