@@ -147,11 +147,11 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
 
     try {
       setLoading(true);
-      // Use same approach as HerdPage - load all females with high limit
+      // Use range to override PostgREST's default 1000 record limit (same as HerdPage)
       const { data, error } = await supabase
         .rpc('get_females_denorm', { target_farm_id: farm.farm_id })
         .order('birth_date', { ascending: true })
-        .limit(10000); // Set high limit to ensure all records are loaded
+        .range(0, 9999); // Fetch up to 10000 records
 
       if (error) throw error;
       

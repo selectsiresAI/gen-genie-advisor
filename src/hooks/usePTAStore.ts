@@ -141,9 +141,10 @@ export const usePTAStore = create<PTAStoreState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      // Get all data for the herd 
+      // Get all data for the herd using range to fetch up to 10000 records
       const { data, error } = await supabase
-        .rpc('get_females_denorm', { target_farm_id: herdId });
+        .rpc('get_females_denorm', { target_farm_id: herdId })
+        .range(0, 9999); // Fetch up to 10000 records
 
       if (error) throw error;
 

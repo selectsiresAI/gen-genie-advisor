@@ -221,11 +221,11 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
       if (showSpinner) {
         setLoading(true);
       }
-      // Load all females by using a high limit to override any default limits
+      // Load all females using range to override PostgREST's default 1000 record limit
       const { data, error } = await supabase
         .rpc('get_females_denorm', { target_farm_id: farm.farm_id })
         .order('created_at', { ascending: false })
-        .limit(10000); // Set high limit to ensure all records are loaded
+        .range(0, 9999); // Fetch up to 10000 records
 
       if (error) throw error;
       setFemales(data || []);

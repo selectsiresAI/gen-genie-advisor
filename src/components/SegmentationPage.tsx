@@ -375,10 +375,10 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
     setLoading(true); 
     setError("");
     try {
-      // Use high limit to ensure all records are loaded (same as HerdPage and ChartsPage)
+      // Use range to override PostgREST's default 1000 record limit (same as HerdPage)
       const { data, error: err } = await supabase
         .rpc('get_females_denorm', { target_farm_id: farm.farm_id })
-        .limit(10000);
+        .range(0, 9999); // Fetch up to 10000 records
 
       if (err) throw err;
       if (!data || !data.length) { 
