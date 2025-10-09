@@ -8,7 +8,7 @@ export function useFemales(farmId?: string | number) {
     queryFn: async () => {
       const { data, error } = await supabase
         .rpc("get_females_denorm", { target_farm_id: String(farmId) })
-        .range(0, 9999); // Fetch up to 10000 records
+        .limit(10000); // Fetch up to 10000 records explicitly
       if (error) throw error;
       return data || [];
     },

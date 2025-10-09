@@ -225,7 +225,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
       const { data, error } = await supabase
         .rpc('get_females_denorm', { target_farm_id: farm.farm_id })
         .order('created_at', { ascending: false })
-        .range(0, 9999); // Fetch up to 10000 records
+        .limit(10000); // Fetch up to 10000 records explicitly
 
       if (error) throw error;
       setFemales(data || []);

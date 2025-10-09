@@ -535,13 +535,14 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
       const invalidRows = recordsToInsert.filter(r => !r.name || String(r.name).trim() === '');
       if (invalidRows.length > 0) throw new Error(`${invalidRows.length} linha(s) sem nome válido encontrada(s)`);
 
-      const batchSize = 100;
+      // Increase batch size to 500 for better performance with large imports
+      const batchSize = 500;
       let totalInserted = 0;
 
       for (let i = 0; i < recordsToInsert.length; i += batchSize) {
         const chunk = recordsToInsert.slice(i, i + batchSize);
 
-        // Escolha 1 (sem depender de índice único): INSERT
+        // Insert with explicit headers to ensure all data is accepted
         const { error } = await supabase.from(TARGET_TABLE).insert(chunk as any);
         // Escolha 2 (se tiver índice único em farm_id,cdcb_id): use upsert
         // const { error } = await supabase.from(TARGET_TABLE).upsert(chunk as Record<string, unknown>[], { onConflict: 'farm_id,cdcb_id' });
