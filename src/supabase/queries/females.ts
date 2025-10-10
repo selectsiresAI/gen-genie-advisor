@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import type { PostgrestError } from "@supabase/supabase-js";
 
 export type FemaleDenormRow = Database["public"]["Tables"]["females_denorm"]["Row"];
 
@@ -22,6 +23,12 @@ export interface FetchFemalesDenormOptions {
 }
 
 const DEFAULT_PAGE_SIZE = 1000;
+const FEMALE_SOURCE_TABLES = [
+  "females_public_by_farm_view",
+  "females_denorm",
+] as const;
+
+type FemaleSourceTable = typeof FEMALE_SOURCE_TABLES[number];
 
 function normalizeFarmId(farmId: string | number | null | undefined): string | null {
   if (farmId === null || farmId === undefined) {
@@ -79,6 +86,52 @@ export async function fetchFemalesDenormByFarm(
   const order = options.order ?? { column: "id", ascending: true as const };
   const signal = options.signal;
 
+  let lastError: PostgrestError | Error | null = null;
+
+  for (const source of FEMALE_SOURCE_TABLES) {
+    try {
+      return await fetchFemalesFromSource({
+        source,
+        normalizedFarmId,
+        pageSize,
+        selectColumns,
+        order,
+        signal,
+      });
+    } catch (error) {
+      if (shouldFallbackToNextSource(error)) {
+        lastError = error as PostgrestError | Error;
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  if (lastError) {
+    throw lastError;
+  }
+
+  return [];
+}
+
+interface FetchFemalesFromSourceArgs {
+  source: FemaleSourceTable;
+  normalizedFarmId: string;
+  pageSize: number;
+  selectColumns: string;
+  order: FetchFemalesDenormOptions["order"];
+  signal?: AbortSignal;
+}
+
+async function fetchFemalesFromSource({
+  source,
+  normalizedFarmId,
+  pageSize,
+  selectColumns,
+  order,
+  signal,
+}: FetchFemalesFromSourceArgs): Promise<FemaleDenormRow[]> {
   const rows: FemaleDenormRow[] = [];
   let page = 0;
   let hasMore = true;
@@ -90,7 +143,7 @@ export async function fetchFemalesDenormByFarm(
     const to = from + pageSize - 1;
 
     let query = supabase
-      .from("females_denorm")
+      .from<FemaleDenormRow>(source as "females_denorm")
       .select(selectColumns)
       .eq("farm_id", normalizedFarmId);
 
@@ -119,4 +172,26 @@ export async function fetchFemalesDenormByFarm(
   }
 
   return rows;
+}
+
+function shouldFallbackToNextSource(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const message = (error as PostgrestError).message ?? (error as Error).message;
+
+  if (!message) {
+    return false;
+  }
+
+  const normalized = message.toLowerCase();
+
+  return (
+    normalized.includes("permission denied") ||
+    normalized.includes("does not exist") ||
+    normalized.includes("relation") && normalized.includes("does not exist") ||
+    normalized.includes("unknown table") ||
+    normalized.includes("not exist")
+  );
 }
