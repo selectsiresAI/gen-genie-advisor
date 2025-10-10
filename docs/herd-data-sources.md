@@ -6,7 +6,7 @@ As páginas **Rebanho** e **Segmentação** consomem o hook `fetchFemalesDenormB
 
 ## Fontes Supabase consultadas
 
-A função `fetchFemalesDenormByFarm` tenta ler primeiro da view `public.females_public_by_farm_view` — pensada para exposições públicas do rebanho — e volta para `public.females_denorm` caso a primeira não esteja disponível (por ausência da view ou permissão) **ou** não traga linhas para o rebanho consultado. O fallback garante compatibilidade com instalações anteriores que só disponibilizam `females_denorm` sem a nova view e evita que a tabela apareça vazia quando a view pública é mais restritiva que a tabela denormalizada.【F:src/supabase/queries/females.ts†L23-L125】
+A função `fetchFemalesDenormByFarm` tenta ler primeiro da view `public.females_public_by_farm_view` — pensada para exposições públicas do rebanho — e volta para `public.females_denorm` caso a primeira não esteja disponível (por ausência da view ou permissão) **ou** não traga linhas para o rebanho consultado. Se mesmo assim nenhum registro for encontrado, ela faz um último fallback para `public.females`, garantindo que os dados recém-importados via modal sejam exibidos imediatamente enquanto o pipeline de denormalização não roda. O fallback progressivo mantém compatibilidade com instalações anteriores e evita que a tabela apareça vazia quando a view pública é mais restritiva que a tabela denormalizada.【F:src/supabase/queries/females.ts†L23-L184】
 
 ## Fluxo de escrita
 

@@ -23,12 +23,29 @@ export interface FetchFemalesDenormOptions {
 }
 
 const DEFAULT_PAGE_SIZE = 1000;
-const FEMALE_SOURCE_TABLES = [
-  "females_public_by_farm_view",
-  "females_denorm",
+const FEMALE_SOURCE_CONFIGS = [
+  {
+    source: "females_public_by_farm_view",
+    transform: (row: FemaleDenormRow) => row,
+  },
+  {
+    source: "females_denorm",
+    transform: (row: FemaleDenormRow) => row,
+  },
+  {
+    source: "females",
+    transform: mapBaseFemaleToDenorm,
+  },
 ] as const;
 
-type FemaleSourceTable = typeof FEMALE_SOURCE_TABLES[number];
+type FemaleSourceConfig = typeof FEMALE_SOURCE_CONFIGS[number];
+type FemaleSourceTable = FemaleSourceConfig["source"];
+
+type FemaleSourceRowMap = {
+  females_public_by_farm_view: FemaleDenormRow;
+  females_denorm: FemaleDenormRow;
+  females: Database["public"]["Tables"]["females"]["Row"];
+};
 
 function normalizeFarmId(farmId: string | number | null | undefined): string | null {
   if (farmId === null || farmId === undefined) {
@@ -88,9 +105,9 @@ export async function fetchFemalesDenormByFarm(
 
   let lastError: PostgrestError | Error | null = null;
 
-  for (let index = 0; index < FEMALE_SOURCE_TABLES.length; index += 1) {
-    const source = FEMALE_SOURCE_TABLES[index];
-    const isLastSource = index === FEMALE_SOURCE_TABLES.length - 1;
+  for (let index = 0; index < FEMALE_SOURCE_CONFIGS.length; index += 1) {
+    const { source, transform } = FEMALE_SOURCE_CONFIGS[index];
+    const isLastSource = index === FEMALE_SOURCE_CONFIGS.length - 1;
     try {
       const rows = await fetchFemalesFromSource({
         source,
@@ -101,11 +118,13 @@ export async function fetchFemalesDenormByFarm(
         signal,
       });
 
-      if (rows.length === 0 && !isLastSource) {
+      const denormRows = rows.map(transform);
+
+      if (denormRows.length === 0 && !isLastSource) {
         continue;
       }
 
-      return rows;
+      return denormRows;
     } catch (error) {
       if (shouldFallbackToNextSource(error)) {
         lastError = error as PostgrestError | Error;
@@ -123,8 +142,8 @@ export async function fetchFemalesDenormByFarm(
   return [];
 }
 
-interface FetchFemalesFromSourceArgs {
-  source: FemaleSourceTable;
+interface FetchFemalesFromSourceArgs<TSource extends FemaleSourceTable> {
+  source: TSource;
   normalizedFarmId: string;
   pageSize: number;
   selectColumns: string;
@@ -132,15 +151,15 @@ interface FetchFemalesFromSourceArgs {
   signal?: AbortSignal;
 }
 
-async function fetchFemalesFromSource({
+async function fetchFemalesFromSource<TSource extends FemaleSourceTable>({
   source,
   normalizedFarmId,
   pageSize,
   selectColumns,
   order,
   signal,
-}: FetchFemalesFromSourceArgs): Promise<FemaleDenormRow[]> {
-  const rows: FemaleDenormRow[] = [];
+}: FetchFemalesFromSourceArgs<TSource>): Promise<FemaleSourceRowMap[TSource][]> {
+  const rows: FemaleSourceRowMap[TSource][] = [];
   let page = 0;
   let hasMore = true;
 
@@ -150,9 +169,11 @@ async function fetchFemalesFromSource({
     const from = page * pageSize;
     const to = from + pageSize - 1;
 
+    const effectiveSelect = source === "females" ? "*" : selectColumns;
+
     let query = supabase
-      .from<FemaleDenormRow>(source as "females_denorm")
-      .select(selectColumns)
+      .from<FemaleSourceRowMap[TSource]>(source)
+      .select(effectiveSelect)
       .eq("farm_id", normalizedFarmId);
 
     if (order?.column) {
@@ -172,7 +193,9 @@ async function fetchFemalesFromSource({
       throw error;
     }
 
-    const pageData = Array.isArray(data) ? (data as FemaleDenormRow[]) : [];
+    const pageData = Array.isArray(data)
+      ? (data as FemaleSourceRowMap[TSource][])
+      : [];
     rows.push(...pageData);
 
     hasMore = pageData.length === pageSize;
@@ -180,6 +203,22 @@ async function fetchFemalesFromSource({
   }
 
   return rows;
+}
+
+function mapBaseFemaleToDenorm(
+  row: Database["public"]["Tables"]["females"]["Row"]
+): FemaleDenormRow {
+  const { ptas: _ptas, ...rest } = row;
+
+  return {
+    ...rest,
+    last_prediction_confidence: null,
+    last_prediction_date: null,
+    last_prediction_method: null,
+    last_prediction_value: null,
+    segmentation_class: null,
+    segmentation_score: null,
+  };
 }
 
 function shouldFallbackToNextSource(error: unknown): boolean {
