@@ -23,12 +23,13 @@ export interface FetchFemalesDenormOptions {
 }
 
 const DEFAULT_PAGE_SIZE = 1000;
-const FEMALE_SOURCE_TABLES = [
-  "females_public_by_farm_view",
-  "females_denorm",
+const FEMALE_SOURCES = [
+  { type: "rpc" as const, name: "get_females_denorm" },
+  { type: "table" as const, name: "females_public_by_farm_view" },
+  { type: "table" as const, name: "females_denorm" },
 ] as const;
 
-type FemaleSourceTable = typeof FEMALE_SOURCE_TABLES[number];
+type FemaleSource = typeof FEMALE_SOURCES[number];
 
 function normalizeFarmId(farmId: string | number | null | undefined): string | null {
   if (farmId === null || farmId === undefined) {
@@ -88,9 +89,9 @@ export async function fetchFemalesDenormByFarm(
 
   let lastError: PostgrestError | Error | null = null;
 
-  for (let index = 0; index < FEMALE_SOURCE_TABLES.length; index += 1) {
-    const source = FEMALE_SOURCE_TABLES[index];
-    const isLastSource = index === FEMALE_SOURCE_TABLES.length - 1;
+  for (let index = 0; index < FEMALE_SOURCES.length; index += 1) {
+    const source = FEMALE_SOURCES[index];
+    const isLastSource = index === FEMALE_SOURCES.length - 1;
     try {
       const rows = await fetchFemalesFromSource({
         source,
@@ -124,7 +125,7 @@ export async function fetchFemalesDenormByFarm(
 }
 
 interface FetchFemalesFromSourceArgs {
-  source: FemaleSourceTable;
+  source: FemaleSource;
   normalizedFarmId: string;
   pageSize: number;
   selectColumns: string;
@@ -150,10 +151,11 @@ async function fetchFemalesFromSource({
     const from = page * pageSize;
     const to = from + pageSize - 1;
 
-    let query = supabase
-      .from<FemaleDenormRow>(source as "females_denorm")
-      .select(selectColumns)
-      .eq("farm_id", normalizedFarmId);
+    let query = buildFemalesQuery({
+      source,
+      normalizedFarmId,
+      selectColumns,
+    });
 
     if (order?.column) {
       query = query.order(order.column as string, {
@@ -180,6 +182,33 @@ async function fetchFemalesFromSource({
   }
 
   return rows;
+}
+
+interface BuildFemalesQueryArgs {
+  source: FemaleSource;
+  normalizedFarmId: string;
+  selectColumns: string;
+}
+
+function buildFemalesQuery({
+  source,
+  normalizedFarmId,
+  selectColumns,
+}: BuildFemalesQueryArgs) {
+  if (source.type === "rpc") {
+    let query = supabase.rpc(source.name, { target_farm_id: normalizedFarmId });
+
+    if (selectColumns && selectColumns !== "*") {
+      query = query.select(selectColumns);
+    }
+
+    return query;
+  }
+
+  return supabase
+    .from<FemaleDenormRow>(source.name as "females_denorm")
+    .select(selectColumns)
+    .eq("farm_id", normalizedFarmId);
 }
 
 function shouldFallbackToNextSource(error: unknown): boolean {
