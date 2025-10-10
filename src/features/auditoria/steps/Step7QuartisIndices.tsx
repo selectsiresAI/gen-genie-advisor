@@ -13,7 +13,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { useAGFilters } from "../store";
 
 const DEFAULT_TRAITS = ["ptam", "ptaf", "ptap"] as const;
@@ -124,28 +123,6 @@ export default function Step7QuartisIndices() {
       .map((key) => ({ key, label: key.toUpperCase() }))
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [ptaOptions]);
-
-  const COLORS = ["#666", "#888", "#aaa", "#ccc", "#ddd", "#eee"];
-
-  const pieDataA = useMemo(() => {
-    const topRows = rows.filter((r) => r.index_label === "IndexA" && r.group_label === "Top25");
-    const total = topRows.reduce((sum, r) => sum + Math.abs(r.mean_value), 0);
-    return topRows.map((r) => ({
-      name: r.trait_key.toUpperCase(),
-      value: Math.abs(r.mean_value),
-      percentage: total > 0 ? (Math.abs(r.mean_value) / total) * 100 : 0,
-    }));
-  }, [rows]);
-
-  const pieDataB = useMemo(() => {
-    const topRows = rows.filter((r) => r.index_label === "IndexB" && r.group_label === "Top25");
-    const total = topRows.reduce((sum, r) => sum + Math.abs(r.mean_value), 0);
-    return topRows.map((r) => ({
-      name: r.trait_key.toUpperCase(),
-      value: Math.abs(r.mean_value),
-      percentage: total > 0 ? (Math.abs(r.mean_value) / total) * 100 : 0,
-    }));
-  }, [rows]);
 
   const tableDataByIndex = useMemo(() => {
     const groups = ["Top25", "Bottom25", "Difference"] as const;
@@ -295,64 +272,6 @@ export default function Step7QuartisIndices() {
                   ))}
                 </tbody>
               </table>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              {pieDataA.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-semibold mb-2 text-center">
-                    {getIndexDisplayLabel(indexA)}
-                  </h4>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={pieDataA}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={(entry: any) => `${Number(entry.percentage).toFixed(0)}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {pieDataA.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-
-              {pieDataB.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-semibold mb-2 text-center">
-                    {getIndexDisplayLabel(indexB)}
-                  </h4>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={pieDataB}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={(entry: any) => `${Number(entry.percentage).toFixed(0)}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {pieDataB.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
             </div>
           </div>
         )}
