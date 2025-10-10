@@ -347,9 +347,9 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({ onBac
 
     setSearchingBulls(true);
     try {
-      // Buscar diretamente na view bulls_denorm que contém todos os dados necessários
+      // Buscar diretamente na view bulls_denorm_member que contém todos os dados necessários
       const { data, error } = await supabase
-        .from('bulls_denorm')
+        .from('bulls_denorm_member')
         .select('*')
         .or(`code.ilike.%${naabSearch.trim()}%,name.ilike.%${naabSearch.trim()}%`)
         .limit(20);
