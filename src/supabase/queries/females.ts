@@ -11,6 +11,16 @@ export type CompleteFemaleDenormRow = FemaleDenormRow & {
   created_at: string;
 };
 
+export type FemaleSourceAttemptEvent =
+  | { status: "start"; source: FemaleSource }
+  | { status: "success"; source: FemaleSource; rowCount: number }
+  | {
+      status: "error";
+      source: FemaleSource;
+      error: PostgrestError | Error;
+      willFallback: boolean;
+    };
+
 export interface FetchFemalesDenormOptions {
   pageSize?: number;
   select?: string;
@@ -20,6 +30,7 @@ export interface FetchFemalesDenormOptions {
     nullsFirst?: boolean;
   };
   signal?: AbortSignal;
+  onSourceAttempt?: (event: FemaleSourceAttemptEvent) => void;
 }
 
 const DEFAULT_PAGE_SIZE = 1000;
@@ -29,7 +40,7 @@ const FEMALE_SOURCES = [
   { type: "table" as const, name: "females_denorm" },
 ] as const;
 
-type FemaleSource = typeof FEMALE_SOURCES[number];
+export type FemaleSource = typeof FEMALE_SOURCES[number];
 
 function normalizeFarmId(farmId: string | number | null | undefined): string | null {
   if (farmId === null || farmId === undefined) {
@@ -86,12 +97,14 @@ export async function fetchFemalesDenormByFarm(
   const selectColumns = options.select ?? "*";
   const order = options.order ?? { column: "id", ascending: true as const };
   const signal = options.signal;
+  const onSourceAttempt = options.onSourceAttempt;
 
   let lastError: PostgrestError | Error | null = null;
 
   for (let index = 0; index < FEMALE_SOURCES.length; index += 1) {
     const source = FEMALE_SOURCES[index];
     const isLastSource = index === FEMALE_SOURCES.length - 1;
+    onSourceAttempt?.({ status: "start", source });
     try {
       const rows = await fetchFemalesFromSource({
         source,
@@ -102,13 +115,23 @@ export async function fetchFemalesDenormByFarm(
         signal,
       });
 
+      onSourceAttempt?.({ status: "success", source, rowCount: rows.length });
+
       if (rows.length === 0 && !isLastSource) {
         continue;
       }
 
       return rows;
     } catch (error) {
-      if (shouldFallbackToNextSource(error)) {
+      const fallback = shouldFallbackToNextSource(error);
+      onSourceAttempt?.({
+        status: "error",
+        source,
+        error: error as PostgrestError | Error,
+        willFallback: fallback && !isLastSource,
+      });
+
+      if (fallback) {
         lastError = error as PostgrestError | Error;
         continue;
       }

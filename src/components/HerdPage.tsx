@@ -15,6 +15,7 @@ import {
   fetchFemalesDenormByFarm,
   isCompleteFemaleRow,
   type CompleteFemaleDenormRow,
+  type FemaleSourceAttemptEvent,
 } from '@/supabase/queries/females';
 import {
   AlertDialog,
@@ -28,6 +29,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { t } from '@/lib/i18n';
+import type { PostgrestError } from '@supabase/supabase-js';
 
 interface Farm {
   farm_id: string;
@@ -178,6 +180,27 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
     }
   }, [categoryCounts, farm.farm_id, setSelectedHerdId, setDashboardCounts]);
 
+  const handleSourceAttempt = useCallback((event: FemaleSourceAttemptEvent) => {
+    const sourceLabel = `${event.source.type}:${event.source.name}`;
+
+    if (event.status === "start") {
+      console.debug(`[HerdPage] Tentando carregar fêmeas via ${sourceLabel}`);
+      return;
+    }
+
+    if (event.status === "success") {
+      console.debug(
+        `[HerdPage] ${sourceLabel} retornou ${event.rowCount} linha${event.rowCount === 1 ? "" : "s"}`
+      );
+      return;
+    }
+
+    console.error(
+      `[HerdPage] ${sourceLabel} falhou${event.willFallback ? " — tentando fallback" : ""}`,
+      event.error
+    );
+  }, []);
+
   const loadFemales = useCallback(async (showSpinner = true) => {
     try {
       if (showSpinner) {
@@ -186,6 +209,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
 
       const rows = await fetchFemalesDenormByFarm(farm.farm_id, {
         order: { column: 'created_at', ascending: false },
+        onSourceAttempt: handleSourceAttempt,
       });
 
       const completeRows = rows.filter(isCompleteFemaleRow) as Female[];
@@ -201,9 +225,16 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
       setFemales(completeRows);
     } catch (error) {
       console.error('Error loading females:', error);
+      const supabaseError = error as PostgrestError | undefined;
+      const descriptionMessage =
+        supabaseError?.message || (error instanceof Error ? error.message : null);
+
       toast({
         title: "Erro",
-        description: "Erro ao carregar dados do rebanho",
+        description:
+          descriptionMessage
+            ? `Erro ao carregar dados do rebanho: ${descriptionMessage}`
+            : "Erro ao carregar dados do rebanho",
         variant: "destructive",
       });
     } finally {
@@ -211,7 +242,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
         setLoading(false);
       }
     }
-  }, [farm.farm_id, toast]);
+  }, [farm.farm_id, handleSourceAttempt, toast]);
 
   useEffect(() => {
     loadFemales();
