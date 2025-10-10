@@ -13,13 +13,17 @@ import { parse as parseDateFn, isValid as isValidDate } from 'date-fns';
 const TARGET_TABLE = "females";
 
 const canonicalColumns = [
-  'id', 'farm_id', 'name', 'identifier', 'cdcb_id', 'sire_naab', 'mgs_naab', 'mmgs_naab', 'birth_date',
-  'ptas', 'created_at', 'updated_at', 'hhp_dollar', 'tpi', 'nm_dollar', 'cm_dollar', 'fm_dollar', 'gm_dollar',
-  'f_sav', 'ptam', 'cfp', 'ptaf', 'ptaf_pct', 'ptap', 'ptap_pct', 'pl', 'dpr', 'liv', 'scs', 'mast', 'met',
-  'rp', 'da', 'ket', 'mf', 'ptat', 'udc', 'flc', 'sce', 'dce', 'ssb', 'dsb', 'h_liv', 'ccr', 'hcr', 'fi',
-  'gl', 'efc', 'bwc', 'sta', 'str', 'dfm', 'rua', 'rls', 'rtp', 'ftl', 'rw', 'rlr', 'fta', 'fls', 'fua',
-  'ruh', 'ruw', 'ucl', 'udp', 'ftp', 'rfi', 'gfi', 'beta_casein', 'kappa_casein', 'parity_order', 'category',
-  'fonte'
+  'id', 'farm_id', 'category', 'ptas', 'created_at', 'updated_at',
+  'sire_naab', 'mgs_naab', 'mmgs_naab', 'fonte', 'parity_order',
+  'identifier', 'name', 'cdcb_id', 'birth_date',
+  'hhp_dollar', 'tpi', 'nm_dollar', 'cm_dollar', 'fm_dollar', 'gm_dollar',
+  'ptam', 'ptaf', 'ptaf_pct', 'ptap', 'ptap_pct', 'cfp', 'scs', 'pl', 'dpr', 'h_liv',
+  'gl', 'mf', 'da', 'ket', 'mast', 'met', 'rp', 'ccr', 'hcr', 'fi', 'rfi',
+  'f_sav', 'ptat', 'udc', 'flc', 'bwc', 'sta', 'str', 'bd', 'dfm',
+  'rua', 'tw', 'rls', 'rlr', 'fa', 'fls', 'fta', 'ruh', 'rw', 'ucl', 'ud', 'ftp', 'rtp', 'ftl',
+  'sce', 'dce', 'ssb', 'dsb', 'gfi',
+  // Campos adicionais suportados anteriormente permanecem aceitos
+  'liv', 'efc', 'ruw', 'udp', 'fua', 'beta_casein', 'kappa_casein'
 ] as const;
 
 const canonicalColumnsSet = new Set<string>(canonicalColumns);
@@ -89,10 +93,10 @@ const headerAliases: Record<string, string> = {
 
 const numericFields = new Set<string>([
   'hhp_dollar', 'tpi', 'nm_dollar', 'cm_dollar', 'fm_dollar', 'gm_dollar', 'f_sav', 'ptam', 'cfp', 'ptaf',
-  'ptaf_pct', 'ptap', 'ptap_pct', 'pl', 'dpr', 'liv', 'scs', 'mast', 'met', 'rp', 'da', 'ket', 'mf', 'ptat',
-  'udc', 'flc', 'sce', 'dce', 'ssb', 'dsb', 'h_liv', 'ccr', 'hcr', 'fi', 'gl', 'efc', 'bwc', 'sta', 'str',
-  'dfm', 'rua', 'rls', 'rtp', 'ftl', 'rw', 'rlr', 'fta', 'fls', 'fua', 'ruh', 'ruw', 'ucl', 'udp', 'ftp',
-  'rfi', 'gfi', 'parity_order'
+  'ptaf_pct', 'ptap', 'ptap_pct', 'pl', 'dpr', 'liv', 'h_liv', 'scs', 'mast', 'met', 'rp', 'ccr', 'hcr', 'fi',
+  'rfi', 'gl', 'mf', 'da', 'ket', 'ptat', 'udc', 'flc', 'bwc', 'sta', 'str', 'bd', 'dfm', 'rua', 'tw', 'rls',
+  'rlr', 'fa', 'fls', 'fta', 'ruh', 'rw', 'ucl', 'ud', 'udp', 'ftp', 'rtp', 'ftl', 'sce', 'dce', 'ssb', 'dsb',
+  'gfi', 'efc', 'ruw', 'fua', 'parity_order'
 ]);
 
 const dateFields = new Set<string>(['birth_date']);
@@ -604,23 +608,23 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
   };
 
   const downloadTemplate = () => {
-    // Template baseado nas colunas principais de females
+    // Template compatível com o layout oficial solicitado
     const headers = [
-      'name','identifier','cdcb_id','birth_date','parity_order','category','fonte',
-      'sire_naab','mgs_naab','mmgs_naab',
-      'hhp_dollar','tpi','nm_dollar','cm_dollar','fm_dollar','gm_dollar',
-      'f_sav','ptam','cfp','ptaf','ptaf_pct','ptap','ptap_pct',
-      'pl','dpr','liv','scs','mast','met','rp','da','ket','mf',
-      'ptat','udc','flc','sce','dce','ssb','dsb','h_liv','ccr','hcr','fi','gl','efc','bwc','sta','str','dfm',
-      'rua','rls','rtp','ftl','rw','rlr','fta','fls','fua','ruh','ruw','ucl','udp','ftp','rfi','gfi',
-      'beta_casein','kappa_casein'
+      'id','farm_id','category','ptas','created_at','updated_at','sire_naab','mgs_naab','mmgs_naab','Fonte','parity_order',
+      'identifier','name','cdcb_id','birth_date','HHP$','TPI','NM$','CM$','FM$','GM$','PTAM','PTAF','PTAF%','PTAP','PTAP%',
+      'CFP','SCS','PL','DPR','H LIV','GL','MF','DA','Ket','Mast','Met','RP','CCR','HCR','FI','RFI','F SAV','PTAT','UDC',
+      'FLC','BWC','STA','STR','BD','DFM','RUA','TW','RLS','RLR','FA','FLS','FTA','RUH','RW','UCL','UD','FTP','RTP','FTL',
+      'SCE','DCE','SSB','DSB','GFI'
     ];
 
-    const sampleData = [
-      'FEMEA EXEMPLO;BR001;1234567890;2020-01-15;2;Multipara;Genômica;200HO12345;100HO98765;050HO11111;820;2650;750;680;590;420;1,2;1100;10;45;3,5;38;3,1;2,3;1,1;1,0;2,85;4,2;1,8;1,1;0,2;0,1;2,4;1,8;0,4;0,3;1,2;0,8;2,1;1,9;2,2;1,4;0,9;1,7;1,3;0,6;1,5;2,0;1,8;0,7;0,2;0,5;1,1;0,9;1,3;0,8;0,4;1,2;0,6;0,7;1,0;0,3;0,5;1,6;A2A2;AA'
+    const sampleRow = [
+      'FEMEA-001','FARM-123','Multipara','','2024-01-01T12:00:00Z','2024-02-01T12:00:00Z','200HO12345','100HO98765','050HO11111',
+      'Genômica','2','BR001','Fêmea Exemplo','1234567890','2020-01-15','820','2650','750','680','590','420','1100','10','3.5',
+      '38','3.1','2.3','2.85','4.2','1.8','1.1','0.2','0.1','2.4','1.8','0.4','0.3','1.2','0.8','2.1','1.9','2.2','1.4',
+      '0.9','1.7','1.3','0.6','1.5','2.0','1.8','0.7','0.2','0.5','1.1','0.9','1.3','0.8','0.4','1.2','0.6','0.7','1.0',
+      '0.3','0.5','1.6','2.1','1.5','1.2','0.9','1.4'
     ];
-
-    const csvContent = [headers.join(';'), ...sampleData].join('\n');
+    const csvContent = [headers.join(';'), sampleRow.join(';')].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');

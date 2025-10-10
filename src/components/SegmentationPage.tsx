@@ -10,6 +10,11 @@ import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, BarChart,
 import { supabase } from '@/integrations/supabase/client';
 import { generateSegmentationPDF, generatePDFBlob } from '@/utils/pdfGenerator';
 import { useFileStore } from '@/hooks/useFileStore';
+import {
+  fetchFemalesDenormByFarm,
+  isCompleteFemaleRow,
+  type CompleteFemaleDenormRow,
+} from '@/supabase/queries/females';
 
 interface Farm {
   id: string;
@@ -23,76 +28,7 @@ interface SegmentationPageProps {
   onBack: () => void;
 }
 
-type Female = {
-  id: string;
-  name: string;
-  identifier?: string;
-  birth_date?: string;
-  parity_order?: number;
-  category?: string;
-  fonte?: string | null;
-  sire_naab?: string;
-  sire_name?: string;
-  mgs_naab?: string;
-  mgs_name?: string;
-  mmgs_naab?: string;
-  mmgs_name?: string;
-  hhp_dollar?: number;
-  nm_dollar?: number;
-  tpi?: number;
-  cm_dollar?: number;
-  fm_dollar?: number;
-  gm_dollar?: number;
-  f_sav?: number;
-  ptam?: number;
-  cfp?: number;
-  ptaf?: number;
-  ptaf_pct?: number;
-  ptap?: number;
-  ptap_pct?: number;
-  pl?: number;
-  dpr?: number;
-  liv?: number;
-  scs?: number;
-  mast?: number;
-  met?: number;
-  rp?: number;
-  da?: number;
-  ket?: number;
-  mf?: number;
-  ptat?: number;
-  udc?: number;
-  flc?: number;
-  sce?: number;
-  dce?: number;
-  ssb?: number;
-  dsb?: number;
-  h_liv?: number;
-  ccr?: number;
-  hcr?: number;
-  fi?: number;
-  gl?: number;
-  efc?: number;
-  bwc?: number;
-  sta?: number;
-  str?: number;
-  dfm?: number;
-  rua?: number;
-  rls?: number;
-  rtp?: number;
-  ftl?: number;
-  rw?: number;
-  rlr?: number;
-  fta?: number;
-  fls?: number;
-  fua?: number;
-  ruh?: number;
-  ruw?: number;
-  ucl?: number;
-  udp?: number;
-  ftp?: number;
-  rfi?: number;
-  gfi?: number;
+type Female = CompleteFemaleDenormRow & {
   CustomScore?: number;
   Classification?: "Superior" | "Intermediário" | "Inferior";
   __idKey?: string;
@@ -409,29 +345,15 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
     setLoading(true); 
     setError("");
     try {
-      // Fetch ALL records by making paginated requests (same as HerdPage)
-      let allData: any[] = [];
-      let page = 0;
-      const pageSize = 1000;
-      let hasMore = true;
+      const rows = await fetchFemalesDenormByFarm(farm.farm_id);
+      const data = rows.filter(isCompleteFemaleRow) as Female[];
 
-      while (hasMore) {
-        const { data: pageData, error: err } = await supabase
-          .rpc('get_females_denorm', { target_farm_id: farm.farm_id })
-          .range(page * pageSize, (page + 1) * pageSize - 1);
-
-        if (err) throw err;
-        
-        if (pageData && pageData.length > 0) {
-          allData = [...allData, ...pageData];
-          hasMore = pageData.length === pageSize;
-          page++;
-        } else {
-          hasMore = false;
-        }
+      if (rows.length !== data.length) {
+        console.warn(
+          '[SegmentationPage] Ignored female rows missing id, name, farm_id or created_at:',
+          rows.length - data.length
+        );
       }
-
-      const data = allData;
       if (!data || !data.length) { 
         setAnimals([]); 
         return; 

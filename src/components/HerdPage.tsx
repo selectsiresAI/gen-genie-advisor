@@ -12,6 +12,11 @@ import { useToast } from '@/hooks/use-toast';
 import FemaleUploadModal from './FemaleUploadModal';
 import { useHerdStore } from '@/hooks/useHerdStore';
 import {
+  fetchFemalesDenormByFarm,
+  isCompleteFemaleRow,
+  type CompleteFemaleDenormRow,
+} from '@/supabase/queries/females';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -37,84 +42,7 @@ interface HerdPageProps {
   onNavigateToCharts?: () => void;
 }
 
-interface Female {
-  id: string;
-  name: string;
-  identifier?: string;
-  birth_date?: string;
-  parity_order?: number;
-  category?: string;
-  fonte?: string | null;
-  sire_naab?: string;
-  sire_name?: string;
-  mgs_naab?: string;
-  mgs_name?: string;
-  farm_id: string;
-  created_at: string;
-  updated_at?: string;
-  cdcb_id?: string;
-  mmgs_naab?: string;
-  mmgs_name?: string;
-  // Genetic traits from females_denorm
-  hhp_dollar?: number;
-  tpi?: number;
-  nm_dollar?: number;
-  cm_dollar?: number;
-  fm_dollar?: number;
-  gm_dollar?: number;
-  f_sav?: number;
-  ptam?: number;
-  cfp?: number;
-  ptaf?: number;
-  ptaf_pct?: number;
-  ptap?: number;
-  ptap_pct?: number;
-  pl?: number;
-  dpr?: number;
-  liv?: number;
-  scs?: number;
-  mast?: number;
-  met?: number;
-  rp?: number;
-  da?: number;
-  ket?: number;
-  mf?: number;
-  ptat?: number;
-  udc?: number;
-  flc?: number;
-  sce?: number;
-  dce?: number;
-  ssb?: number;
-  dsb?: number;
-  h_liv?: number;
-  ccr?: number;
-  hcr?: number;
-  fi?: number;
-  gl?: number;
-  efc?: number;
-  bwc?: number;
-  sta?: number;
-  str?: number;
-  dfm?: number;
-  rua?: number;
-  rls?: number;
-  rtp?: number;
-  ftl?: number;
-  rw?: number;
-  rlr?: number;
-  fta?: number;
-  fls?: number;
-  fua?: number;
-  ruh?: number;
-  ruw?: number;
-  ucl?: number;
-  udp?: number;
-  ftp?: number;
-  rfi?: number;
-  beta_casein?: string;
-  kappa_casein?: string;
-  gfi?: number;
-}
+type Female = CompleteFemaleDenormRow;
 
 const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts }) => {
   const [females, setFemales] = useState<Female[]>([]);
@@ -255,32 +183,22 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
       if (showSpinner) {
         setLoading(true);
       }
-      
-      // Fetch ALL records by making paginated requests
-      let allData: any[] = [];
-      let page = 0;
-      const pageSize = 1000;
-      let hasMore = true;
 
-      while (hasMore) {
-        const { data, error } = await supabase
-          .rpc('get_females_denorm', { target_farm_id: farm.farm_id })
-          .order('created_at', { ascending: false })
-          .range(page * pageSize, (page + 1) * pageSize - 1);
+      const rows = await fetchFemalesDenormByFarm(farm.farm_id, {
+        order: { column: 'created_at', ascending: false },
+      });
 
-        if (error) throw error;
-        
-        if (data && data.length > 0) {
-          allData = [...allData, ...data];
-          hasMore = data.length === pageSize; // Continue if we got a full page
-          page++;
-        } else {
-          hasMore = false;
-        }
+      const completeRows = rows.filter(isCompleteFemaleRow) as Female[];
+
+      if (rows.length !== completeRows.length) {
+        console.warn(
+          '[HerdPage] Ignored female rows missing id, name, farm_id or created_at:',
+          rows.length - completeRows.length
+        );
       }
 
-      console.log(`Loaded ${allData.length} females from database`);
-      setFemales(allData);
+      console.log(`[HerdPage] Loaded ${completeRows.length} females from females_denorm`);
+      setFemales(completeRows);
     } catch (error) {
       console.error('Error loading females:', error);
       toast({
