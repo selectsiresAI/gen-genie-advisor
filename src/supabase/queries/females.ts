@@ -88,9 +88,11 @@ export async function fetchFemalesDenormByFarm(
 
   let lastError: PostgrestError | Error | null = null;
 
-  for (const source of FEMALE_SOURCE_TABLES) {
+  for (let index = 0; index < FEMALE_SOURCE_TABLES.length; index += 1) {
+    const source = FEMALE_SOURCE_TABLES[index];
+    const isLastSource = index === FEMALE_SOURCE_TABLES.length - 1;
     try {
-      return await fetchFemalesFromSource({
+      const rows = await fetchFemalesFromSource({
         source,
         normalizedFarmId,
         pageSize,
@@ -98,6 +100,12 @@ export async function fetchFemalesDenormByFarm(
         order,
         signal,
       });
+
+      if (rows.length === 0 && !isLastSource) {
+        continue;
+      }
+
+      return rows;
     } catch (error) {
       if (shouldFallbackToNextSource(error)) {
         lastError = error as PostgrestError | Error;
