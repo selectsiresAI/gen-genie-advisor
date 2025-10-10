@@ -14,7 +14,7 @@ import {
   Step5Progressao as Step4Progressao,
   Step6ProgressCompare as Step5ProgressCompare,
   Step7QuartisIndices as Step6QuartisIndices,
-  Step9Distribuicao as Step7Distribuicao,
+  Step7Distribuicao,
 } from "@/features/auditoria/steps";
 
 type FarmLike = {
