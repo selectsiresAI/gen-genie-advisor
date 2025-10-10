@@ -507,7 +507,6 @@ export type Database = {
           birth_date: string | null
           bwc: number | null
           category: string | null
-          fonte: string | null
           ccr: number | null
           cdcb_id: string | null
           cfp: number | null
@@ -525,6 +524,7 @@ export type Database = {
           flc: number | null
           fls: number | null
           fm_dollar: number | null
+          fonte: string | null
           fta: number | null
           ftl: number | null
           ftp: number | null
@@ -582,7 +582,6 @@ export type Database = {
           birth_date?: string | null
           bwc?: number | null
           category?: string | null
-          fonte?: string | null
           ccr?: number | null
           cdcb_id?: string | null
           cfp?: number | null
@@ -600,6 +599,7 @@ export type Database = {
           flc?: number | null
           fls?: number | null
           fm_dollar?: number | null
+          fonte?: string | null
           fta?: number | null
           ftl?: number | null
           ftp?: number | null
@@ -657,7 +657,6 @@ export type Database = {
           birth_date?: string | null
           bwc?: number | null
           category?: string | null
-          fonte?: string | null
           ccr?: number | null
           cdcb_id?: string | null
           cfp?: number | null
@@ -675,6 +674,7 @@ export type Database = {
           flc?: number | null
           fls?: number | null
           fm_dollar?: number | null
+          fonte?: string | null
           fta?: number | null
           ftl?: number | null
           ftp?: number | null
@@ -1509,7 +1509,6 @@ export type Database = {
           birth_date: string | null
           bwc: number | null
           category: string | null
-          fonte: string | null
           ccr: number | null
           cdcb_id: string | null
           cfp: number | null
@@ -1527,6 +1526,7 @@ export type Database = {
           flc: number | null
           fls: number | null
           fm_dollar: number | null
+          fonte: string | null
           fta: number | null
           ftl: number | null
           ftp: number | null
@@ -1654,6 +1654,172 @@ export type Database = {
         Returns: {
           message: string
           success: boolean
+        }[]
+      }
+      ag_age_group: {
+        Args:
+          | { p_birth_date: string; p_parity: number }
+          | { p_birth_ts: string; p_parity: number }
+          | { p_birth_tstz: string; p_parity: number }
+        Returns: string
+      }
+      ag_boxplot_stats: {
+        Args: { p_farm: string; p_trait: string }
+        Returns: {
+          n: number
+          p0: number
+          p100: number
+          p25: number
+          p50: number
+          p75: number
+          trait_key: string
+        }[]
+      }
+      ag_col_exists: {
+        Args: { p_col: string }
+        Returns: boolean
+      }
+      ag_farm_trait_coverage: {
+        Args: { p_farm: string; p_traits: string[] }
+        Returns: {
+          coverage_pct: number
+          n_total: number
+          n_with_value: number
+          trait_key: string
+        }[]
+      }
+      ag_genetic_benchmark: {
+        Args: {
+          p_farm: string
+          p_region?: string
+          p_top?: number
+          p_traits: string[]
+        }
+        Returns: {
+          benchmark_avg: number
+          benchmark_top: number
+          farm_value: number
+          trait_key: string
+        }[]
+      }
+      ag_is_numeric: {
+        Args: { p: string }
+        Returns: boolean
+      }
+      ag_linear_means: {
+        Args: {
+          p_farm: string
+          p_mode: string
+          p_normalize: boolean
+          p_scope: string
+          p_scope_id: string
+          p_traits: string[]
+        }
+        Returns: {
+          group_label: string
+          mean_value: number
+          n: number
+          trait_key: string
+        }[]
+      }
+      ag_mean_generic: {
+        Args: { p_col: string; p_farm: string; p_year?: number }
+        Returns: number
+      }
+      ag_parentage_overview: {
+        Args: { p_farm: string }
+        Returns: {
+          n: number
+          pct: number
+          role: string
+          status: string
+        }[]
+      }
+      ag_parentesco_relacao_ano: {
+        Args: {
+          p_farm: string
+          p_relacao: string
+          p_year_from?: number
+          p_year_to?: number
+        }
+        Returns: {
+          birth_year: number
+          pct: number
+          status: string
+          total: number
+        }[]
+      }
+      ag_parentesco_triad: {
+        Args: { p_farm: string; p_year_from?: number; p_year_to?: number }
+        Returns: {
+          pct: number
+          status: string
+          total: number
+        }[]
+      }
+      ag_percentile_disc: {
+        Args: { p: number; p_farm: string; p_index: string; p_scope: string }
+        Returns: number
+      }
+      ag_pick_col: {
+        Args: { p_candidates: string[] }
+        Returns: string
+      }
+      ag_progress_compare: {
+        Args: { p_farm: string; p_group_by: string; p_traits: string[] }
+        Returns: {
+          group_label: string
+          n_years: number
+          slope_per_year: number
+          trait_key: string
+        }[]
+      }
+      ag_quartis_indices_compare: {
+        Args: {
+          p_farm: string
+          p_index_a: string
+          p_index_b: string
+          p_traits: string[]
+        }
+        Returns: {
+          group_label: string
+          index_label: string
+          mean_value: number
+          n: number
+          trait_key: string
+        }[]
+      }
+      ag_quartis_overview: {
+        Args: { p_farm: string; p_index: string; p_traits: string[] }
+        Returns: {
+          group_label: string
+          mean_value: number
+          n: number
+          trait_key: string
+        }[]
+      }
+      ag_top_parents: {
+        Args: {
+          p_age_filter: string
+          p_farm: string
+          p_limit: number
+          p_order_trait: string
+          p_parent_type: string
+          p_year_from: number
+          p_year_to: number
+        }
+        Returns: {
+          daughters_count: number
+          parent_label: string
+          trait_mean: number
+        }[]
+      }
+      ag_trait_histogram: {
+        Args: { p_bins?: number; p_farm: string; p_trait: string }
+        Returns: {
+          bin_count: number
+          bin_from: number
+          bin_to: number
         }[]
       }
       can_edit_farm: {
@@ -1885,92 +2051,6 @@ export type Database = {
           total_matings: number | null
           total_predictions: number | null
           total_semen_doses: number | null
-        }[]
-      }
-      get_females_denorm: {
-        Args: { target_farm_id?: string }
-        Returns: {
-          beta_casein: string | null
-          birth_date: string | null
-          bwc: number | null
-          category: string | null
-          ccr: number | null
-          cdcb_id: string | null
-          cfp: number | null
-          cm_dollar: number | null
-          created_at: string | null
-          da: number | null
-          dce: number | null
-          dfm: number | null
-          dpr: number | null
-          dsb: number | null
-          efc: number | null
-          f_sav: number | null
-          farm_id: string | null
-          fi: number | null
-          flc: number | null
-          fls: number | null
-          fm_dollar: number | null
-          fta: number | null
-          ftl: number | null
-          ftp: number | null
-          fua: number | null
-          gfi: number | null
-          gl: number | null
-          gm_dollar: number | null
-          h_liv: number | null
-          hcr: number | null
-          hhp_dollar: number | null
-          id: string | null
-          identifier: string | null
-          kappa_casein: string | null
-          ket: number | null
-          last_prediction_confidence: number | null
-          last_prediction_date: string | null
-          last_prediction_method:
-            | Database["public"]["Enums"]["prediction_method"]
-            | null
-          last_prediction_value: number | null
-          liv: number | null
-          mast: number | null
-          met: number | null
-          mf: number | null
-          mgs_naab: string | null
-          mmgs_naab: string | null
-          name: string | null
-          nm_dollar: number | null
-          parity_order: number | null
-          pl: number | null
-          ptaf: number | null
-          ptaf_pct: number | null
-          ptam: number | null
-          ptap: number | null
-          ptap_pct: number | null
-          ptat: number | null
-          rfi: number | null
-          rlr: number | null
-          rls: number | null
-          rp: number | null
-          rtp: number | null
-          rua: number | null
-          ruh: number | null
-          ruw: number | null
-          rw: number | null
-          sce: number | null
-          scs: number | null
-          segmentation_class:
-            | Database["public"]["Enums"]["segmentation_class"]
-            | null
-          segmentation_score: number | null
-          sire_naab: string | null
-          ssb: number | null
-          sta: number | null
-          str: number | null
-          tpi: number | null
-          ucl: number | null
-          udc: number | null
-          udp: number | null
-          updated_at: string | null
         }[]
       }
       get_semen_inventory: {
