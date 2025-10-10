@@ -10,12 +10,19 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { useAGFilters } from "../store";
 
-const DEFAULT_TRAITS = ["ptam", "ptaf", "ptap"] as const;
+const ALL_PTA_COLUMNS = [
+  "hhp_dollar", "tpi", "nm_dollar", "cm_dollar", "fm_dollar", "gm_dollar",
+  "f_sav", "ptam", "cfp", "ptaf", "ptaf_pct", "ptap", "ptap_pct",
+  "pl", "dpr", "liv", "scs", "mast", "met", "rp", "da", "ket", "mf",
+  "ptat", "udc", "flc", "sce", "dce", "ssb", "dsb", "h_liv",
+  "ccr", "hcr", "fi", "gl", "efc", "bwc", "sta", "str", "dfm",
+  "rua", "rls", "rtp", "ftl", "rw", "rlr", "fta", "fls", "fua",
+  "ruh", "ruw", "ucl", "udp", "ftp", "rfi", "gfi"
+];
 
 const INDEX_OPTIONS = [
   { label: "HHP$", value: "hhp_dollar" },
@@ -42,8 +49,6 @@ export default function Step7QuartisIndices() {
   const { farmId } = useAGFilters();
   const [indexA, setIndexA] = useState("hhp_dollar");
   const [indexB, setIndexB] = useState("nm_dollar");
-  const [ptaOptions, setPtaOptions] = useState<string[]>([]);
-  const [traits, setTraits] = useState<string[]>([...DEFAULT_TRAITS]);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -53,47 +58,8 @@ export default function Step7QuartisIndices() {
     }
   }, [farmId]);
 
-  useEffect(() => {
-    let active = true;
-    async function loadColumns() {
-      const { data, error } = await (supabase.rpc as any)("ag_list_pta_columns");
-      if (!active) return;
-      if (error) {
-        console.error("Failed to list PTA columns", error);
-        setPtaOptions([]);
-        return;
-      }
-      const cols = Array.isArray(data)
-        ? data.map((item: { column_name?: string }) => String(item.column_name))
-        : [];
-      setPtaOptions(cols);
-      setTraits((current) => {
-        const sanitized = current.filter((trait) => cols.includes(trait));
-        if (sanitized.length) {
-          const unchanged =
-            sanitized.length === current.length &&
-            sanitized.every((trait, index) => trait === current[index]);
-          return unchanged ? current : sanitized;
-        }
-        const defaults = DEFAULT_TRAITS.filter((trait) => cols.includes(trait));
-        if (defaults.length) {
-          return defaults;
-        }
-        if (cols.length === 0) {
-          return [];
-        }
-        const fallbackSize = Math.min(DEFAULT_TRAITS.length, cols.length);
-        return cols.slice(0, fallbackSize);
-      });
-    }
-    loadColumns();
-    return () => {
-      active = false;
-    };
-  }, []);
-
   const load = useCallback(async () => {
-    if (!farmId || traits.length === 0) {
+    if (!farmId) {
       setRows([]);
       return;
     }
@@ -102,7 +68,7 @@ export default function Step7QuartisIndices() {
       p_farm: farmId,
       p_index_a: indexA,
       p_index_b: indexB,
-      p_traits: traits,
+      p_traits: ALL_PTA_COLUMNS,
     });
     if (error) {
       console.error("Failed to load quartis indices", error);
@@ -112,17 +78,11 @@ export default function Step7QuartisIndices() {
     }
     setRows(Array.isArray(data) ? (data as Row[]) : []);
     setLoading(false);
-  }, [farmId, indexA, indexB, traits]);
+  }, [farmId, indexA, indexB]);
 
   useEffect(() => {
     load();
   }, [load]);
-
-  const badges = useMemo(() => {
-    return ptaOptions
-      .map((key) => ({ key, label: key.toUpperCase() }))
-      .sort((a, b) => a.label.localeCompare(b.label));
-  }, [ptaOptions]);
 
   const tableDataByIndex = useMemo(() => {
     const groups = ["Top25", "Bottom25", "Difference"] as const;
@@ -145,14 +105,14 @@ export default function Step7QuartisIndices() {
     const top25A = rows.filter((r) => r.index_label === "IndexA" && r.group_label === "Top25");
     const top25B = rows.filter((r) => r.index_label === "IndexB" && r.group_label === "Top25");
 
-    traits.forEach((t) => {
+    ALL_PTA_COLUMNS.forEach((t) => {
       const valA = top25A.find((r) => r.trait_key === t)?.mean_value || 0;
       const valB = top25B.find((r) => r.trait_key === t)?.mean_value || 0;
       diffData[t] = valA - valB;
     });
 
     return [...(indexMap.get("IndexA") || []), ...(indexMap.get("IndexB") || []), diffData];
-  }, [rows, traits]);
+  }, [rows]);
 
   return (
     <Card>
@@ -191,28 +151,6 @@ export default function Step7QuartisIndices() {
           </Button>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {badges.map(({ key, label }) => {
-            const on = traits.includes(key);
-            return (
-              <Badge
-                key={key}
-                variant={on ? "default" : "outline"}
-                className="cursor-pointer"
-                onClick={() =>
-                  setTraits((prev) =>
-                    on ? prev.filter((item) => item !== key) : [...prev, key]
-                  )
-                }
-              >
-                {label}
-              </Badge>
-            );
-          })}
-          {badges.length === 0 && (
-            <span className="text-sm text-muted-foreground">Nenhuma PTA disponível.</span>
-          )}
-        </div>
 
         {loading && (
           <div className="py-6 text-center text-muted-foreground">Carregando dados...</div>
@@ -224,14 +162,14 @@ export default function Step7QuartisIndices() {
 
         {!loading && rows.length > 0 && (
           <div className="space-y-6">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto relative">
               <table className="w-full text-sm border-collapse">
                 <thead>
                   <tr className="border-b">
-                    <th className="py-2 px-2 text-left font-semibold">Index</th>
-                    <th className="py-2 px-2 text-left font-semibold">Group</th>
-                    {traits.map((t) => (
-                      <th key={t} className="py-2 px-2 text-left font-semibold">
+                    <th className="sticky left-0 z-10 bg-background py-2 px-2 text-left font-semibold border-r">Index</th>
+                    <th className="sticky left-[80px] z-10 bg-background py-2 px-2 text-left font-semibold border-r">Group</th>
+                    {ALL_PTA_COLUMNS.map((t) => (
+                      <th key={t} className="py-2 px-2 text-left font-semibold whitespace-nowrap">
                         {t.toUpperCase()}
                       </th>
                     ))}
@@ -245,22 +183,24 @@ export default function Step7QuartisIndices() {
                         row.index === "Difference" ? "bg-muted/30 font-semibold" : ""
                       }`}
                     >
-                      <td className="py-2 px-2">
+                      <td className="sticky left-0 z-10 bg-background py-2 px-2 border-r">
                         {row.index === "IndexA"
                           ? getIndexDisplayLabel(indexA)
                           : row.index === "IndexB"
                           ? getIndexDisplayLabel(indexB)
                           : row.index}
                       </td>
-                      <td className="py-2 px-2">{row.group}</td>
-                      {traits.map((t) => {
+                      <td className="sticky left-[80px] z-10 bg-background py-2 px-2 border-r">
+                        {row.group}
+                      </td>
+                      {ALL_PTA_COLUMNS.map((t) => {
                         const val = row[t] as number | undefined;
                         const isPositive = val && val > 0;
                         const isDiff = row.index === "Difference";
                         return (
                           <td
                             key={t}
-                            className={`py-2 px-2 ${
+                            className={`py-2 px-2 whitespace-nowrap ${
                               isDiff && isPositive ? "text-green-600" : ""
                             }`}
                           >
