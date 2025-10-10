@@ -13,7 +13,17 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+} from "recharts";
 import { useAGFilters } from "../store";
 
 const DEFAULT_TRAITS = ["ptam", "ptaf", "ptap"] as const;
@@ -47,6 +57,7 @@ export default function Step7QuartisIndices() {
   const [traits, setTraits] = useState<string[]>([...DEFAULT_TRAITS]);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showCharts, setShowCharts] = useState(true);
 
   useEffect(() => {
     if (farmId) {
@@ -125,9 +136,7 @@ export default function Step7QuartisIndices() {
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [ptaOptions]);
 
-  const COLORS = ["#666", "#888", "#aaa", "#ccc", "#ddd", "#eee"];
-
-  const pieDataA = useMemo(() => {
+  const chartDataA = useMemo(() => {
     const topRows = rows.filter((r) => r.index_label === "IndexA" && r.group_label === "Top25");
     const total = topRows.reduce((sum, r) => sum + Math.abs(r.mean_value), 0);
     return topRows.map((r) => ({
@@ -137,7 +146,7 @@ export default function Step7QuartisIndices() {
     }));
   }, [rows]);
 
-  const pieDataB = useMemo(() => {
+  const chartDataB = useMemo(() => {
     const topRows = rows.filter((r) => r.index_label === "IndexB" && r.group_label === "Top25");
     const total = topRows.reduce((sum, r) => sum + Math.abs(r.mean_value), 0);
     return topRows.map((r) => ({
@@ -146,6 +155,26 @@ export default function Step7QuartisIndices() {
       percentage: total > 0 ? (Math.abs(r.mean_value) / total) * 100 : 0,
     }));
   }, [rows]);
+
+  const renderTooltip = useCallback(({ active, payload }: any) => {
+    if (!active || !payload?.length) {
+      return null;
+    }
+
+    const item = payload[0].payload as {
+      name: string;
+      value: number;
+      percentage: number;
+    };
+
+    return (
+      <div className="rounded border bg-background p-2 text-xs shadow-sm">
+        <div className="font-semibold">{item.name}</div>
+        <div>Valor: {Math.round(item.value)}</div>
+        <div>Participação: {item.percentage.toFixed(1)}%</div>
+      </div>
+    );
+  }, []);
 
   const tableDataByIndex = useMemo(() => {
     const groups = ["Top25", "Bottom25", "Difference"] as const;
@@ -212,6 +241,16 @@ export default function Step7QuartisIndices() {
             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             Atualizar
           </Button>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="toggle-step6-charts"
+              checked={showCharts}
+              onCheckedChange={setShowCharts}
+            />
+            <Label htmlFor="toggle-step6-charts" className="text-sm text-muted-foreground">
+              {showCharts ? "Visualizando Barras" : "Visualizando Tabela"}
+            </Label>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -247,113 +286,112 @@ export default function Step7QuartisIndices() {
 
         {!loading && rows.length > 0 && (
           <div className="space-y-6">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="border-b">
-                    <th className="py-2 px-2 text-left font-semibold">Index</th>
-                    <th className="py-2 px-2 text-left font-semibold">Group</th>
-                    {traits.map((t) => (
-                      <th key={t} className="py-2 px-2 text-left font-semibold">
-                        {t.toUpperCase()}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {tableDataByIndex.map((row, idx) => (
-                    <tr
-                      key={`${row.index}-${row.group}-${idx}`}
-                      className={`border-b ${
-                        row.index === "Difference" ? "bg-muted/30 font-semibold" : ""
-                      }`}
-                    >
-                      <td className="py-2 px-2">
-                        {row.index === "IndexA"
-                          ? getIndexDisplayLabel(indexA)
-                          : row.index === "IndexB"
-                          ? getIndexDisplayLabel(indexB)
-                          : row.index}
-                      </td>
-                      <td className="py-2 px-2">{row.group}</td>
-                      {traits.map((t) => {
-                        const val = row[t] as number | undefined;
-                        const isPositive = val && val > 0;
-                        const isDiff = row.index === "Difference";
-                        return (
-                          <td
-                            key={t}
-                            className={`py-2 px-2 ${
-                              isDiff && isPositive ? "text-green-600" : ""
-                            }`}
-                          >
-                            {val != null ? Math.round(val) : "-"}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              {pieDataA.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-semibold mb-2 text-center">
+            {showCharts ? (
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold text-center">
                     {getIndexDisplayLabel(indexA)}
                   </h4>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={pieDataA}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={(entry: any) => `${Number(entry.percentage).toFixed(0)}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {pieDataA.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {chartDataA.length > 0 ? (
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={chartDataA}
+                          layout="vertical"
+                          margin={{ left: 16, right: 16 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis type="number" />
+                          <YAxis dataKey="name" type="category" width={120} />
+                          <Tooltip content={renderTooltip} />
+                          <Bar dataKey="value" fill="#6366f1" radius={[4, 4, 4, 4]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground text-center">
+                      Sem dados para exibir.
+                    </div>
+                  )}
                 </div>
-              )}
-
-              {pieDataB.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-semibold mb-2 text-center">
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold text-center">
                     {getIndexDisplayLabel(indexB)}
                   </h4>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={pieDataB}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={(entry: any) => `${Number(entry.percentage).toFixed(0)}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {pieDataB.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {chartDataB.length > 0 ? (
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={chartDataB}
+                          layout="vertical"
+                          margin={{ left: 16, right: 16 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis type="number" />
+                          <YAxis dataKey="name" type="category" width={120} />
+                          <Tooltip content={renderTooltip} />
+                          <Bar dataKey="value" fill="#6366f1" radius={[4, 4, 4, 4]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground text-center">
+                      Sem dados para exibir.
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="py-2 px-2 text-left font-semibold">Index</th>
+                      <th className="py-2 px-2 text-left font-semibold">Group</th>
+                      {traits.map((t) => (
+                        <th key={t} className="py-2 px-2 text-left font-semibold">
+                          {t.toUpperCase()}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tableDataByIndex.map((row, idx) => (
+                      <tr
+                        key={`${row.index}-${row.group}-${idx}`}
+                        className={`border-b ${
+                          row.index === "Difference" ? "bg-muted/30 font-semibold" : ""
+                        }`}
+                      >
+                        <td className="py-2 px-2">
+                          {row.index === "IndexA"
+                            ? getIndexDisplayLabel(indexA)
+                            : row.index === "IndexB"
+                            ? getIndexDisplayLabel(indexB)
+                            : row.index}
+                        </td>
+                        <td className="py-2 px-2">{row.group}</td>
+                        {traits.map((t) => {
+                          const val = row[t] as number | undefined;
+                          const isPositive = val && val > 0;
+                          const isDiff = row.index === "Difference";
+                          return (
+                            <td
+                              key={t}
+                              className={`py-2 px-2 ${
+                                isDiff && isPositive ? "text-green-600" : ""
+                              }`}
+                            >
+                              {val != null ? Math.round(val) : "-"}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </CardContent>
