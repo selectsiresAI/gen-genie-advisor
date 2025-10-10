@@ -18,7 +18,8 @@ const canonicalColumns = [
   'f_sav', 'ptam', 'cfp', 'ptaf', 'ptaf_pct', 'ptap', 'ptap_pct', 'pl', 'dpr', 'liv', 'scs', 'mast', 'met',
   'rp', 'da', 'ket', 'mf', 'ptat', 'udc', 'flc', 'sce', 'dce', 'ssb', 'dsb', 'h_liv', 'ccr', 'hcr', 'fi',
   'gl', 'efc', 'bwc', 'sta', 'str', 'dfm', 'rua', 'rls', 'rtp', 'ftl', 'rw', 'rlr', 'fta', 'fls', 'fua',
-  'ruh', 'ruw', 'ucl', 'udp', 'ftp', 'rfi', 'gfi', 'beta_casein', 'kappa_casein', 'parity_order', 'category'
+  'ruh', 'ruw', 'ucl', 'udp', 'ftp', 'rfi', 'gfi', 'beta_casein', 'kappa_casein', 'parity_order', 'category',
+  'fonte'
 ] as const;
 
 const canonicalColumnsSet = new Set<string>(canonicalColumns);
@@ -80,7 +81,10 @@ const headerAliases: Record<string, string> = {
   ordem_parto: 'parity_order',
   ordem_de_parto: 'parity_order',
   categoria: 'category',
-  category: 'category'
+  category: 'category',
+  fonte: 'fonte',
+  origem: 'fonte',
+  source: 'fonte'
 };
 
 const numericFields = new Set<string>([
@@ -97,6 +101,24 @@ const timestampFields = new Set<string>(['created_at', 'updated_at']);
 const nullTokens = new Set<string>([
   '', 'null', 'undefined', 'na', 'n/a', 'nan', 'none', 'sem dado', 'sem dados', 'sem valor', '-', '--', '#########'
 ]);
+
+const normalizeFonteValue = (value: FemaleValue | undefined): string | null => {
+  if (value === undefined || value === null) return null;
+  if (typeof value === 'object') return null;
+
+  const raw = String(value).trim();
+  if (!raw) return null;
+
+  const normalized = raw
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase();
+
+  if (normalized.startsWith('genom')) return 'Genômica';
+  if (normalized.startsWith('pred')) return 'Predição';
+
+  return raw;
+};
 
 const padNumber = (value: number) => value.toString().padStart(2, '0');
 
@@ -524,6 +546,10 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
           }
         });
 
+        if ('fonte' in record) {
+          record.fonte = normalizeFonteValue(record.fonte as FemaleValue | undefined);
+        }
+
         // reforçar alguns campos textuais com trim
         if (record.identifier != null) record.identifier = String(record.identifier).trim();
         if (record.cdcb_id != null) record.cdcb_id = String(record.cdcb_id).trim();
@@ -580,7 +606,7 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
   const downloadTemplate = () => {
     // Template baseado nas colunas principais de females
     const headers = [
-      'name','identifier','cdcb_id','birth_date','parity_order','category',
+      'name','identifier','cdcb_id','birth_date','parity_order','category','fonte',
       'sire_naab','mgs_naab','mmgs_naab',
       'hhp_dollar','tpi','nm_dollar','cm_dollar','fm_dollar','gm_dollar',
       'f_sav','ptam','cfp','ptaf','ptaf_pct','ptap','ptap_pct',
@@ -591,7 +617,7 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
     ];
 
     const sampleData = [
-      'FEMEA EXEMPLO;BR001;1234567890;2020-01-15;2;Multipara;200HO12345;100HO98765;050HO11111;820;2650;750;680;590;420;1,2;1100;10;45;3,5;38;3,1;2,3;1,1;1,0;2,85;4,2;1,8;1,1;0,2;0,1;2,4;1,8;0,4;0,3;1,2;0,8;2,1;1,9;2,2;1,4;0,9;1,7;1,3;0,6;1,5;2,0;1,8;0,7;0,2;0,5;1,1;0,9;1,3;0,8;0,4;1,2;0,6;0,7;1,0;0,3;0,5;1,6;A2A2;AA'
+      'FEMEA EXEMPLO;BR001;1234567890;2020-01-15;2;Multipara;Genômica;200HO12345;100HO98765;050HO11111;820;2650;750;680;590;420;1,2;1100;10;45;3,5;38;3,1;2,3;1,1;1,0;2,85;4,2;1,8;1,1;0,2;0,1;2,4;1,8;0,4;0,3;1,2;0,8;2,1;1,9;2,2;1,4;0,9;1,7;1,3;0,6;1,5;2,0;1,8;0,7;0,2;0,5;1,1;0,9;1,3;0,8;0,4;1,2;0,6;0,7;1,0;0,3;0,5;1,6;A2A2;AA'
     ];
 
     const csvContent = [headers.join(';'), ...sampleData].join('\n');

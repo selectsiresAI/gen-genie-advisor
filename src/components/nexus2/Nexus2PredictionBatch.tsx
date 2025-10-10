@@ -140,7 +140,8 @@ const buildResultExportRows = (rows: BatchRow[]) =>
         nome_avo_materno: row.bulls.mgs?.name ?? '',
         naab_bisavo_materno: row.naabBisavoMaterno,
         nome_bisavo_materno: row.bulls.mmgs?.name ?? '',
-        ...predictionColumns
+        ...predictionColumns,
+        Fonte: 'Predição'
       };
     });
 
@@ -716,6 +717,7 @@ const Nexus2PredictionBatch: React.FC = () => {
                         {PREDICTION_TRAITS.map((trait) => (
                           <TableHead key={`prediction-${trait.key}`}>{trait.label}</TableHead>
                         ))}
+                        <TableHead>Fonte</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -750,6 +752,7 @@ const Nexus2PredictionBatch: React.FC = () => {
                                 {formatPredictionValue(row.prediction?.[trait.key] ?? null)}
                               </TableCell>
                             ))}
+                            <TableCell>Predição</TableCell>
                           </TableRow>
                         ))}
                     </TableBody>

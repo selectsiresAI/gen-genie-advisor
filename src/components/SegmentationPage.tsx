@@ -30,6 +30,7 @@ type Female = {
   birth_date?: string;
   parity_order?: number;
   category?: string;
+  fonte?: string | null;
   sire_naab?: string;
   sire_name?: string;
   mgs_naab?: string;
@@ -237,6 +238,39 @@ function renderPedigreeCell(code?: string | null, name?: string | null) {
       {name && <span className="text-[11px]" style={{ color: '#6B7280' }}>{name}</span>}
     </div>
   );
+}
+
+function getFonteDisplay(fonte?: string | null) {
+  if (!fonte) {
+    return {
+      label: '—',
+      className: 'border-gray-200 bg-gray-50 text-gray-600'
+    };
+  }
+
+  const normalized = fonte
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase();
+
+  if (normalized.startsWith('genom')) {
+    return {
+      label: 'Genômica',
+      className: 'border-green-200 bg-green-50 text-green-700'
+    };
+  }
+
+  if (normalized.startsWith('pred')) {
+    return {
+      label: 'Predição',
+      className: 'border-purple-200 bg-purple-50 text-purple-700'
+    };
+  }
+
+  return {
+    label: fonte,
+    className: 'border-gray-200 bg-gray-50 text-gray-700'
+  };
 }
 
 function getAutomaticCategory(birthDate?: string, parityOrder?: number): string {
@@ -661,19 +695,24 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
   }
 
   function exportCSV() {
-    const rows = filteredAnimals.map(a => ({
-      id: a.__idKey ? (a as any)[a.__idKey] : (a.id ?? ""),
-      nome: a.__nameKey ? (a as any)[a.__nameKey] : (a.name ?? ""),
-      "HHP$": a.hhp_dollar ?? "",
-      TPI: a.tpi ?? "",
-      "NM$": a.nm_dollar ?? "",
-      PTAM: a.ptam ?? "",
-      PTAF: a.ptaf ?? "",
-      SCS: a.scs ?? "",
-      DPR: a.dpr ?? "",
-      CustomScore: a.CustomScore,
-      Classificacao: a.Classification ?? "",
-    }));
+    const rows = filteredAnimals.map(a => {
+      const fonteInfo = getFonteDisplay((a as any).fonte);
+
+      return {
+        id: a.__idKey ? (a as any)[a.__idKey] : (a.id ?? ""),
+        nome: a.__nameKey ? (a as any)[a.__nameKey] : (a.name ?? ""),
+        Fonte: fonteInfo.label === '—' ? '' : fonteInfo.label,
+        "HHP$": a.hhp_dollar ?? "",
+        TPI: a.tpi ?? "",
+        "NM$": a.nm_dollar ?? "",
+        PTAM: a.ptam ?? "",
+        PTAF: a.ptaf ?? "",
+        SCS: a.scs ?? "",
+        DPR: a.dpr ?? "",
+        CustomScore: a.CustomScore,
+        Classificacao: a.Classification ?? "",
+      };
+    });
     const csv = toCSV(rows);
     downloadText("segmentacao_custom_index.csv", csv);
   }
@@ -1550,6 +1589,7 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
                       <th className="border px-2 py-1 text-left text-xs" style={{ background: SS.gray }}>Data de Nascimento</th>
                       <th className="border px-2 py-1 text-left text-xs" style={{ background: SS.gray }}>Ordem de Parto</th>
                       <th className="border px-2 py-1 text-left text-xs" style={{ background: SS.gray }}>Categoria</th>
+                      <th className="border px-2 py-1 text-left text-xs" style={{ background: SS.gray }}>Fonte</th>
                       {segmentationEnabled && <th className="border px-2 py-1 text-left text-xs" style={{ background: SS.gray }}>Classificação</th>}
                       <th className="border px-2 py-1 text-left text-xs" style={{ background: SS.gray }}>HHP$®</th>
                       <th className="border px-2 py-1 text-left text-xs" style={{ background: SS.gray }}>TPI</th>
@@ -1614,13 +1654,14 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
                   </thead>
                   <tbody>
                     {filteredAnimals.map((a, idx) => {
-                      const classificationColor = a.Classification === "Superior" ? "#10B981" : 
-                                                 a.Classification === "Intermediário" ? "#F59E0B" : 
+                      const classificationColor = a.Classification === "Superior" ? "#10B981" :
+                                                 a.Classification === "Intermediário" ? "#F59E0B" :
                                                  a.Classification === "Inferior" ? "#EF4444" : "transparent";
-                      
+                      const fonteInfo = getFonteDisplay((a as any).fonte);
+
                       return (
-                      <tr key={(a.__idKey ? (a as any)[a.__idKey] : (a.id ?? idx))} 
-                          className="border-b hover:opacity-90" 
+                      <tr key={(a.__idKey ? (a as any)[a.__idKey] : (a.id ?? idx))}
+                          className="border-b hover:opacity-90"
                           style={{ 
                             borderColor: SS.gray, 
                             color: SS.black,
@@ -1642,36 +1683,45 @@ export default function SegmentationPage({ farm, onBack }: SegmentationPageProps
                         </td>
                          <td className="border px-2 py-1 text-xs">{(a as any).parity_order || '-'}</td>
                          <td className="border px-2 py-1 text-xs">
-                           <span 
-                             className="px-2 py-1 rounded text-xs font-medium"
-                             style={{
-                               backgroundColor: 
-                                 getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Bezerra' ? '#EBF4FF' :
-                                 getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Novilha' ? '#F0FDF4' :
-                                 getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Primípara' ? '#FAF5FF' :
-                                 getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Secundípara' ? '#FFF7ED' :
-                                 getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Multípara' ? '#FEF2F2' :
-                                 '#F9FAFB',
-                               color:
-                                 getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Bezerra' ? '#1E40AF' :
-                                 getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Novilha' ? '#166534' :
-                                 getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Primípara' ? '#7C3AED' :
-                                 getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Secundípara' ? '#EA580C' :
-                                 getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Multípara' ? '#DC2626' :
-                                 '#6B7280',
-                               border: '1px solid',
-                               borderColor:
-                                 getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Bezerra' ? '#DBEAFE' :
-                                 getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Novilha' ? '#DCFCE7' :
-                                 getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Primípara' ? '#F3E8FF' :
-                                 getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Secundípara' ? '#FED7AA' :
-                                 getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Multípara' ? '#FECACA' :
-                                 '#E5E7EB'
-                             }}
-                           >
-                             {getAutomaticCategory((a as any).birth_date, (a as any).parity_order)}
-                           </span>
-                         </td>
+                         <span
+                           className="px-2 py-1 rounded text-xs font-medium"
+                           style={{
+                             backgroundColor:
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Bezerra' ? '#EBF4FF' :
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Novilha' ? '#F0FDF4' :
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Primípara' ? '#FAF5FF' :
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Secundípara' ? '#FFF7ED' :
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Multípara' ? '#FEF2F2' :
+                               '#F9FAFB',
+                             color:
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Bezerra' ? '#1E40AF' :
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Novilha' ? '#166534' :
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Primípara' ? '#7C3AED' :
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Secundípara' ? '#EA580C' :
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Multípara' ? '#DC2626' :
+                               '#6B7280',
+                             border: '1px solid',
+                             borderColor:
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Bezerra' ? '#DBEAFE' :
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Novilha' ? '#DCFCE7' :
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Primípara' ? '#F3E8FF' :
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Secundípara' ? '#FED7AA' :
+                               getAutomaticCategory((a as any).birth_date, (a as any).parity_order) === 'Multípara' ? '#FECACA' :
+                               '#E5E7EB'
+                           }}
+                         >
+                           {getAutomaticCategory((a as any).birth_date, (a as any).parity_order)}
+                         </span>
+                       </td>
+                        <td className="border px-2 py-1 text-xs">
+                          {fonteInfo.label === '—' ? (
+                            <span className="text-gray-500">—</span>
+                          ) : (
+                            <Badge variant="outline" className={fonteInfo.className}>
+                              {fonteInfo.label}
+                            </Badge>
+                          )}
+                        </td>
                          {segmentationEnabled && (
                            <td className="border px-2 py-1 text-xs">
                              {a.Classification && (
