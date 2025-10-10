@@ -44,6 +44,7 @@ interface Female {
   birth_date?: string;
   parity_order?: number;
   category?: string;
+  fonte?: string | null;
   sire_naab?: string;
   sire_name?: string;
   mgs_naab?: string;
@@ -131,7 +132,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
 
   const getAutomaticCategory = (birthDate?: string, parityOrder?: number) => {
     if (!birthDate) return 'Indefinida';
-    
+
     const birth = new Date(birthDate);
     const today = new Date();
     const daysDiff = Math.floor((today.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24));
@@ -162,6 +163,39 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
     }
     
     return 'Indefinida';
+  };
+
+  const getFonteDisplay = (fonte?: string | null) => {
+    if (!fonte) {
+      return {
+        label: '—',
+        className: 'border-gray-200 bg-gray-50 text-gray-600'
+      };
+    }
+
+    const normalized = fonte
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+      .toLowerCase();
+
+    if (normalized.startsWith('genom')) {
+      return {
+        label: 'Genômica',
+        className: 'border-green-200 bg-green-50 text-green-700'
+      };
+    }
+
+    if (normalized.startsWith('pred')) {
+      return {
+        label: 'Predição',
+        className: 'border-purple-200 bg-purple-50 text-purple-700'
+      };
+    }
+
+    return {
+      label: fonte,
+      className: 'border-gray-200 bg-gray-50 text-gray-700'
+    };
   };
 
   // Memoize category counts to avoid recalculating on every render
@@ -431,6 +465,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
       'Data Nascimento',
       'Ordem de Parto',
       'Categoria',
+      'Fonte',
       'Pai NAAB',
       'Avô Materno NAAB',
       'BisAvô Materno NAAB',
@@ -504,6 +539,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
       female.birth_date ? formatDate(female.birth_date) : '',
       female.parity_order || '',
       getAutomaticCategory(female.birth_date, female.parity_order),
+      female.fonte || '',
       female.sire_naab || '',
       female.mgs_naab || '',
       female.mmgs_naab || '',
@@ -849,6 +885,7 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
                           <th className="border px-2 py-1 text-left text-xs bg-muted">Data de Nascimento</th>
                           <th className="border px-2 py-1 text-left text-xs bg-muted">Ordem de Parto</th>
                           <th className="border px-2 py-1 text-left text-xs bg-muted">Categoria</th>
+                          <th className="border px-2 py-1 text-left text-xs bg-muted">Fonte</th>
                           <th className="border px-2 py-1 text-left text-xs bg-muted">HHP$®</th>
                           <th className="border px-2 py-1 text-left text-xs bg-muted">TPI</th>
                           <th className="border px-2 py-1 text-left text-xs bg-muted">NM$</th>
@@ -910,8 +947,11 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredFemales.map((female) => (
-                          <tr key={female.id} className="hover:bg-muted/50">
+                        {filteredFemales.map((female) => {
+                          const fonteDisplay = getFonteDisplay(female.fonte);
+
+                          return (
+                            <tr key={female.id} className="hover:bg-muted/50">
                             <td className="border px-2 py-1 text-xs">
                               <input
                                 type="checkbox"
@@ -946,6 +986,13 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
                               }>
                                 {getAutomaticCategory(female.birth_date, female.parity_order)}
                               </Badge>
+                            </td>
+                            <td className="border px-2 py-1 text-xs">
+                              {fonteDisplay.label === '—' ? (
+                                <span className="text-muted-foreground">—</span>
+                              ) : (
+                                <Badge variant="outline" className={fonteDisplay.className}>{fonteDisplay.label}</Badge>
+                              )}
                             </td>
                             <td className="border px-2 py-1 text-xs">{female.hhp_dollar ? Number(female.hhp_dollar).toFixed(0) : '-'}</td>
                             <td className="border px-2 py-1 text-xs">{female.tpi || '-'}</td>
@@ -1005,8 +1052,9 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
                             <td className="border px-2 py-1 text-xs">{female.beta_casein || '-'}</td>
                             <td className="border px-2 py-1 text-xs">{female.kappa_casein || '-'}</td>
                             <td className="border px-2 py-1 text-xs">{female.gfi || '-'}</td>
-                          </tr>
-                        ))}
+                            </tr>
+                          );
+                        })}
                       </tbody>
                       </table>
                     </div>

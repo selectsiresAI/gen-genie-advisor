@@ -507,6 +507,7 @@ export type Database = {
           birth_date: string | null
           bwc: number | null
           category: string | null
+          fonte: string | null
           ccr: number | null
           cdcb_id: string | null
           cfp: number | null
@@ -581,6 +582,7 @@ export type Database = {
           birth_date?: string | null
           bwc?: number | null
           category?: string | null
+          fonte?: string | null
           ccr?: number | null
           cdcb_id?: string | null
           cfp?: number | null
@@ -655,6 +657,7 @@ export type Database = {
           birth_date?: string | null
           bwc?: number | null
           category?: string | null
+          fonte?: string | null
           ccr?: number | null
           cdcb_id?: string | null
           cfp?: number | null
@@ -1506,6 +1509,7 @@ export type Database = {
           birth_date: string | null
           bwc: number | null
           category: string | null
+          fonte: string | null
           ccr: number | null
           cdcb_id: string | null
           cfp: number | null
