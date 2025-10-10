@@ -8,8 +8,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Settings, Download, RefreshCw, Users, TrendingUp, BarChart3, PieChart as PieChartIcon, Eye } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import {
+  fetchFemalesDenormByFarm,
+  isCompleteFemaleRow,
+  type CompleteFemaleDenormRow,
+} from "@/supabase/queries/females";
 
 type RawRow = Record<string, any>;
 
@@ -62,7 +66,7 @@ const COLORS = {
 const CHART_COLORS = [COLORS.primary, COLORS.accent, COLORS.secondary, '#FFA500', '#8B5CF6', '#06B6D4', '#F59E0B'];
 
 const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd }) => {
-  const [females, setFemales] = useState<any[]>([]);
+  const [females, setFemales] = useState<CompleteFemaleDenormRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedPTAs, setSelectedPTAs] = useState<string[]>(['tpi', 'hhp_dollar', 'nm_dollar']);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
@@ -148,32 +152,20 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
     try {
       setLoading(true);
       
-      // Fetch ALL records by making paginated requests (same as HerdPage)
-      let allData: any[] = [];
-      let page = 0;
-      const pageSize = 1000;
-      let hasMore = true;
+      const rows = await fetchFemalesDenormByFarm(farm.farm_id, {
+        order: { column: 'birth_date', ascending: true, nullsFirst: true },
+      });
 
-      while (hasMore) {
-        const { data: pageData, error: pageError } = await supabase
-          .rpc('get_females_denorm', { target_farm_id: farm.farm_id })
-          .order('birth_date', { ascending: true })
-          .range(page * pageSize, (page + 1) * pageSize - 1);
+      const completeRows = rows.filter(isCompleteFemaleRow);
 
-        if (pageError) throw pageError;
-        
-        if (pageData && pageData.length > 0) {
-          allData = [...allData, ...pageData];
-          hasMore = pageData.length === pageSize;
-          page++;
-        } else {
-          hasMore = false;
-        }
+      if (rows.length !== completeRows.length) {
+        console.warn(
+          '[ChartsPage] Ignored female rows missing id, name, farm_id or created_at:',
+          rows.length - completeRows.length
+        );
       }
 
-      const data = allData;
-      
-      setFemales(data || []);
+      setFemales(completeRows);
     } catch (error) {
       console.error('Error loading females data:', error);
       toast({
