@@ -60,7 +60,6 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [totalFarms, setTotalFarms] = useState(0);
   const [totalAnimals, setTotalAnimals] = useState(0);
-  const [totalBulls, setTotalBulls] = useState(0);
   const { toast } = useToast();
   const { setSelectedHerdId, refreshFromSupabase } = useHerdStore();
   useEffect(() => {
@@ -111,17 +110,6 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
         setTotalAnimals(totalFemales);
       }
 
-      // Load total bulls count from database
-      const {
-        count: bullsCount,
-        error: bullsError
-      } = await supabase.from('bulls').select('*', {
-        count: 'exact',
-        head: true
-      });
-      if (!bullsError) {
-        setTotalBulls(bullsCount || 0);
-      }
     } catch (error: any) {
       console.error('Error loading data:', error);
       toast({
@@ -342,48 +330,6 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
         </div>
 
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-10">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card className="border-none bg-white shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-neutral-500">Fêmeas cadastradas</CardTitle>
-                <CardDescription>Animais ativos no rebanho</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-semibold text-neutral-900">{(selectedFarm.total_females ?? 0).toLocaleString()}</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-none bg-white shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-neutral-500">Touros selecionados</CardTitle>
-                <CardDescription>Favoritos prontos para uso</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-semibold text-neutral-900">{selectedFarm.selected_bulls ?? 0}</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-none bg-white shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-neutral-500">Total de touros na base</CardTitle>
-                <CardDescription>Catálogo disponível para consulta</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-semibold text-neutral-900">{totalBulls.toLocaleString()}</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-none bg-white shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-neutral-500">Proprietário</CardTitle>
-                <CardDescription>Gestor da fazenda</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-lg font-semibold text-neutral-900">{selectedFarm.owner_name}</p>
-              </CardContent>
-            </Card>
-          </div>
-
           <div className="rounded-3xl border bg-white/70 p-6 shadow-sm md:p-10">
             <header className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
