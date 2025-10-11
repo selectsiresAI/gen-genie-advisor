@@ -336,7 +336,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
       <div className="border-b">
         <div className="flex h-16 items-center px-4 justify-between">
           <div className="flex items-center">
-            <Button variant="ghost" onClick={onBack} className="mr-4">
+            <Button variant="ghost" onClick={onBack} className="mr-4 bg-slate-200 hover:bg-slate-100">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Dashboard
             </Button>
