@@ -23,7 +23,6 @@ import { usePlanStore } from '@/hooks/usePlanStore';
 import { useHerdStore } from '@/hooks/useHerdStore';
 import ConversaoPage from '@/pages/tools/conversao';
 import AuditoriaGeneticaPage from '@/pages/AuditoriaGeneticaPage';
-
 interface MainDashboardProps {
   user: User;
   onLogout: () => void;
@@ -38,7 +37,6 @@ interface Farm {
   selected_bulls: number;
   created_at: string;
 }
-
 type SupabaseFarm = Omit<Farm, 'total_females'> & {
   total_females: number | null;
 };
@@ -56,8 +54,13 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   const [totalFarms, setTotalFarms] = useState(0);
   const [totalAnimals, setTotalAnimals] = useState(0);
   const [totalBulls, setTotalBulls] = useState(0);
-  const { toast } = useToast();
-  const { setSelectedHerdId, refreshFromSupabase } = useHerdStore();
+  const {
+    toast
+  } = useToast();
+  const {
+    setSelectedHerdId,
+    refreshFromSupabase
+  } = useHerdStore();
   useEffect(() => {
     loadUserData();
   }, []);
@@ -89,7 +92,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
           variant: "destructive"
         });
       } else {
-        const rawFarms = (farmsData as SupabaseFarm[]) ?? [];
+        const rawFarms = farmsData as SupabaseFarm[] ?? [];
         const normalizedFarms: Farm[] = rawFarms.map(farm => {
           const normalizedCount = Number(farm.total_females ?? 0);
           return {
@@ -97,7 +100,6 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
             total_females: Number.isFinite(normalizedCount) ? normalizedCount : 0
           };
         });
-
         setFarms(normalizedFarms);
 
         // Calcular totais
@@ -185,11 +187,10 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   const handleFarmSelect = async (farm: Farm) => {
     setSelectedFarm(farm);
     setCurrentView('farm');
-    
+
     // Automatically load herd data when entering farm
     setSelectedHerdId(farm.farm_id);
     await refreshFromSupabase(farm.farm_id);
-    
     console.log('🏠 Entrando na fazenda e carregando rebanho automaticamente:', farm.farm_name);
   };
   const handleBackToDashboard = () => {
@@ -272,7 +273,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                         Rebanho
                       </CardTitle>
                        <CardDescription>
-                         <span>{(selectedFarm.total_females ?? 0)} fêmeas cadastradas</span>
+                         <span>{selectedFarm.total_females ?? 0} fêmeas cadastradas</span>
                        </CardDescription>
                     </CardHeader>
                   </Card>
@@ -709,7 +710,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
       <div className="border-b">
         <div className="flex h-16 items-center px-4">
           <div className="flex items-center space-x-4">
-            <Building2 className="w-8 h-8 text-primary" />
+            
             <h1 className="text-2xl font-bold">ToolSS</h1>
           </div>
           
@@ -792,7 +793,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                       <div className="flex justify-between text-sm">
                         <div className="flex items-center gap-1">
                           <Users className="w-4 h-4 text-muted-foreground" />
-                          <span>{(farm.total_females ?? 0)} fêmeas</span>
+                          <span>{farm.total_females ?? 0} fêmeas</span>
                         </div>
                         <div className="flex items-center gap-1">
                           
