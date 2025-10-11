@@ -351,45 +351,47 @@ const HerdPage: React.FC<HerdPageProps> = ({
           {/* Header with Category Stats */}
           <div className="grid gap-4 md:grid-cols-6">
             {[{
-              key: 'total',
-              label: 'Total de Fêmeas',
-              value: categoryCounts.total,
-              testId: 'card-total-femeas',
-              icon: <Users className="w-4 h-4" />
-            }, {
-              key: 'bezerras',
-              label: 'Bezerras',
-              value: categoryCounts.bezerras,
-              testId: 'card-bezerras',
-              indicatorColor: 'bg-blue-200'
-            }, {
-              key: 'novilhas',
-              label: 'Novilhas',
-              value: categoryCounts.novilhas,
-              testId: 'card-novilhas',
-              indicatorColor: 'bg-emerald-200'
-            }, {
-              key: 'primiparas',
-              label: 'Primíparas',
-              value: categoryCounts.primiparas,
-              testId: 'card-primiparas',
-              indicatorColor: 'bg-violet-200'
-            }, {
-              key: 'secundiparas',
-              label: 'Secundíparas',
-              value: categoryCounts.secundiparas,
-              testId: 'card-secundiparas',
-              indicatorColor: 'bg-orange-200'
-            }, {
-              key: 'multiparas',
-              label: 'Multíparas',
-              value: categoryCounts.multiparas,
-              testId: 'card-multiparas',
-              indicatorColor: 'bg-rose-200'
-            }].map(stat => <Card key={stat.key} data-testid={stat.testId} className="relative overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-[#7F1D1D] via-[#B91C1C] to-[#EF4444] text-white shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
-                <div className="pointer-events-none absolute inset-0 opacity-80" style={{ background: 'radial-gradient(circle at top left, rgba(255,255,255,0.35), transparent 55%)' }} aria-hidden="true"></div>
+            key: 'total',
+            label: 'Total de Fêmeas',
+            value: categoryCounts.total,
+            testId: 'card-total-femeas',
+            icon: <Users className="w-4 h-4" />
+          }, {
+            key: 'bezerras',
+            label: 'Bezerras',
+            value: categoryCounts.bezerras,
+            testId: 'card-bezerras',
+            indicatorColor: 'bg-blue-200'
+          }, {
+            key: 'novilhas',
+            label: 'Novilhas',
+            value: categoryCounts.novilhas,
+            testId: 'card-novilhas',
+            indicatorColor: 'bg-emerald-200'
+          }, {
+            key: 'primiparas',
+            label: 'Primíparas',
+            value: categoryCounts.primiparas,
+            testId: 'card-primiparas',
+            indicatorColor: 'bg-violet-200'
+          }, {
+            key: 'secundiparas',
+            label: 'Secundíparas',
+            value: categoryCounts.secundiparas,
+            testId: 'card-secundiparas',
+            indicatorColor: 'bg-orange-200'
+          }, {
+            key: 'multiparas',
+            label: 'Multíparas',
+            value: categoryCounts.multiparas,
+            testId: 'card-multiparas',
+            indicatorColor: 'bg-rose-200'
+          }].map(stat => <Card key={stat.key} data-testid={stat.testId} className="relative overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-[#7F1D1D] via-[#B91C1C] to-[#EF4444] text-white shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
+                <div className="pointer-events-none absolute inset-0 opacity-80" style={{
+              background: 'radial-gradient(circle at top left, rgba(255,255,255,0.35), transparent 55%)'
+            }} aria-hidden="true"></div>
                 <CardHeader className="relative z-10 pb-1">
-                  <CardTitle className="flex items-center gap-3 text-sm font-medium uppercase tracking-wide text-white/80">
+                  <CardTitle className="flex items-center gap-3 text-sm uppercase tracking-wide text-slate-50 font-bold">
                     {stat.icon ? <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white">
                           {stat.icon}
                         </span> : <span className={`h-2.5 w-2.5 rounded-full ${stat.indicatorColor || 'bg-white/60'}`}></span>}
@@ -495,13 +497,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
                           <tr>
                             <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">
                               <div className="flex items-center gap-2">
-                                <input
-                                  type="checkbox"
-                                  ref={selectAllCheckboxRef}
-                                  checked={allVisibleSelected}
-                                  onChange={handleSelectAll}
-                                  className="h-4 w-4"
-                                />
+                                <input type="checkbox" ref={selectAllCheckboxRef} checked={allVisibleSelected} onChange={handleSelectAll} className="h-4 w-4" />
                                 Selecionar
                               </div>
                             </th>
