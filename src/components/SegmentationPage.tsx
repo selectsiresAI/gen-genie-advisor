@@ -1305,7 +1305,7 @@ export default function SegmentationPage({
                   <div style={{
                   borderColor: '#10B981',
                   backgroundColor: '#ECFDF5'
-                }} className="mb-4 p-3 rounded-lg border-2 bg-slate-200">
+                }} className="mb-4 p-3 rounded-lg border-2 bg-slate-100">
                     <div className="flex items-center justify-between mb-2">
                       <span style={{
                       color: '#065F46'
