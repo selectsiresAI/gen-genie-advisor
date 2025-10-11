@@ -1710,11 +1710,7 @@ export default function SegmentationPage({
                             </Badge>}
                         </td>
                          {segmentationEnabled && <td className="border px-2 py-1 text-xs">
-                              {a.Classification && <span className={`px-2 py-1 rounded text-xs font-medium border ${
-                                a.Classification === "Superior" ? "bg-accent/20 text-accent border-accent" :
-                                a.Classification === "Intermediário" ? "bg-amber-100 text-amber-800 border-amber-500 dark:bg-amber-950/30 dark:text-amber-300" :
-                                "bg-destructive/20 text-destructive border-destructive"
-                              }`}>
+                              {a.Classification && <span className={`px-2 py-1 rounded text-xs font-medium border ${a.Classification === "Superior" ? "bg-accent/20 text-accent border-accent" : a.Classification === "Intermediário" ? "bg-amber-100 text-amber-800 border-amber-500 dark:bg-amber-950/30 dark:text-amber-300" : "bg-destructive/20 text-destructive border-destructive"}`}>
                                   {a.Classification}
                                 </span>}
                             </td>}
