@@ -59,15 +59,15 @@ export default function PlanoApp({
               </div>
               <div className="space-y-2 text-sm text-gray-500 mb-6">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  
                   Análise de PTAs e índices genéticos
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  
                   Cálculos de ROI em tempo real
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  
                   Gráficos e relatórios detalhados
                 </div>
               </div>
@@ -92,15 +92,15 @@ export default function PlanoApp({
               </div>
               <div className="space-y-2 text-sm text-gray-500 mb-6">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                  
                   7 fases de planejamento estruturado
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                  
                   Estratégia genética customizável
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                  
                   Análise de investimentos e retornos
                 </div>
               </div>
