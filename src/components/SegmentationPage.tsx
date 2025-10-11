@@ -1329,7 +1329,7 @@ export default function SegmentationPage({
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <button onClick={saveSegmentationToDatabase} disabled={!segmentationEnabled || !segmentationTriggered || loading} className="flex items-center gap-2 border border-accent px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 text-slate-50 rounded-xl bg-red-700 hover:bg-red-600">
+                <button onClick={saveSegmentationToDatabase} disabled={!segmentationEnabled || !segmentationTriggered || loading} className="flex items-center gap-2 border border-accent px-4 py-2 font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 text-slate-50 rounded-xl bg-red-700 hover:bg-red-600 text-sm">
                   <Database size={18} /> Salvar Segmentação
                 </button>
               </TooltipTrigger>
