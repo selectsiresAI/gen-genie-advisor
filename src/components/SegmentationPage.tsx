@@ -1312,7 +1312,7 @@ export default function SegmentationPage({
                     }} className="font-medium text-slate-950">Superior</span>
                       <span style={{
                       color: '#065F46'
-                    }} className="font-semibold text-zinc-950">{superiorPercent[0]}%</span>
+                    }} className="font-semibold text-slate-950">{superiorPercent[0]}%</span>
                     </div>
                     <Slider value={superiorPercent} onValueChange={updateSuperiorPercent} max={100} step={1} className="w-full" />
                   </div>
@@ -1328,7 +1328,7 @@ export default function SegmentationPage({
                     }} className="font-medium text-slate-950">Intermediário</span>
                       <span style={{
                       color: '#92400E'
-                    }} className="font-semibold text-zinc-950">{intermediarioPercent[0]}%</span>
+                    }} className="font-semibold text-slate-950">{intermediarioPercent[0]}%</span>
                     </div>
                     <Slider value={intermediarioPercent} onValueChange={updateIntermediarioPercent} max={100} step={1} className="w-full" />
                   </div>
@@ -1344,7 +1344,7 @@ export default function SegmentationPage({
                     }} className="font-medium text-slate-950">Inferior</span>
                       <span style={{
                       color: '#991B1B'
-                    }} className="font-semibold text-zinc-950">{inferiorPercent[0]}%</span>
+                    }} className="font-semibold text-slate-950">{inferiorPercent[0]}%</span>
                     </div>
                     <Slider value={inferiorPercent} onValueChange={updateInferiorPercent} max={100} step={1} className="w-full" />
                   </div>
