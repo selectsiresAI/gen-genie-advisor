@@ -1433,7 +1433,7 @@ export default function SegmentationPage({
                       <div className="flex justify-between">
                         <span style={{
                         color: '#EF4444'
-                      }}>Inferior:</span>
+                      }} className="text-red-400">Inferior:</span>
                         <span style={{
                         color: SS.black
                       }}>{distributionStats.inferior.count} animais ({distributionStats.inferior.percentage.toFixed(1)}%)</span>
