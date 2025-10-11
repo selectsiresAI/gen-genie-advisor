@@ -350,77 +350,58 @@ const HerdPage: React.FC<HerdPageProps> = ({
         <div className="space-y-6">
           {/* Header with Category Stats */}
           <div className="grid gap-4 md:grid-cols-6">
-            <Card data-testid="card-total-femeas">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Users className="w-5 h-5 text-primary" />
-                  Total de Fêmeas
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{categoryCounts.total}</div>
-              </CardContent>
-            </Card>
-
-            <Card data-testid="card-bezerras">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  
-                  Bezerras
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-700 bg-slate-50">{categoryCounts.bezerras}</div>
-              </CardContent>
-            </Card>
-
-            <Card data-testid="card-novilhas">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  
-                  Novilhas
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-700">{categoryCounts.novilhas}</div>
-              </CardContent>
-            </Card>
-
-            <Card data-testid="card-primiparas">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  
-                  Primíparas
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-purple-700">{categoryCounts.primiparas}</div>
-              </CardContent>
-            </Card>
-
-            <Card data-testid="card-secundiparas">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  
-                  Secundíparas
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-orange-700">{categoryCounts.secundiparas}</div>
-              </CardContent>
-            </Card>
-
-            <Card data-testid="card-multiparas">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  
-                  Multíparas
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-700">{categoryCounts.multiparas}</div>
-              </CardContent>
-            </Card>
+            {[{
+              key: 'total',
+              label: 'Total de Fêmeas',
+              value: categoryCounts.total,
+              testId: 'card-total-femeas',
+              icon: <Users className="w-4 h-4" />
+            }, {
+              key: 'bezerras',
+              label: 'Bezerras',
+              value: categoryCounts.bezerras,
+              testId: 'card-bezerras',
+              indicatorColor: 'bg-blue-200'
+            }, {
+              key: 'novilhas',
+              label: 'Novilhas',
+              value: categoryCounts.novilhas,
+              testId: 'card-novilhas',
+              indicatorColor: 'bg-emerald-200'
+            }, {
+              key: 'primiparas',
+              label: 'Primíparas',
+              value: categoryCounts.primiparas,
+              testId: 'card-primiparas',
+              indicatorColor: 'bg-violet-200'
+            }, {
+              key: 'secundiparas',
+              label: 'Secundíparas',
+              value: categoryCounts.secundiparas,
+              testId: 'card-secundiparas',
+              indicatorColor: 'bg-orange-200'
+            }, {
+              key: 'multiparas',
+              label: 'Multíparas',
+              value: categoryCounts.multiparas,
+              testId: 'card-multiparas',
+              indicatorColor: 'bg-rose-200'
+            }].map(stat => <Card key={stat.key} data-testid={stat.testId} className="relative overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-[#7F1D1D] via-[#B91C1C] to-[#EF4444] text-white shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
+                <div className="pointer-events-none absolute inset-0 opacity-80" style={{ background: 'radial-gradient(circle at top left, rgba(255,255,255,0.35), transparent 55%)' }} aria-hidden="true"></div>
+                <CardHeader className="relative z-10 pb-1">
+                  <CardTitle className="flex items-center gap-3 text-sm font-medium uppercase tracking-wide text-white/80">
+                    {stat.icon ? <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white">
+                          {stat.icon}
+                        </span> : <span className={`h-2.5 w-2.5 rounded-full ${stat.indicatorColor || 'bg-white/60'}`}></span>}
+                    {stat.label}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="relative z-10 pt-0">
+                  <div className="text-4xl font-black leading-tight tracking-tight drop-shadow-sm">
+                    {stat.value.toLocaleString('pt-BR')}
+                  </div>
+                </CardContent>
+              </Card>)}
           </div>
 
           {/* Search and Actions */}
