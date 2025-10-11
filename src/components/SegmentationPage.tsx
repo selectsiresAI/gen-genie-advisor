@@ -1360,30 +1360,19 @@ export default function SegmentationPage({
                 </div>
 
                 <div>
-                  <h4 className="text-md font-medium mb-3" style={{
-                  color: SS.black
-                }}>Presets e Estatísticas</h4>
+                  <h4 className="text-md font-medium mb-3 text-foreground">Presets e Estatísticas</h4>
                   
                   {/* Presets rápidos */}
                   <div className="mb-4">
-                    <label className="text-sm font-medium" style={{
-                    color: SS.black
-                  }}>Presets Rápidos:</label>
+                    <label className="text-sm font-medium text-foreground">Presets Rápidos:</label>
                     <div className="grid grid-cols-1 gap-2 mt-2">
-                      {segmentationPresets.map(preset => <div key={preset.name} className="flex items-center justify-between p-2 border rounded-lg" style={{
-                      borderColor: SS.gray
-                    }}>
-                          <span className="text-sm" style={{
-                        color: SS.black
-                      }}>{preset.name}</span>
+                      {segmentationPresets.map(preset => <div key={preset.name} className="flex items-center justify-between p-2 border border-secondary rounded-lg">
+                          <span className="text-sm text-foreground">{preset.name}</span>
                           <div className="flex items-center gap-2">
-                            <button onClick={() => applySegmentationPreset(preset)} className="px-2 py-1 text-xs rounded border" style={{
-                          borderColor: SS.gray,
-                          color: SS.black
-                        }}>
+                            <button onClick={() => applySegmentationPreset(preset)} className="px-2 py-1 text-xs rounded border border-secondary text-foreground">
                               Aplicar
                             </button>
-                            {!["Padrão 20/60/20", "Equilibrado 33/34/33", "Quartis 25/50/25"].includes(preset.name) && <button onClick={() => deleteSegmentationPreset(preset.name)} className="text-red-500 hover:text-red-700">
+                            {!["Padrão 20/60/20", "Equilibrado 33/34/33", "Quartis 25/50/25"].includes(preset.name) && <button onClick={() => deleteSegmentationPreset(preset.name)} className="text-destructive hover:text-destructive/80">
                                 <X size={14} />
                               </button>}
                           </div>
@@ -1394,49 +1383,28 @@ export default function SegmentationPage({
                   {/* Salvar novo preset */}
                   <div className="mb-4">
                     <div className="flex gap-2">
-                      <input className="flex-1 border rounded-lg px-3 py-2 text-sm" placeholder="Nome do novo preset..." value={newPresetName} onChange={e => setNewPresetName(e.target.value)} style={{
-                      borderColor: SS.gray,
-                      color: SS.black,
-                      background: SS.white
-                    }} />
-                      <button onClick={saveSegmentationPreset} className="px-3 py-2 rounded-lg border text-sm" style={{
-                      borderColor: SS.gray,
-                      color: SS.black
-                    }}>
+                      <input className="flex-1 border border-input rounded-lg px-3 py-2 text-sm bg-background text-foreground" placeholder="Nome do novo preset..." value={newPresetName} onChange={e => setNewPresetName(e.target.value)} />
+                      <button onClick={saveSegmentationPreset} className="px-3 py-2 rounded-lg border border-secondary text-foreground text-sm">
                         Salvar
                       </button>
                     </div>
                   </div>
 
                   {/* Estatísticas */}
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <h5 className="text-sm font-medium mb-2" style={{
-                    color: SS.black
-                  }}>Distribuição Atual:</h5>
+                  <div className="p-3 bg-muted rounded-lg">
+                    <h5 className="text-sm font-medium mb-2 text-foreground">Distribuição Atual:</h5>
                     <div className="space-y-1 text-sm">
                       <div className="flex justify-between">
-                        <span style={{
-                        color: '#10B981'
-                      }} className="text-amber-500">Superior:</span>
-                        <span style={{
-                        color: SS.black
-                      }}>{distributionStats.superior.count} animais ({distributionStats.superior.percentage.toFixed(1)}%)</span>
+                        <span className="text-accent">Superior:</span>
+                        <span className="text-foreground">{distributionStats.superior.count} animais ({distributionStats.superior.percentage.toFixed(1)}%)</span>
                       </div>
                       <div className="flex justify-between">
-                        <span style={{
-                        color: '#F59E0B'
-                      }} className="text-gray-400">Intermediário:</span>
-                        <span style={{
-                        color: SS.black
-                      }}>{distributionStats.intermediario.count} animais ({distributionStats.intermediario.percentage.toFixed(1)}%)</span>
+                        <span className="text-amber-600 dark:text-amber-400">Intermediário:</span>
+                        <span className="text-foreground">{distributionStats.intermediario.count} animais ({distributionStats.intermediario.percentage.toFixed(1)}%)</span>
                       </div>
                       <div className="flex justify-between">
-                        <span style={{
-                        color: '#EF4444'
-                      }} className="text-red-400">Inferior:</span>
-                        <span style={{
-                        color: SS.black
-                      }}>{distributionStats.inferior.count} animais ({distributionStats.inferior.percentage.toFixed(1)}%)</span>
+                        <span className="text-destructive">Inferior:</span>
+                        <span className="text-foreground">{distributionStats.inferior.count} animais ({distributionStats.inferior.percentage.toFixed(1)}%)</span>
                       </div>
                     </div>
                   </div>
@@ -1444,19 +1412,12 @@ export default function SegmentationPage({
               </div>
 
               {/* Gráfico */}
-              {showChart && <div className="mb-6 p-4 border rounded-lg" style={{
-              borderColor: SS.gray,
-              backgroundColor: '#FAFAFA'
-            }}>
-                  <h4 className="text-md font-medium mb-3" style={{
-                color: SS.black
-              }}>Distribuição Visual</h4>
+              {showChart && <div className="mb-6 p-4 border border-secondary rounded-lg bg-muted">
+                  <h4 className="text-md font-medium mb-3 text-foreground">Distribuição Visual</h4>
                   <div className="grid md:grid-cols-2 gap-4">
                     {/* Gráfico de Pizza */}
                     <div>
-                      <h5 className="text-sm font-medium mb-2 text-center" style={{
-                    color: SS.black
-                  }}>Distribuição por Grupos</h5>
+                      <h5 className="text-sm font-medium mb-2 text-center text-foreground">Distribuição por Grupos</h5>
                       <ResponsiveContainer width="100%" height={200}>
                         <RechartsPieChart>
                           <Pie data={chartData} cx="50%" cy="50%" innerRadius={40} outerRadius={80} paddingAngle={5} dataKey="value">
@@ -1470,9 +1431,7 @@ export default function SegmentationPage({
 
                     {/* Gráfico de Barras */}
                     <div>
-                      <h5 className="text-sm font-medium mb-2 text-center" style={{
-                    color: SS.black
-                  }}>Quantidade por Grupo</h5>
+                      <h5 className="text-sm font-medium mb-2 text-center text-foreground">Quantidade por Grupo</h5>
                       <ResponsiveContainer width="100%" height={200}>
                         <BarChart data={chartData}>
                           <CartesianGrid strokeDasharray="3 3" />
@@ -1491,9 +1450,7 @@ export default function SegmentationPage({
         </div>
 
         {/* Ações + Resumo */}
-        <div className="rounded-2xl shadow p-4" style={{
-          background: SS.white
-        }}>
+        <div className="rounded-2xl shadow p-4 bg-card">
           <div className="flex flex-wrap items-center gap-3">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -1647,221 +1604,81 @@ export default function SegmentationPage({
                       <th className="border px-2 py-1 text-left text-xs" style={{
                       background: SS.gray
                     }}>Nome</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>ID CDCB</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>Pai</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>Avô Materno</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>Bisavô Materno</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>Data de Nascimento</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>Ordem de Parto</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>Categoria</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>Fonte</th>
-                      {segmentationEnabled && <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>Classificação</th>}
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>HHP$®</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>TPI</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>NM$</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>CM$</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>FM$</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>GM$</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>F SAV</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>PTAM</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>CFP</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>PTAF</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>PTAF%</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>PTAP</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>PTAP%</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>PL</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>DPR</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>LIV</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>SCS</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>MAST</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>MET</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>RP</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>DA</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>KET</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>MF</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>PTAT</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>UDC</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>FLC</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>SCE</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>DCE</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>SSB</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>DSB</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>H LIV</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>CCR</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>HCR</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>FI</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>GL</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>EFC</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>BWC</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>STA</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>STR</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>DFM</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>RUA</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>RLS</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>RTP</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>FTL</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>RW</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>RLR</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>FTA</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>FLS</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>FUA</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>RUH</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>RUW</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>UCL</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>UDP</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>FTP</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>RFI</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>Beta-Casein</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>Kappa-Casein</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>GFI</th>
-                      <th className="border px-2 py-1 text-left text-xs" style={{
-                      background: SS.gray
-                    }}>CustomScore</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">ID CDCB</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">Pai</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">Avô Materno</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">Bisavô Materno</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">Data de Nascimento</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">Ordem de Parto</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">Categoria</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">Fonte</th>
+                      {segmentationEnabled && <th className="border px-2 py-1 text-left text-xs bg-secondary">Classificação</th>}
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">HHP$®</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">TPI</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">NM$</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">CM$</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">FM$</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">GM$</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">F SAV</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">PTAM</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">CFP</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">PTAF</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">PTAF%</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">PTAP</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">PTAP%</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">PL</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">DPR</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">LIV</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">SCS</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">MAST</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">MET</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">RP</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">DA</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">KET</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">MF</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">PTAT</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">UDC</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">FLC</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">SCE</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">DCE</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">SSB</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">DSB</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">H LIV</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">CCR</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">HCR</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">FI</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">GL</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">EFC</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">BWC</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">STA</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">STR</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">DFM</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">RUA</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">RLS</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">RTP</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">FTL</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">RW</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">RLR</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">FTA</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">FLS</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">FUA</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">RUH</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">RUW</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">UCL</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">UDP</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">FTP</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">RFI</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">Beta-Casein</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">Kappa-Casein</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">GFI</th>
+                      <th className="border px-2 py-1 text-left text-xs bg-secondary">CustomScore</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredAnimals.map((a, idx) => {
-                    const classificationColor = a.Classification === "Superior" ? "#10B981" : a.Classification === "Intermediário" ? "#F59E0B" : a.Classification === "Inferior" ? "#EF4444" : "transparent";
+                    const classificationBg = a.Classification === "Superior" ? "bg-accent/10" : a.Classification === "Intermediário" ? "bg-amber-50 dark:bg-amber-950/20" : a.Classification === "Inferior" ? "bg-destructive/10" : "";
                     const fonteInfo = getFonteDisplay((a as any).fonte);
-                    return <tr key={a.__idKey ? (a as any)[a.__idKey] : a.id ?? idx} className="border-b hover:opacity-90" style={{
-                      borderColor: SS.gray,
-                      color: SS.black,
-                      backgroundColor: segmentationEnabled && a.Classification ? `${classificationColor}10` : "transparent"
-                    }}>
+                    return <tr key={a.__idKey ? (a as any)[a.__idKey] : a.id ?? idx} className={`border-b border-secondary text-foreground hover:opacity-90 ${segmentationEnabled && a.Classification ? classificationBg : ""}`}>
                         <td className="border px-2 py-1 text-xs">{(a as any).farm_id || '-'}</td>
                         <td className="border px-2 py-1 text-xs font-medium">{a.__nameKey ? (a as any)[a.__nameKey] : (a as any).name ?? ''}</td>
                         <td className="border px-2 py-1 text-xs">{(a as any).cdcb_id || (a as any).identifier || '-'}</td>
@@ -1893,14 +1710,10 @@ export default function SegmentationPage({
                             </Badge>}
                         </td>
                          {segmentationEnabled && <td className="border px-2 py-1 text-xs">
-                             {a.Classification && <span className="px-2 py-1 rounded text-xs font-medium" style={{
-                          backgroundColor: classificationColor + '20',
-                          color: classificationColor,
-                          border: `1px solid ${classificationColor}`
-                        }}>
-                                 {a.Classification}
-                               </span>}
-                           </td>}
+                              {a.Classification && <span className={`px-2 py-1 rounded text-xs font-medium border ${a.Classification === "Superior" ? "bg-accent/20 text-accent border-accent" : a.Classification === "Intermediário" ? "bg-amber-100 text-amber-800 border-amber-500 dark:bg-amber-950/30 dark:text-amber-300" : "bg-destructive/20 text-destructive border-destructive"}`}>
+                                  {a.Classification}
+                                </span>}
+                            </td>}
                         <td className="border px-2 py-1 text-xs">{(a as any).hhp_dollar !== undefined && (a as any).hhp_dollar !== null ? Number((a as any).hhp_dollar).toFixed(0) : '-'}</td>
                         <td className="border px-2 py-1 text-xs">{(a as any).tpi || '-'}</td>
                         <td className="border px-2 py-1 text-xs">{(a as any).nm_dollar || '-'}</td>
