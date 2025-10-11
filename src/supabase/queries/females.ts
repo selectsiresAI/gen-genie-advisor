@@ -8,7 +8,6 @@ export type CompleteFemaleDenormRow = FemaleDenormRow & {
   id: string;
   name: string;
   farm_id: string;
-  created_at: string;
 };
 
 export interface FetchFemalesDenormOptions {
@@ -67,8 +66,7 @@ export function isCompleteFemaleRow(
     row &&
       row.id &&
       row.name &&
-      row.farm_id &&
-      row.created_at
+      row.farm_id
   );
 }
 
