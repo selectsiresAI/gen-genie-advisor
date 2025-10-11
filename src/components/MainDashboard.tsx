@@ -327,10 +327,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                   </h3>
                   <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
                     {section.items.map(item => <button key={item.title} type="button" onClick={() => handleFarmModuleClick(item.view)} className="group rounded-xl border bg-white p-6 text-left shadow-sm transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E00000] focus-visible:ring-offset-2 hover:shadow-lg">
-                        <div className="mb-2 flex items-center">
-                          <div className="mr-3 h-3 w-3 rounded-full bg-[#E00000]"></div>
-                          <h4 className="text-lg font-semibold text-black">{item.title}</h4>
-                        </div>
+                        <h4 className="mb-2 text-lg font-semibold text-black">{item.title}</h4>
                         <p className="text-sm text-[#555555]">{item.description}</p>
                       </button>)}
                   </div>
