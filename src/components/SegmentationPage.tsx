@@ -252,15 +252,13 @@ function getAutomaticCategory(birthDate?: string, parityOrder?: number): string 
   }
   return 'Indefinida';
 }
-
 const CATEGORY_BADGE_CLASSES: Record<string, string> = {
   Bezerra: "border-blue-200 bg-blue-100 text-blue-700 dark:border-blue-800 dark:bg-blue-900/40 dark:text-blue-200",
   Novilha: "border-accent/80 bg-accent/20 text-accent-foreground",
   "Primípara": "border-purple-200 bg-purple-100 text-purple-700 dark:border-purple-800 dark:bg-purple-900/40 dark:text-purple-200",
   "Secundípara": "border-amber-200 bg-amber-100 text-amber-800 dark:border-amber-800 dark:bg-amber-900/40 dark:text-amber-200",
-  "Multípara": "border-destructive/80 bg-destructive/20 text-destructive",
+  "Multípara": "border-destructive/80 bg-destructive/20 text-destructive"
 };
-
 function getCategoryBadgeClasses(category: string): string {
   return CATEGORY_BADGE_CLASSES[category] ?? "border-border bg-muted text-muted-foreground";
 }
@@ -950,12 +948,7 @@ export default function SegmentationPage({
             <div className="flex items-center gap-2">
               {(["HHP$", "TPI", "NM$", "Custom"] as const).map(opt => <Tooltip key={opt}>
                   <TooltipTrigger asChild>
-                    <button onClick={() => setIndexSelection(opt)} className={cn(
-                    "rounded-xl border px-3 py-2 text-sm transition-colors",
-                    indexSelection === opt
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-border bg-background text-foreground hover:bg-muted"
-                  )}>{opt}</button>
+                    <button onClick={() => setIndexSelection(opt)} className={cn("rounded-xl border px-3 py-2 text-sm transition-colors", indexSelection === opt ? "border-foreground bg-foreground text-background" : "border-border bg-background text-foreground hover:bg-muted")}>{opt}</button>
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>
@@ -1001,10 +994,7 @@ export default function SegmentationPage({
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-64 overflow-auto pr-2">
                 {filteredPTAs.map(p => {
                 const checked = selectedTraits.includes(p);
-                return <label key={p} className={cn(
-                  "flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-foreground transition-colors",
-                  checked ? "border-accent bg-accent/20" : "border-border bg-background hover:bg-muted"
-                )}>
+                return <label key={p} className={cn("flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-foreground transition-colors", checked ? "border-accent bg-accent/20" : "border-border bg-background hover:bg-muted")}>
                       <input type="checkbox" className="accent-foreground" checked={checked} onChange={() => toggleTrait(p)} />
                       <span className="text-sm">{p}</span>
                     </label>;
@@ -1083,10 +1073,7 @@ export default function SegmentationPage({
                   Padronizar variáveis (Z-score intra-rebanho)
                 </label>
                 <div>
-                  Soma dos pesos: <span className={cn(
-                  "font-semibold",
-                  Math.abs(weightSum - 1) < 1e-6 ? "text-accent" : "text-destructive"
-                )}>{weightSum.toFixed(3)}</span>
+                  Soma dos pesos: <span className={cn("font-semibold", Math.abs(weightSum - 1) < 1e-6 ? "text-accent" : "text-destructive")}>{weightSum.toFixed(3)}</span>
                   {Math.abs(weightSum - 1) >= 1e-6 && <span className="ml-2 text-xs text-foreground">(clique em Normalizar)</span>}
                 </div>
               </div>
@@ -1219,12 +1206,7 @@ export default function SegmentationPage({
                   </div>
 
                   {/* Validação da soma */}
-                  <div className={cn(
-                  "rounded-lg p-2 text-center text-sm",
-                  superiorPercent[0] + intermediarioPercent[0] + inferiorPercent[0] === 100
-                    ? "bg-accent/20 text-accent-foreground"
-                    : "bg-destructive/10 text-destructive"
-                )}>
+                  <div className={cn("rounded-lg p-2 text-center text-sm", superiorPercent[0] + intermediarioPercent[0] + inferiorPercent[0] === 100 ? "bg-accent/20 text-accent-foreground" : "bg-destructive/10 text-destructive")}>
                     Total: {superiorPercent[0] + intermediarioPercent[0] + inferiorPercent[0]}%
                     {superiorPercent[0] + intermediarioPercent[0] + inferiorPercent[0] === 100 ? " ✓" : " (deve ser 100%)"}
                   </div>
@@ -1325,7 +1307,7 @@ export default function SegmentationPage({
           <div className="flex flex-wrap items-center gap-3">
             <Tooltip>
               <TooltipTrigger asChild>
-                <button onClick={triggerSegmentation} className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90">
+                <button onClick={triggerSegmentation} className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors bg-red-700 hover:bg-red-600">
                   <Check size={18} /> Aplicar Índice
                 </button>
               </TooltipTrigger>
