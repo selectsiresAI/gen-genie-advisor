@@ -2,8 +2,13 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import type { PostgrestError } from "@supabase/supabase-js";
 
+// CRÍTICO: females_denorm é uma VIEW que pode retornar campos nullable
+// mesmo que a tabela base tenha valores. Nunca exija created_at como obrigatório aqui!
 export type FemaleDenormRow = Database["public"]["Views"]["females_denorm"]["Row"];
 
+// IMPORTANTE: CompleteFemaleDenormRow valida APENAS os campos essenciais
+// para operações de UI. Campos como created_at, updated_at podem ser null
+// na view mesmo que existam na tabela base females.
 export type CompleteFemaleDenormRow = FemaleDenormRow & {
   id: string;
   name: string;
@@ -59,6 +64,23 @@ function throwIfAborted(signal?: AbortSignal) {
   throw error;
 }
 
+/**
+ * Valida se uma linha da view females_denorm tem os campos MÍNIMOS necessários
+ * para renderização na UI.
+ * 
+ * ATENÇÃO: NÃO adicione validação de created_at ou updated_at aqui!
+ * A view females_denorm pode retornar esses campos como null mesmo quando
+ * existem na tabela base. Adicionar essa validação causará perda de dados
+ * na UI (linhas serão filtradas incorretamente).
+ * 
+ * Campos validados (APENAS os essenciais para operação):
+ * - id: identificador único do animal
+ * - name: nome do animal (obrigatório para listagens)
+ * - farm_id: vínculo com a fazenda (obrigatório para RLS)
+ * 
+ * @param row - Linha da view females_denorm
+ * @returns true se a linha possui os campos mínimos necessários
+ */
 export function isCompleteFemaleRow(
   row: FemaleDenormRow | null | undefined
 ): row is CompleteFemaleDenormRow {
