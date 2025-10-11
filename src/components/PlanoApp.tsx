@@ -23,7 +23,7 @@ export default function PlanoApp({
   if (activeSubmenu === "calculadora") {
     return <div className="min-h-screen">
         <div className="p-4 border-b bg-background">
-          <Button variant="outline" onClick={() => setActiveSubmenu(null)}>
+          <Button variant="outline" onClick={() => setActiveSubmenu(null)} className="bg-gray-200 hover:bg-gray-100">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Voltar ao Menu Plano
           </Button>
