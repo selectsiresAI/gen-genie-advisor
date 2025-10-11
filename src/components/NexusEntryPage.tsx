@@ -3,14 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dna, Calendar, ArrowRight, TrendingUp, FileSpreadsheet } from 'lucide-react';
-
 interface NexusEntryPageProps {
   onSelectMethod: (method: 'nexus1' | 'nexus2') => void;
 }
-
-const NexusEntryPage: React.FC<NexusEntryPageProps> = ({ onSelectMethod }) => {
-  return (
-    <div className="container mx-auto px-4 py-8">
+const NexusEntryPage: React.FC<NexusEntryPageProps> = ({
+  onSelectMethod
+}) => {
+  return <div className="container mx-auto px-4 py-8">
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold mb-4 flex items-center justify-center gap-3">
           <TrendingUp className="w-8 h-8 text-primary" />
@@ -44,16 +43,10 @@ const NexusEntryPage: React.FC<NexusEntryPageProps> = ({ onSelectMethod }) => {
                 <li>• Análise de todos os PTAs disponíveis</li>
               </ul>
             </div>
-            <div className="bg-yellow-50 p-3 rounded-lg">
-              <p className="text-xs text-yellow-700 font-medium">
-                💡 Ideal quando você possui dados genômicos completos das fêmeas
-              </p>
+            <div className="p-3 rounded-lg bg-rose-100">
+              <p className="text-xs font-medium text-zinc-950 text-center">Ideal quando você possui dados genômicos completos das fêmeas</p>
             </div>
-            <Button 
-              onClick={() => onSelectMethod('nexus1')} 
-              className="w-full bg-red-500 hover:bg-red-600 text-white"
-              size="lg"
-            >
+            <Button onClick={() => onSelectMethod('nexus1')} size="lg" className="w-full text-white bg-red-700 hover:bg-red-600">
               <FileSpreadsheet className="w-4 h-4 mr-2" />
               Usar Nexus 1
               <ArrowRight className="w-4 h-4 ml-2" />
@@ -64,10 +57,10 @@ const NexusEntryPage: React.FC<NexusEntryPageProps> = ({ onSelectMethod }) => {
         {/* Nexus 2 - Predição por Pedigrê */}
         <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/50">
           <CardHeader className="text-center pb-4">
-            <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-              <Calendar className="w-8 h-8 text-green-600" />
+            <div className="mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-red-50">
+              
             </div>
-            <CardTitle className="text-xl">Nexus 2: Predição por Pedigrê</CardTitle>
+            <CardTitle className="text-xl">Nexus 2: Predição por Pedigree</CardTitle>
             <p className="text-sm text-muted-foreground">
               Baseado no pedigrê: Pai, Avô e Bisavô Materno
             </p>
@@ -83,17 +76,10 @@ const NexusEntryPage: React.FC<NexusEntryPageProps> = ({ onSelectMethod }) => {
                 <li>• Upload de planilhas para processamento em lote</li>
               </ul>
             </div>
-            <div className="bg-green-50 p-3 rounded-lg">
-              <p className="text-xs text-green-700 font-medium">
-                💡 Ideal quando você tem apenas informações de pedigrê
-              </p>
+            <div className="p-3 rounded-lg bg-red-100">
+              <p className="text-xs font-medium text-slate-950 text-center">Ideal quando você tem apenas informações de pedigree</p>
             </div>
-            <Button 
-              onClick={() => onSelectMethod('nexus2')} 
-              className="w-full"
-              size="lg"
-              variant="secondary"
-            >
+            <Button onClick={() => onSelectMethod('nexus2')} size="lg" variant="secondary" className="w-full text-neutral-50 bg-red-700 hover:bg-red-600">
               <Calendar className="w-4 h-4 mr-2" />
               Usar Nexus 2
               <ArrowRight className="w-4 h-4 ml-2" />
@@ -115,8 +101,6 @@ const NexusEntryPage: React.FC<NexusEntryPageProps> = ({ onSelectMethod }) => {
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default NexusEntryPage;
