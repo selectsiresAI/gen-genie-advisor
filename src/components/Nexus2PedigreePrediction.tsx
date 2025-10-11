@@ -5,17 +5,16 @@ import { ArrowLeft, Calculator } from 'lucide-react';
 import { t } from '@/lib/i18n';
 import Nexus2PredictionIndividual from './nexus2/Nexus2PredictionIndividual';
 import Nexus2PredictionBatch from './nexus2/Nexus2PredictionBatch';
-
 interface Nexus2PedigreePredictionProps {
   onBack: () => void;
 }
-
-const Nexus2PedigreePrediction: React.FC<Nexus2PedigreePredictionProps> = ({ onBack }) => {
-  return (
-    <div className="space-y-6">
+const Nexus2PedigreePrediction: React.FC<Nexus2PedigreePredictionProps> = ({
+  onBack
+}) => {
+  return <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={onBack}>
+        <Button variant="outline" onClick={onBack} className="bg-slate-200 hover:bg-slate-100">
           <ArrowLeft className="w-4 h-4 mr-2" />
           {t('nexus2.back')}
         </Button>
@@ -40,8 +39,6 @@ const Nexus2PedigreePrediction: React.FC<Nexus2PedigreePredictionProps> = ({ onB
           <Nexus2PredictionBatch />
         </TabsContent>
       </Tabs>
-    </div>
-  );
+    </div>;
 };
-
 export default Nexus2PedigreePrediction;
