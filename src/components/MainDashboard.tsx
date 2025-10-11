@@ -476,7 +476,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
       return <div className="min-h-screen bg-background">
           <div className="border-b">
             <div className="flex h-16 items-center px-4">
-              <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
+              <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4 bg-slate-200 hover:bg-slate-100">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Dashboard
               </Button>
