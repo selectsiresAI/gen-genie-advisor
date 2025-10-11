@@ -309,6 +309,7 @@ export default function SegmentationPage({
   farm,
   onBack
 }: SegmentationPageProps) {
+  const gradientTextClass = "font-bold bg-gradient-to-r from-red-900 via-red-800 to-red-600 bg-clip-text text-transparent";
   const [indexSelection, setIndexSelection] = useState<"HHP$" | "TPI" | "NM$" | "Custom">("HHP$");
   const {
     addReport
@@ -1245,19 +1246,19 @@ export default function SegmentationPage({
 
                   {/* Estatísticas */}
                   <div className="p-3 bg-muted rounded-lg">
-                    <h5 className="text-sm font-medium mb-2 text-foreground">Distribuição Atual:</h5>
+                    <h5 className={cn("text-sm mb-2", gradientTextClass)}>Distribuição Atual:</h5>
                     <div className="space-y-1 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-accent">Superior:</span>
-                        <span className="text-foreground">{distributionStats.superior.count} animais ({distributionStats.superior.percentage.toFixed(1)}%)</span>
+                        <span className={gradientTextClass}>Superior:</span>
+                        <span className={cn("text-right", gradientTextClass)}>{distributionStats.superior.count} animais ({distributionStats.superior.percentage.toFixed(1)}%)</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-amber-600 dark:text-amber-400">Intermediário:</span>
-                        <span className="text-foreground">{distributionStats.intermediario.count} animais ({distributionStats.intermediario.percentage.toFixed(1)}%)</span>
+                        <span className={gradientTextClass}>Intermediário:</span>
+                        <span className={cn("text-right", gradientTextClass)}>{distributionStats.intermediario.count} animais ({distributionStats.intermediario.percentage.toFixed(1)}%)</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-destructive">Inferior:</span>
-                        <span className="text-foreground">{distributionStats.inferior.count} animais ({distributionStats.inferior.percentage.toFixed(1)}%)</span>
+                        <span className={gradientTextClass}>Inferior:</span>
+                        <span className={cn("text-right", gradientTextClass)}>{distributionStats.inferior.count} animais ({distributionStats.inferior.percentage.toFixed(1)}%)</span>
                       </div>
                     </div>
                   </div>
