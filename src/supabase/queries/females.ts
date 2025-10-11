@@ -250,6 +250,7 @@ function shouldFallbackToNextSource(error: unknown): boolean {
   return (
     normalized.includes("permission denied") ||
     normalized.includes("does not exist") ||
+    normalized.includes("could not find the function") ||
     normalized.includes("relation") && normalized.includes("does not exist") ||
     normalized.includes("unknown table") ||
     normalized.includes("not exist")
