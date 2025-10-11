@@ -1321,7 +1321,7 @@ export default function SegmentationPage({
                   <div style={{
                   borderColor: '#F59E0B',
                   backgroundColor: '#FFFBEB'
-                }} className="mb-4 p-3 rounded-lg border-2 bg-gray-200">
+                }} className="mb-4 p-3 rounded-lg border-2 bg-slate-100">
                     <div className="flex items-center justify-between mb-2">
                       <span style={{
                       color: '#92400E'
@@ -1337,8 +1337,8 @@ export default function SegmentationPage({
                   <div style={{
                   borderColor: '#EF4444',
                   backgroundColor: '#FEF2F2'
-                }} className="mb-4 p-3 rounded-lg border-2 bg-gray-200">
-                    <div className="flex items-center justify-between mb-2 bg-gray-200">
+                }} className="mb-4 p-3 rounded-lg border-2 bg-slate-100">
+                    <div className="flex items-center justify-between mb-2 bg-slate-100">
                       <span style={{
                       color: '#991B1B'
                     }} className="font-medium text-slate-950">Inferior</span>
