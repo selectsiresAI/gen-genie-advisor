@@ -1525,11 +1525,11 @@ export default function SegmentationPage({
             
             <Tooltip>
               <TooltipTrigger asChild>
-                <button onClick={saveSegmentationToDatabase} className="px-4 py-2 rounded-xl border text-sm flex items-center gap-2" style={{
+                <button onClick={saveSegmentationToDatabase} style={{
                   borderColor: SS.green,
                   backgroundColor: SS.green,
                   color: SS.white
-                }} disabled={!segmentationEnabled || !segmentationTriggered || loading}>
+                }} disabled={!segmentationEnabled || !segmentationTriggered || loading} className="px-4 py-2 rounded-xl border text-sm flex items-center gap-2 bg-red-600 hover:bg-red-500 text-zinc-50">
                   <Database size={18} /> Salvar Segmentação
                 </button>
               </TooltipTrigger>
