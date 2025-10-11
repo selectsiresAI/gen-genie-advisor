@@ -89,11 +89,11 @@ const ID_COLS = ["id", "animal_id", "brinco", "ear_tag", "cdcb_id", "uuid"];
 
 // Dataset demo (fallback se não houver dados)
 const DEMO_ANIMALS: Female[] = [
-  { id: "A001", name: "Vaca 001", hhp_dollar: 620, tpi: 2350, nm_dollar: 415, ptam: 1200, ptaf: 50, scs: 2.6, dpr: 1.2 },
-  { id: "A002", name: "Vaca 002", hhp_dollar: 590, tpi: 2280, nm_dollar: 380, ptam: 1080, ptaf: 44, scs: 2.9, dpr: -0.1 },
-  { id: "A003", name: "Vaca 003", hhp_dollar: 655, tpi: 2425, nm_dollar: 430, ptam: 1305, ptaf: 56, scs: 2.4, dpr: 0.4 },
-  { id: "A004", name: "Vaca 004", hhp_dollar: 540, tpi: 2205, nm_dollar: 350, ptam: 980,  ptaf: 40, scs: 3.1, dpr: -0.6 },
-  { id: "A005", name: "Vaca 005", hhp_dollar: 605, tpi: 2360, nm_dollar: 405, ptam: 1190, ptaf: 48, scs: 2.7, dpr: 0.8 },
+  { id: "A001", name: "Vaca 001", hhp_dollar: 620, tpi: 2350, nm_dollar: 415, ptam: 1200, ptaf: 50, scs: 2.6, dpr: 1.2 } as Female,
+  { id: "A002", name: "Vaca 002", hhp_dollar: 590, tpi: 2280, nm_dollar: 380, ptam: 1080, ptaf: 44, scs: 2.9, dpr: -0.1 } as Female,
+  { id: "A003", name: "Vaca 003", hhp_dollar: 655, tpi: 2425, nm_dollar: 430, ptam: 1305, ptaf: 56, scs: 2.4, dpr: 0.4 } as Female,
+  { id: "A004", name: "Vaca 004", hhp_dollar: 540, tpi: 2205, nm_dollar: 350, ptam: 980,  ptaf: 40, scs: 3.1, dpr: -0.6 } as Female,
+  { id: "A005", name: "Vaca 005", hhp_dollar: 605, tpi: 2360, nm_dollar: 405, ptam: 1190, ptaf: 48, scs: 2.7, dpr: 0.8 } as Female,
 ];
 
 // ────────────────────────────────────────────────────────────────────

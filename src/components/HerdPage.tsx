@@ -881,9 +881,9 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
                             <td className="border px-2 py-1 text-xs">{farm.farm_id}</td>
                             <td className="border px-2 py-1 text-xs font-medium">{female.name}</td>
                             <td className="border px-2 py-1 text-xs">{female.cdcb_id || female.identifier || '-'}</td>
-                            <td className="border px-2 py-1 text-xs">{renderPedigreeCell(female.sire_naab, female.sire_name)}</td>
-                            <td className="border px-2 py-1 text-xs">{renderPedigreeCell(female.mgs_naab, female.mgs_name)}</td>
-                            <td className="border px-2 py-1 text-xs">{renderPedigreeCell(female.mmgs_naab, female.mmgs_name)}</td>
+                            <td className="border px-2 py-1 text-xs">{renderPedigreeCell(female.sire_naab)}</td>
+                            <td className="border px-2 py-1 text-xs">{renderPedigreeCell(female.mgs_naab)}</td>
+                            <td className="border px-2 py-1 text-xs">{renderPedigreeCell(female.mmgs_naab)}</td>
                             <td className="border px-2 py-1 text-xs">
                               {female.birth_date ? formatDate(female.birth_date) : '-'} 
                               {female.birth_date && (

@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import type { PostgrestError } from "@supabase/supabase-js";
 
-export type FemaleDenormRow = Database["public"]["Tables"]["females_denorm"]["Row"];
+export type FemaleDenormRow = Database["public"]["Views"]["females_denorm"]["Row"];
 
 export type CompleteFemaleDenormRow = FemaleDenormRow & {
   id: string;
@@ -151,7 +151,7 @@ async function fetchFemalesFromSource({
     const to = from + pageSize - 1;
 
     let query = supabase
-      .from<FemaleDenormRow>(source as "females_denorm")
+      .from(source)
       .select(selectColumns)
       .eq("farm_id", normalizedFarmId);
 
@@ -172,7 +172,7 @@ async function fetchFemalesFromSource({
       throw error;
     }
 
-    const pageData = Array.isArray(data) ? (data as FemaleDenormRow[]) : [];
+    const pageData = Array.isArray(data) ? (data as unknown as FemaleDenormRow[]) : [];
     rows.push(...pageData);
 
     hasMore = pageData.length === pageSize;
