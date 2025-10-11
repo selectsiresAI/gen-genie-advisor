@@ -597,7 +597,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                 localStorage.removeItem(`selected-bulls-${selectedFarm.farm_id}`);
                 localStorage.removeItem(`selected-females-${selectedFarm.farm_id}`);
                 handleBackToDashboard();
-              }} className="mr-4">
+              }} className="mr-4 bg-slate-200 hover:bg-slate-100">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Dashboard
                 </Button>
