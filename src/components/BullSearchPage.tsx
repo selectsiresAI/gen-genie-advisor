@@ -18,6 +18,9 @@ interface Bull {
   sire_naab?: string;
   mgs_naab?: string;
   mmgs_naab?: string;
+  sire_name?: string;
+  mgs_name?: string;
+  mmgs_name?: string;
   // All genetic traits from bulls_denorm
   hhp_dollar?: number;
   tpi?: number;
@@ -125,6 +128,9 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
       sire_naab: "7HO13386",
       mgs_naab: "11HO11478",
       mmgs_naab: "1HO09918",
+      sire_name: "PINE-TREE MONUMENT-ET",
+      mgs_name: "SEAGULL-BAY SILVER-ET",
+      mmgs_name: "MR LOOKOUT P ENFORCER",
       // PTAs conforme tabela bulls_denorm
       nm_dollar: 1247,
       fm_dollar: 1180,
@@ -313,7 +319,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
     }];
 
     // Converter para CSV
-    const headers = ["code", "name", "registration", "birth_date", "sire_naab", "mgs_naab", "mmgs_naab", "nm_dollar", "fm_dollar", "gm_dollar", "cm_dollar", "hhp_dollar", "tpi", "ptam", "ptaf", "ptaf_pct", "ptap", "ptap_pct", "pl", "liv", "scs", "dpr", "cfp", "ptat", "udc", "flc", "fls", "fua", "ruh", "ruw", "rlr", "rls", "rtp", "str", "dfm", "rua", "ftl", "fta", "ftp", "rw", "ucl", "udp", "rfi", "gfi", "ssb", "dsb", "dce", "sce", "h_liv", "ccr", "hcr", "fi", "bwc", "sta", "mf", "da", "rp", "met", "mast", "ket", "f_sav", "kappa_casein", "beta_casein"];
+    const headers = ["code", "name", "registration", "birth_date", "sire_naab", "mgs_naab", "mmgs_naab", "sire_name", "mgs_name", "mmgs_name", "nm_dollar", "fm_dollar", "gm_dollar", "cm_dollar", "hhp_dollar", "tpi", "ptam", "ptaf", "ptaf_pct", "ptap", "ptap_pct", "pl", "liv", "scs", "dpr", "cfp", "ptat", "udc", "flc", "fls", "fua", "ruh", "ruw", "rlr", "rls", "rtp", "str", "dfm", "rua", "ftl", "fta", "ftp", "rw", "ucl", "udp", "rfi", "gfi", "ssb", "dsb", "dce", "sce", "h_liv", "ccr", "hcr", "fi", "bwc", "sta", "mf", "da", "rp", "met", "mast", "ket", "f_sav", "kappa_casein", "beta_casein"];
     const csvContent = [headers.join(','), ...templateBulls.map(bull => headers.map(header => {
       const value = bull[header as keyof typeof bull];
       // Tratar valores nulos e strings com vírgula
@@ -368,6 +374,9 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
         sire_naab: bull.sire_naab,
         mgs_naab: bull.mgs_naab,
         mmgs_naab: bull.mmgs_naab,
+        sire_name: bull.sire_name,
+        mgs_name: bull.mgs_name,
+        mmgs_name: bull.mmgs_name,
         hhp_dollar: bull.hhp_dollar,
         tpi: bull.tpi,
         nm_dollar: bull.nm_dollar,
@@ -468,7 +477,18 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
       };
     });
     return bullsWithScores.filter(bull => {
-      const matchesSearch = bull.name.toLowerCase().includes(searchTerm.toLowerCase()) || bull.code.toLowerCase().includes(searchTerm.toLowerCase());
+      const normalizedSearch = searchTerm.toLowerCase();
+      const pedigreeCandidates = [
+        bull.sire_name,
+        bull.mgs_name,
+        bull.mmgs_name,
+        bull.sire_naab,
+        bull.mgs_naab,
+        bull.mmgs_naab
+      ]
+        .filter(Boolean)
+        .map(value => value!.toLowerCase());
+      const matchesSearch = bull.name.toLowerCase().includes(normalizedSearch) || bull.code.toLowerCase().includes(normalizedSearch) || pedigreeCandidates.some(candidate => candidate.includes(normalizedSearch));
       const matchesCompany = !selectedEmpresa || selectedEmpresa === "todas" || selectedEmpresa === "Todas" || bull.company && bull.company.toLowerCase().includes(selectedEmpresa.toLowerCase());
       const matchesYear = !selectedYear || selectedYear === "all-years" || bull.birth_date && new Date(bull.birth_date).getFullYear().toString() === selectedYear;
       return matchesSearch && matchesCompany && matchesYear;
@@ -540,19 +560,84 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
       const errors: string[] = [];
 
       // Process each row
+      const normalizeString = (value: any) => {
+        if (typeof value !== 'string') return null;
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : null;
+      };
+
+      const extractPedigreeNames = (row: Record<string, any>) => {
+        const rawPedigree = normalizeString(row.pedigree || row.Pedigre || row.Pedigree);
+        const pedigreeParts = rawPedigree
+          ? rawPedigree
+              .split(/[xX/\\>-]/)
+              .map(part => part.trim())
+              .filter(Boolean)
+          : [];
+
+        const getCandidate = (...candidates: (string | null | undefined)[]) => {
+          for (const candidate of candidates) {
+            const normalized = normalizeString(candidate);
+            if (normalized) {
+              return normalized;
+            }
+          }
+          return null;
+        };
+
+        const sireName = getCandidate(
+          row.sire_name,
+          row['sire_name'],
+          row['Sire Name'],
+          row['SireName'],
+          row['Nome Pai'],
+          row['Pai'],
+          pedigreeParts[0]
+        );
+
+        const mgsName = getCandidate(
+          row.mgs_name,
+          row['mgs_name'],
+          row['Maternal Grandsire'],
+          row['Avô Materno'],
+          row['Avo Materno'],
+          row['MaternalGrandSire'],
+          pedigreeParts[1]
+        );
+
+        const mmgsName = getCandidate(
+          row.mmgs_name,
+          row['mmgs_name'],
+          row['Maternal Great Grandsire'],
+          row['Bisavô Materno'],
+          row['Bisavo Materno'],
+          row['MaternalGreatGrandSire'],
+          pedigreeParts[2]
+        );
+
+        return {
+          sireName,
+          mgsName,
+          mmgsName
+        };
+      };
+
       for (const row of rows) {
         try {
+          const { sireName, mgsName, mmgsName } = extractPedigreeNames(row);
           // Prepare bull data, ignoring empty id and handling all columns
           const bullData: any = {
             code: row.code || row.NAAB || row.Code,
             name: row.name || row.Nome || row.Name,
             registration: row.registration || row.Registro || row.Registration || null,
-            pedigree: row.pedigree || row.Pedigre || row.Pedigree || null,
             birth_date: row.birth_date || row['Data de Nascimento'] || row.BirthDate || null,
             company: row.company || row.Empresa || row.Company || null,
             sire_naab: row.sire_naab || row.sire || row.Sire || null,
             mgs_naab: row.mgs_naab || row.mgs || row.MGS || null,
             mmgs_naab: row.mmgs_naab || row.mmgs || row.MMGS || null,
+            sire_name: sireName,
+            mgs_name: mgsName,
+            mmgs_name: mmgsName,
             beta_casein: row.beta_casein || row['Beta-Caseina'] || row.BetaCasein || null,
             kappa_casein: row.kappa_casein || row['Kappa-Caseina'] || row.KappaCasein || null,
             // Numeric fields - convert to number or null
@@ -770,7 +855,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
           {/* Search and Controls */}
           <div className="flex items-center gap-4">
             <div className="relative flex-1">
-              <Input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Buscar touros por NAAB, nome ou pedigree" className="pl-10" />
+              <Input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Buscar touros por NAAB, nome ou parentesco" className="pl-10" />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
             </div>
             
@@ -829,7 +914,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
           {/* Bulls Table */}
           <Card>
             <ScrollArea className="h-[500px] w-full">
-              <div className="min-w-[2000px]">
+              <div className="min-w-[2100px]">
                 <table className="w-full">
                   <thead className="sticky top-0 z-10">
                     <tr>
@@ -837,7 +922,9 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
                       <th className="px-2 py-1 bg-foreground text-background text-xs">NAAB</th>
                       <th className="px-2 py-1 bg-foreground text-background text-xs">Nome</th>
                       <th className="px-2 py-1 bg-foreground text-background text-xs">Registro</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">Pedigre Pai/Avô Materno/BisaAvô Materno</th>
+                      <th className="px-2 py-1 bg-foreground text-background text-xs">Pai</th>
+                      <th className="px-2 py-1 bg-foreground text-background text-xs">Avô Materno</th>
+                      <th className="px-2 py-1 bg-foreground text-background text-xs">Bisavô Materno</th>
                       <th className="px-2 py-1 bg-foreground text-background text-xs">Data de Nascimento</th>
                       <th className="px-2 py-1 bg-foreground text-background text-xs">Empresa</th>
                       <th className="px-2 py-1 bg-foreground text-background text-xs">HHP$®</th>
@@ -906,7 +993,9 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
                          <td className="px-2 py-1 font-mono text-xs">{bull.code}</td>
                          <td className="px-2 py-1 font-medium text-xs">{bull.name}</td>
                          <td className="px-2 py-1 font-mono text-xs">{bull.registration}</td>
-                         <td className="px-2 py-1 text-xs">{[bull.sire_naab, bull.mgs_naab, bull.mmgs_naab].filter(Boolean).join(' / ') || '-'}</td>
+                         <td className="px-2 py-1 text-xs">{bull.sire_name || bull.sire_naab || '-'}</td>
+                         <td className="px-2 py-1 text-xs">{bull.mgs_name || bull.mgs_naab || '-'}</td>
+                         <td className="px-2 py-1 text-xs">{bull.mmgs_name || bull.mmgs_naab || '-'}</td>
                           <td className="px-2 py-1 text-xs">{bull.birth_date}</td>
                           <td className="px-2 py-1 text-xs">{bull.company || '-'}</td>
                          <td className="px-2 py-1 text-center text-xs">{bull.hhp_dollar}</td>
