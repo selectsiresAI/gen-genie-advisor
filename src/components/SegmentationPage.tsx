@@ -1425,7 +1425,7 @@ export default function SegmentationPage({
                       <div className="flex justify-between">
                         <span style={{
                         color: '#F59E0B'
-                      }}>Intermediário:</span>
+                      }} className="text-gray-400">Intermediário:</span>
                         <span style={{
                         color: SS.black
                       }}>{distributionStats.intermediario.count} animais ({distributionStats.intermediario.percentage.toFixed(1)}%)</span>
