@@ -434,12 +434,15 @@ const ConversaoPage: React.FC = () => {
           helper={
             dataRows.length > 0 ? (
               <p className="text-xs text-muted-foreground">{dataRows.length} linhas carregadas.</p>
+            ) : modelHeaders.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Importe os dados quando quiser e carregue o modelo padrão para habilitar as sugestões de mapeamento.
+              </p>
             ) : (
               <p className="text-xs text-muted-foreground">Após o upload você poderá revisar e aprovar os mapeamentos.</p>
             )
           }
           badge={dataRows.length > 0 ? <Badge variant="secondary">Dados prontos</Badge> : undefined}
-          disabled={modelHeaders.length === 0}
         />
       </div>
 
