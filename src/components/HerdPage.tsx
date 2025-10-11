@@ -342,10 +342,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
             </Button>
             <h1 className="text-xl font-semibold">{farm.farm_name} - Rebanho</h1>
           </div>
-          {onNavigateToCharts && <Button onClick={onNavigateToCharts} className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4" />
-              Ver Gráficos
-            </Button>}
+          {onNavigateToCharts}
         </div>
       </div>
 
