@@ -8,7 +8,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowLeft, Search, Upload, Download, Beaker } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-
 interface Bull {
   id: string;
   code: string;
@@ -78,22 +77,24 @@ interface Bull {
   gfi?: number;
   score?: number; // Calculated score
 }
-
 interface Farm {
   farm_id: string;
   farm_name: string;
   owner_name: string;
   selected_bulls: number;
 }
-
 interface BullSearchPageProps {
   farm: Farm;
   onBack: () => void;
   onBullsSelected?: (selectedBulls: string[]) => void;
   onGoToBotijao?: () => void;
 }
-
-const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSelected, onGoToBotijao }) => {
+const BullSearchPage: React.FC<BullSearchPageProps> = ({
+  farm,
+  onBack,
+  onBullsSelected,
+  onGoToBotijao
+}) => {
   const [bulls, setBulls] = useState<Bull[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -108,241 +109,225 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
     PTAM: 0.15,
     CFP: 0.1
   });
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   useEffect(() => {
     loadBulls();
   }, []);
-
   const downloadBullTemplate = () => {
     // Template completo com dados reais de touros para exemplo
-    const templateBulls = [
-      {
-        code: "11HO15933",
-        name: "LADYS-MANOR PK ALTAMONT-ET",
-        registration: "HOLUSA000142457321",
-        birth_date: "2018-12-15",
-        sire_naab: "7HO13386",
-        mgs_naab: "11HO11478",
-        mmgs_naab: "1HO09918",
-        // PTAs conforme tabela bulls_denorm
-        nm_dollar: 1247,
-        fm_dollar: 1180,
-        gm_dollar: 1089,
-        cm_dollar: 1156,
-        hhp_dollar: 1098,
-        tpi: 2856,
-        ptam: 65,
-        ptaf: 89,
-        ptaf_pct: 0.15,
-        ptap: 75,
-        ptap_pct: 0.08,
-        pl: 6.8,
-        liv: 2.1,
-        scs: 2.89,
-        dpr: 1.8,
-        cfp: -0.8,
-        ptat: 1.89,
-        udc: 1.45,
-        flc: 0.78,
-        fls: 0.95,
-        fua: 1.23,
-        ruh: 0.87,
-        ruw: 1.12,
-        rlr: 0.94,
-        rls: 1.08,
-        rtp: 0.76,
-        str: 1.34,
-        dfm: 0.89,
-        rua: 1.67,
-        ftl: 0.98,
-        fta: 1.12,
-        ftp: 0.85,
-        rw: 1.05,
-        ucl: 1.23,
-        udp: 1.45,
-        rfi: 1.2,
-        gfi: -0.3,
-        ssb: 108,
-        dsb: 106,
-        dce: 105,
-        sce: 103,
-        h_liv: 102,
-        ccr: 104,
-        hcr: 103,
-        fi: 105,
-        bwc: 106,
-        sta: 108,
-        mf: 0.15,
-        da: 108,
-        rp: 105,
-        met: 103,
-        mast: 104,
-        ket: 102,
-        f_sav: 102,
-        kappa_casein: "AA",
-        beta_casein: "A2A2"
-      },
-      {
-        code: "29HO21513",
-        name: "PINE-TREE ACHIEVER-ET",
-        registration: "HOLUSA000142658974",
-        birth_date: "2019-03-20",
-        sire_naab: "11HO15933",
-        mgs_naab: "7HO13386",
-        mmgs_naab: "11HO11478",
-        nm_dollar: 1098,
-        fm_dollar: 1045,
-        gm_dollar: 987,
-        cm_dollar: 1023,
-        hhp_dollar: 965,
-        tpi: 2634,
-        ptam: 58,
-        ptaf: 76,
-        ptaf_pct: 0.12,
-        ptap: 68,
-        ptap_pct: 0.06,
-        pl: 5.9,
-        liv: 1.8,
-        scs: 2.95,
-        dpr: 1.5,
-        cfp: -0.6,
-        ptat: 1.67,
-        udc: 1.28,
-        flc: 0.65,
-        fls: 0.82,
-        fua: 1.05,
-        ruh: 0.74,
-        ruw: 0.98,
-        rlr: 0.81,
-        rls: 0.94,
-        rtp: 0.63,
-        str: 1.18,
-        dfm: 0.76,
-        rua: 1.42,
-        ftl: 0.85,
-        fta: 0.98,
-        ftp: 0.72,
-        rw: 0.91,
-        ucl: 1.06,
-        udp: 1.28,
-        rfi: 1.05,
-        gfi: -0.2,
-        ssb: 105,
-        dsb: 104,
-        dce: 103,
-        sce: 102,
-        h_liv: 101,
-        ccr: 103,
-        hcr: 102,
-        fi: 104,
-        bwc: 105,
-        sta: 106,
-        mf: 0.12,
-        da: 105,
-        rp: 103,
-        met: 102,
-        mast: 103,
-        ket: 101,
-        f_sav: 101,
-        kappa_casein: "AB",
-        beta_casein: "A1A2"
-      },
-      {
-        code: "551HO05064",
-        name: "WESTCOAST LAMBORGHINI-ET",
-        registration: "HOLUSA000142789632",
-        birth_date: "2020-01-10",
-        sire_naab: "29HO21513",
-        mgs_naab: "11HO15933",
-        mmgs_naab: "7HO13386",
-        nm_dollar: 1356,
-        fm_dollar: 1298,
-        gm_dollar: 1234,
-        cm_dollar: 1276,
-        hhp_dollar: 1187,
-        tpi: 3012,
-        ptam: 72,
-        ptaf: 98,
-        ptaf_pct: 0.18,
-        ptap: 82,
-        ptap_pct: 0.09,
-        pl: 7.2,
-        liv: 2.3,
-        scs: 2.78,
-        dpr: 2.1,
-        cfp: -0.9,
-        ptat: 2.05,
-        udc: 1.62,
-        flc: 0.89,
-        fls: 1.08,
-        fua: 1.38,
-        ruh: 0.96,
-        ruw: 1.25,
-        rlr: 1.07,
-        rls: 1.21,
-        rtp: 0.84,
-        str: 1.47,
-        dfm: 0.98,
-        rua: 1.78,
-        ftl: 1.06,
-        fta: 1.23,
-        ftp: 0.94,
-        rw: 1.15,
-        ucl: 1.36,
-        udp: 1.58,
-        rfi: 1.35,
-        gfi: -0.4,
-        ssb: 112,
-        dsb: 110,
-        dce: 108,
-        sce: 106,
-        h_liv: 105,
-        ccr: 107,
-        hcr: 106,
-        fi: 108,
-        bwc: 109,
-        sta: 112,
-        mf: 0.18,
-        da: 112,
-        rp: 108,
-        met: 106,
-        mast: 107,
-        ket: 105,
-        f_sav: 105,
-        kappa_casein: "BB",
-        beta_casein: "A2A2"
-      }
-    ];
+    const templateBulls = [{
+      code: "11HO15933",
+      name: "LADYS-MANOR PK ALTAMONT-ET",
+      registration: "HOLUSA000142457321",
+      birth_date: "2018-12-15",
+      sire_naab: "7HO13386",
+      mgs_naab: "11HO11478",
+      mmgs_naab: "1HO09918",
+      // PTAs conforme tabela bulls_denorm
+      nm_dollar: 1247,
+      fm_dollar: 1180,
+      gm_dollar: 1089,
+      cm_dollar: 1156,
+      hhp_dollar: 1098,
+      tpi: 2856,
+      ptam: 65,
+      ptaf: 89,
+      ptaf_pct: 0.15,
+      ptap: 75,
+      ptap_pct: 0.08,
+      pl: 6.8,
+      liv: 2.1,
+      scs: 2.89,
+      dpr: 1.8,
+      cfp: -0.8,
+      ptat: 1.89,
+      udc: 1.45,
+      flc: 0.78,
+      fls: 0.95,
+      fua: 1.23,
+      ruh: 0.87,
+      ruw: 1.12,
+      rlr: 0.94,
+      rls: 1.08,
+      rtp: 0.76,
+      str: 1.34,
+      dfm: 0.89,
+      rua: 1.67,
+      ftl: 0.98,
+      fta: 1.12,
+      ftp: 0.85,
+      rw: 1.05,
+      ucl: 1.23,
+      udp: 1.45,
+      rfi: 1.2,
+      gfi: -0.3,
+      ssb: 108,
+      dsb: 106,
+      dce: 105,
+      sce: 103,
+      h_liv: 102,
+      ccr: 104,
+      hcr: 103,
+      fi: 105,
+      bwc: 106,
+      sta: 108,
+      mf: 0.15,
+      da: 108,
+      rp: 105,
+      met: 103,
+      mast: 104,
+      ket: 102,
+      f_sav: 102,
+      kappa_casein: "AA",
+      beta_casein: "A2A2"
+    }, {
+      code: "29HO21513",
+      name: "PINE-TREE ACHIEVER-ET",
+      registration: "HOLUSA000142658974",
+      birth_date: "2019-03-20",
+      sire_naab: "11HO15933",
+      mgs_naab: "7HO13386",
+      mmgs_naab: "11HO11478",
+      nm_dollar: 1098,
+      fm_dollar: 1045,
+      gm_dollar: 987,
+      cm_dollar: 1023,
+      hhp_dollar: 965,
+      tpi: 2634,
+      ptam: 58,
+      ptaf: 76,
+      ptaf_pct: 0.12,
+      ptap: 68,
+      ptap_pct: 0.06,
+      pl: 5.9,
+      liv: 1.8,
+      scs: 2.95,
+      dpr: 1.5,
+      cfp: -0.6,
+      ptat: 1.67,
+      udc: 1.28,
+      flc: 0.65,
+      fls: 0.82,
+      fua: 1.05,
+      ruh: 0.74,
+      ruw: 0.98,
+      rlr: 0.81,
+      rls: 0.94,
+      rtp: 0.63,
+      str: 1.18,
+      dfm: 0.76,
+      rua: 1.42,
+      ftl: 0.85,
+      fta: 0.98,
+      ftp: 0.72,
+      rw: 0.91,
+      ucl: 1.06,
+      udp: 1.28,
+      rfi: 1.05,
+      gfi: -0.2,
+      ssb: 105,
+      dsb: 104,
+      dce: 103,
+      sce: 102,
+      h_liv: 101,
+      ccr: 103,
+      hcr: 102,
+      fi: 104,
+      bwc: 105,
+      sta: 106,
+      mf: 0.12,
+      da: 105,
+      rp: 103,
+      met: 102,
+      mast: 103,
+      ket: 101,
+      f_sav: 101,
+      kappa_casein: "AB",
+      beta_casein: "A1A2"
+    }, {
+      code: "551HO05064",
+      name: "WESTCOAST LAMBORGHINI-ET",
+      registration: "HOLUSA000142789632",
+      birth_date: "2020-01-10",
+      sire_naab: "29HO21513",
+      mgs_naab: "11HO15933",
+      mmgs_naab: "7HO13386",
+      nm_dollar: 1356,
+      fm_dollar: 1298,
+      gm_dollar: 1234,
+      cm_dollar: 1276,
+      hhp_dollar: 1187,
+      tpi: 3012,
+      ptam: 72,
+      ptaf: 98,
+      ptaf_pct: 0.18,
+      ptap: 82,
+      ptap_pct: 0.09,
+      pl: 7.2,
+      liv: 2.3,
+      scs: 2.78,
+      dpr: 2.1,
+      cfp: -0.9,
+      ptat: 2.05,
+      udc: 1.62,
+      flc: 0.89,
+      fls: 1.08,
+      fua: 1.38,
+      ruh: 0.96,
+      ruw: 1.25,
+      rlr: 1.07,
+      rls: 1.21,
+      rtp: 0.84,
+      str: 1.47,
+      dfm: 0.98,
+      rua: 1.78,
+      ftl: 1.06,
+      fta: 1.23,
+      ftp: 0.94,
+      rw: 1.15,
+      ucl: 1.36,
+      udp: 1.58,
+      rfi: 1.35,
+      gfi: -0.4,
+      ssb: 112,
+      dsb: 110,
+      dce: 108,
+      sce: 106,
+      h_liv: 105,
+      ccr: 107,
+      hcr: 106,
+      fi: 108,
+      bwc: 109,
+      sta: 112,
+      mf: 0.18,
+      da: 112,
+      rp: 108,
+      met: 106,
+      mast: 107,
+      ket: 105,
+      f_sav: 105,
+      kappa_casein: "BB",
+      beta_casein: "A2A2"
+    }];
 
     // Converter para CSV
-    const headers = [
-      "code", "name", "registration", "birth_date", "sire_naab", "mgs_naab", "mmgs_naab",
-      "nm_dollar", "fm_dollar", "gm_dollar", "cm_dollar", "hhp_dollar", "tpi", "ptam", "ptaf", 
-      "ptaf_pct", "ptap", "ptap_pct", "pl", "liv", "scs", "dpr", "cfp", "ptat", "udc", "flc",
-      "fls", "fua", "ruh", "ruw", "rlr", "rls", "rtp", "str", "dfm", "rua", "ftl", "fta", 
-      "ftp", "rw", "ucl", "udp", "rfi", "gfi", "ssb", "dsb", "dce", "sce", "h_liv", "ccr", 
-      "hcr", "fi", "bwc", "sta", "mf", "da", "rp", "met", "mast", "ket", 
-      "f_sav", "kappa_casein", "beta_casein"
-    ];
-
-    const csvContent = [
-      headers.join(','),
-      ...templateBulls.map(bull => 
-        headers.map(header => {
-          const value = bull[header as keyof typeof bull];
-          // Tratar valores nulos e strings com vírgula
-          if (value === undefined || value === null) return '';
-          if (typeof value === 'string' && value.includes(',')) {
-            return `"${value}"`;
-          }
-          return value;
-        }).join(',')
-      )
-    ].join('\n');
+    const headers = ["code", "name", "registration", "birth_date", "sire_naab", "mgs_naab", "mmgs_naab", "nm_dollar", "fm_dollar", "gm_dollar", "cm_dollar", "hhp_dollar", "tpi", "ptam", "ptaf", "ptaf_pct", "ptap", "ptap_pct", "pl", "liv", "scs", "dpr", "cfp", "ptat", "udc", "flc", "fls", "fua", "ruh", "ruw", "rlr", "rls", "rtp", "str", "dfm", "rua", "ftl", "fta", "ftp", "rw", "ucl", "udp", "rfi", "gfi", "ssb", "dsb", "dce", "sce", "h_liv", "ccr", "hcr", "fi", "bwc", "sta", "mf", "da", "rp", "met", "mast", "ket", "f_sav", "kappa_casein", "beta_casein"];
+    const csvContent = [headers.join(','), ...templateBulls.map(bull => headers.map(header => {
+      const value = bull[header as keyof typeof bull];
+      // Tratar valores nulos e strings com vírgula
+      if (value === undefined || value === null) return '';
+      if (typeof value === 'string' && value.includes(',')) {
+        return `"${value}"`;
+      }
+      return value;
+    }).join(','))].join('\n');
 
     // Download do arquivo
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csvContent], {
+      type: 'text/csv;charset=utf-8;'
+    });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
@@ -351,29 +336,27 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
     toast({
       title: "Template baixado",
-      description: "Template completo de touros para Supabase foi baixado com sucesso.",
+      description: "Template completo de touros para Supabase foi baixado com sucesso."
     });
   };
-
   const loadBulls = async () => {
     try {
       setLoading(true);
-
       console.log('🐂 Carregando banco completo de touros...');
-      const { data, error } = await supabase
-        .rpc('get_bulls_denorm')
-        .order('tpi', { ascending: false });
-
+      const {
+        data,
+        error
+      } = await supabase.rpc('get_bulls_denorm').order('tpi', {
+        ascending: false
+      });
       if (error) {
         console.error('Error from RPC get_bulls_denorm:', error);
         throw error;
       }
-      
       console.log(`✅ ${data?.length || 0} touros carregados do banco`);
-      
+
       // Transform data to match expected format
       const transformedBulls: Bull[] = (data || []).map(bull => ({
         id: bull.id || bull.code,
@@ -442,9 +425,8 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
         kappa_casein: bull.kappa_casein,
         gfi: bull.gfi
       }));
-
       setBulls(transformedBulls);
-      
+
       // Extract unique companies from loaded bulls
       const uniqueCompanies = new Set<string>();
       transformedBulls.forEach(bull => {
@@ -453,13 +435,12 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
         }
       });
       setEmpresas(["Todas", ...Array.from(uniqueCompanies).sort()]);
-      
     } catch (error) {
       console.error('Error loading bulls:', error);
       toast({
         title: "Erro",
         description: "Erro ao carregar banco de touros",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
@@ -480,62 +461,41 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
   // Calculate weighted scores for bulls
   const rankedBulls = useMemo(() => {
     const bullsWithScores = bulls.map(bull => {
-      const score = (
-        (bull.tpi || 0) * weights.TPI +
-        (bull.nm_dollar || 0) * weights.NM_dollar +
-        (bull.hhp_dollar || 0) * weights.HHP_dollar +
-        (bull.ptam || 0) * weights.PTAM +
-        (bull.cfp || 0) * weights.CFP
-      );
-      return { ...bull, score };
+      const score = (bull.tpi || 0) * weights.TPI + (bull.nm_dollar || 0) * weights.NM_dollar + (bull.hhp_dollar || 0) * weights.HHP_dollar + (bull.ptam || 0) * weights.PTAM + (bull.cfp || 0) * weights.CFP;
+      return {
+        ...bull,
+        score
+      };
     });
-
-    return bullsWithScores
-      .filter(bull => {
-        const matchesSearch = bull.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                             bull.code.toLowerCase().includes(searchTerm.toLowerCase());
-        
-        const matchesCompany = !selectedEmpresa || selectedEmpresa === "todas" || selectedEmpresa === "Todas" ||
-                              (bull.company && bull.company.toLowerCase().includes(selectedEmpresa.toLowerCase()));
-        
-        const matchesYear = !selectedYear || selectedYear === "all-years" || (bull.birth_date && 
-          new Date(bull.birth_date).getFullYear().toString() === selectedYear);
-                              
-        return matchesSearch && matchesCompany && matchesYear;
-      })
-      .sort((a, b) => (b.score || 0) - (a.score || 0));
+    return bullsWithScores.filter(bull => {
+      const matchesSearch = bull.name.toLowerCase().includes(searchTerm.toLowerCase()) || bull.code.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCompany = !selectedEmpresa || selectedEmpresa === "todas" || selectedEmpresa === "Todas" || bull.company && bull.company.toLowerCase().includes(selectedEmpresa.toLowerCase());
+      const matchesYear = !selectedYear || selectedYear === "all-years" || bull.birth_date && new Date(bull.birth_date).getFullYear().toString() === selectedYear;
+      return matchesSearch && matchesCompany && matchesYear;
+    }).sort((a, b) => (b.score || 0) - (a.score || 0));
   }, [bulls, weights, searchTerm, selectedEmpresa, selectedYear]);
-
   const totalWeight = Object.values(weights).reduce((sum, weight) => sum + weight, 0);
-
   const handleBullToggle = (code: string) => {
-    setSelectedBulls(prev =>
-      prev.includes(code)
-        ? prev.filter(n => n !== code)
-        : [...prev, code]
-    );
+    setSelectedBulls(prev => prev.includes(code) ? prev.filter(n => n !== code) : [...prev, code]);
   };
-
   const handleAddToBotijao = () => {
     if (selectedBulls.length === 0) {
       toast({
         title: "Nenhum touro selecionado",
         description: "Selecione pelo menos um touro para adicionar ao Botijão Virtual.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
 
     // Save selected bulls to localStorage for the Botijão Virtual
     localStorage.setItem(`selected-bulls-${farm.farm_id}`, JSON.stringify(selectedBulls));
-
     if (onBullsSelected) {
       onBullsSelected(selectedBulls);
     }
-
     toast({
       title: "Touros selecionados",
-      description: `${selectedBulls.length} touro(s) foram enviados para o Botijão Virtual.`,
+      description: `${selectedBulls.length} touro(s) foram enviados para o Botijão Virtual.`
     });
 
     // Navigate to Botijão Virtual if callback is provided
@@ -543,28 +503,24 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
       onGoToBotijao();
     }
   };
-
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     try {
       setLoading(true);
-      
       toast({
         title: "Upload iniciado",
-        description: "Processando arquivo de touros...",
+        description: "Processando arquivo de touros..."
       });
 
       // Read CSV file
       const text = await file.text();
       const lines = text.split('\n').filter(line => line.trim());
-      
       if (lines.length < 2) {
         toast({
           title: "Erro no arquivo",
           description: "Arquivo CSV deve conter pelo menos um cabeçalho e uma linha de dados.",
-          variant: "destructive",
+          variant: "destructive"
         });
         return;
       }
@@ -579,7 +535,6 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
         });
         return row;
       });
-
       let successCount = 0;
       let errorCount = 0;
       const errors: string[] = [];
@@ -654,7 +609,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
             udp: parseFloat(row.udp || row.UDP) || null,
             ftp: parseFloat(row.ftp || row.FTP) || null,
             rfi: parseFloat(row.rfi || row.RFI) || null,
-            gfi: parseFloat(row.gfi || row.GFI) || null,
+            gfi: parseFloat(row.gfi || row.GFI) || null
           };
 
           // Handle id field: convert empty strings to null, keep valid UUIDs
@@ -672,13 +627,12 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
           }
 
           // UPSERT: Insert or update on conflict
-          const { error } = await supabase
-            .from('bulls')
-            .upsert(bullData, {
-              onConflict: 'code',
-              ignoreDuplicates: false
-            });
-
+          const {
+            error
+          } = await supabase.from('bulls').upsert(bullData, {
+            onConflict: 'code',
+            ignoreDuplicates: false
+          });
           if (error) {
             console.error('Error inserting bull:', error);
             errors.push(`Erro no touro ${bullData.code}: ${error.message}`);
@@ -697,34 +651,32 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
       if (successCount > 0) {
         toast({
           title: "Import concluído",
-          description: `${successCount} touros importados com sucesso${errorCount > 0 ? `. ${errorCount} erros encontrados.` : '.'}`,
+          description: `${successCount} touros importados com sucesso${errorCount > 0 ? `. ${errorCount} erros encontrados.` : '.'}`
         });
-        
+
         // Reload bulls data
         await loadBulls();
       }
-
       if (errors.length > 0 && errors.length <= 5) {
         // Show first few errors
         toast({
           title: "Erros encontrados",
           description: errors.slice(0, 3).join('; '),
-          variant: "destructive",
+          variant: "destructive"
         });
       } else if (errors.length > 5) {
         toast({
           title: `Múltiplos erros (${errors.length})`,
           description: "Verifique o formato do arquivo CSV",
-          variant: "destructive",
+          variant: "destructive"
         });
       }
-
     } catch (error) {
       console.error('Upload error:', error);
       toast({
         title: "Erro no upload",
         description: "Falha ao processar o arquivo CSV",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
@@ -734,15 +686,13 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
     setTimeout(() => {
       toast({
         title: "Touros importados",
-        description: "Banco de touros atualizado com sucesso!",
+        description: "Banco de touros atualizado com sucesso!"
       });
       loadBulls(); // Reload data
     }, 2000);
   };
-
   const handleExport = () => {
     if (rankedBulls.length === 0) return;
-    
     const csvData = rankedBulls.map(bull => ({
       NAAB: bull.code,
       Nome: bull.name,
@@ -758,13 +708,12 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
 
     // Create CSV content
     const headers = Object.keys(csvData[0]);
-    const csvContent = [
-      headers.join(','),
-      ...csvData.map(row => Object.values(row).join(','))
-    ].join('\n');
+    const csvContent = [headers.join(','), ...csvData.map(row => Object.values(row).join(','))].join('\n');
 
     // Download file
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const blob = new Blob([csvContent], {
+      type: 'text/csv'
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -773,18 +722,15 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-
     toast({
       title: "Exportação concluída",
-      description: "Arquivo CSV foi baixado com sucesso!",
+      description: "Arquivo CSV foi baixado com sucesso!"
     });
   };
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       <div className="border-b">
         <div className="flex h-16 items-center px-4">
-          <Button variant="ghost" onClick={onBack} className="mr-4">
+          <Button variant="ghost" onClick={onBack} className="mr-4 bg-slate-200 hover:bg-slate-100">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Voltar
           </Button>
@@ -804,22 +750,13 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
-                {Object.entries(weights).map(([key, value]) => (
-                  <div key={key} className="space-y-2">
+                {Object.entries(weights).map(([key, value]) => <div key={key} className="space-y-2">
                     <label className="text-sm font-medium">{key}</label>
-                    <Input
-                      type="number"
-                      step="0.05"
-                      min="0"
-                      max="1"
-                      value={value}
-                      onChange={(e) => setWeights(prev => ({
-                        ...prev,
-                        [key]: parseFloat(e.target.value) || 0
-                      }))}
-                    />
-                  </div>
-                ))}
+                    <Input type="number" step="0.05" min="0" max="1" value={value} onChange={e => setWeights(prev => ({
+                  ...prev,
+                  [key]: parseFloat(e.target.value) || 0
+                }))} />
+                  </div>)}
               </div>
               <div className="text-sm text-muted-foreground">
                 Soma de pesos: <b>{totalWeight.toFixed(2)}</b> (recomendado 1.00 ± 0.2)
@@ -833,12 +770,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
           {/* Search and Controls */}
           <div className="flex items-center gap-4">
             <div className="relative flex-1">
-              <Input 
-                value={searchTerm} 
-                onChange={(e) => setSearchTerm(e.target.value)} 
-                placeholder="Buscar touros por NAAB, nome ou pedigree" 
-                className="pl-10" 
-              />
+              <Input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Buscar touros por NAAB, nome ou pedigree" className="pl-10" />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
             </div>
             
@@ -848,9 +780,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todas">Todas as empresas</SelectItem>
-                {empresas.slice(1).map((empresa) => (
-                  <SelectItem key={empresa} value={empresa}>{empresa}</SelectItem>
-                ))}
+                {empresas.slice(1).map(empresa => <SelectItem key={empresa} value={empresa}>{empresa}</SelectItem>)}
               </SelectContent>
             </Select>
 
@@ -860,9 +790,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all-years">Todos os anos</SelectItem>
-                {availableYears.map(year => (
-                  <SelectItem key={year} value={year}>{year}</SelectItem>
-                ))}
+                {availableYears.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
               </SelectContent>
             </Select>
 
@@ -874,19 +802,10 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
                     Importar CSV
                   </span>
                 </Button>
-                <input 
-                  type="file" 
-                  accept=".csv" 
-                  onChange={handleUpload} 
-                  className="hidden" 
-                />
+                <input type="file" accept=".csv" onChange={handleUpload} className="hidden" />
               </label>
 
-              <Button 
-                variant="outline" 
-                onClick={downloadBullTemplate}
-                title="Baixar template completo de touros para Supabase"
-              >
+              <Button variant="outline" onClick={downloadBullTemplate} title="Baixar template completo de touros para Supabase" className="bg-slate-100">
                 <Download size={16} className="mr-2" />
                 Template Touros
               </Button>
@@ -901,15 +820,10 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
               Selecionados: {selectedBulls.length}
             </Badge>
             
-            {selectedBulls.length > 0 && (
-              <Button 
-                onClick={handleAddToBotijao}
-                className="bg-primary hover:bg-primary/90"
-              >
+            {selectedBulls.length > 0 && <Button onClick={handleAddToBotijao} className="bg-primary hover:bg-primary/90">
                 <Beaker size={16} className="mr-2" />
                 Enviar para Botijão Virtual
-              </Button>
-            )}
+              </Button>}
           </div>
 
           {/* Bulls Table */}
@@ -985,14 +899,9 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
                     </tr>
                   </thead>
                    <tbody>
-                      {rankedBulls.map((bull, index) => (
-                       <tr key={bull.code} className={index % 2 === 0 ? "bg-muted/50" : ""}>
+                      {rankedBulls.map((bull, index) => <tr key={bull.code} className={index % 2 === 0 ? "bg-muted/50" : ""}>
                          <td className="px-2 py-1 text-center">
-                           <input
-                             type="checkbox"
-                             checked={selectedBulls.includes(bull.code)}
-                             onChange={() => handleBullToggle(bull.code)}
-                           />
+                           <input type="checkbox" checked={selectedBulls.includes(bull.code)} onChange={() => handleBullToggle(bull.code)} />
                          </td>
                          <td className="px-2 py-1 font-mono text-xs">{bull.code}</td>
                          <td className="px-2 py-1 font-medium text-xs">{bull.name}</td>
@@ -1056,16 +965,14 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
                           <td className="px-2 py-1 text-center text-xs">{bull.beta_casein}</td>
                           <td className="px-2 py-1 text-center text-xs">{bull.kappa_casein}</td>
                           <td className="px-2 py-1 text-center text-xs">{bull.gfi}</td>
-                        </tr>
-                      ))}
+                        </tr>)}
                   </tbody>
                 </table>
               </div>
             </ScrollArea>
           </Card>
 
-          {rankedBulls.length === 0 && (
-            <Card>
+          {rankedBulls.length === 0 && <Card>
               <CardContent className="pt-6">
                 <div className="text-center space-y-2">
                   <Search className="w-12 h-12 text-muted-foreground mx-auto" />
@@ -1075,12 +982,9 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({ farm, onBack, onBullsSe
                   </p>
                 </div>
               </CardContent>
-            </Card>
-          )}
+            </Card>}
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default BullSearchPage;
