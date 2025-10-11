@@ -849,7 +849,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
           {/* Footer */}
           <div className="pt-8 border-t">
             <div className="text-center text-sm text-muted-foreground">
-              <p>ToolSS - Sistema de Seleção de Touros</p>
+              <p>ToolSS </p>
               <p>Desenvolvido para otimizar a genética do seu rebanho</p>
             </div>
           </div>
