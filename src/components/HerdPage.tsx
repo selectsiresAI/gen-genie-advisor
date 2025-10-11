@@ -508,10 +508,10 @@ const HerdPage: React.FC<HerdPageProps> = ({
                       </AlertDialog>
                     </div>}
                   <ScrollArea className="h-[600px] w-full rounded-md border">
-                    <div className="min-w-max pb-4">
-                      <table className="w-full border-collapse table-auto">
-                        <thead className="sticky top-0 z-20">
-                          <tr className="bg-foreground text-background">
+                    <div className="w-full overflow-x-auto pb-4">
+                      <table className="w-full table-auto border-collapse">
+                        <thead className="sticky top-0 z-20 bg-foreground text-background [&>tr>th]:whitespace-nowrap [&>tr>th]:min-w-max [&>tr>th]:align-middle [&>tr>th]:px-3 [&>tr>th]:py-2 [&>tr>th]:text-left [&>tr>th]:text-xs [&>tr>th]:font-semibold [&>tr>th]:tracking-tight">
+                          <tr>
                             <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">
                               <div className="flex items-center gap-2">
                                 <input
@@ -526,7 +526,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
                             </th>
                             <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">ID Fazenda</th>
                             <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Nome</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">ID CDCB</th>
+                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">ID CDCB / Identificador</th>
                             <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Pai</th>
                             <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Avô Materno</th>
                             <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Bisavô Materno</th>
@@ -594,7 +594,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
                             <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">GFI</th>
                           </tr>
                         </thead>
-                      <tbody>
+                      <tbody className="[&>tr>td]:border [&>tr>td]:px-3 [&>tr>td]:py-2 [&>tr>td]:text-xs [&>tr>td]:whitespace-nowrap [&>tr>td]:align-middle">
                         {filteredFemales.map(female => {
                         const fonteDisplay = getFonteDisplay(female.fonte);
                         return <tr key={female.id} className="hover:bg-muted/50">
