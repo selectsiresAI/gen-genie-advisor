@@ -8,16 +8,18 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, User, Lock, Mail, UserPlus, LogIn } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
 interface AuthPageProps {
   onAuthSuccess: () => void;
 }
-
-const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
+const AuthPage: React.FC<AuthPageProps> = ({
+  onAuthSuccess
+}) => {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('login');
   const [error, setError] = useState('');
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
 
   // Estados para login
   const [loginEmail, setLoginEmail] = useState('');
@@ -28,38 +30,39 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
   const [signupPassword, setSignupPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
-
   useEffect(() => {
     // Verificar se já está logado
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: {
+          session
+        }
+      } = await supabase.auth.getSession();
       if (session) {
         onAuthSuccess();
       }
     };
-    
     checkAuth();
   }, [onAuthSuccess]);
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const {
+        data,
+        error
+      } = await supabase.auth.signInWithPassword({
         email: loginEmail,
-        password: loginPassword,
+        password: loginPassword
       });
-
       if (error) {
         throw error;
       }
-
       if (data.user) {
         toast({
           title: "Login realizado com sucesso!",
-          description: "Bem-vindo ao ToolSS",
+          description: "Bem-vindo ao ToolSS"
         });
         onAuthSuccess();
       }
@@ -69,13 +72,12 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
       toast({
         title: "Erro no login",
         description: error.message || 'Verifique suas credenciais e tente novamente',
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
-
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -87,41 +89,38 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
       setIsLoading(false);
       return;
     }
-
     if (signupPassword !== confirmPassword) {
       setError('As senhas não coincidem');
       setIsLoading(false);
       return;
     }
-
     if (signupPassword.length < 6) {
       setError('A senha deve ter pelo menos 6 caracteres');
       setIsLoading(false);
       return;
     }
-
     try {
       const redirectUrl = `${window.location.origin}/`;
-      
-      const { data, error } = await supabase.auth.signUp({
+      const {
+        data,
+        error
+      } = await supabase.auth.signUp({
         email: signupEmail,
         password: signupPassword,
         options: {
           emailRedirectTo: redirectUrl,
           data: {
-            full_name: fullName.trim(),
-          },
-        },
+            full_name: fullName.trim()
+          }
+        }
       });
-
       if (error) {
         throw error;
       }
-
       if (data.user) {
         toast({
           title: "Conta criada com sucesso!",
-          description: "Verifique seu e-mail para confirmar a conta. Após a confirmação, você poderá fazer login.",
+          description: "Verifique seu e-mail para confirmar a conta. Após a confirmação, você poderá fazer login."
         });
 
         // Limpar formulário e ir para aba de login
@@ -137,21 +136,17 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
       toast({
         title: "Erro ao criar conta",
         description: error.message || 'Tente novamente',
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/20 via-background to-secondary/20 p-4">
+  return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/20 via-background to-secondary/20 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold">ToolSS</CardTitle>
-          <CardDescription>
-            Sistema de Seleção e Segmentação para Técnicos
-          </CardDescription>
+          <CardDescription>Sistema de Sistema para técnicos em melhoramento genético bovino</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -172,16 +167,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                   <Label htmlFor="login-email">E-mail</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                    <Input
-                      id="login-email"
-                      type="email"
-                      placeholder="seu@email.com"
-                      value={loginEmail}
-                      onChange={(e) => setLoginEmail(e.target.value)}
-                      className="pl-10"
-                      required
-                      disabled={isLoading}
-                    />
+                    <Input id="login-email" type="email" placeholder="seu@email.com" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} className="pl-10" required disabled={isLoading} />
                   </div>
                 </div>
 
@@ -189,42 +175,22 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                   <Label htmlFor="login-password">Senha</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                    <Input
-                      id="login-password"
-                      type="password"
-                      placeholder="Sua senha"
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      className="pl-10"
-                      required
-                      disabled={isLoading}
-                      minLength={6}
-                    />
+                    <Input id="login-password" type="password" placeholder="Sua senha" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} className="pl-10" required disabled={isLoading} minLength={6} />
                   </div>
                 </div>
 
-                {error && (
-                  <Alert variant="destructive">
+                {error && <Alert variant="destructive">
                     <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
+                  </Alert>}
 
-                <Button 
-                  type="submit" 
-                  className="w-full" 
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Entrando...
-                    </>
-                  ) : (
-                    <>
+                    </> : <>
                       <LogIn className="mr-2 h-4 w-4" />
                       Entrar
-                    </>
-                  )}
+                    </>}
                 </Button>
               </form>
             </TabsContent>
@@ -235,16 +201,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                   <Label htmlFor="signup-name">Nome Completo</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                    <Input
-                      id="signup-name"
-                      type="text"
-                      placeholder="Seu nome completo"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="pl-10"
-                      required
-                      disabled={isLoading}
-                    />
+                    <Input id="signup-name" type="text" placeholder="Seu nome completo" value={fullName} onChange={e => setFullName(e.target.value)} className="pl-10" required disabled={isLoading} />
                   </div>
                 </div>
 
@@ -252,16 +209,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                   <Label htmlFor="signup-email">E-mail</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="seu@email.com"
-                      value={signupEmail}
-                      onChange={(e) => setSignupEmail(e.target.value)}
-                      className="pl-10"
-                      required
-                      disabled={isLoading}
-                    />
+                    <Input id="signup-email" type="email" placeholder="seu@email.com" value={signupEmail} onChange={e => setSignupEmail(e.target.value)} className="pl-10" required disabled={isLoading} />
                   </div>
                 </div>
 
@@ -269,17 +217,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                   <Label htmlFor="signup-password">Senha</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      placeholder="Mínimo 6 caracteres"
-                      value={signupPassword}
-                      onChange={(e) => setSignupPassword(e.target.value)}
-                      className="pl-10"
-                      required
-                      disabled={isLoading}
-                      minLength={6}
-                    />
+                    <Input id="signup-password" type="password" placeholder="Mínimo 6 caracteres" value={signupPassword} onChange={e => setSignupPassword(e.target.value)} className="pl-10" required disabled={isLoading} minLength={6} />
                   </div>
                 </div>
 
@@ -287,55 +225,35 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                   <Label htmlFor="confirm-password">Confirmar Senha</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                    <Input
-                      id="confirm-password"
-                      type="password"
-                      placeholder="Confirme sua senha"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="pl-10"
-                      required
-                      disabled={isLoading}
-                      minLength={6}
-                    />
+                    <Input id="confirm-password" type="password" placeholder="Confirme sua senha" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="pl-10" required disabled={isLoading} minLength={6} />
                   </div>
                 </div>
 
-                {error && (
-                  <Alert variant="destructive">
+                {error && <Alert variant="destructive">
                     <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
+                  </Alert>}
 
-                <Button 
-                  type="submit" 
-                  className="w-full" 
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Criando conta...
-                    </>
-                  ) : (
-                    <>
+                    </> : <>
                       <UserPlus className="mr-2 h-4 w-4" />
                       Criar Conta
-                    </>
-                  )}
+                    </>}
                 </Button>
               </form>
             </TabsContent>
           </Tabs>
 
           <div className="mt-6 pt-6 border-t text-center text-sm text-muted-foreground">
-            <p>Sistema para técnicos em melhoramento genético bovino</p>
-            <p className="mt-1">Gestão de fazendas, fêmeas, touros e acasalamentos</p>
+            <p>
+          </p>
+            <p className="mt-1">
+          </p>
           </div>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 };
-
 export default AuthPage;
