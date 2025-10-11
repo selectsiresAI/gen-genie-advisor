@@ -1179,7 +1179,7 @@ export default function SegmentationPage({
                   <h4 className="mb-3 text-md font-medium text-foreground">Distribuição dos Grupos</h4>
 
                   {/* Superior */}
-                  <div className="mb-4 rounded-lg border-2 border-accent/60 bg-accent/10 p-3">
+                  <div className="mb-4 rounded-lg border-2 border-accent/60 p-3 bg-stone-200">
                     <div className="mb-2 flex items-center justify-between">
                       <span className="font-medium text-accent-foreground">Superior</span>
                       <span className="font-semibold text-accent-foreground">{superiorPercent[0]}%</span>
@@ -1188,7 +1188,7 @@ export default function SegmentationPage({
                   </div>
 
                   {/* Intermediário */}
-                  <div className="mb-4 rounded-lg border-2 border-amber-300 bg-amber-100/50 p-3 dark:border-amber-500 dark:bg-amber-500/10">
+                  <div className="mb-4 rounded-lg border-2 border-amber-300 p-3 dark:border-amber-500 bg-slate-200">
                     <div className="mb-2 flex items-center justify-between">
                       <span className="font-medium text-amber-700 dark:text-amber-400">Intermediário</span>
                       <span className="font-semibold text-amber-700 dark:text-amber-400">{intermediarioPercent[0]}%</span>
@@ -1197,7 +1197,7 @@ export default function SegmentationPage({
                   </div>
 
                   {/* Inferior */}
-                  <div className="mb-4 rounded-lg border-2 border-destructive/60 bg-destructive/10 p-3">
+                  <div className="mb-4 rounded-lg border-2 border-destructive/60 p-3 bg-gray-200">
                     <div className="mb-2 flex items-center justify-between">
                       <span className="font-medium text-destructive">Inferior</span>
                       <span className="font-semibold text-destructive">{inferiorPercent[0]}%</span>
@@ -1329,7 +1329,7 @@ export default function SegmentationPage({
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <button onClick={saveSegmentationToDatabase} disabled={!segmentationEnabled || !segmentationTriggered || loading} className="flex items-center gap-2 rounded-xl border border-accent px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 text-slate-50 bg-red-700 hover:bg-red-600">
+                <button onClick={saveSegmentationToDatabase} disabled={!segmentationEnabled || !segmentationTriggered || loading} className="flex items-center gap-2 border border-accent px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 text-slate-50 rounded-xl bg-red-700 hover:bg-red-600">
                   <Database size={18} /> Salvar Segmentação
                 </button>
               </TooltipTrigger>
