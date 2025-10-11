@@ -1179,28 +1179,28 @@ export default function SegmentationPage({
                   <h4 className="mb-3 text-md font-medium text-foreground">Distribuição dos Grupos</h4>
 
                   {/* Superior */}
-                  <div className="mb-4 rounded-lg border-2 border-accent/60 p-3 bg-stone-200">
+                  <div className="mb-4 rounded-lg border border-red-500 p-3 bg-stone-200">
                     <div className="mb-2 flex items-center justify-between">
-                      <span className="font-medium text-accent-foreground">Superior</span>
-                      <span className="font-semibold text-accent-foreground">{superiorPercent[0]}%</span>
+                      <span className="font-medium text-black">Superior</span>
+                      <span className="font-semibold text-black">{superiorPercent[0]}%</span>
                     </div>
                     <Slider value={superiorPercent} onValueChange={updateSuperiorPercent} max={100} step={1} className="w-full" />
                   </div>
 
                   {/* Intermediário */}
-                  <div className="mb-4 rounded-lg border-2 border-amber-300 p-3 dark:border-amber-500 bg-slate-200">
+                  <div className="mb-4 rounded-lg border border-red-500 p-3 dark:border-red-500 bg-slate-200">
                     <div className="mb-2 flex items-center justify-between">
-                      <span className="font-medium text-amber-700 dark:text-amber-400">Intermediário</span>
-                      <span className="font-semibold text-amber-700 dark:text-amber-400">{intermediarioPercent[0]}%</span>
+                      <span className="font-medium text-black">Intermediário</span>
+                      <span className="font-semibold text-black">{intermediarioPercent[0]}%</span>
                     </div>
                     <Slider value={intermediarioPercent} onValueChange={updateIntermediarioPercent} max={100} step={1} className="w-full" />
                   </div>
 
                   {/* Inferior */}
-                  <div className="mb-4 rounded-lg border-2 border-destructive/60 p-3 bg-gray-200">
+                  <div className="mb-4 rounded-lg border border-red-500 p-3 bg-gray-200">
                     <div className="mb-2 flex items-center justify-between">
-                      <span className="font-medium text-destructive">Inferior</span>
-                      <span className="font-semibold text-destructive">{inferiorPercent[0]}%</span>
+                      <span className="font-medium text-black">Inferior</span>
+                      <span className="font-semibold text-black">{inferiorPercent[0]}%</span>
                     </div>
                     <Slider value={inferiorPercent} onValueChange={updateInferiorPercent} max={100} step={1} className="w-full" />
                   </div>
