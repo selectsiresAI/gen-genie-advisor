@@ -55,7 +55,9 @@ export type Database = {
           mmgs_naab: string | null
           name: string
           nm_dollar: number | null
-          pedigree: string | null
+          sire_name: string | null
+          mgs_name: string | null
+          mmgs_name: string | null
           pl: number | null
           ptaf: number | null
           ptaf_pct: number | null
@@ -126,7 +128,9 @@ export type Database = {
           mmgs_naab?: string | null
           name: string
           nm_dollar?: number | null
-          pedigree?: string | null
+          sire_name?: string | null
+          mgs_name?: string | null
+          mmgs_name?: string | null
           pl?: number | null
           ptaf?: number | null
           ptaf_pct?: number | null
@@ -197,7 +201,9 @@ export type Database = {
           mmgs_naab?: string | null
           name?: string
           nm_dollar?: number | null
-          pedigree?: string | null
+          sire_name?: string | null
+          mgs_name?: string | null
+          mmgs_name?: string | null
           pl?: number | null
           ptaf?: number | null
           ptaf_pct?: number | null
@@ -1298,9 +1304,11 @@ export type Database = {
           mf: number | null
           mgs_naab: string | null
           mmgs_naab: string | null
+          sire_name: string | null
+          mgs_name: string | null
+          mmgs_name: string | null
           name: string | null
           nm_dollar: number | null
-          pedigree: string | null
           pl: number | null
           ptaf: number | null
           ptaf_pct: number | null
@@ -1369,9 +1377,11 @@ export type Database = {
           mf?: number | null
           mgs_naab?: string | null
           mmgs_naab?: string | null
+          sire_name?: string | null
+          mgs_name?: string | null
+          mmgs_name?: string | null
           name?: string | null
           nm_dollar?: number | null
-          pedigree?: string | null
           pl?: number | null
           ptaf?: number | null
           ptaf_pct?: number | null
@@ -1440,9 +1450,11 @@ export type Database = {
           mf?: number | null
           mgs_naab?: string | null
           mmgs_naab?: string | null
+          sire_name?: string | null
+          mgs_name?: string | null
+          mmgs_name?: string | null
           name?: string | null
           nm_dollar?: number | null
-          pedigree?: string | null
           pl?: number | null
           ptaf?: number | null
           ptaf_pct?: number | null
@@ -1969,9 +1981,11 @@ export type Database = {
           mf: number | null
           mgs_naab: string | null
           mmgs_naab: string | null
+          sire_name: string | null
+          mgs_name: string | null
+          mmgs_name: string | null
           name: string | null
           nm_dollar: number | null
-          pedigree: string | null
           pl: number | null
           ptaf: number | null
           ptaf_pct: number | null

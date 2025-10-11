@@ -7,6 +7,14 @@ const SELECT_COLUMNS = [
   'id',
   'code',
   'name',
+  'registration',
+  'birth_date',
+  'sire_naab',
+  'mgs_naab',
+  'mmgs_naab',
+  'sire_name',
+  'mgs_name',
+  'mmgs_name',
   'company',
   'hhp_dollar',
   'tpi',
@@ -61,6 +69,8 @@ const SELECT_COLUMNS = [
   'udp',
   'ftp',
   'rfi',
+  'beta_casein',
+  'kappa_casein',
   'gfi'
 ] as const;
 
