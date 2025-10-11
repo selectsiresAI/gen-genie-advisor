@@ -1529,7 +1529,7 @@ export default function SegmentationPage({
                   borderColor: SS.green,
                   backgroundColor: SS.green,
                   color: SS.white
-                }} disabled={!segmentationEnabled || !segmentationTriggered || loading} className="px-4 py-2 rounded-xl border text-sm flex items-center gap-2 text-zinc-50 bg-red-700 hover:bg-red-600 font-semibold">
+                }} disabled={!segmentationEnabled || !segmentationTriggered || loading} className="px-4 py-2 rounded-xl border text-sm flex items-center gap-2 text-zinc-50 font-semibold bg-red-700 hover:bg-red-600">
                   <Database size={18} /> Salvar Segmentação
                 </button>
               </TooltipTrigger>
