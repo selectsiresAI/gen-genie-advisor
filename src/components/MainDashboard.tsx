@@ -40,9 +40,7 @@ interface Farm {
 type SupabaseFarm = Omit<Farm, 'total_females'> & {
   total_females: number | null;
 };
-
 type DashboardView = 'dashboard' | 'farm' | 'herd' | 'segmentation' | 'bulls' | 'nexus' | 'charts' | 'auditoria' | 'botijao' | 'sms' | 'metas' | 'plano' | 'arquivos' | 'conversao';
-
 type ModuleView = Exclude<DashboardView, 'dashboard' | 'farm'>;
 const MainDashboard: React.FC<MainDashboardProps> = ({
   user,
@@ -57,8 +55,13 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [totalFarms, setTotalFarms] = useState(0);
   const [totalAnimals, setTotalAnimals] = useState(0);
-  const { toast } = useToast();
-  const { setSelectedHerdId, refreshFromSupabase } = useHerdStore();
+  const {
+    toast
+  } = useToast();
+  const {
+    setSelectedHerdId,
+    refreshFromSupabase
+  } = useHerdStore();
   useEffect(() => {
     loadUserData();
   }, []);
@@ -105,7 +108,6 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
         const totalFemales = normalizedFarms.reduce((sum, farm) => sum + farm.total_females, 0);
         setTotalAnimals(totalFemales);
       }
-
     } catch (error: any) {
       console.error('Error loading data:', error);
       toast({
@@ -186,80 +188,64 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   };
   const moduleSections: Array<{
     title: string;
-    items: Array<{ title: string; description: string; view: ModuleView }>;
-  }> = [
-    {
-      title: 'Bancos de Dados',
-      items: [
-        {
-          title: 'Rebanho',
-          description: 'Banco de fêmeas — consultas, filtros e importação',
-          view: 'herd'
-        },
-        {
-          title: 'Busca de Touros',
-          description: 'Base global — pesquisa e comparação',
-          view: 'bulls'
-        },
-        {
-          title: 'Botijão Virtual',
-          description: 'Touros da fazenda — estoque e lotes',
-          view: 'botijao'
-        }
-      ]
-    },
-    {
-      title: 'Análises e Estratégia',
-      items: [
-        {
-          title: 'Segmentação',
-          description: 'Monte índices e classifique o rebanho',
-          view: 'segmentation'
-        },
-        {
-          title: 'Auditoria Genética',
-          description: 'Desempenho por lotes, quartis e tendências',
-          view: 'auditoria'
-        },
-        {
-          title: 'Nexus',
-          description: 'Predições e acasalamentos otimizados',
-          view: 'nexus'
-        }
-      ]
-    },
-    {
-      title: 'Planejamento e Direcionamento',
-      items: [
-        {
-          title: 'Metas',
-          description: 'Defina objetivos de genética e produção',
-          view: 'metas'
-        },
-        {
-          title: 'Plano Genético',
-          description: 'Projeções e cálculo de reposição',
-          view: 'plano'
-        }
-      ]
-    },
-    {
-      title: 'Operações e Suporte',
-      items: [
-        {
-          title: 'Arquivos',
-          description: 'Gerenciamento de documentos e anexos',
-          view: 'arquivos'
-        },
-        {
-          title: 'Conversão (preview)',
-          description: 'Padronize planilhas e cabeçalhos',
-          view: 'conversao'
-        }
-      ]
-    }
-  ];
-
+    items: Array<{
+      title: string;
+      description: string;
+      view: ModuleView;
+    }>;
+  }> = [{
+    title: 'Bancos de Dados',
+    items: [{
+      title: 'Rebanho',
+      description: 'Banco de fêmeas — consultas, filtros e importação',
+      view: 'herd'
+    }, {
+      title: 'Busca de Touros',
+      description: 'Base global — pesquisa e comparação',
+      view: 'bulls'
+    }, {
+      title: 'Botijão Virtual',
+      description: 'Touros da fazenda — estoque e lotes',
+      view: 'botijao'
+    }]
+  }, {
+    title: 'Análises e Estratégia',
+    items: [{
+      title: 'Segmentação',
+      description: 'Monte índices e classifique o rebanho',
+      view: 'segmentation'
+    }, {
+      title: 'Auditoria Genética',
+      description: 'Desempenho por lotes, quartis e tendências',
+      view: 'auditoria'
+    }, {
+      title: 'Nexus',
+      description: 'Predições e acasalamentos otimizados',
+      view: 'nexus'
+    }]
+  }, {
+    title: 'Planejamento e Direcionamento',
+    items: [{
+      title: 'Metas',
+      description: 'Defina objetivos de genética e produção',
+      view: 'metas'
+    }, {
+      title: 'Plano Genético',
+      description: 'Projeções e cálculo de reposição',
+      view: 'plano'
+    }]
+  }, {
+    title: 'Operações e Suporte',
+    items: [{
+      title: 'Arquivos',
+      description: 'Gerenciamento de documentos e anexos',
+      view: 'arquivos'
+    }, {
+      title: 'Conversão (preview)',
+      description: 'Padronize planilhas e cabeçalhos',
+      view: 'conversao'
+    }]
+  }];
   const handleFarmModuleClick = (view: ModuleView) => {
     setCurrentView(view);
   };
@@ -335,29 +321,20 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
             </header>
 
             <div className="space-y-10">
-              {moduleSections.map(section => (
-                <section key={section.title}>
+              {moduleSections.map(section => <section key={section.title}>
                   <h3 className="mb-6 border-b-2 border-[#E00000] pb-1 text-2xl font-bold text-[#E00000]">
                     {section.title}
                   </h3>
                   <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
-                    {section.items.map(item => (
-                      <button
-                        key={item.title}
-                        type="button"
-                        onClick={() => handleFarmModuleClick(item.view)}
-                        className="group rounded-xl border bg-white p-6 text-left shadow-sm transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E00000] focus-visible:ring-offset-2 hover:shadow-lg"
-                      >
+                    {section.items.map(item => <button key={item.title} type="button" onClick={() => handleFarmModuleClick(item.view)} className="group rounded-xl border bg-white p-6 text-left shadow-sm transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E00000] focus-visible:ring-offset-2 hover:shadow-lg">
                         <div className="mb-2 flex items-center">
                           <div className="mr-3 h-3 w-3 rounded-full bg-[#E00000]"></div>
                           <h4 className="text-lg font-semibold text-black">{item.title}</h4>
                         </div>
                         <p className="text-sm text-[#555555]">{item.description}</p>
-                      </button>
-                    ))}
+                      </button>)}
                   </div>
-                </section>
-              ))}
+                </section>)}
             </div>
           </div>
         </div>
@@ -413,7 +390,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
       return <div className="min-h-screen bg-background">
           <div className="border-b">
             <div className="flex h-16 items-center px-4">
-              <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
+              <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4 bg-gray-200 hover:bg-gray-100">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Dashboard
               </Button>

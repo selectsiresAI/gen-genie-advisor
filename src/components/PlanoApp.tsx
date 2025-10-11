@@ -3,13 +3,14 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import ProjecaoGenetica from "./ProjecaoGenetica";
 import CalculadoraReposicao from "./CalculadoraReposicao";
-
-export default function PlanoApp({ onBack }: { onBack: () => void }) {
+export default function PlanoApp({
+  onBack
+}: {
+  onBack: () => void;
+}) {
   const [activeSubmenu, setActiveSubmenu] = useState<"projecao" | "calculadora" | null>(null);
-
   if (activeSubmenu === "projecao") {
-    return (
-      <div className="min-h-screen">
+    return <div className="min-h-screen">
         <div className="p-4 border-b bg-background">
           <Button variant="outline" onClick={() => setActiveSubmenu(null)}>
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -17,13 +18,10 @@ export default function PlanoApp({ onBack }: { onBack: () => void }) {
           </Button>
         </div>
         <ProjecaoGenetica />
-      </div>
-    );
+      </div>;
   }
-
   if (activeSubmenu === "calculadora") {
-    return (
-      <div className="min-h-screen">
+    return <div className="min-h-screen">
         <div className="p-4 border-b bg-background">
           <Button variant="outline" onClick={() => setActiveSubmenu(null)}>
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -31,19 +29,13 @@ export default function PlanoApp({ onBack }: { onBack: () => void }) {
           </Button>
         </div>
         <CalculadoraReposicao />
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-gray-50 p-6">
+  return <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <Button variant="outline" onClick={onBack} className="mb-4">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar
-          </Button>
+          
           <h1 className="text-3xl font-bold text-center mb-2">Plano</h1>
           <p className="text-center text-muted-foreground">
             Escolha uma das funcionalidades abaixo para começar
@@ -79,10 +71,7 @@ export default function PlanoApp({ onBack }: { onBack: () => void }) {
                   Gráficos e relatórios detalhados
                 </div>
               </div>
-              <Button 
-                onClick={() => setActiveSubmenu("projecao")}
-                className="w-full bg-red-600 hover:bg-red-700"
-              >
+              <Button onClick={() => setActiveSubmenu("projecao")} className="w-full bg-red-700 hover:bg-red-600">
                 Acessar Projeção Genética
               </Button>
             </div>
@@ -92,7 +81,7 @@ export default function PlanoApp({ onBack }: { onBack: () => void }) {
           <div className="bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow cursor-pointer border border-gray-200">
             <div className="p-8">
               <div className="text-center mb-6">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 bg-red-50">
                   <span className="text-2xl">📊</span>
                 </div>
                 <h3 className="text-xl font-semibold mb-2">Calculadora de Reposição</h3>
@@ -115,10 +104,7 @@ export default function PlanoApp({ onBack }: { onBack: () => void }) {
                   Análise de investimentos e retornos
                 </div>
               </div>
-              <Button 
-                onClick={() => setActiveSubmenu("calculadora")}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-              >
+              <Button onClick={() => setActiveSubmenu("calculadora")} className="w-full bg-red-700 hover:bg-red-600">
                 Acessar Calculadora de Reposição
               </Button>
             </div>
@@ -136,6 +122,5 @@ export default function PlanoApp({ onBack }: { onBack: () => void }) {
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 }
