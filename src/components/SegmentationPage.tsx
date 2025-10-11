@@ -1500,7 +1500,7 @@ export default function SegmentationPage({
                 <button onClick={triggerSegmentation} style={{
                   background: SS.red,
                   color: SS.white
-                }} className="px-4 py-2 rounded-xl flex items-center gap-2 text-sm text-slate-50 bg-red-700 hover:bg-red-600 font-medium"> 
+                }} className="px-4 py-2 rounded-xl flex items-center gap-2 text-slate-50 bg-red-700 hover:bg-red-600 text-sm font-semibold"> 
                   <Check size={18} /> Aplicar Índice 
                 </button>
               </TooltipTrigger>
