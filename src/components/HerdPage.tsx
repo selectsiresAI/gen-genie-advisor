@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ArrowLeft, Users, Search, Plus, Upload, Download, TrendingUp, Trash2, Loader2 } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -46,6 +47,18 @@ interface HerdPageProps {
 
 type Female = CompleteFemaleDenormRow;
 
+const SOURCE_STATUS_BADGE_STYLES: Record<FemaleSourceAttemptEvent["status"], string> = {
+  start: "border-blue-200 bg-blue-50 text-blue-700",
+  success: "border-green-200 bg-green-50 text-green-700",
+  error: "border-red-200 bg-red-50 text-red-700",
+};
+
+const SOURCE_STATUS_LABEL: Record<FemaleSourceAttemptEvent["status"], string> = {
+  start: "Início",
+  success: "Sucesso",
+  error: "Erro",
+};
+
 const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts }) => {
   const [females, setFemales] = useState<Female[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,6 +72,10 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
   const { setSelectedHerdId, setDashboardCounts } = useHerdStore();
   const tableRegionRef = useRef<HTMLDivElement | null>(null);
   const selectAllCheckboxRef = useRef<HTMLInputElement | null>(null);
+  const diagnosticsCopyResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [sourceDiagnostics, setSourceDiagnostics] = useState<FemaleSourceAttemptEvent[]>([]);
+  const [diagnosticsCopied, setDiagnosticsCopied] = useState(false);
+  const [lastLoadErrorMessage, setLastLoadErrorMessage] = useState<string | null>(null);
 
   const getAutomaticCategory = (birthDate?: string, parityOrder?: number) => {
     if (!birthDate) return 'Indefinida';
@@ -180,8 +197,13 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
     }
   }, [categoryCounts, farm.farm_id, setSelectedHerdId, setDashboardCounts]);
 
+  const formatSourceLabel = useCallback((source: FemaleSourceAttemptEvent["source"]) => {
+    return `${source.type}:${source.name}`;
+  }, []);
+
   const handleSourceAttempt = useCallback((event: FemaleSourceAttemptEvent) => {
-    const sourceLabel = `${event.source.type}:${event.source.name}`;
+    setSourceDiagnostics((previous) => [...previous, event]);
+    const sourceLabel = formatSourceLabel(event.source);
 
     if (event.status === "start") {
       console.debug(`[HerdPage] Tentando carregar fêmeas via ${sourceLabel}`);
@@ -199,13 +221,17 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
       `[HerdPage] ${sourceLabel} falhou${event.willFallback ? " — tentando fallback" : ""}`,
       event.error
     );
-  }, []);
+  }, [formatSourceLabel, setSourceDiagnostics]);
 
   const loadFemales = useCallback(async (showSpinner = true) => {
     try {
       if (showSpinner) {
         setLoading(true);
       }
+
+      setSourceDiagnostics([]);
+      setDiagnosticsCopied(false);
+      setLastLoadErrorMessage(null);
 
       const rows = await fetchFemalesDenormByFarm(farm.farm_id, {
         order: { column: 'created_at', ascending: false },
@@ -223,11 +249,16 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
 
       console.log(`[HerdPage] Loaded ${completeRows.length} females from females_denorm`);
       setFemales(completeRows);
+      setLastLoadErrorMessage(null);
     } catch (error) {
       console.error('Error loading females:', error);
       const supabaseError = error as PostgrestError | undefined;
       const descriptionMessage =
         supabaseError?.message || (error instanceof Error ? error.message : null);
+
+      setLastLoadErrorMessage(
+        descriptionMessage ?? 'Erro ao carregar dados do rebanho'
+      );
 
       toast({
         title: "Erro",
@@ -247,6 +278,14 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
   useEffect(() => {
     loadFemales();
   }, [loadFemales]);
+
+  useEffect(() => {
+    return () => {
+      if (diagnosticsCopyResetRef.current) {
+        clearTimeout(diagnosticsCopyResetRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     setSelectedFemales(prev => prev.filter(id => females.some(female => female.id === id)));
@@ -323,6 +362,73 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
       </div>
     );
   };
+
+  const hasErrorDiagnostic = useMemo(
+    () => sourceDiagnostics.some(event => event.status === "error"),
+    [sourceDiagnostics]
+  );
+
+  const diagnosticsText = useMemo(() => {
+    const lines = sourceDiagnostics.map((event) => {
+      const label = formatSourceLabel(event.source);
+
+      if (event.status === "start") {
+        return `→ Tentando fonte ${label}`;
+      }
+
+      if (event.status === "success") {
+        return `✓ Fonte ${label} retornou ${event.rowCount} linha${event.rowCount === 1 ? '' : 's'}`;
+      }
+
+      const errorMessage = (event.error as PostgrestError | Error)?.message ?? 'Erro desconhecido';
+      return `✗ Fonte ${label} falhou${event.willFallback ? ' (tentando fallback)' : ''}: ${errorMessage}`;
+    });
+
+    if (lastLoadErrorMessage) {
+      lines.push(`Erro final exibido ao usuário: ${lastLoadErrorMessage}`);
+    }
+
+    return lines.join('\n');
+  }, [formatSourceLabel, lastLoadErrorMessage, sourceDiagnostics]);
+
+  const handleCopyDiagnostics = useCallback(async () => {
+    if (!diagnosticsText) {
+      return;
+    }
+
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(diagnosticsText);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = diagnosticsText;
+        textarea.setAttribute('readonly', 'true');
+        textarea.style.position = 'absolute';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+
+      setDiagnosticsCopied(true);
+      if (diagnosticsCopyResetRef.current) {
+        clearTimeout(diagnosticsCopyResetRef.current);
+      }
+      diagnosticsCopyResetRef.current = setTimeout(() => {
+        setDiagnosticsCopied(false);
+      }, 2500);
+    } catch (copyError) {
+      console.error('Erro ao copiar diagnóstico das fontes de fêmeas', copyError);
+      toast({
+        title: 'Não foi possível copiar o diagnóstico',
+        description: copyError instanceof Error ? copyError.message : 'Erro inesperado ao copiar o diagnóstico.',
+        variant: 'destructive',
+      });
+    }
+  }, [diagnosticsText, toast]);
+
+  const showDiagnosticsAlert = (hasErrorDiagnostic || Boolean(lastLoadErrorMessage)) && Boolean(diagnosticsText);
 
   const handleSelectFemale = (femaleId: string) => {
     setSelectedFemales(prev => 
@@ -608,6 +714,62 @@ const HerdPage: React.FC<HerdPageProps> = ({ farm, onBack, onNavigateToCharts })
 
       <div className="container mx-auto px-4 py-8">
         <div className="space-y-6">
+          {showDiagnosticsAlert && (
+            <Alert variant={lastLoadErrorMessage ? 'destructive' : 'default'}>
+              <AlertTitle>Diagnóstico do carregamento das fêmeas</AlertTitle>
+              <AlertDescription>
+                {lastLoadErrorMessage && (
+                  <p className="text-sm font-medium text-destructive">
+                    {lastLoadErrorMessage}
+                  </p>
+                )}
+                <ul className="mt-3 space-y-2 text-sm">
+                  {sourceDiagnostics.map((event, index) => {
+                    const label = formatSourceLabel(event.source);
+                    const statusClass = SOURCE_STATUS_BADGE_STYLES[event.status];
+                    const statusLabel = SOURCE_STATUS_LABEL[event.status];
+                    let description = '';
+
+                    if (event.status === 'start') {
+                      description = `Iniciando tentativa com ${label}`;
+                    } else if (event.status === 'success') {
+                      description = `${label} retornou ${event.rowCount} linha${event.rowCount === 1 ? '' : 's'}`;
+                    } else {
+                      const errorMessage = (event.error as PostgrestError | Error)?.message ?? 'Erro desconhecido';
+                      description = `${label} falhou${event.willFallback ? ' — tentando fallback' : ''}: ${errorMessage}`;
+                    }
+
+                    return (
+                      <li key={`${label}-${index}`} className="flex items-start gap-3">
+                        <Badge variant="outline" className={statusClass}>
+                          {statusLabel}
+                        </Badge>
+                        <span className="font-mono text-xs sm:text-sm leading-snug">
+                          {description}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyDiagnostics}
+                    disabled={!diagnosticsText}
+                  >
+                    {diagnosticsCopied ? 'Copiado!' : 'Copiar diagnóstico'}
+                  </Button>
+                  {!hasErrorDiagnostic && !lastLoadErrorMessage && (
+                    <span className="text-xs text-muted-foreground">
+                      Sem erros no momento, mas mantivemos as tentativas para referência.
+                    </span>
+                  )}
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Header with Category Stats */}
           <div className="grid gap-4 md:grid-cols-6">
             <Card data-testid="card-total-femeas">
