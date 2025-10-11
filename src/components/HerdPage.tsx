@@ -590,7 +590,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
                         {filteredFemales.map(female => {
                         const fonteDisplay = getFonteDisplay(female.fonte);
                         return <tr key={female.id} className="hover:bg-muted/50">
-                            <td className="border px-2 py-1 text-xs">
+                            <td className="border px-2 py-1 text-xs bg-gray-200">
                               <input type="checkbox" checked={selectedFemales.includes(female.id)} onChange={() => handleSelectFemale(female.id)} className="mr-1" />
                             </td>
                             <td className="border px-2 py-1 text-xs">{farm.farm_id}</td>
