@@ -293,7 +293,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" onClick={handleBackToDashboard} className="flex items-center">
+                  <Button variant="ghost" onClick={handleBackToDashboard} className="flex items-center bg-gray-200 hover:bg-gray-100">
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Voltar
                   </Button>
