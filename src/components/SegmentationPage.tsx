@@ -1500,7 +1500,7 @@ export default function SegmentationPage({
                 <button onClick={triggerSegmentation} style={{
                   background: SS.red,
                   color: SS.white
-                }} className="px-4 py-2 rounded-xl flex items-center gap-2 text-sm text-slate-50 bg-red-700 hover:bg-red-600"> 
+                }} className="px-4 py-2 rounded-xl flex items-center gap-2 text-sm text-slate-50 bg-red-700 hover:bg-red-600 font-medium"> 
                   <Check size={18} /> Aplicar Índice 
                 </button>
               </TooltipTrigger>
@@ -1529,7 +1529,7 @@ export default function SegmentationPage({
                   borderColor: SS.green,
                   backgroundColor: SS.green,
                   color: SS.white
-                }} disabled={!segmentationEnabled || !segmentationTriggered || loading} className="px-4 py-2 rounded-xl border text-sm flex items-center gap-2 text-zinc-50 bg-red-700 hover:bg-red-600">
+                }} disabled={!segmentationEnabled || !segmentationTriggered || loading} className="px-4 py-2 rounded-xl border text-sm flex items-center gap-2 text-zinc-50 bg-red-700 hover:bg-red-600 font-semibold">
                   <Database size={18} /> Salvar Segmentação
                 </button>
               </TooltipTrigger>
