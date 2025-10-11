@@ -5,12 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Building2, Users, Beef, BarChart3, Plus, LogOut, Zap, ArrowLeft, ArrowLeftRight, TrendingUp, Beaker, MessageSquare, Target, FolderOpen, Calculator, Trash2 } from "lucide-react";
+import { Building2, Users, Beef, BarChart3, Plus, LogOut, Zap, ArrowLeft, ArrowLeftRight, TrendingUp, Beaker, Target, FolderOpen, Calculator, Trash2 } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import CreateFarmModal from './CreateFarmModal';
 import BotijaoVirtualPage from './BotijaoVirtual';
-import SMSPage from './SMS';
 import MetasPage from './Metas';
 import PastaArquivosPage from './PastaArquivos';
 import PlanoApp from './PlanoApp';
@@ -52,7 +51,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'farm' | 'herd' | 'segmentation' | 'bulls' | 'nexus' | 'charts' | 'auditoria' | 'botijao' | 'sms' | 'metas' | 'plano' | 'arquivos' | 'conversao'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'farm' | 'herd' | 'segmentation' | 'bulls' | 'nexus' | 'charts' | 'auditoria' | 'botijao' | 'metas' | 'plano' | 'arquivos' | 'conversao'>('dashboard');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [totalFarms, setTotalFarms] = useState(0);
   const [totalAnimals, setTotalAnimals] = useState(0);
@@ -399,25 +398,6 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('sms')}>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <MessageSquare className="w-5 h-5 text-primary" />
-                        SMS
-                      </CardTitle>
-                      <CardDescription>
-                        Comunicação e notificações
-                      </CardDescription>
-                    </CardHeader>
-                  </Card>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Envio de SMS para clientes e sistema de comunicação da fazenda</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
                   <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setCurrentView('arquivos')}>
                     <CardHeader className="pb-3">
                       <CardTitle className="flex items-center gap-2 text-base">
@@ -634,22 +614,6 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
               localStorage.removeItem(`selected-females-${selectedFarm.farm_id}`);
               handleBackToDashboard();
             }} />
-            </div>
-          </div>;
-      }
-      if (currentView === 'sms') {
-        return <div className="min-h-screen bg-background">
-            <div className="border-b">
-              <div className="flex h-16 items-center px-4">
-                <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Dashboard
-                </Button>
-                <h1 className="text-xl font-semibold">{selectedFarm?.farm_name} - SMS</h1>
-              </div>
-            </div>
-            <div className="container mx-auto px-4 py-8">
-              <SMSPage farm={farmData} onBack={handleBackToDashboard} />
             </div>
           </div>;
       }
