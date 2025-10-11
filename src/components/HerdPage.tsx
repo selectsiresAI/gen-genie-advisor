@@ -365,19 +365,19 @@ const HerdPage: React.FC<HerdPageProps> = ({
             <Card data-testid="card-bezerras">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                  
                   Bezerras
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-blue-700">{categoryCounts.bezerras}</div>
+                <div className="text-2xl font-bold text-blue-700 bg-slate-50">{categoryCounts.bezerras}</div>
               </CardContent>
             </Card>
 
             <Card data-testid="card-novilhas">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                  
                   Novilhas
                 </CardTitle>
               </CardHeader>
@@ -389,7 +389,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
             <Card data-testid="card-primiparas">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                  
                   Primíparas
                 </CardTitle>
               </CardHeader>
@@ -401,7 +401,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
             <Card data-testid="card-secundiparas">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                  
                   Secundíparas
                 </CardTitle>
               </CardHeader>
@@ -413,7 +413,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
             <Card data-testid="card-multiparas">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  
                   Multíparas
                 </CardTitle>
               </CardHeader>
