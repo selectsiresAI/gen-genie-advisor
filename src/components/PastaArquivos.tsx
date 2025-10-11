@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Upload, FileText, FileSpreadsheet, File, Trash2, Download, Search, ChartBar, Beaker, TrendingUp, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFileStore, SavedReport } from "@/hooks/useFileStore";
-
 interface ArquivoItem {
   id: string;
   nome: string;
@@ -16,42 +15,34 @@ interface ArquivoItem {
   dataUpload: string;
   arquivo: File;
 }
-
 interface PastaArquivosPageProps {
   onBack: () => void;
 }
-
-export default function PastaArquivosPage({ onBack }: PastaArquivosPageProps) {
+export default function PastaArquivosPage({
+  onBack
+}: PastaArquivosPageProps) {
   const [arquivos, setArquivos] = useState<ArquivoItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
-  const { reports, removeReport } = useFileStore();
-
+  const {
+    toast
+  } = useToast();
+  const {
+    reports,
+    removeReport
+  } = useFileStore();
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
-
     setIsUploading(true);
-    
     try {
       const novosArquivos: ArquivoItem[] = [];
-      
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        
+
         // Validar tipo de arquivo
-        const tiposPermitidos = [
-          'application/pdf',
-          'application/vnd.ms-excel',
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          'text/csv',
-          'application/msword',
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          'text/plain'
-        ];
-        
+        const tiposPermitidos = ['application/pdf', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
         if (!tiposPermitidos.includes(file.type)) {
           toast({
             title: "Tipo de arquivo não suportado",
@@ -70,7 +61,6 @@ export default function PastaArquivosPage({ onBack }: PastaArquivosPageProps) {
           });
           continue;
         }
-
         const novoArquivo: ArquivoItem = {
           id: Date.now().toString() + i,
           nome: file.name,
@@ -79,12 +69,9 @@ export default function PastaArquivosPage({ onBack }: PastaArquivosPageProps) {
           dataUpload: new Date().toISOString(),
           arquivo: file
         };
-
         novosArquivos.push(novoArquivo);
       }
-
       setArquivos(prev => [...prev, ...novosArquivos]);
-      
       if (novosArquivos.length > 0) {
         toast({
           title: "Arquivos enviados",
@@ -104,7 +91,6 @@ export default function PastaArquivosPage({ onBack }: PastaArquivosPageProps) {
       }
     }
   };
-
   const removerArquivo = (id: string) => {
     setArquivos(prev => prev.filter(arquivo => arquivo.id !== id));
     toast({
@@ -112,7 +98,6 @@ export default function PastaArquivosPage({ onBack }: PastaArquivosPageProps) {
       description: "O arquivo foi removido com sucesso."
     });
   };
-
   const downloadArquivo = (arquivo: ArquivoItem) => {
     const url = URL.createObjectURL(arquivo.arquivo);
     const link = document.createElement('a');
@@ -123,7 +108,6 @@ export default function PastaArquivosPage({ onBack }: PastaArquivosPageProps) {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
-
   const formatarTamanho = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -131,7 +115,6 @@ export default function PastaArquivosPage({ onBack }: PastaArquivosPageProps) {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
-
   const getIconeArquivo = (tipo: string) => {
     if (tipo.includes('pdf')) return <FileText className="w-8 h-8 text-red-500" />;
     if (tipo.includes('excel') || tipo.includes('spreadsheet') || tipo.includes('csv')) {
@@ -139,7 +122,6 @@ export default function PastaArquivosPage({ onBack }: PastaArquivosPageProps) {
     }
     return <File className="w-8 h-8 text-blue-500" />;
   };
-
   const getReportIcon = (type: SavedReport['type']) => {
     switch (type) {
       case 'segmentation':
@@ -152,7 +134,6 @@ export default function PastaArquivosPage({ onBack }: PastaArquivosPageProps) {
         return <FileText className="w-8 h-8 text-gray-500" />;
     }
   };
-
   const getReportTypeName = (type: SavedReport['type']) => {
     switch (type) {
       case 'segmentation':
@@ -165,7 +146,6 @@ export default function PastaArquivosPage({ onBack }: PastaArquivosPageProps) {
         return 'Relatório';
     }
   };
-
   const downloadReport = async (report: SavedReport) => {
     try {
       if (report.fileBlob) {
@@ -193,7 +173,6 @@ export default function PastaArquivosPage({ onBack }: PastaArquivosPageProps) {
       });
     }
   };
-
   const removeReportFile = (id: string) => {
     removeReport(id);
     toast({
@@ -201,57 +180,33 @@ export default function PastaArquivosPage({ onBack }: PastaArquivosPageProps) {
       description: "O relatório foi removido com sucesso."
     });
   };
-
-  const arquivosFiltrados = arquivos.filter(arquivo =>
-    arquivo.nome.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const reportsFiltrados = reports.filter(report =>
-    report.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  return (
-    <div className="min-h-screen bg-background p-6">
+  const arquivosFiltrados = arquivos.filter(arquivo => arquivo.nome.toLowerCase().includes(searchTerm.toLowerCase()));
+  const reportsFiltrados = reports.filter(report => report.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  return <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="outline" onClick={onBack}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar
-            </Button>
+            
             <h1 className="text-2xl font-bold">Pasta de Arquivos</h1>
           </div>
-          <Button 
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-          >
+          <Button onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
             <Upload className="w-4 h-4 mr-2" />
             {isUploading ? "Enviando..." : "Adicionar Arquivos"}
           </Button>
         </div>
 
         {/* Input de upload (hidden) */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.txt"
-          onChange={handleFileUpload}
-          style={{ display: 'none' }}
-        />
+        <input ref={fileInputRef} type="file" multiple accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.txt" onChange={handleFileUpload} style={{
+        display: 'none'
+      }} />
 
         {/* Busca */}
         <Card>
           <CardContent className="p-4">
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar arquivos..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-              />
+              <Input placeholder="Buscar arquivos..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9" />
             </div>
           </CardContent>
         </Card>
@@ -273,26 +228,16 @@ export default function PastaArquivosPage({ onBack }: PastaArquivosPageProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {reportsFiltrados.length === 0 ? (
-                  <div className="text-center py-12">
+                {reportsFiltrados.length === 0 ? <div className="text-center py-12">
                     <ChartBar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-muted-foreground mb-2">
                       {reports.length === 0 ? "Nenhum relatório salvo" : "Nenhum relatório encontrado"}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {reports.length === 0 
-                        ? "Os relatórios das páginas de Segmentação, Botijão Virtual e Projeção Genética aparecerão aqui"
-                        : "Tente uma busca diferente"
-                      }
+                      {reports.length === 0 ? "Os relatórios das páginas de Segmentação, Botijão Virtual e Projeção Genética aparecerão aqui" : "Tente uma busca diferente"}
                     </p>
-                  </div>
-                ) : (
-                  <div className="grid gap-4">
-                    {reportsFiltrados.map((report) => (
-                      <div
-                        key={report.id}
-                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                      >
+                  </div> : <div className="grid gap-4">
+                    {reportsFiltrados.map(report => <div key={report.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
                         <div className="flex items-center gap-4">
                           {getReportIcon(report.type)}
                           <div>
@@ -306,34 +251,21 @@ export default function PastaArquivosPage({ onBack }: PastaArquivosPageProps) {
                                 {new Date(report.metadata.createdAt).toLocaleDateString('pt-BR')}
                               </p>
                             </div>
-                            {report.metadata.description && (
-                              <p className="text-xs text-muted-foreground mt-1">
+                            {report.metadata.description && <p className="text-xs text-muted-foreground mt-1">
                                 {report.metadata.description}
-                              </p>
-                            )}
+                              </p>}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => downloadReport(report)}
-                          >
+                          <Button variant="outline" size="sm" onClick={() => downloadReport(report)}>
                             <Download className="w-4 h-4" />
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => removeReportFile(report.id)}
-                            className="text-red-600 hover:text-red-700"
-                          >
+                          <Button variant="outline" size="sm" onClick={() => removeReportFile(report.id)} className="text-red-600 hover:text-red-700">
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      </div>)}
+                  </div>}
               </CardContent>
             </Card>
           </TabsContent>
@@ -345,32 +277,20 @@ export default function PastaArquivosPage({ onBack }: PastaArquivosPageProps) {
                 <CardTitle>Arquivos Enviados Manualmente</CardTitle>
               </CardHeader>
               <CardContent>
-                {arquivosFiltrados.length === 0 ? (
-                  <div className="text-center py-12">
+                {arquivosFiltrados.length === 0 ? <div className="text-center py-12">
                     <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-muted-foreground mb-2">
                       {arquivos.length === 0 ? "Nenhum arquivo enviado" : "Nenhum arquivo encontrado"}
                     </h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      {arquivos.length === 0 
-                        ? "Adicione arquivos PDF, Excel ou outros documentos"
-                        : "Tente uma busca diferente"
-                      }
+                      {arquivos.length === 0 ? "Adicione arquivos PDF, Excel ou outros documentos" : "Tente uma busca diferente"}
                     </p>
-                    {arquivos.length === 0 && (
-                      <Button onClick={() => fileInputRef.current?.click()}>
+                    {arquivos.length === 0 && <Button onClick={() => fileInputRef.current?.click()}>
                         <Upload className="w-4 h-4 mr-2" />
                         Adicionar Primeiro Arquivo
-                      </Button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="grid gap-4">
-                    {arquivosFiltrados.map((arquivo) => (
-                      <div
-                        key={arquivo.id}
-                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                      >
+                      </Button>}
+                  </div> : <div className="grid gap-4">
+                    {arquivosFiltrados.map(arquivo => <div key={arquivo.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
                         <div className="flex items-center gap-4">
                           {getIconeArquivo(arquivo.tipo)}
                           <div>
@@ -382,26 +302,15 @@ export default function PastaArquivosPage({ onBack }: PastaArquivosPageProps) {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => downloadArquivo(arquivo)}
-                          >
+                          <Button variant="outline" size="sm" onClick={() => downloadArquivo(arquivo)}>
                             <Download className="w-4 h-4" />
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => removerArquivo(arquivo.id)}
-                            className="text-red-600 hover:text-red-700"
-                          >
+                          <Button variant="outline" size="sm" onClick={() => removerArquivo(arquivo.id)} className="text-red-600 hover:text-red-700">
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      </div>)}
+                  </div>}
               </CardContent>
             </Card>
           </TabsContent>
@@ -451,6 +360,5 @@ export default function PastaArquivosPage({ onBack }: PastaArquivosPageProps) {
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    </div>;
 }

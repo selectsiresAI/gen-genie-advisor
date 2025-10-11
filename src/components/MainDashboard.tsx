@@ -5,12 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Building2, Users, Beef, BarChart3, Plus, LogOut, Zap, ArrowLeft, ArrowLeftRight, TrendingUp, Beaker, MessageSquare, Target, FolderOpen, Calculator, Trash2 } from "lucide-react";
+import { Building2, Users, Beef, BarChart3, Plus, LogOut, Zap, ArrowLeft, ArrowLeftRight, TrendingUp, Beaker, Target, FolderOpen, Calculator, Trash2 } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import CreateFarmModal from './CreateFarmModal';
 import BotijaoVirtualPage from './BotijaoVirtual';
-import SMSPage from './SMS';
 import MetasPage from './Metas';
 import PastaArquivosPage from './PastaArquivos';
 import PlanoApp from './PlanoApp';
@@ -24,7 +23,6 @@ import { usePlanStore } from '@/hooks/usePlanStore';
 import { useHerdStore } from '@/hooks/useHerdStore';
 import ConversaoPage from '@/pages/tools/conversao';
 import AuditoriaGeneticaPage from '@/pages/AuditoriaGeneticaPage';
-
 interface MainDashboardProps {
   user: User;
   onLogout: () => void;
@@ -39,7 +37,6 @@ interface Farm {
   selected_bulls: number;
   created_at: string;
 }
-
 type SupabaseFarm = Omit<Farm, 'total_females'> & {
   total_females: number | null;
 };
@@ -93,7 +90,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
           variant: "destructive"
         });
       } else {
-        const rawFarms = (farmsData as SupabaseFarm[]) ?? [];
+        const rawFarms = farmsData as SupabaseFarm[] ?? [];
         const normalizedFarms: Farm[] = rawFarms.map(farm => {
           const normalizedCount = Number(farm.total_females ?? 0);
           return {
@@ -101,7 +98,6 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
             total_females: Number.isFinite(normalizedCount) ? normalizedCount : 0
           };
         });
-
         setFarms(normalizedFarms);
 
         // Calcular totais
@@ -178,11 +174,10 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   const handleFarmSelect = async (farm: Farm) => {
     setSelectedFarm(farm);
     setCurrentView('farm');
-    
+
     // Automatically load herd data when entering farm
     setSelectedHerdId(farm.farm_id);
     await refreshFromSupabase(farm.farm_id);
-    
     console.log('🏠 Entrando na fazenda e carregando rebanho automaticamente:', farm.farm_name);
   };
   const handleBackToDashboard = () => {
@@ -402,7 +397,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
       return <div className="min-h-screen bg-background">
           <div className="border-b">
             <div className="flex h-16 items-center px-4">
-              <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
+              <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4 bg-slate-200 hover:bg-slate-100">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Dashboard
               </Button>
@@ -507,7 +502,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                 localStorage.removeItem(`selected-bulls-${selectedFarm.farm_id}`);
                 localStorage.removeItem(`selected-females-${selectedFarm.farm_id}`);
                 handleBackToDashboard();
-              }} className="mr-4">
+              }} className="mr-4 bg-slate-200 hover:bg-slate-100">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Dashboard
                 </Button>
@@ -528,27 +523,11 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
             </div>
           </div>;
       }
-      if (currentView === 'sms') {
-        return <div className="min-h-screen bg-background">
-            <div className="border-b">
-              <div className="flex h-16 items-center px-4">
-                <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Dashboard
-                </Button>
-                <h1 className="text-xl font-semibold">{selectedFarm?.farm_name} - SMS</h1>
-              </div>
-            </div>
-            <div className="container mx-auto px-4 py-8">
-              <SMSPage farm={farmData} onBack={handleBackToDashboard} />
-            </div>
-          </div>;
-      }
       if (currentView === 'metas') {
         return <div className="min-h-screen bg-background">
             <div className="border-b">
               <div className="flex h-16 items-center px-4">
-                <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
+                <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4 bg-slate-200 hover:bg-slate-100">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Dashboard
                 </Button>
@@ -587,7 +566,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
         return <div className="min-h-screen bg-background">
             <div className="border-b">
               <div className="flex h-16 items-center px-4">
-                <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4">
+                <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4 bg-slate-200 hover:bg-slate-100">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Dashboard
                 </Button>
@@ -636,7 +615,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
       <div className="border-b">
         <div className="flex h-16 items-center px-4">
           <div className="flex items-center space-x-4">
-            <Building2 className="w-8 h-8 text-primary" />
+            
             <h1 className="text-2xl font-bold">ToolSS</h1>
           </div>
           
@@ -652,7 +631,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                 <p className="text-muted-foreground">{user.email}</p>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
+            <Button variant="outline" size="sm" onClick={handleLogout} className="bg-slate-200 hover:bg-slate-100">
               <LogOut className="w-4 h-4 mr-2" />
               Sair
             </Button>
@@ -719,7 +698,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                       <div className="flex justify-between text-sm">
                         <div className="flex items-center gap-1">
                           <Users className="w-4 h-4 text-muted-foreground" />
-                          <span>{(farm.total_females ?? 0)} fêmeas</span>
+                          <span>{farm.total_females ?? 0} fêmeas</span>
                         </div>
                         <div className="flex items-center gap-1">
                           
@@ -775,7 +754,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
           {/* Footer */}
           <div className="pt-8 border-t">
             <div className="text-center text-sm text-muted-foreground">
-              <p>ToolSS - Sistema de Seleção de Touros</p>
+              <p>ToolSS </p>
               <p>Desenvolvido para otimizar a genética do seu rebanho</p>
             </div>
           </div>

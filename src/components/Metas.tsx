@@ -7,17 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Save, Trash2, Plus, Target, TrendingUp, Users, Milk, Heart, Activity } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
 interface Farm {
   id: string;
   nome: string;
 }
-
 interface MetasPageProps {
   farm: Farm;
   onBack: () => void;
 }
-
 interface MetaGenetica {
   id: string;
   nome: string;
@@ -26,7 +23,6 @@ interface MetaGenetica {
   unidade: string;
   categoria: "genetica" | "fenotipica";
 }
-
 interface MetaReproductiva {
   id: string;
   nome: string;
@@ -34,7 +30,6 @@ interface MetaReproductiva {
   valorMeta: number;
   unidade: string;
 }
-
 interface MetaProducao {
   id: string;
   nome: string;
@@ -42,14 +37,12 @@ interface MetaProducao {
   valorMeta: number;
   unidade: string;
 }
-
 interface MetaPopulacional {
   id: string;
   categoria: string;
   quantidadeAtual: number;
   quantidadeMeta: number;
 }
-
 interface MetasSistema {
   metasGeneticas: MetaGenetica[];
   metasReproductivas: MetaReproductiva[];
@@ -58,56 +51,95 @@ interface MetasSistema {
   anotacoes: string;
   dataAtualizacao: string;
 }
-
-const metasGeneticasPadrao: Omit<MetaGenetica, 'id' | 'valorAtual' | 'valorMeta'>[] = [
-  { nome: "TPI", unidade: "pontos", categoria: "genetica" },
-  { nome: "NM$", unidade: "dólares", categoria: "genetica" },
-  { nome: "Milk", unidade: "libras", categoria: "genetica" },
-  { nome: "Fat", unidade: "libras", categoria: "genetica" },
-  { nome: "Protein", unidade: "libras", categoria: "genetica" },
-  { nome: "SCS", unidade: "pontos", categoria: "genetica" },
-  { nome: "DPR", unidade: "pontos", categoria: "genetica" },
-  { nome: "PTAT", unidade: "pontos", categoria: "genetica" }
-];
-
-const metasFenotipicasPadrao: Omit<MetaGenetica, 'id' | 'valorAtual' | 'valorMeta'>[] = [
-  { nome: "Escore Corporal Médio", unidade: "pontos", categoria: "fenotipica" },
-  { nome: "Peso Médio", unidade: "kg", categoria: "fenotipica" },
-  { nome: "Altura Média", unidade: "cm", categoria: "fenotipica" }
-];
-
-const metasReproductivasPadrao: Omit<MetaReproductiva, 'id' | 'valorAtual' | 'valorMeta'>[] = [
-  { nome: "Taxa de Prenhez", unidade: "%" },
-  { nome: "Taxa de Concepção", unidade: "%" },
-  { nome: "Intervalo entre Partos", unidade: "dias" },
-  { nome: "Idade ao Primeiro Parto", unidade: "meses" },
-  { nome: "Taxa de Retenção de Placenta", unidade: "%" },
-  { nome: "Taxa de Mastite", unidade: "%" }
-];
-
-const metasProducaoPadrao: Omit<MetaProducao, 'id' | 'valorAtual' | 'valorMeta'>[] = [
-  { nome: "Produção de Leite/Dia", unidade: "litros" },
-  { nome: "Produção de Leite/Lactação", unidade: "litros" },
-  { nome: "Teor de Gordura", unidade: "%" },
-  { nome: "Teor de Proteína", unidade: "%" },
-  { nome: "CCS Médio", unidade: "mil/ml" },
-  { nome: "Persistência de Lactação", unidade: "%" }
-];
-
-const categoriasPopulacionais = [
-  "Novilhas (0-12 meses)",
-  "Novilhas (12-24 meses)", 
-  "Novilhas Prenhes",
-  "Primíparas",
-  "Secundíparas",
-  "Multíparas",
-  "Vacas Secas",
-  "Vacas em Lactação",
-  "Doadoras",
-  "Receptoras"
-];
-
-export default function MetasPage({ farm, onBack }: MetasPageProps) {
+const metasGeneticasPadrao: Omit<MetaGenetica, 'id' | 'valorAtual' | 'valorMeta'>[] = [{
+  nome: "TPI",
+  unidade: "pontos",
+  categoria: "genetica"
+}, {
+  nome: "NM$",
+  unidade: "dólares",
+  categoria: "genetica"
+}, {
+  nome: "Milk",
+  unidade: "libras",
+  categoria: "genetica"
+}, {
+  nome: "Fat",
+  unidade: "libras",
+  categoria: "genetica"
+}, {
+  nome: "Protein",
+  unidade: "libras",
+  categoria: "genetica"
+}, {
+  nome: "SCS",
+  unidade: "pontos",
+  categoria: "genetica"
+}, {
+  nome: "DPR",
+  unidade: "pontos",
+  categoria: "genetica"
+}, {
+  nome: "PTAT",
+  unidade: "pontos",
+  categoria: "genetica"
+}];
+const metasFenotipicasPadrao: Omit<MetaGenetica, 'id' | 'valorAtual' | 'valorMeta'>[] = [{
+  nome: "Escore Corporal Médio",
+  unidade: "pontos",
+  categoria: "fenotipica"
+}, {
+  nome: "Peso Médio",
+  unidade: "kg",
+  categoria: "fenotipica"
+}, {
+  nome: "Altura Média",
+  unidade: "cm",
+  categoria: "fenotipica"
+}];
+const metasReproductivasPadrao: Omit<MetaReproductiva, 'id' | 'valorAtual' | 'valorMeta'>[] = [{
+  nome: "Taxa de Prenhez",
+  unidade: "%"
+}, {
+  nome: "Taxa de Concepção",
+  unidade: "%"
+}, {
+  nome: "Intervalo entre Partos",
+  unidade: "dias"
+}, {
+  nome: "Idade ao Primeiro Parto",
+  unidade: "meses"
+}, {
+  nome: "Taxa de Retenção de Placenta",
+  unidade: "%"
+}, {
+  nome: "Taxa de Mastite",
+  unidade: "%"
+}];
+const metasProducaoPadrao: Omit<MetaProducao, 'id' | 'valorAtual' | 'valorMeta'>[] = [{
+  nome: "Produção de Leite/Dia",
+  unidade: "litros"
+}, {
+  nome: "Produção de Leite/Lactação",
+  unidade: "litros"
+}, {
+  nome: "Teor de Gordura",
+  unidade: "%"
+}, {
+  nome: "Teor de Proteína",
+  unidade: "%"
+}, {
+  nome: "CCS Médio",
+  unidade: "mil/ml"
+}, {
+  nome: "Persistência de Lactação",
+  unidade: "%"
+}];
+const categoriasPopulacionais = ["Novilhas (0-12 meses)", "Novilhas (12-24 meses)", "Novilhas Prenhes", "Primíparas", "Secundíparas", "Multíparas", "Vacas Secas", "Vacas em Lactação", "Doadoras", "Receptoras"];
+export default function MetasPage({
+  farm,
+  onBack
+}: MetasPageProps) {
   const [metas, setMetas] = useState<MetasSistema>({
     metasGeneticas: [],
     metasReproductivas: [],
@@ -116,8 +148,9 @@ export default function MetasPage({ farm, onBack }: MetasPageProps) {
     anotacoes: "",
     dataAtualizacao: new Date().toISOString()
   });
-
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
 
   // Carregar dados salvos do localStorage
   useEffect(() => {
@@ -134,44 +167,36 @@ export default function MetasPage({ farm, onBack }: MetasPageProps) {
       inicializarMetasPadrao();
     }
   }, [farm.id]);
-
   const inicializarMetasPadrao = () => {
-    const metasGeneticasInit = [
-      ...metasGeneticasPadrao.map(meta => ({
-        ...meta,
-        id: Date.now().toString() + Math.random().toString(),
-        valorAtual: 0,
-        valorMeta: 0
-      })),
-      ...metasFenotipicasPadrao.map(meta => ({
-        ...meta,
-        id: Date.now().toString() + Math.random().toString(),
-        valorAtual: 0,
-        valorMeta: 0
-      }))
-    ];
-
+    const metasGeneticasInit = [...metasGeneticasPadrao.map(meta => ({
+      ...meta,
+      id: Date.now().toString() + Math.random().toString(),
+      valorAtual: 0,
+      valorMeta: 0
+    })), ...metasFenotipicasPadrao.map(meta => ({
+      ...meta,
+      id: Date.now().toString() + Math.random().toString(),
+      valorAtual: 0,
+      valorMeta: 0
+    }))];
     const metasReproductivasInit = metasReproductivasPadrao.map(meta => ({
       ...meta,
       id: Date.now().toString() + Math.random().toString(),
       valorAtual: 0,
       valorMeta: 0
     }));
-
     const metasProducaoInit = metasProducaoPadrao.map(meta => ({
       ...meta,
       id: Date.now().toString() + Math.random().toString(),
       valorAtual: 0,
       valorMeta: 0
     }));
-
     const metasPopulacionaisInit = categoriasPopulacionais.map(categoria => ({
       id: Date.now().toString() + Math.random().toString(),
       categoria,
       quantidadeAtual: 0,
       quantidadeMeta: 0
     }));
-
     setMetas({
       metasGeneticas: metasGeneticasInit,
       metasReproductivas: metasReproductivasInit,
@@ -188,7 +213,6 @@ export default function MetasPage({ farm, onBack }: MetasPageProps) {
       localStorage.setItem(`metas-${farm.id}`, JSON.stringify(metas));
     }
   }, [metas, farm.id]);
-
   const salvarMetas = () => {
     const metasAtualizadas = {
       ...metas,
@@ -196,49 +220,47 @@ export default function MetasPage({ farm, onBack }: MetasPageProps) {
     };
     setMetas(metasAtualizadas);
     localStorage.setItem(`metas-${farm.id}`, JSON.stringify(metasAtualizadas));
-    
     toast({
       title: "Metas salvas",
       description: "Suas metas foram salvas com sucesso."
     });
   };
-
   const atualizarMetaGenetica = (id: string, campo: 'valorAtual' | 'valorMeta', valor: number) => {
     setMetas(prev => ({
       ...prev,
-      metasGeneticas: prev.metasGeneticas.map(meta =>
-        meta.id === id ? { ...meta, [campo]: valor } : meta
-      )
+      metasGeneticas: prev.metasGeneticas.map(meta => meta.id === id ? {
+        ...meta,
+        [campo]: valor
+      } : meta)
     }));
   };
-
   const atualizarMetaReproductiva = (id: string, campo: 'valorAtual' | 'valorMeta', valor: number) => {
     setMetas(prev => ({
       ...prev,
-      metasReproductivas: prev.metasReproductivas.map(meta =>
-        meta.id === id ? { ...meta, [campo]: valor } : meta
-      )
+      metasReproductivas: prev.metasReproductivas.map(meta => meta.id === id ? {
+        ...meta,
+        [campo]: valor
+      } : meta)
     }));
   };
-
   const atualizarMetaProducao = (id: string, campo: 'valorAtual' | 'valorMeta', valor: number) => {
     setMetas(prev => ({
       ...prev,
-      metasProducao: prev.metasProducao.map(meta =>
-        meta.id === id ? { ...meta, [campo]: valor } : meta
-      )
+      metasProducao: prev.metasProducao.map(meta => meta.id === id ? {
+        ...meta,
+        [campo]: valor
+      } : meta)
     }));
   };
-
   const atualizarMetaPopulacional = (id: string, campo: 'quantidadeAtual' | 'quantidadeMeta', valor: number) => {
     setMetas(prev => ({
       ...prev,
-      metasPopulacionais: prev.metasPopulacionais.map(meta =>
-        meta.id === id ? { ...meta, [campo]: valor } : meta
-      )
+      metasPopulacionais: prev.metasPopulacionais.map(meta => meta.id === id ? {
+        ...meta,
+        [campo]: valor
+      } : meta)
     }));
   };
-
   const limparTodasMetas = () => {
     inicializarMetasPadrao();
     localStorage.removeItem(`metas-${farm.id}`);
@@ -247,27 +269,20 @@ export default function MetasPage({ farm, onBack }: MetasPageProps) {
       description: "Todas as metas foram resetadas para os valores padrão."
     });
   };
-
   const calcularProgressoGenetico = (valorAtual: number, valorMeta: number) => {
     if (valorMeta === 0) return 0;
-    return Math.min(100, Math.max(0, (valorAtual / valorMeta) * 100));
+    return Math.min(100, Math.max(0, valorAtual / valorMeta * 100));
   };
-
   const calcularProgressoPopulacional = (atual: number, meta: number) => {
     if (meta === 0) return 0;
-    return Math.min(100, Math.max(0, (atual / meta) * 100));
+    return Math.min(100, Math.max(0, atual / meta * 100));
   };
-
-  return (
-    <div className="min-h-screen bg-background p-6">
+  return <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="outline" onClick={onBack}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar
-            </Button>
+            
             <h1 className="text-2xl font-bold">Metas da Fazenda</h1>
           </div>
           <div className="flex gap-2">
@@ -300,31 +315,18 @@ export default function MetasPage({ farm, onBack }: MetasPageProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {metas.metasGeneticas.map((meta) => (
-                  <div key={meta.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg">
+                {metas.metasGeneticas.map(meta => <div key={meta.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg">
                     <div>
                       <Label className="text-sm font-medium">{meta.nome}</Label>
                       <p className="text-xs text-muted-foreground">{meta.categoria === 'genetica' ? 'Genética' : 'Fenotípica'}</p>
                     </div>
                     <div>
                       <Label className="text-sm">Valor Atual</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={meta.valorAtual}
-                        onChange={(e) => atualizarMetaGenetica(meta.id, 'valorAtual', parseFloat(e.target.value) || 0)}
-                        placeholder="0"
-                      />
+                      <Input type="number" step="0.01" value={meta.valorAtual} onChange={e => atualizarMetaGenetica(meta.id, 'valorAtual', parseFloat(e.target.value) || 0)} placeholder="0" />
                     </div>
                     <div>
                       <Label className="text-sm">Meta</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={meta.valorMeta}
-                        onChange={(e) => atualizarMetaGenetica(meta.id, 'valorMeta', parseFloat(e.target.value) || 0)}
-                        placeholder="0"
-                      />
+                      <Input type="number" step="0.01" value={meta.valorMeta} onChange={e => atualizarMetaGenetica(meta.id, 'valorMeta', parseFloat(e.target.value) || 0)} placeholder="0" />
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="text-sm">
@@ -332,14 +334,12 @@ export default function MetasPage({ farm, onBack }: MetasPageProps) {
                         <p className="text-xs text-muted-foreground">{meta.unidade}</p>
                       </div>
                       <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-primary transition-all"
-                          style={{ width: `${calcularProgressoGenetico(meta.valorAtual, meta.valorMeta)}%` }}
-                        />
+                        <div className="h-full bg-primary transition-all" style={{
+                      width: `${calcularProgressoGenetico(meta.valorAtual, meta.valorMeta)}%`
+                    }} />
                       </div>
                     </div>
-                  </div>
-                ))}
+                  </div>)}
               </CardContent>
             </Card>
           </TabsContent>
@@ -353,30 +353,17 @@ export default function MetasPage({ farm, onBack }: MetasPageProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {metas.metasReproductivas.map((meta) => (
-                  <div key={meta.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg">
+                {metas.metasReproductivas.map(meta => <div key={meta.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg">
                     <div>
                       <Label className="text-sm font-medium">{meta.nome}</Label>
                     </div>
                     <div>
                       <Label className="text-sm">Valor Atual</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={meta.valorAtual}
-                        onChange={(e) => atualizarMetaReproductiva(meta.id, 'valorAtual', parseFloat(e.target.value) || 0)}
-                        placeholder="0"
-                      />
+                      <Input type="number" step="0.01" value={meta.valorAtual} onChange={e => atualizarMetaReproductiva(meta.id, 'valorAtual', parseFloat(e.target.value) || 0)} placeholder="0" />
                     </div>
                     <div>
                       <Label className="text-sm">Meta</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={meta.valorMeta}
-                        onChange={(e) => atualizarMetaReproductiva(meta.id, 'valorMeta', parseFloat(e.target.value) || 0)}
-                        placeholder="0"
-                      />
+                      <Input type="number" step="0.01" value={meta.valorMeta} onChange={e => atualizarMetaReproductiva(meta.id, 'valorMeta', parseFloat(e.target.value) || 0)} placeholder="0" />
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="text-sm">
@@ -384,14 +371,12 @@ export default function MetasPage({ farm, onBack }: MetasPageProps) {
                         <p className="text-xs text-muted-foreground">{meta.unidade}</p>
                       </div>
                       <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-green-500 transition-all"
-                          style={{ width: `${calcularProgressoGenetico(meta.valorAtual, meta.valorMeta)}%` }}
-                        />
+                        <div className="h-full bg-green-500 transition-all" style={{
+                      width: `${calcularProgressoGenetico(meta.valorAtual, meta.valorMeta)}%`
+                    }} />
                       </div>
                     </div>
-                  </div>
-                ))}
+                  </div>)}
               </CardContent>
             </Card>
           </TabsContent>
@@ -405,30 +390,17 @@ export default function MetasPage({ farm, onBack }: MetasPageProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {metas.metasProducao.map((meta) => (
-                  <div key={meta.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg">
+                {metas.metasProducao.map(meta => <div key={meta.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg">
                     <div>
                       <Label className="text-sm font-medium">{meta.nome}</Label>
                     </div>
                     <div>
                       <Label className="text-sm">Valor Atual</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={meta.valorAtual}
-                        onChange={(e) => atualizarMetaProducao(meta.id, 'valorAtual', parseFloat(e.target.value) || 0)}
-                        placeholder="0"
-                      />
+                      <Input type="number" step="0.01" value={meta.valorAtual} onChange={e => atualizarMetaProducao(meta.id, 'valorAtual', parseFloat(e.target.value) || 0)} placeholder="0" />
                     </div>
                     <div>
                       <Label className="text-sm">Meta</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={meta.valorMeta}
-                        onChange={(e) => atualizarMetaProducao(meta.id, 'valorMeta', parseFloat(e.target.value) || 0)}
-                        placeholder="0"
-                      />
+                      <Input type="number" step="0.01" value={meta.valorMeta} onChange={e => atualizarMetaProducao(meta.id, 'valorMeta', parseFloat(e.target.value) || 0)} placeholder="0" />
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="text-sm">
@@ -436,14 +408,12 @@ export default function MetasPage({ farm, onBack }: MetasPageProps) {
                         <p className="text-xs text-muted-foreground">{meta.unidade}</p>
                       </div>
                       <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-blue-500 transition-all"
-                          style={{ width: `${calcularProgressoGenetico(meta.valorAtual, meta.valorMeta)}%` }}
-                        />
+                        <div className="h-full bg-blue-500 transition-all" style={{
+                      width: `${calcularProgressoGenetico(meta.valorAtual, meta.valorMeta)}%`
+                    }} />
                       </div>
                     </div>
-                  </div>
-                ))}
+                  </div>)}
               </CardContent>
             </Card>
           </TabsContent>
@@ -457,28 +427,17 @@ export default function MetasPage({ farm, onBack }: MetasPageProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {metas.metasPopulacionais.map((meta) => (
-                  <div key={meta.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg">
+                {metas.metasPopulacionais.map(meta => <div key={meta.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg">
                     <div>
                       <Label className="text-sm font-medium">{meta.categoria}</Label>
                     </div>
                     <div>
                       <Label className="text-sm">Quantidade Atual</Label>
-                      <Input
-                        type="number"
-                        value={meta.quantidadeAtual}
-                        onChange={(e) => atualizarMetaPopulacional(meta.id, 'quantidadeAtual', parseInt(e.target.value) || 0)}
-                        placeholder="0"
-                      />
+                      <Input type="number" value={meta.quantidadeAtual} onChange={e => atualizarMetaPopulacional(meta.id, 'quantidadeAtual', parseInt(e.target.value) || 0)} placeholder="0" />
                     </div>
                     <div>
                       <Label className="text-sm">Meta</Label>
-                      <Input
-                        type="number"
-                        value={meta.quantidadeMeta}
-                        onChange={(e) => atualizarMetaPopulacional(meta.id, 'quantidadeMeta', parseInt(e.target.value) || 0)}
-                        placeholder="0"
-                      />
+                      <Input type="number" value={meta.quantidadeMeta} onChange={e => atualizarMetaPopulacional(meta.id, 'quantidadeMeta', parseInt(e.target.value) || 0)} placeholder="0" />
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="text-sm">
@@ -486,14 +445,12 @@ export default function MetasPage({ farm, onBack }: MetasPageProps) {
                         <p className="text-xs text-muted-foreground">animais</p>
                       </div>
                       <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-orange-500 transition-all"
-                          style={{ width: `${calcularProgressoPopulacional(meta.quantidadeAtual, meta.quantidadeMeta)}%` }}
-                        />
+                        <div className="h-full bg-orange-500 transition-all" style={{
+                      width: `${calcularProgressoPopulacional(meta.quantidadeAtual, meta.quantidadeMeta)}%`
+                    }} />
                       </div>
                     </div>
-                  </div>
-                ))}
+                  </div>)}
               </CardContent>
             </Card>
           </TabsContent>
@@ -512,19 +469,15 @@ export default function MetasPage({ farm, onBack }: MetasPageProps) {
                     <Label className="text-sm font-medium mb-2 block">
                       Anotações Gerais da Fazenda
                     </Label>
-                    <Textarea
-                      placeholder="Digite suas anotações sobre metas, estratégias, observações importantes, números iniciais, auditoria genética, etc..."
-                      value={metas.anotacoes}
-                      onChange={(e) => setMetas(prev => ({ ...prev, anotacoes: e.target.value }))}
-                      className="min-h-[200px]"
-                    />
+                    <Textarea placeholder="Digite suas anotações sobre metas, estratégias, observações importantes, números iniciais, auditoria genética, etc..." value={metas.anotacoes} onChange={e => setMetas(prev => ({
+                    ...prev,
+                    anotacoes: e.target.value
+                  }))} className="min-h-[200px]" />
                   </div>
                   
-                  {metas.dataAtualizacao && (
-                    <div className="text-sm text-muted-foreground">
+                  {metas.dataAtualizacao && <div className="text-sm text-muted-foreground">
                       Última atualização: {new Date(metas.dataAtualizacao).toLocaleString('pt-BR')}
-                    </div>
-                  )}
+                    </div>}
                 </div>
               </CardContent>
             </Card>
@@ -562,6 +515,5 @@ export default function MetasPage({ farm, onBack }: MetasPageProps) {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
-  );
+    </div>;
 }
