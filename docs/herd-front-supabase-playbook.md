@@ -1,5 +1,11 @@
 # Plano de reorganização do front e ajuste do Supabase para o rebanho
 
+> **Resumo rápido:**
+> - **Hook único (`useFemalesByFarm`)** para HerdPage e SegmentationPage, reaproveitando o fluxo `fetchFemalesDenormByFarm`.
+> - **Painel de diagnóstico compartilhado** informando qual fonte do Supabase respondeu ou falhou.
+> - **Script SQL** reinstalando a RPC `get_females_denorm`, a view de fallback e as políticas de RLS obrigatórias.
+> - **Checklist de execução** cobrindo implantação no banco, migração das páginas e testes.
+
 ## 1. Objetivos
 
 1. Garantir que tanto a página **Rebanho** quanto **Segmentação** compartilhem o mesmo fluxo de leitura de fêmeas, incluindo telemetria de diagnóstico sobre qual fonte do Supabase respondeu ou falhou.
