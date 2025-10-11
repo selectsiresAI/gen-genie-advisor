@@ -1309,7 +1309,7 @@ export default function SegmentationPage({
                     <div className="flex items-center justify-between mb-2">
                       <span style={{
                       color: '#065F46'
-                    }} className="font-medium text-zinc-950">Superior</span>
+                    }} className="font-medium text-slate-950">Superior</span>
                       <span style={{
                       color: '#065F46'
                     }} className="font-semibold text-zinc-950">{superiorPercent[0]}%</span>
@@ -1325,7 +1325,7 @@ export default function SegmentationPage({
                     <div className="flex items-center justify-between mb-2">
                       <span style={{
                       color: '#92400E'
-                    }} className="font-medium text-zinc-950">Intermediário</span>
+                    }} className="font-medium text-slate-950">Intermediário</span>
                       <span style={{
                       color: '#92400E'
                     }} className="font-semibold text-zinc-950">{intermediarioPercent[0]}%</span>
@@ -1338,10 +1338,10 @@ export default function SegmentationPage({
                   borderColor: '#EF4444',
                   backgroundColor: '#FEF2F2'
                 }} className="mb-4 p-3 rounded-lg border-2 bg-gray-200">
-                    <div className="flex items-center justify-between mb-2 bg-zinc-200">
+                    <div className="flex items-center justify-between mb-2 bg-gray-200">
                       <span style={{
                       color: '#991B1B'
-                    }} className="font-medium text-zinc-950">Inferior</span>
+                    }} className="font-medium text-slate-950">Inferior</span>
                       <span style={{
                       color: '#991B1B'
                     }} className="font-semibold text-zinc-950">{inferiorPercent[0]}%</span>
@@ -1353,7 +1353,7 @@ export default function SegmentationPage({
                   <div style={{
                   backgroundColor: superiorPercent[0] + intermediarioPercent[0] + inferiorPercent[0] === 100 ? '#ECFDF5' : '#FEF2F2',
                   color: superiorPercent[0] + intermediarioPercent[0] + inferiorPercent[0] === 100 ? '#065F46' : '#991B1B'
-                }} className="text-sm text-center p-2 rounded-lg bg-slate-50">
+                }} className="text-sm text-center p-2 rounded-lg bg-gray-200">
                     Total: {superiorPercent[0] + intermediarioPercent[0] + inferiorPercent[0]}% 
                     {superiorPercent[0] + intermediarioPercent[0] + inferiorPercent[0] === 100 ? ' ✓' : ' (deve ser 100%)'}
                   </div>
