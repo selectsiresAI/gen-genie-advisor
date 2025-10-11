@@ -797,7 +797,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
             <div className="flex gap-2">
               <label className="cursor-pointer">
                 <Button variant="outline" asChild>
-                  <span>
+                  <span className="text-gray-100">
                     <Upload size={16} className="mr-2" />
                     Importar CSV
                   </span>
@@ -805,7 +805,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
                 <input type="file" accept=".csv" onChange={handleUpload} className="hidden" />
               </label>
 
-              <Button variant="outline" onClick={downloadBullTemplate} title="Baixar template completo de touros para Supabase" className="bg-slate-100">
+              <Button variant="outline" onClick={downloadBullTemplate} title="Baixar template completo de touros para Supabase" className="bg-gray-100">
                 <Download size={16} className="mr-2" />
                 Template Touros
               </Button>
