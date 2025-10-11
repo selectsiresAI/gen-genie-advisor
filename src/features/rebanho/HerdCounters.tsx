@@ -21,6 +21,16 @@ const COLORS: Record<Segment, string> = {
   Multípara: "#ED334A",
 };
 
+const GRADIENTS: Record<Segment, string> = {
+  Bezerra: "linear-gradient(135deg, #8F1B33 0%, #A92039 100%)",
+  Novilha: "linear-gradient(135deg, #A92039 0%, #C2263F 100%)",
+  Primípara: "linear-gradient(135deg, #C2263F 0%, #D82C45 100%)",
+  Secundípara: "linear-gradient(135deg, #D82C45 0%, #ED334A 100%)",
+  Multípara: "linear-gradient(135deg, #ED334A 0%, #FF6B7D 100%)",
+};
+
+const TOTAL_GRADIENT = "linear-gradient(135deg, #ED334A 0%, #FF8090 100%)";
+
 function Dot({ color }: { color: string }) {
   return (
     <span
@@ -44,24 +54,52 @@ function CounterCard({
   color,
   value,
   blackNumber,
+  gradient,
+  accentGradient,
 }: {
   title: string;
   color: string;
   value: number | null;
   blackNumber?: boolean;
+  gradient?: string;
+  accentGradient?: string;
 }) {
+  const displayValue =
+    value === null || value === undefined
+      ? "–"
+      : value.toLocaleString("pt-BR");
+
   return (
-    <div className="rounded-2xl bg-white shadow-md hover:shadow-lg transition-shadow ring-1 ring-black/5 p-5 min-h-[132px]">
+    <div className="flex h-full flex-col justify-between rounded-2xl bg-white p-5 shadow-md ring-1 ring-black/5 transition-shadow hover:shadow-lg">
       <div className="flex items-center gap-2 text-[15px] font-semibold text-black">
         <Dot color={color} />
         <span>{title}</span>
       </div>
-      <div
-        className="mt-3 text-4xl font-extrabold tracking-tight"
-        style={{ color: blackNumber ? "#000000" : color }}
-      >
-        {value ?? "–"}
+      <div className="mt-3">
+        <span
+          className={`block text-4xl font-extrabold tracking-tight ${
+            blackNumber ? "text-black" : "text-transparent"
+          }`}
+          style={
+            blackNumber
+              ? undefined
+              : {
+                  backgroundImage: gradient,
+                  WebkitBackgroundClip: "text",
+                  backgroundClip: "text",
+                }
+          }
+        >
+          {displayValue}
+        </span>
       </div>
+      <span
+        className="mt-4 block h-[5px] w-14 rounded-full"
+        style={{
+          backgroundImage: accentGradient ?? gradient,
+          backgroundColor: accentGradient || gradient ? undefined : color,
+        }}
+      />
     </div>
   );
 }
@@ -131,12 +169,44 @@ export default function HerdCounters() {
         color: "#ED334A",
         value: counts?.Total ?? null,
         blackNumber: true,
+        gradient: undefined,
+        accentGradient: TOTAL_GRADIENT,
       },
-      { key: "Bezerra", title: "Bezerra", color: COLORS.Bezerra, value: counts?.Bezerra ?? null },
-      { key: "Novilha", title: "Novilhas", color: COLORS.Novilha, value: counts?.Novilha ?? null },
-      { key: "Primípara", title: "Primíparas", color: COLORS.Primípara, value: counts?.Primípara ?? null },
-      { key: "Secundípara", title: "Secundíparas", color: COLORS.Secundípara, value: counts?.Secundípara ?? null },
-      { key: "Multípara", title: "Multíparas", color: COLORS.Multípara, value: counts?.Multípara ?? null },
+      {
+        key: "Bezerra",
+        title: "Bezerra",
+        color: COLORS.Bezerra,
+        value: counts?.Bezerra ?? null,
+        gradient: GRADIENTS.Bezerra,
+      },
+      {
+        key: "Novilha",
+        title: "Novilhas",
+        color: COLORS.Novilha,
+        value: counts?.Novilha ?? null,
+        gradient: GRADIENTS.Novilha,
+      },
+      {
+        key: "Primípara",
+        title: "Primíparas",
+        color: COLORS.Primípara,
+        value: counts?.Primípara ?? null,
+        gradient: GRADIENTS.Primípara,
+      },
+      {
+        key: "Secundípara",
+        title: "Secundíparas",
+        color: COLORS.Secundípara,
+        value: counts?.Secundípara ?? null,
+        gradient: GRADIENTS.Secundípara,
+      },
+      {
+        key: "Multípara",
+        title: "Multíparas",
+        color: COLORS.Multípara,
+        value: counts?.Multípara ?? null,
+        gradient: GRADIENTS.Multípara,
+      },
     ],
     [counts]
   );
@@ -153,6 +223,8 @@ export default function HerdCounters() {
                 color={c.color}
                 value={c.value}
                 blackNumber={c.blackNumber}
+                gradient={c.gradient}
+                accentGradient={c.accentGradient}
               />
             ))}
       </div>
