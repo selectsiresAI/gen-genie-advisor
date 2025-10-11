@@ -1302,58 +1302,58 @@ export default function SegmentationPage({
                 }}>Distribuição dos Grupos</h4>
                   
                   {/* Superior */}
-                  <div className="mb-4 p-3 rounded-lg border-2" style={{
+                  <div style={{
                   borderColor: '#10B981',
                   backgroundColor: '#ECFDF5'
-                }}>
+                }} className="mb-4 p-3 rounded-lg border-2 bg-gray-200">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium" style={{
+                      <span style={{
                       color: '#065F46'
-                    }}>Superior</span>
-                      <span className="font-semibold" style={{
+                    }} className="font-medium text-zinc-950">Superior</span>
+                      <span style={{
                       color: '#065F46'
-                    }}>{superiorPercent[0]}%</span>
+                    }} className="font-semibold text-zinc-950">{superiorPercent[0]}%</span>
                     </div>
                     <Slider value={superiorPercent} onValueChange={updateSuperiorPercent} max={100} step={1} className="w-full" />
                   </div>
 
                   {/* Intermediário */}
-                  <div className="mb-4 p-3 rounded-lg border-2" style={{
+                  <div style={{
                   borderColor: '#F59E0B',
                   backgroundColor: '#FFFBEB'
-                }}>
+                }} className="mb-4 p-3 rounded-lg border-2 bg-gray-200">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium" style={{
+                      <span style={{
                       color: '#92400E'
-                    }}>Intermediário</span>
-                      <span className="font-semibold" style={{
+                    }} className="font-medium text-zinc-950">Intermediário</span>
+                      <span style={{
                       color: '#92400E'
-                    }}>{intermediarioPercent[0]}%</span>
+                    }} className="font-semibold text-zinc-950">{intermediarioPercent[0]}%</span>
                     </div>
                     <Slider value={intermediarioPercent} onValueChange={updateIntermediarioPercent} max={100} step={1} className="w-full" />
                   </div>
 
                   {/* Inferior */}
-                  <div className="mb-4 p-3 rounded-lg border-2" style={{
+                  <div style={{
                   borderColor: '#EF4444',
                   backgroundColor: '#FEF2F2'
-                }}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium" style={{
+                }} className="mb-4 p-3 rounded-lg border-2 bg-gray-200">
+                    <div className="flex items-center justify-between mb-2 bg-zinc-200">
+                      <span style={{
                       color: '#991B1B'
-                    }}>Inferior</span>
-                      <span className="font-semibold" style={{
+                    }} className="font-medium text-zinc-950">Inferior</span>
+                      <span style={{
                       color: '#991B1B'
-                    }}>{inferiorPercent[0]}%</span>
+                    }} className="font-semibold text-zinc-950">{inferiorPercent[0]}%</span>
                     </div>
                     <Slider value={inferiorPercent} onValueChange={updateInferiorPercent} max={100} step={1} className="w-full" />
                   </div>
 
                   {/* Validação da soma */}
-                  <div className="text-sm text-center p-2 rounded-lg" style={{
+                  <div style={{
                   backgroundColor: superiorPercent[0] + intermediarioPercent[0] + inferiorPercent[0] === 100 ? '#ECFDF5' : '#FEF2F2',
                   color: superiorPercent[0] + intermediarioPercent[0] + inferiorPercent[0] === 100 ? '#065F46' : '#991B1B'
-                }}>
+                }} className="text-sm text-center p-2 rounded-lg bg-slate-50">
                     Total: {superiorPercent[0] + intermediarioPercent[0] + inferiorPercent[0]}% 
                     {superiorPercent[0] + intermediarioPercent[0] + inferiorPercent[0] === 100 ? ' ✓' : ' (deve ser 100%)'}
                   </div>
