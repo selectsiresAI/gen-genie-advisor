@@ -43,6 +43,10 @@ interface Farm {
 type SupabaseFarm = Omit<Farm, 'total_females'> & {
   total_females: number | null;
 };
+
+type DashboardView = 'dashboard' | 'farm' | 'herd' | 'segmentation' | 'bulls' | 'nexus' | 'charts' | 'auditoria' | 'botijao' | 'sms' | 'metas' | 'plano' | 'arquivos' | 'conversao';
+
+type ModuleView = Exclude<DashboardView, 'dashboard' | 'farm'>;
 const MainDashboard: React.FC<MainDashboardProps> = ({
   user,
   onLogout
@@ -52,13 +56,14 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'farm' | 'herd' | 'segmentation' | 'bulls' | 'nexus' | 'charts' | 'auditoria' | 'botijao' | 'sms' | 'metas' | 'plano' | 'arquivos' | 'conversao'>('dashboard');
+  const [currentView, setCurrentView] = useState<DashboardView>('dashboard');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [totalFarms, setTotalFarms] = useState(0);
   const [totalAnimals, setTotalAnimals] = useState(0);
   const [totalBulls, setTotalBulls] = useState(0);
   const { toast } = useToast();
   const { setSelectedHerdId, refreshFromSupabase } = useHerdStore();
+  const modulesDisabled = farms.length === 0;
   useEffect(() => {
     loadUserData();
   }, []);
@@ -197,12 +202,99 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
     setCurrentView('dashboard');
     setSelectedFarm(null);
   };
-  const handleQuickAction = (action: string) => {
+  const moduleSections: Array<{
+    title: string;
+    items: Array<{ title: string; description: string; view: ModuleView }>;
+  }> = [
+    {
+      title: 'Bancos de Dados',
+      items: [
+        {
+          title: 'Rebanho',
+          description: 'Banco de fêmeas — consultas, filtros e importação',
+          view: 'herd'
+        },
+        {
+          title: 'Busca de Touros',
+          description: 'Base global — pesquisa e comparação',
+          view: 'bulls'
+        },
+        {
+          title: 'Botijão Virtual',
+          description: 'Touros da fazenda — estoque e lotes',
+          view: 'botijao'
+        }
+      ]
+    },
+    {
+      title: 'Análises e Estratégia',
+      items: [
+        {
+          title: 'Segmentação',
+          description: 'Monte índices e classifique o rebanho',
+          view: 'segmentation'
+        },
+        {
+          title: 'Auditoria Genética',
+          description: 'Desempenho por lotes, quartis e tendências',
+          view: 'auditoria'
+        },
+        {
+          title: 'Nexus',
+          description: 'Predições e acasalamentos otimizados',
+          view: 'nexus'
+        }
+      ]
+    },
+    {
+      title: 'Planejamento e Direcionamento',
+      items: [
+        {
+          title: 'Metas',
+          description: 'Defina objetivos de genética e produção',
+          view: 'metas'
+        },
+        {
+          title: 'Plano Genético',
+          description: 'Projeções e cálculo de reposição',
+          view: 'plano'
+        }
+      ]
+    },
+    {
+      title: 'Operações e Suporte',
+      items: [
+        {
+          title: 'Arquivos',
+          description: 'Gerenciamento de documentos e anexos',
+          view: 'arquivos'
+        },
+        {
+          title: 'Conversão (preview)',
+          description: 'Padronize planilhas e cabeçalhos',
+          view: 'conversao'
+        }
+      ]
+    }
+  ];
+
+  const handleQuickAction = (action: ModuleView) => {
     if (farms.length > 0) {
       const defaultFarm = farms.find(f => f.is_default) || farms[0];
       setSelectedFarm(defaultFarm);
-      setCurrentView(action as any);
+      setCurrentView(action);
     }
+  };
+  const handleModuleClick = (view: ModuleView) => {
+    if (farms.length === 0) {
+      toast({
+        title: 'Cadastre uma fazenda para continuar',
+        description: 'Crie uma fazenda para acessar os módulos do ecossistema ToolSS.'
+      });
+      return;
+    }
+
+    handleQuickAction(view);
   };
   const getUserInitials = (name: string) => {
     return name.split(' ').map(word => word.charAt(0)).join('').toUpperCase().slice(0, 2);
@@ -843,7 +935,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
           {/* Account Totals */}
           <div className="space-y-6">
             <h3 className="text-xl font-semibold">Resumo da Conta</h3>
-            
+
             <div className="grid gap-4 md:grid-cols-2">
               <Card>
                 <CardHeader className="pb-3">
@@ -879,6 +971,47 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                 </CardContent>
               </Card>
             </div>
+          </div>
+
+          {/* ToolSS Ecosystem */}
+          <div className="rounded-3xl border bg-[#FAFAFA] p-6 md:p-10 space-y-10">
+            <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <h2 className="text-3xl font-bold text-black tracking-tight">Painel Principal</h2>
+              <p className="text-base italic text-neutral-600">Ecossistema ToolSS</p>
+            </header>
+
+            <div className="space-y-10">
+              {moduleSections.map(section => (
+                <section key={section.title}>
+                  <h3 className="text-2xl font-bold text-[#E00000] border-b-2 border-[#E00000] pb-1 mb-6">
+                    {section.title}
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {section.items.map(item => (
+                      <button
+                        key={item.title}
+                        type="button"
+                        onClick={() => handleModuleClick(item.view)}
+                        disabled={modulesDisabled}
+                        className={`group rounded-xl border bg-white p-6 text-left shadow-sm transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E00000] focus-visible:ring-offset-2 ${modulesDisabled ? 'cursor-not-allowed opacity-60' : 'hover:shadow-lg'}`}
+                      >
+                        <div className="flex items-center mb-2">
+                          <div className={`h-3 w-3 rounded-full mr-3 ${modulesDisabled ? 'bg-neutral-300' : 'bg-[#E00000]'}`}></div>
+                          <h4 className="text-lg font-semibold text-black">{item.title}</h4>
+                        </div>
+                        <p className="text-sm text-[#555555]">{item.description}</p>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+
+            {modulesDisabled && (
+              <p className="text-sm text-neutral-500">
+                Cadastre sua primeira fazenda para desbloquear as ferramentas do ecossistema ToolSS.
+              </p>
+            )}
           </div>
 
           {/* Footer */}
