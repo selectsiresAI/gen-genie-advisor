@@ -7,6 +7,7 @@ import { User, Session } from "@supabase/supabase-js";
 import AuthPage from "@/components/AuthPage";
 import MainDashboard from "@/components/MainDashboard";
 import QueryProvider from "@/providers/query-client";
+import { TutorialProvider } from "@/features/tutorial/TutorialProvider";
 
 const App = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -57,15 +58,17 @@ const App = () => {
 
   return (
     <QueryProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        {user ? (
-          <MainDashboard user={user} onLogout={handleLogout} />
-        ) : (
-          <AuthPage onAuthSuccess={handleAuthSuccess} />
-        )}
-      </TooltipProvider>
+      <TutorialProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          {user ? (
+            <MainDashboard user={user} onLogout={handleLogout} />
+          ) : (
+            <AuthPage onAuthSuccess={handleAuthSuccess} />
+          )}
+        </TooltipProvider>
+      </TutorialProvider>
     </QueryProvider>
   );
 };
