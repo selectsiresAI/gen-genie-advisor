@@ -147,7 +147,7 @@ const AuthPage: React.FC<AuthPageProps> = ({
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <img src={toolssLogo} alt="ToolSS Logo" className="h-16 mx-auto mb-2" />
-          <CardTitle className="text-2xl font-bold">ToolSS</CardTitle>
+          
           <CardDescription>Sistema de Sistema para técnicos em melhoramento genético bovino</CardDescription>
         </CardHeader>
         <CardContent>
