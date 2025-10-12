@@ -356,12 +356,15 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
     if (currentView === 'conversao') {
       return <div className="min-h-screen bg-background">
           <div className="border-b">
-            <div className="flex h-16 items-center px-4">
+            <div className="flex h-16 items-center px-4 gap-4">
               <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4 bg-slate-200 hover:bg-slate-100">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Dashboard
               </Button>
               <h1 className="text-xl font-semibold">Conversão de planilhas (preview)</h1>
+              <div className="ml-auto">
+                <TutorialButtons slug="conversao" />
+              </div>
             </div>
           </div>
           <div className="container mx-auto px-4 py-8">
@@ -391,12 +394,15 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
     if (currentView === 'plano') {
       return <div className="min-h-screen bg-background">
           <div className="border-b">
-            <div className="flex h-16 items-center px-4">
+            <div className="flex h-16 items-center px-4 gap-4">
               <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4 bg-gray-200 hover:bg-gray-100">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Dashboard
               </Button>
               <h1 className="text-xl font-semibold">Plano Genético</h1>
+              <div className="ml-auto">
+                <TutorialButtons slug="plano" />
+              </div>
             </div>
           </div>
           <div className="container mx-auto px-4 py-8">
@@ -505,12 +511,15 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
       if (currentView === 'metas') {
         return <div className="min-h-screen bg-background">
             <div className="border-b">
-              <div className="flex h-16 items-center px-4">
+              <div className="flex h-16 items-center px-4 gap-4">
                 <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4 bg-slate-200 hover:bg-slate-100">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Dashboard
                 </Button>
                 <h1 className="text-xl font-semibold">{selectedFarm?.farm_name} - Metas</h1>
+                <div className="ml-auto">
+                  <TutorialButtons slug="metas" />
+                </div>
               </div>
             </div>
             <div className="container mx-auto px-4 py-8">
@@ -544,12 +553,15 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
       if (currentView === 'arquivos') {
         return <div className="min-h-screen bg-background">
             <div className="border-b">
-              <div className="flex h-16 items-center px-4">
+              <div className="flex h-16 items-center px-4 gap-4">
                 <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4 bg-slate-200 hover:bg-slate-100">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Dashboard
                 </Button>
                 <h1 className="text-xl font-semibold">{selectedFarm?.farm_name} - Pasta de Arquivos</h1>
+                <div className="ml-auto">
+                  <TutorialButtons slug="arquivos" />
+                </div>
               </div>
             </div>
             <div className="container mx-auto px-4 py-8">

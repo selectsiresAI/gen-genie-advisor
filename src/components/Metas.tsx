@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Save, Trash2, Plus, Target, TrendingUp, Users, Milk, Heart, Activity } from "lucide-react";
+import { Save, Trash2, Plus, Target, TrendingUp, Users, Milk, Heart, Activity } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 interface Farm {
   id: string;
@@ -280,12 +280,12 @@ export default function MetasPage({
   return <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            
+
             <h1 className="text-2xl font-bold">Metas da Fazenda</h1>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-3">
             <Button variant="outline" onClick={limparTodasMetas} className="text-red-600">
               <Trash2 className="w-4 h-4 mr-2" />
               Reinicializar

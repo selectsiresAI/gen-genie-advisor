@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import ProjecaoGenetica from "./ProjecaoGenetica";
 import CalculadoraReposicao from "./CalculadoraReposicao";
+import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
 export default function PlanoApp({
   onBack
 }: {
@@ -12,10 +13,13 @@ export default function PlanoApp({
   if (activeSubmenu === "projecao") {
     return <div className="min-h-screen">
         <div className="p-4 border-b bg-background">
-          <Button variant="outline" onClick={() => setActiveSubmenu(null)} className="bg-gray-200 hover:bg-gray-100">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar ao Menu Plano
-          </Button>
+          <div className="flex items-center justify-between gap-4">
+            <Button variant="outline" onClick={() => setActiveSubmenu(null)} className="bg-gray-200 hover:bg-gray-100">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Voltar ao Menu Plano
+            </Button>
+            <TutorialButtons slug="plano" />
+          </div>
         </div>
         <ProjecaoGenetica />
       </div>;
@@ -23,10 +27,13 @@ export default function PlanoApp({
   if (activeSubmenu === "calculadora") {
     return <div className="min-h-screen">
         <div className="p-4 border-b bg-background">
-          <Button variant="outline" onClick={() => setActiveSubmenu(null)} className="bg-gray-200 hover:bg-gray-100">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar ao Menu Plano
-          </Button>
+          <div className="flex items-center justify-between gap-4">
+            <Button variant="outline" onClick={() => setActiveSubmenu(null)} className="bg-gray-200 hover:bg-gray-100">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Voltar ao Menu Plano
+            </Button>
+            <TutorialButtons slug="plano" />
+          </div>
         </div>
         <CalculadoraReposicao />
       </div>;
@@ -35,11 +42,15 @@ export default function PlanoApp({
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          
-          <h1 className="text-3xl font-bold text-center mb-2">Plano</h1>
-          <p className="text-center text-muted-foreground">
-            Escolha uma das funcionalidades abaixo para começar
-          </p>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1 text-center sm:text-left">
+              <h1 className="text-3xl font-bold mb-2">Plano</h1>
+              <p className="text-muted-foreground">
+                Escolha uma das funcionalidades abaixo para começar
+              </p>
+            </div>
+            <TutorialButtons slug="plano" />
+          </div>
         </div>
 
         {/* Menu Cards */}

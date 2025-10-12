@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { BullSelector } from '@/components/BullSelector';
+import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
 
 // Types - Updated to match Supabase structure
 type Bull = {
@@ -687,7 +688,7 @@ function BotijaoVirtualPage({ client, farm, bulls: propBulls, selectedBulls = []
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 gap-4">
         <div>
           <h1 className="text-2xl font-bold">Botijão Virtual</h1>
           <p className="text-muted-foreground">Fazenda: {farm.nome}</p>
@@ -695,9 +696,12 @@ function BotijaoVirtualPage({ client, farm, bulls: propBulls, selectedBulls = []
             Última atualização: {new Date(botijao.dataAtualizacao).toLocaleString()}
           </p>
         </div>
-        <Button variant="outline" onClick={onBack}>
-          Voltar
-        </Button>
+        <div className="flex items-center gap-3">
+          <TutorialButtons slug="botijao" />
+          <Button variant="outline" onClick={onBack}>
+            Voltar
+          </Button>
+        </div>
       </div>
 
       {/* Selected Females Display */}

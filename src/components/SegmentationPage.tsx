@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
 import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
 import { generateSegmentationPDF, generatePDFBlob } from '@/utils/pdfGenerator';
@@ -924,7 +925,7 @@ export default function SegmentationPage({
       <TooltipProvider>
         {/* Header */}
         <div className="border-b">
-          <div className="flex h-16 items-center px-4">
+          <div className="flex h-16 items-center px-4 gap-4">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" onClick={onBack} className="mr-4 bg-slate-200 hover:bg-slate-100">
@@ -937,6 +938,9 @@ export default function SegmentationPage({
               </TooltipContent>
             </Tooltip>
             <h1 className="text-xl font-semibold">{farm.name} - Segmentação</h1>
+            <div className="ml-auto">
+              <TutorialButtons slug="segmentacao" />
+            </div>
           </div>
         </div>
 
