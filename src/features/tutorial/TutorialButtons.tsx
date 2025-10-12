@@ -8,8 +8,20 @@ export function TutorialButtons({
   slug: string;
 }) {
   const t = useTutorial();
-  return <div className="flex gap-2">
-      <Button size="sm" onClick={() => t.start(slug)}>Ver tutorial</Button>
-      <Button size="sm" variant="outline" onClick={() => t.reset(slug)} className="bg-gray-200 hover:bg-gray-100">Reiniciar</Button>
-    </div>;
+  return (
+    <div className="flex gap-2">
+      <Button
+        size="sm"
+        onClick={() => {
+          if (process.env.NODE_ENV !== "production") console.debug("[tutorial] button click", slug);
+          t.start(slug);
+        }}
+      >
+        Ver tutorial
+      </Button>
+      <Button size="sm" variant="outline" onClick={() => t.reset(slug)} className="bg-gray-200 hover:bg-gray-100">
+        Reiniciar
+      </Button>
+    </div>
+  );
 }

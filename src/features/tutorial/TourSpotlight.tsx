@@ -28,7 +28,11 @@ export default function TourSpotlight(p: Props) {
   );
 
   useEffect(() => {
-    if (!p.visible || !el) {
+    if (!p.visible) {
+      setRect(null);
+      return;
+    }
+    if (!el) {
       setRect(null);
       return;
     }
@@ -48,7 +52,29 @@ export default function TourSpotlight(p: Props) {
     };
   }, [el, p.visible]);
 
-  if (!p.visible || !rect) return null;
+  if (!p.visible) return null;
+
+  if (!el) {
+    return createPortal(
+      <div className="fixed inset-0 z-[1000]">
+        <div className="absolute inset-0 bg-black/50" onClick={p.onNext} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 max-w-md bg-white rounded-2xl shadow-xl p-4 border">
+          <h3 className="text-lg font-semibold mb-1">{p.headline}</h3>
+          <p className="text-sm text-muted-foreground mb-2">{p.body}</p>
+          <div className="text-xs text-amber-600 mb-3">
+            Âncora não encontrada no DOM: <code>{p.targetAttr}</code>. Verifique o <code>data-tour</code> na página.
+          </div>
+          <div className="flex gap-2 justify-end">
+            {p.onNext && <Button onClick={p.onNext}>{p.nextLabel ?? "Próximo"}</Button>}
+            {p.onDone && <Button onClick={p.onDone}>{p.doneLabel ?? "Concluir"}</Button>}
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
+  }
+
+  if (!rect) return null;
 
   return createPortal(
     <div className="fixed inset-0 z-[1000]">
