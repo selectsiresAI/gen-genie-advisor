@@ -607,7 +607,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
         <div className="flex h-16 items-center px-4 gap-4" data-tour="dashboard:header">
           <div className="flex items-center space-x-4">
             <img src={toolssLogo} alt="ToolSS Logo" className="h-10" />
-            <h1 className="text-2xl font-bold">ToolSS</h1>
+            
           </div>
 
           <div className="ml-auto flex items-center gap-4">
