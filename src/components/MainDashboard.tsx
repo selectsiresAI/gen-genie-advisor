@@ -746,7 +746,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
           {/* Footer */}
           <div className="pt-8 border-t">
             <div className="text-center text-sm text-muted-foreground">
-              <p>ToolSS </p>
+              
               <p>Powered by
 Select Sires do Brasil</p>
             </div>
