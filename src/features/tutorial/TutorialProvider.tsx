@@ -1,28 +1,21 @@
 "use client";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 import TourSpotlight from "./TourSpotlight";
 import { fetchTutorial, getOrInitProgress, updateProgress, tutorialsEnabled } from "./api";
 import type { TutorialStep } from "./types";
-import { supabase } from "@/integrations/supabase/client";
-import { useAGFilters } from "@/features/auditoria/store";
+import { useSession } from "@supabase/auth-helpers-react";
 
 const __DEV__ = process.env.NODE_ENV !== "production";
 
-/**
- * TODO: Trocar por seu hook real de tenant (ex.: useAGFilters().farmId)
- * Retorne o UUID do tenant/farm atual.
- */
+/** TODO: troque por seu hook real (ex.: useAGFilters().farmId) */
 function useTenantId(): string | null {
-  const filters = useAGFilters();
-  const farmId = filters?.farmId;
-
-  if (process.env.NODE_ENV !== "production") {
-    console.debug("Tutorial tenantId", farmId);
+  try {
+    // const { farmId } = useAGFilters();
+    // return farmId ?? null;
+    return null;
+  } catch {
+    return null;
   }
-
-  if (typeof farmId === "string" && farmId.length > 0) return farmId;
-  if (typeof farmId === "number" && Number.isFinite(farmId)) return String(farmId);
-  return null;
 }
 
 type Ctx = {
@@ -31,7 +24,6 @@ type Ctx = {
   isActive: boolean;
   step?: number;
 };
-
 const TutorialCtx = createContext<Ctx | null>(null);
 export const useTutorial = () => {
   const ctx = useContext(TutorialCtx);
@@ -40,25 +32,10 @@ export const useTutorial = () => {
 };
 
 export function TutorialProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<any>(null);
-
-  // Get session from Supabase
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-    });
-    
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-    
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, []);
-  
-  const tenantId = useTenantId();
+  const session = useSession();
   const userId = session?.user?.id ?? null;
+  const tenantId = useTenantId();
+  // Fallback: se não houver tenant (ex.: Home), usamos userId como “tenant efetivo”
   const effectiveTenantId = tenantId ?? userId ?? null;
 
   const [active, setActive] = useState(false);
@@ -79,12 +56,12 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     if (!enabled) return;
 
     const { steps } = await fetchTutorial(s);
-    if (__DEV__) console.debug("[tutorial] fetched steps", { slug: s, count: steps?.length ?? 0, steps });
+    if (__DEV__) console.debug("[tutorial] fetched steps", { slug: s, count: steps?.length ?? 0 });
     if (!steps?.length) return;
 
     const progress = await getOrInitProgress({ userId, tenantId: effectiveTenantId, slug: s });
     const startAt = progress.is_completed ? 0 : progress.current_step ?? 0;
-    if (__DEV__) console.debug("[tutorial] progress", { progress, startAt });
+    if (__DEV__) console.debug("[tutorial] progress", { startAt, progress });
 
     setSteps(steps);
     setIdx(Math.min(startAt, steps.length - 1));
@@ -94,22 +71,23 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
 
   async function reset(s: string) {
     if (!userId || !effectiveTenantId) return;
-    if (__DEV__) console.debug("[tutorial] reset called", { slug: s, userId, tenantId, effectiveTenantId });
     await updateProgress({ userId, tenantId: effectiveTenantId, slug: s, currentStep: 0, isCompleted: false });
     localStorage.removeItem(`toolss:tutorial:auto:${s}:${userId}:${effectiveTenantId}`);
   }
 
-  if (__DEV__ && typeof window !== "undefined") {
+  // Helpers globais para debug em DEV
+  if (__DEV__) {
     // @ts-ignore
-    window.toolssStartTutorial = (slug: string) => start(slug);
+    (window as any).toolssStartTutorial = (slug: string) => start(slug);
     // @ts-ignore
-    window.toolssResetTutorial = (slug: string) => reset(slug);
+    (window as any).toolssResetTutorial = (slug: string) => reset(slug);
   }
 
+  const ctx = useMemo<Ctx>(() => ({ start, reset, isActive: active, step: idx }), [active, idx]);
   const step = steps[idx];
 
   return (
-    <TutorialCtx.Provider value={{ start, reset, isActive: active, step: idx }}>
+    <TutorialCtx.Provider value={ctx}>
       {children}
       {step && slug && (
         <TourSpotlight
@@ -121,33 +99,16 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
           nextLabel={step.next_label ?? undefined}
           doneLabel={step.done_label ?? undefined}
           onPrev={idx > 0 ? async () => {
-            const nextIndex = idx - 1;
-            setIdx(nextIndex);
-            if (userId && effectiveTenantId) {
-              if (__DEV__) console.debug("[tutorial] onPrev", { slug, nextIndex, userId, tenantId, effectiveTenantId });
-              await updateProgress({ userId, tenantId: effectiveTenantId, slug, currentStep: nextIndex });
-            }
+            const nextIndex = idx - 1; setIdx(nextIndex);
+            if (userId && effectiveTenantId) await updateProgress({ userId, tenantId: effectiveTenantId, slug, currentStep: nextIndex });
           } : undefined}
           onNext={idx < steps.length - 1 ? async () => {
-            const nextIndex = idx + 1;
-            setIdx(nextIndex);
-            if (userId && effectiveTenantId) {
-              if (__DEV__) console.debug("[tutorial] onNext", { slug, nextIndex, userId, tenantId, effectiveTenantId });
-              await updateProgress({ userId, tenantId: effectiveTenantId, slug, currentStep: nextIndex });
-            }
+            const nextIndex = idx + 1; setIdx(nextIndex);
+            if (userId && effectiveTenantId) await updateProgress({ userId, tenantId: effectiveTenantId, slug, currentStep: nextIndex });
           } : undefined}
           onDone={async () => {
             setActive(false);
-            if (userId && effectiveTenantId) {
-              if (__DEV__) console.debug("[tutorial] onDone", { slug, userId, tenantId, effectiveTenantId });
-              await updateProgress({
-                userId,
-                tenantId: effectiveTenantId,
-                slug,
-                currentStep: steps.length - 1,
-                isCompleted: true
-              });
-            }
+            if (userId && effectiveTenantId) await updateProgress({ userId, tenantId: effectiveTenantId, slug, currentStep: steps.length - 1, isCompleted: true });
           }}
         />
       )}
