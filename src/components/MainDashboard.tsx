@@ -603,7 +603,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
       </div>;
   }
   return <div className="min-h-screen bg-background">
-      <HomeHintDialog />
+      <HomeHintDialog userId={user.id} />
       {/* Header */}
       <div className="border-b">
         <div className="flex h-16 items-center px-4 gap-4" data-tour="dashboard:header">

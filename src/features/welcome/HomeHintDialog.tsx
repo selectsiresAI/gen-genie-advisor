@@ -1,22 +1,8 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { useSession } from "@supabase/auth-helpers-react";
-import type { Session } from "@supabase/supabase-js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useAGFilters } from "@/features/auditoria/store";
-
-function useSafeSession(): Session | null {
-  try {
-    return useSession();
-  } catch (error) {
-    if (process.env.NODE_ENV !== "production") {
-      console.warn("HomeHintDialog: useSession unavailable", error);
-    }
-    return null;
-  }
-}
-
 function useTenantId(): string | null {
   const filters = useAGFilters();
   const farmId = filters?.farmId;
@@ -34,9 +20,11 @@ function storageKey(userId: string | null, tenantId: string | null) {
   return `toolss:homehint:dismissed:${userId ?? "anon"}:${tenantId ?? "na"}`;
 }
 
-export default function HomeHintDialog() {
-  const session = useSafeSession();
-  const userId = session?.user?.id ?? null;
+type HomeHintDialogProps = {
+  userId?: string | null;
+};
+
+export default function HomeHintDialog({ userId = null }: HomeHintDialogProps) {
   const tenantId = useTenantId();
 
   const key = useMemo(() => storageKey(userId, tenantId), [userId, tenantId]);
