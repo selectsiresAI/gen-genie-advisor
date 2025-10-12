@@ -57,6 +57,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   
   const tenantId = useTenantId();
   const userId = session?.user?.id ?? null;
+  const effectiveTenantId = tenantId ?? userId ?? null;
 
   const [active, setActive] = useState(false);
   const [slug, setSlug] = useState<string | null>(null);
@@ -64,14 +65,30 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   const [idx, setIdx] = useState(0);
 
   async function start(s: string) {
-    if (!userId || !tenantId) return;
-    const enabled = await tutorialsEnabled(tenantId);
-    if (!enabled) return;
+    if (!userId || !effectiveTenantId) {
+      if (process.env.NODE_ENV !== "production") {
+        console.debug("[tutorial] abort: missing ids", { userId, tenantId, effectiveTenantId, slug: s });
+      }
+      return;
+    }
+
+    const enabled = await tutorialsEnabled(effectiveTenantId);
+    if (!enabled) {
+      if (process.env.NODE_ENV !== "production") {
+        console.debug("[tutorial] abort: tutorials disabled", { effectiveTenantId, slug: s });
+      }
+      return;
+    }
 
     const { steps } = await fetchTutorial(s);
-    if (!steps?.length) return;
+    if (!steps?.length) {
+      if (process.env.NODE_ENV !== "production") {
+        console.debug("[tutorial] abort: no steps for slug", { slug: s });
+      }
+      return;
+    }
 
-    const progress = await getOrInitProgress({ userId, tenantId, slug: s });
+    const progress = await getOrInitProgress({ userId, tenantId: effectiveTenantId, slug: s });
     const startAt = progress.is_completed ? 0 : progress.current_step ?? 0;
 
     setSteps(steps);
@@ -81,9 +98,9 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function reset(s: string) {
-    if (!userId || !tenantId) return;
-    await updateProgress({ userId, tenantId, slug: s, currentStep: 0, isCompleted: false });
-    localStorage.removeItem(`toolss:tutorial:auto:${s}:${userId}:${tenantId}`);
+    if (!userId || !effectiveTenantId) return;
+    await updateProgress({ userId, tenantId: effectiveTenantId, slug: s, currentStep: 0, isCompleted: false });
+    localStorage.removeItem(`toolss:tutorial:auto:${s}:${userId}:${effectiveTenantId}`);
   }
 
   const controls = useMemo<Ctx>(() => ({
@@ -107,22 +124,24 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
           onPrev={idx > 0 ? async () => {
             const nextIndex = idx - 1;
             setIdx(nextIndex);
-            if (userId && tenantId) {
-              await updateProgress({ userId, tenantId, slug, currentStep: nextIndex });
+            if (userId && effectiveTenantId) {
+              await updateProgress({ userId, tenantId: effectiveTenantId, slug, currentStep: nextIndex });
             }
           } : undefined}
           onNext={idx < steps.length - 1 ? async () => {
             const nextIndex = idx + 1;
             setIdx(nextIndex);
-            if (userId && tenantId) {
-              await updateProgress({ userId, tenantId, slug, currentStep: nextIndex });
+            if (userId && effectiveTenantId) {
+              await updateProgress({ userId, tenantId: effectiveTenantId, slug, currentStep: nextIndex });
             }
           } : undefined}
           onDone={async () => {
             setActive(false);
-            if (userId && tenantId) {
+            if (userId && effectiveTenantId) {
               await updateProgress({
-                userId, tenantId, slug,
+                userId,
+                tenantId: effectiveTenantId,
+                slug,
                 currentStep: steps.length - 1,
                 isCompleted: true
               });
