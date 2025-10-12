@@ -4,6 +4,7 @@ import TourSpotlight from "./TourSpotlight";
 import { fetchTutorial, getOrInitProgress, updateProgress, tutorialsEnabled } from "./api";
 import type { TutorialStep } from "./types";
 import { supabase } from "@/integrations/supabase/client";
+import { useAGFilters } from "@/features/auditoria/store";
 
 /**
  * TODO: Trocar por seu hook real de tenant (ex.: useAGFilters().farmId)
@@ -11,7 +12,11 @@ import { supabase } from "@/integrations/supabase/client";
  */
 function useTenantId(): string | null {
   try {
-    return null; // substitua por: const { farmId } = useAGFilters(); return farmId ?? null;
+    const { farmId } = useAGFilters();
+    if (process.env.NODE_ENV !== "production") {
+      console.debug("Tutorial tenantId", farmId);
+    }
+    return (typeof farmId === "string" && farmId.length > 0) ? farmId : null;
   } catch {
     return null;
   }
