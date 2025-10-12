@@ -1,9 +1,9 @@
 "use client";
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import TourSpotlight from "./TourSpotlight";
 import { fetchTutorial, getOrInitProgress, updateProgress, tutorialsEnabled } from "./api";
 import type { TutorialStep } from "./types";
-import { useSession } from "@supabase/auth-helpers-react";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * TODO: Trocar por seu hook real de tenant (ex.: useAGFilters().farmId)
@@ -32,7 +32,23 @@ export const useTutorial = () => {
 };
 
 export function TutorialProvider({ children }: { children: React.ReactNode }) {
-  const session = useSession();
+  const [session, setSession] = useState<any>(null);
+  
+  // Get session from Supabase
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+    });
+    
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+    
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+  
   const tenantId = useTenantId();
   const userId = session?.user?.id ?? null;
 

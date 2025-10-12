@@ -124,24 +124,87 @@ const buildResultExportRows = (rows: BatchRow[]) =>
   rows
     .filter((row) => row.status === 'valid' && row.prediction)
     .map((row) => {
-      const predictionColumns = PREDICTION_TRAITS.reduce((acc, trait) => {
-        acc[trait.label] = formatPredictionValue(row.prediction?.[trait.key] ?? null);
-        return acc;
-      }, {} as Record<string, string>);
+      // Convert date from DD/MM/YYYY to YYYY-MM-DD format for import
+      const convertDate = (dateStr: string) => {
+        if (!dateStr) return '';
+        const parts = dateStr.split('/');
+        if (parts.length === 3) {
+          return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        }
+        return dateStr;
+      };
 
+      // Map PTA values with exact column names required for import
+      const pred = row.prediction;
+      
       return {
-        linha: row.lineNumber.toString(),
-        id_fazenda: row.idFazenda,
-        nome: row.nome,
-        data_de_nascimento: row.dataNascimento,
-        naab_pai: row.naabPai,
-        nome_pai: row.bulls.sire?.name ?? '',
-        naab_avo_materno: row.naabAvoMaterno,
-        nome_avo_materno: row.bulls.mgs?.name ?? '',
-        naab_bisavo_materno: row.naabBisavoMaterno,
-        nome_bisavo_materno: row.bulls.mmgs?.name ?? '',
-        ...predictionColumns,
-        Fonte: 'Predição'
+        id: '',
+        farm_id: row.idFazenda,
+        name: row.nome,
+        identifier: '',
+        cdcb_id: '',
+        sire_naab: row.naabPai,
+        mgs_naab: row.naabAvoMaterno,
+        mmgs_naab: row.naabBisavoMaterno,
+        birth_date: convertDate(row.dataNascimento),
+        ptas: '',
+        created_at: '',
+        updated_at: '',
+        'HHP$': formatPredictionValue(pred?.hhp_dollar ?? null),
+        'TPI': formatPredictionValue(pred?.tpi ?? null),
+        'NM$': formatPredictionValue(pred?.nm_dollar ?? null),
+        'CM$': formatPredictionValue(pred?.cm_dollar ?? null),
+        'FM$': formatPredictionValue(pred?.fm_dollar ?? null),
+        'GM$': formatPredictionValue(pred?.gm_dollar ?? null),
+        'F SAV': formatPredictionValue(pred?.f_sav ?? null),
+        'PTAM': formatPredictionValue(pred?.ptam ?? null),
+        'CFP': formatPredictionValue(pred?.cfp ?? null),
+        'PTAF': formatPredictionValue(pred?.ptaf ?? null),
+        'PTAF%': formatPredictionValue(pred?.ptaf_pct ?? null),
+        'PTAP': formatPredictionValue(pred?.ptap ?? null),
+        'PTAP%': formatPredictionValue(pred?.ptap_pct ?? null),
+        'PL': formatPredictionValue(pred?.pl ?? null),
+        'DPR': formatPredictionValue(pred?.dpr ?? null),
+        '': formatPredictionValue(pred?.liv ?? null), // LIV column (unnamed in import format)
+        'SCS': formatPredictionValue(pred?.scs ?? null),
+        'Mast': formatPredictionValue(pred?.mast ?? null),
+        'Met': formatPredictionValue(pred?.met ?? null),
+        'RP': formatPredictionValue(pred?.rp ?? null),
+        'DA': formatPredictionValue(pred?.da ?? null),
+        'Ket': formatPredictionValue(pred?.ket ?? null),
+        'MF': formatPredictionValue(pred?.mf ?? null),
+        'PTAT': formatPredictionValue(pred?.ptat ?? null),
+        'UDC': formatPredictionValue(pred?.udc ?? null),
+        'FLC': formatPredictionValue(pred?.flc ?? null),
+        'SCE': formatPredictionValue(pred?.sce ?? null),
+        'DCE': formatPredictionValue(pred?.dce ?? null),
+        'SSB': formatPredictionValue(pred?.ssb ?? null),
+        'DSB': formatPredictionValue(pred?.dsb ?? null),
+        'H LIV': formatPredictionValue(pred?.h_liv ?? null),
+        'CCR': formatPredictionValue(pred?.ccr ?? null),
+        'HCR': formatPredictionValue(pred?.hcr ?? null),
+        'FI': formatPredictionValue(pred?.fi ?? null),
+        'GL': '', // Not available in prediction
+        'bwc': formatPredictionValue(pred?.bwc ?? null),
+        'sta': formatPredictionValue(pred?.sta ?? null),
+        'str': formatPredictionValue(pred?.str ?? null),
+        'dfm': formatPredictionValue(pred?.dfm ?? null),
+        'rua': formatPredictionValue(pred?.rua ?? null),
+        'rls': formatPredictionValue(pred?.rls ?? null),
+        'rtp': formatPredictionValue(pred?.rtp ?? null),
+        'ftl': formatPredictionValue(pred?.ftl ?? null),
+        'rw': formatPredictionValue(pred?.rw ?? null),
+        'rlr': formatPredictionValue(pred?.rlr ?? null),
+        'fta': formatPredictionValue(pred?.fta ?? null),
+        'fls': formatPredictionValue(pred?.fls ?? null),
+        'fua': formatPredictionValue(pred?.fua ?? null),
+        'ruh': formatPredictionValue(pred?.ruh ?? null),
+        'ruw': formatPredictionValue(pred?.ruw ?? null),
+        'ucl': formatPredictionValue(pred?.ucl ?? null),
+        'udp': formatPredictionValue(pred?.udp ?? null),
+        'ftp': formatPredictionValue(pred?.ftp ?? null),
+        'RFI': formatPredictionValue(pred?.rfi ?? null),
+        'GFI': formatPredictionValue(pred?.gfi ?? null)
       };
     });
 
