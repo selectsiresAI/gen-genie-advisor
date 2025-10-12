@@ -22,6 +22,7 @@ import FemaleUploadModal from './FemaleUploadModal';
 import SegmentationPage from './SegmentationPage';
 import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
 import HomeHintDialog from '@/features/welcome/HomeHintDialog';
+import HomeTourAnchors from "@/features/tutorial/anchors/HomeTourAnchors";
 import { usePlanStore } from '@/hooks/usePlanStore';
 import { useHerdStore } from '@/hooks/useHerdStore';
 import ConversaoPage from '@/pages/tools/conversao';
@@ -603,6 +604,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
       </div>;
   }
   return <div className="min-h-screen bg-background">
+      <HomeTourAnchors />
       <HomeHintDialog userId={user.id} />
       {/* Header */}
       <div className="border-b">
