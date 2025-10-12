@@ -204,7 +204,8 @@ const buildResultExportRows = (rows: BatchRow[]) =>
         'udp': formatPredictionValue(pred?.udp ?? null),
         'ftp': formatPredictionValue(pred?.ftp ?? null),
         'RFI': formatPredictionValue(pred?.rfi ?? null),
-        'GFI': formatPredictionValue(pred?.gfi ?? null)
+        'GFI': formatPredictionValue(pred?.gfi ?? null),
+        'Fonte': 'Predição'
       };
     });
 
