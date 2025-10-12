@@ -590,7 +590,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
       <div className="border-b">
         <div className="flex h-16 items-center px-4">
           <div className="flex items-center space-x-4">
-            <img src={toolssLogo} alt="ToolSS Logo" className="h-8 w-auto" />
+            
             <h1 className="text-2xl font-bold">ToolSS</h1>
           </div>
           
