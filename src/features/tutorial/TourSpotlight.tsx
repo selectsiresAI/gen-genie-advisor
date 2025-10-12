@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 
 type Props = {
-  targetAttr: string; // ex.: 'rebanho:cards.contadores'
+  targetAttr: string;
   headline: string;
   body: string;
   onPrev?: () => void;
@@ -18,33 +18,21 @@ type Props = {
 
 export default function TourSpotlight(p: Props) {
   const [rect, setRect] = useState<DOMRect | null>(null);
-
   const el = useMemo(
-    () =>
-      (p.visible
-        ? (document.querySelector(`[data-tour="${p.targetAttr}"]`) as HTMLElement | null)
-        : null),
+    () => (p.visible ? (document.querySelector(`[data-tour="${p.targetAttr}"]`) as HTMLElement | null) : null),
     [p.targetAttr, p.visible]
   );
 
   useEffect(() => {
-    if (!p.visible) {
-      setRect(null);
-      return;
-    }
-    if (!el) {
-      setRect(null);
-      return;
-    }
+    if (!p.visible) { setRect(null); return; }
+    if (!el) { setRect(null); return; }
+
     const update = () => setRect(el.getBoundingClientRect());
     update();
-
     const obs = new ResizeObserver(update);
     obs.observe(document.body);
-
     window.addEventListener("scroll", update, true);
     window.addEventListener("resize", update);
-
     return () => {
       obs.disconnect();
       window.removeEventListener("scroll", update, true);
@@ -54,6 +42,7 @@ export default function TourSpotlight(p: Props) {
 
   if (!p.visible) return null;
 
+  // Fallback: âncora não encontrada
   if (!el) {
     return createPortal(
       <div className="fixed inset-0 z-[1000]">
@@ -65,6 +54,7 @@ export default function TourSpotlight(p: Props) {
             Âncora não encontrada no DOM: <code>{p.targetAttr}</code>. Verifique o <code>data-tour</code> na página.
           </div>
           <div className="flex gap-2 justify-end">
+            {p.onPrev && <Button variant="outline" onClick={p.onPrev}>{p.prevLabel ?? "Voltar"}</Button>}
             {p.onNext && <Button onClick={p.onNext}>{p.nextLabel ?? "Próximo"}</Button>}
             {p.onDone && <Button onClick={p.onDone}>{p.doneLabel ?? "Concluir"}</Button>}
           </div>
@@ -78,21 +68,11 @@ export default function TourSpotlight(p: Props) {
 
   return createPortal(
     <div className="fixed inset-0 z-[1000]">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50" onClick={p.onNext} />
-
-      {/* Spotlight */}
       <div
         className="absolute ring-4 ring-white rounded-2xl pointer-events-none shadow-2xl"
-        style={{
-          top: rect.top - 8,
-          left: rect.left - 8,
-          width: rect.width + 16,
-          height: rect.height + 16,
-        }}
+        style={{ top: rect.top - 8, left: rect.left - 8, width: rect.width + 16, height: rect.height + 16 }}
       />
-
-      {/* Tooltip card */}
       <div
         className="absolute max-w-md bg-white rounded-2xl shadow-xl p-4 border left-1/2 -translate-x-1/2"
         style={{ top: Math.max(rect.bottom + 12, 16) }}
@@ -100,21 +80,9 @@ export default function TourSpotlight(p: Props) {
         <h3 className="text-lg font-semibold mb-1">{p.headline}</h3>
         <p className="text-sm text-muted-foreground mb-3">{p.body}</p>
         <div className="flex gap-2 justify-end">
-          {p.onPrev && (
-            <Button variant="outline" onClick={p.onPrev}>
-              {p.prevLabel ?? "Voltar"}
-            </Button>
-          )}
-          {p.onNext && (
-            <Button onClick={p.onNext}>
-              {p.nextLabel ?? "Próximo"}
-            </Button>
-          )}
-          {p.onDone && (
-            <Button onClick={p.onDone}>
-              {p.doneLabel ?? "Concluir"}
-            </Button>
-          )}
+          {p.onPrev && <Button variant="outline" onClick={p.onPrev}>{p.prevLabel ?? "Voltar"}</Button>}
+          {p.onNext && <Button onClick={p.onNext}>{p.nextLabel ?? "Próximo"}</Button>}
+          {p.onDone && <Button onClick={p.onDone}>{p.doneLabel ?? "Concluir"}</Button>}
         </div>
       </div>
     </div>,
