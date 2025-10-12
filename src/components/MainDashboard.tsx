@@ -20,6 +20,7 @@ import HerdPage from './HerdPage';
 import BullSearchPage from './BullSearchPage';
 import FemaleUploadModal from './FemaleUploadModal';
 import SegmentationPage from './SegmentationPage';
+import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
 import { usePlanStore } from '@/hooks/usePlanStore';
 import { useHerdStore } from '@/hooks/useHerdStore';
 import ConversaoPage from '@/pages/tools/conversao';
@@ -371,12 +372,15 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
     if (currentView === 'nexus') {
       return <div className="min-h-screen bg-background">
           <div className="border-b">
-            <div className="flex h-16 items-center px-4">
+            <div className="flex h-16 items-center px-4 gap-4">
               <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4 bg-slate-200 hover:bg-slate-100">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Dashboard
               </Button>
               <h1 className="text-xl font-semibold">Nexus - Sistema de Predição Genética</h1>
+              <div className="ml-auto">
+                <TutorialButtons slug="nexus" />
+              </div>
             </div>
           </div>
           <div className="container mx-auto px-4 py-8">
@@ -588,12 +592,12 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   return <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b">
-        <div className="flex h-16 items-center px-4">
+        <div className="flex h-16 items-center px-4 gap-4" data-tour="dashboard:header">
           <div className="flex items-center space-x-4">
             <img src={toolssLogo} alt="ToolSS Logo" className="h-10" />
             <h1 className="text-2xl font-bold">ToolSS</h1>
           </div>
-          
+
           <div className="ml-auto flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               <Avatar>
@@ -610,6 +614,9 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
               <LogOut className="w-4 h-4 mr-2" />
               Sair
             </Button>
+            <div className="ml-auto">
+              <TutorialButtons slug="dashboard" />
+            </div>
           </div>
         </div>
       </div>
@@ -627,7 +634,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
           </div>
 
           {/* Farms Section */}
-          <div className="space-y-6">
+          <div className="space-y-6" data-tour="dashboard:cards">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-semibold">Suas Fazendas</h3>
               <Button onClick={handleCreateFarm}>
@@ -686,7 +693,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
           </div>
 
           {/* Account Totals */}
-          <div className="space-y-6">
+          <div className="space-y-6" data-tour="dashboard:grafico">
             <h3 className="text-xl font-semibold">Resumo da Conta</h3>
 
             <div className="grid gap-4 md:grid-cols-2">

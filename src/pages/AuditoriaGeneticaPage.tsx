@@ -57,20 +57,24 @@ export default function AuditoriaGeneticaPage({ farm, onBack }: AuditoriaGenetic
 
   return (
     <AGLayout onBack={onBack} farmName={farm?.farm_name ?? undefined}>
-      {/* Se o seu AGStepper exigir props extras, descomente uma das linhas abaixo */}
-      <AGStepper
-        active={active}
-        onChange={setActive}
-        // total={steps.length}
-        // steps={steps.map((s) => s.key)}
-      />
-      <div className="space-y-4">
+      <div className="flex items-center gap-3" data-tour="auditoria:stepper">
+        {/* Se o seu AGStepper exigir props extras, descomente uma das linhas abaixo */}
+        <AGStepper
+          active={active}
+          onChange={setActive}
+          // total={steps.length}
+          // steps={steps.map((s) => s.key)}
+        />
+      </div>
+      <div className="space-y-4" data-tour="auditoria:selectors">
         {!hasFarm ? (
           <div className="text-sm text-muted-foreground border rounded-lg p-4">
             Selecione uma fazenda para iniciar a Auditoria Genética.
           </div>
         ) : (
-          steps[Math.min(active, steps.length - 1)].node
+          <div data-tour="auditoria:resultados" className="space-y-4">
+            {steps[Math.min(active, steps.length - 1)].node}
+          </div>
         )}
       </div>
     </AGLayout>

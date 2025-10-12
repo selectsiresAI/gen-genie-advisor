@@ -5,6 +5,7 @@ import { ArrowLeft, Calculator } from 'lucide-react';
 import { t } from '@/lib/i18n';
 import Nexus2PredictionIndividual from './nexus2/Nexus2PredictionIndividual';
 import Nexus2PredictionBatch from './nexus2/Nexus2PredictionBatch';
+import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
 interface Nexus2PedigreePredictionProps {
   onBack: () => void;
 }
@@ -24,6 +25,9 @@ const Nexus2PedigreePrediction: React.FC<Nexus2PedigreePredictionProps> = ({
             {t('nexus2.title')}
           </h2>
           <p className="text-muted-foreground">{t('nexus2.subtitle')}</p>
+        </div>
+        <div className="ml-auto">
+          <TutorialButtons slug="nexus" />
         </div>
       </div>
 

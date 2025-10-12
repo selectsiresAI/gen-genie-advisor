@@ -566,7 +566,8 @@ const Nexus2PredictionBatch: React.FC = () => {
   };
 
   return (
-    <Card>
+    <div data-tour="nexus:lote.processamento">
+      <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <FileSpreadsheet className="h-5 w-5" />
@@ -707,7 +708,7 @@ const Nexus2PredictionBatch: React.FC = () => {
               </Table>
             </div>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3" data-tour="nexus:acoes">
               <Button type="button" onClick={handleProcess} disabled={isProcessing || !validRows.length}>
                 {isProcessing ? (
                   <span className="flex items-center gap-2">
@@ -765,7 +766,7 @@ const Nexus2PredictionBatch: React.FC = () => {
             </div>
 
             {hasPredictions && (
-              <div className="space-y-3">
+              <div className="space-y-3" data-tour="nexus:tabela.resultados">
                 <h3 className="text-lg font-semibold">{t('nexus2.batch.results.title')}</h3>
                 <div className="overflow-x-auto rounded-md border">
                   <Table>
@@ -832,6 +833,7 @@ const Nexus2PredictionBatch: React.FC = () => {
         )}
       </CardContent>
     </Card>
+    </div>
   );
 };
 
