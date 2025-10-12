@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import toolssLogo from '@/assets/toolss-logo.png';
+import toolssLogo from '@/assets/toolss-logo.jpg';
 import { User } from '@supabase/supabase-js';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -590,7 +590,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
       <div className="border-b">
         <div className="flex h-16 items-center px-4">
           <div className="flex items-center space-x-4">
-            
+            <img src={toolssLogo} alt="ToolSS Logo" className="h-10" />
             <h1 className="text-2xl font-bold">ToolSS</h1>
           </div>
           
