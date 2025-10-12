@@ -344,12 +344,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
             <h1 className="text-xl font-semibold">{farm.farm_name} - Rebanho</h1>
           </div>
           <div className="ml-auto flex items-center gap-3">
-            {onNavigateToCharts && (
-              <Button onClick={onNavigateToCharts} variant="outline">
-                <TrendingUp className="w-4 h-4 mr-2" />
-                Gráficos
-              </Button>
-            )}
+            {onNavigateToCharts}
             <TutorialButtons slug="rebanho" />
           </div>
         </div>
@@ -467,14 +462,14 @@ const HerdPage: React.FC<HerdPageProps> = ({
                   {selectedFemales.length > 0 && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-muted/70 px-4 py-3">
                       <span className="text-sm font-medium">
                         {t('herd.selected.count', {
-                    count: selectedFemales.length
-                  })}
+                      count: selectedFemales.length
+                    })}
                       </span>
                       <AlertDialog open={isDeleteDialogOpen} onOpenChange={open => {
-                  if (!isDeleting) {
-                    setIsDeleteDialogOpen(open);
-                  }
-                }}>
+                    if (!isDeleting) {
+                      setIsDeleteDialogOpen(open);
+                    }
+                  }}>
                         <AlertDialogTrigger asChild>
                           <Button variant="destructive" size="sm" onClick={() => setIsDeleteDialogOpen(true)} disabled={isDeleting} aria-label={t('actions.delete')}>
                             {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
@@ -583,8 +578,8 @@ const HerdPage: React.FC<HerdPageProps> = ({
                         </thead>
                       <tbody className="[&>tr>td]:border [&>tr>td]:px-3 [&>tr>td]:py-2 [&>tr>td]:text-xs [&>tr>td]:whitespace-nowrap [&>tr>td]:align-middle">
                         {filteredFemales.map(female => {
-                        const fonteDisplay = getFonteDisplay(female.fonte);
-                        return <tr key={female.id} className="hover:bg-muted/50">
+                          const fonteDisplay = getFonteDisplay(female.fonte);
+                          return <tr key={female.id} className="hover:bg-muted/50">
                             <td className="border px-3 py-2 text-xs whitespace-nowrap">
                               <input type="checkbox" checked={selectedFemales.includes(female.id)} onChange={() => handleSelectFemale(female.id)} className="mr-1" />
                             </td>
@@ -668,7 +663,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
                             <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.kappa_casein || '-'}</td>
                             <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.gfi || '-'}</td>
                             </tr>;
-                      })}
+                        })}
                       </tbody>
                       </table>
                     </div>
