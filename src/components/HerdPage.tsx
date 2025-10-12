@@ -14,6 +14,7 @@ import { useHerdStore } from '@/hooks/useHerdStore';
 import { fetchFemalesDenormByFarm, isCompleteFemaleRow, type CompleteFemaleDenormRow } from '@/supabase/queries/females';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { t } from '@/lib/i18n';
+import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
 interface Farm {
   farm_id: string;
   farm_name: string;
@@ -334,27 +335,30 @@ const HerdPage: React.FC<HerdPageProps> = ({
   };
   return <div className="min-h-screen bg-background">
       <div className="border-b">
-        <div className="flex h-16 items-center px-4 justify-between">
-          <div className="flex items-center">
-            <Button variant="ghost" onClick={onBack} className="mr-4 bg-slate-200 hover:bg-slate-100">
+        <div className="flex h-16 items-center px-4 gap-4">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={onBack} className="mr-2 bg-slate-200 hover:bg-slate-100">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Dashboard
             </Button>
             <h1 className="text-xl font-semibold">{farm.farm_name} - Rebanho</h1>
           </div>
-          {onNavigateToCharts && (
-            <Button onClick={onNavigateToCharts} variant="outline">
-              <TrendingUp className="w-4 h-4 mr-2" />
-              Gráficos
-            </Button>
-          )}
+          <div className="ml-auto flex items-center gap-3">
+            {onNavigateToCharts && (
+              <Button onClick={onNavigateToCharts} variant="outline">
+                <TrendingUp className="w-4 h-4 mr-2" />
+                Gráficos
+              </Button>
+            )}
+            <TutorialButtons slug="rebanho" />
+          </div>
         </div>
       </div>
 
       <div className="container mx-auto px-4 py-8">
         <div className="space-y-6">
           {/* Header with Category Stats */}
-          <div className="grid gap-4 md:grid-cols-6">
+          <div className="grid gap-4 md:grid-cols-6" data-tour="rebanho:cards.contadores">
             {[{
             key: 'total',
             label: 'Total de Fêmeas',
@@ -412,7 +416,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
           </div>
 
           {/* Search and Actions */}
-          <div className="flex gap-4 items-center">
+          <div className="flex gap-4 items-center" data-tour="rebanho:header.filtro">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input placeholder="Buscar por nome ou identificação..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
@@ -438,7 +442,8 @@ const HerdPage: React.FC<HerdPageProps> = ({
           </div>
 
           {/* Table */}
-          <Card>
+          <div data-tour="rebanho:tabela.femeas">
+            <Card>
             <CardHeader>
               <CardTitle>Lista do Rebanho</CardTitle>
             </CardHeader>
@@ -670,7 +675,8 @@ const HerdPage: React.FC<HerdPageProps> = ({
                   </ScrollArea>
                 </div>}
             </CardContent>
-          </Card>
+            </Card>
+          </div>
         </div>
       </div>
 

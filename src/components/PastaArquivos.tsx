@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Upload, FileText, FileSpreadsheet, File, Trash2, Download, Search, ChartBar, Beaker, TrendingUp, Filter } from "lucide-react";
+import { Upload, FileText, FileSpreadsheet, File, Trash2, Download, Search, ChartBar, Beaker, TrendingUp, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFileStore, SavedReport } from "@/hooks/useFileStore";
 interface ArquivoItem {
@@ -185,15 +185,17 @@ export default function PastaArquivosPage({
   return <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            
+
             <h1 className="text-2xl font-bold">Pasta de Arquivos</h1>
           </div>
-          <Button onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
-            <Upload className="w-4 h-4 mr-2" />
-            {isUploading ? "Enviando..." : "Adicionar Arquivos"}
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+              <Upload className="w-4 h-4 mr-2" />
+              {isUploading ? "Enviando..." : "Adicionar Arquivos"}
+            </Button>
+          </div>
         </div>
 
         {/* Input de upload (hidden) */}

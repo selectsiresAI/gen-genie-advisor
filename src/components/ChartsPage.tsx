@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Settings, Download, RefreshCw, Users, TrendingUp, BarChart3, PieChart as PieChartIcon, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
 import {
   fetchFemalesDenormByFarm,
   isCompleteFemaleRow,
@@ -350,7 +351,7 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b">
-        <div className="flex h-16 items-center px-4">
+        <div className="flex h-16 items-center px-4 gap-4">
           <Button variant="ghost" onClick={onBack} className="mr-4">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Voltar
@@ -361,7 +362,8 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
               <p className="text-sm text-muted-foreground">{farm.farm_name}</p>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <TutorialButtons slug="graficos" />
             <Badge variant="outline" className="text-xs">
               {females.length} animais
             </Badge>

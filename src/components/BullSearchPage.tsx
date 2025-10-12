@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowLeft, Search, Upload, Download, Beaker } from "lucide-react";
+import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 interface Bull {
@@ -814,14 +815,15 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
   };
   return <div className="min-h-screen bg-background">
       <div className="border-b">
-        <div className="flex h-16 items-center px-4">
+        <div className="flex h-16 items-center px-4 gap-4">
           <Button variant="ghost" onClick={onBack} className="mr-4 bg-slate-200 hover:bg-slate-100">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Voltar
           </Button>
           <h1 className="text-xl font-semibold">{farm.farm_name} - Busca de Touros</h1>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-3">
             <Badge variant="outline">{rankedBulls.length} touros disponíveis</Badge>
+            <TutorialButtons slug="touros" />
           </div>
         </div>
       </div>

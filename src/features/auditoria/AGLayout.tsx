@@ -4,6 +4,7 @@ import { ReactNode } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
 interface AGLayoutProps {
   children: ReactNode;
   onBack?: () => void;
@@ -25,10 +26,13 @@ export default function AGLayout({
             <h1 className="text-xl font-semibold">Auditoria Genética{farmName ? ` — ${farmName}` : ""}</h1>
             <p className="text-sm text-muted-foreground">7 passos sequenciais</p>
           </div>
+          <div className="ml-auto">
+            <TutorialButtons slug="auditoria" />
+          </div>
         </div>
       </div>
       <div className="container mx-auto px-4 py-6">
-        <Card className="p-4">{children}</Card>
+        <Card className="p-4" data-tour="auditoria:resultados">{children}</Card>
       </div>
     </div>;
 }
