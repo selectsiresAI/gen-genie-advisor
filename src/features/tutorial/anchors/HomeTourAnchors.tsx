@@ -18,46 +18,95 @@ function byText(root: ParentNode, text: string) {
 }
 
 function setAnchor(el: Element | null, value: string) {
-  if (!el) return;
+  if (!el) return false;
   // procura um contêiner "razoável" para receber o atributo (evita colocar direto no <h1>)
   let target: HTMLElement | null = el as HTMLElement;
   // se é um heading, tenta subir/achar um wrapper pai que tenha conteúdo relacionado
   if (/^H[1-6]$/.test(target.tagName) && target.parentElement) {
     target = target.parentElement;
   }
-  target?.setAttribute("data-tour", value);
+  if (!target || target.getAttribute("data-tour") === value) return !!target;
+  target.setAttribute("data-tour", value);
+  return true;
 }
 
 export default function HomeTourAnchors() {
   useEffect(() => {
-    // 1) "Suas Fazendas" – usa heading/área que contém essa string
-    const farmsTitle = byText(document.body, "suas fazendas");
-    if (farmsTitle) {
-      // procura um container próximo (pai ou next section)
-      let container: HTMLElement | null = farmsTitle.parentElement as HTMLElement | null;
-      // tenta a seção seguinte, se fizer sentido
-      if (container && !container.querySelector("div,section,ul")) {
-        container = container.parentElement as HTMLElement | null;
+    const anchors = [
+      {
+        id: "home:fazendas",
+        applied: false,
+        apply: () => {
+          const farmsTitle = byText(document.body, "suas fazendas");
+          if (!farmsTitle) return false;
+
+          let container: HTMLElement | null = farmsTitle.parentElement as HTMLElement | null;
+          if (container && !container.querySelector("div,section,ul")) {
+            container = container.parentElement as HTMLElement | null;
+          }
+
+          return setAnchor(container ?? farmsTitle, "home:fazendas");
+        }
+      },
+      {
+        id: "home:criar",
+        applied: false,
+        apply: () => {
+          const allButtons = Array.from(document.querySelectorAll("button, a")) as HTMLElement[];
+          const createBtn = allButtons.find((el) => (el.textContent || "").toLowerCase().includes("criar fazenda"));
+          if (!createBtn) return false;
+          if (createBtn.getAttribute("data-tour") === "home:criar") return true;
+          createBtn.setAttribute("data-tour", "home:criar");
+          return true;
+        }
+      },
+      {
+        id: "home:resumo",
+        applied: false,
+        apply: () => {
+          const resumoTitle = byText(document.body, "resumo da conta");
+          if (!resumoTitle) return false;
+
+          let resumoContainer: HTMLElement | null = resumoTitle.parentElement as HTMLElement | null;
+          if (resumoContainer && !resumoContainer.querySelector("div,section,ul")) {
+            resumoContainer = resumoContainer.parentElement as HTMLElement | null;
+          }
+
+          return setAnchor(resumoContainer ?? resumoTitle, "home:resumo");
+        }
       }
-      setAnchor(container ?? farmsTitle, "home:fazendas");
+    ];
+
+    const applyAnchors = () => {
+      let allApplied = true;
+      for (const anchor of anchors) {
+        if (anchor.applied) continue;
+        const success = anchor.apply();
+        if (success) {
+          anchor.applied = true;
+        } else {
+          allApplied = false;
+        }
+      }
+      return allApplied;
+    };
+
+    if (applyAnchors()) {
+      return;
     }
 
-    // 2) Botão "+ Criar Fazenda" – busca por botão com esse texto
-    const allButtons = Array.from(document.querySelectorAll("button, a")) as HTMLElement[];
-    const createBtn = allButtons.find((el) => (el.textContent || "").toLowerCase().includes("criar fazenda"));
-    if (createBtn) {
-      createBtn.setAttribute("data-tour", "home:criar");
-    }
-
-    // 3) "Resumo da Conta" – idem ao título e seu contêiner
-    const resumoTitle = byText(document.body, "resumo da conta");
-    if (resumoTitle) {
-      let resumoContainer: HTMLElement | null = resumoTitle.parentElement as HTMLElement | null;
-      if (resumoContainer && !resumoContainer.querySelector("div,section,ul")) {
-        resumoContainer = resumoContainer.parentElement as HTMLElement | null;
+    const observer = new MutationObserver(() => {
+      if (applyAnchors()) {
+        observer.disconnect();
       }
-      setAnchor(resumoContainer ?? resumoTitle, "home:resumo");
-    }
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+
+    return () => observer.disconnect();
   }, []);
 
   return null;
