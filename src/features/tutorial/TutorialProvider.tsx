@@ -11,15 +11,16 @@ import { useAGFilters } from "@/features/auditoria/store";
  * Retorne o UUID do tenant/farm atual.
  */
 function useTenantId(): string | null {
-  try {
-    const { farmId } = useAGFilters();
-    if (process.env.NODE_ENV !== "production") {
-      console.debug("Tutorial tenantId", farmId);
-    }
-    return (typeof farmId === "string" && farmId.length > 0) ? farmId : null;
-  } catch {
-    return null;
+  const filters = useAGFilters();
+  const farmId = filters?.farmId;
+
+  if (process.env.NODE_ENV !== "production") {
+    console.debug("Tutorial tenantId", farmId);
   }
+
+  if (typeof farmId === "string" && farmId.length > 0) return farmId;
+  if (typeof farmId === "number" && Number.isFinite(farmId)) return String(farmId);
+  return null;
 }
 
 type Ctx = {

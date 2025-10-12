@@ -21,6 +21,7 @@ import BullSearchPage from './BullSearchPage';
 import FemaleUploadModal from './FemaleUploadModal';
 import SegmentationPage from './SegmentationPage';
 import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
+import HomeHintDialog from '@/features/welcome/HomeHintDialog';
 import { usePlanStore } from '@/hooks/usePlanStore';
 import { useHerdStore } from '@/hooks/useHerdStore';
 import ConversaoPage from '@/pages/tools/conversao';
@@ -602,6 +603,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
       </div>;
   }
   return <div className="min-h-screen bg-background">
+      <HomeHintDialog />
       {/* Header */}
       <div className="border-b">
         <div className="flex h-16 items-center px-4 gap-4" data-tour="dashboard:header">
