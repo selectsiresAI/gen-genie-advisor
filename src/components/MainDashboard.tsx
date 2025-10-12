@@ -588,7 +588,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   return <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b">
-        <div className="flex h-16 items-center px-4">
+        <div className="flex h-16 items-center px-4 bg-slate-50">
           <div className="flex items-center space-x-4">
             <img src={toolssLogo} alt="ToolSS Logo" className="h-10" />
             
