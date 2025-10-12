@@ -350,9 +350,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
                 Gráficos
               </Button>
             )}
-            <div className="ml-auto">
-              <TutorialButtons slug="rebanho" />
-            </div>
+            <TutorialButtons slug="rebanho" />
           </div>
         </div>
       </div>

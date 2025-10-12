@@ -14,12 +14,12 @@ const Nexus2PedigreePrediction: React.FC<Nexus2PedigreePredictionProps> = ({
 }) => {
   return <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-4">
         <Button variant="outline" onClick={onBack} className="bg-slate-200 hover:bg-slate-100">
           <ArrowLeft className="w-4 h-4 mr-2" />
           {t('nexus2.back')}
         </Button>
-        <div>
+        <div className="min-w-0 flex-1 space-y-1">
           <h2 className="text-2xl font-bold flex items-center gap-2">
             <Calculator className="w-6 h-6" />
             {t('nexus2.title')}

@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dna, Calendar, ArrowRight, TrendingUp, FileSpreadsheet } from 'lucide-react';
+import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
 interface NexusEntryPageProps {
   onSelectMethod: (method: 'nexus1' | 'nexus2') => void;
 }
@@ -10,14 +11,21 @@ const NexusEntryPage: React.FC<NexusEntryPageProps> = ({
   onSelectMethod
 }) => {
   return <div className="container mx-auto px-4 py-8">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold mb-4 flex items-center justify-center gap-3">
-          <TrendingUp className="w-8 h-8 text-primary" />
-          Nexus - Sistema de Predição Genética
-        </h1>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Escolha o método de predição genética baseado nos dados disponíveis para seu rebanho
-        </p>
+      <div className="mb-8">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="text-center md:text-left space-y-2 md:space-y-1">
+            <h1 className="text-3xl font-bold flex items-center justify-center gap-3 md:justify-start">
+              <TrendingUp className="w-8 h-8 text-primary" />
+              Nexus - Sistema de Predição Genética
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto md:mx-0 md:max-w-xl">
+              Escolha o método de predição genética baseado nos dados disponíveis para seu rebanho
+            </p>
+          </div>
+          <div className="flex justify-center md:justify-end">
+            <TutorialButtons slug="nexus" />
+          </div>
+        </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">

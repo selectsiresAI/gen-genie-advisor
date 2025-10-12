@@ -13,6 +13,7 @@ import { Upload, Download, Calculator, ArrowLeft, Users, Target, Database, FileU
 import { read, utils, writeFileXLSX } from 'xlsx';
 import { supabase } from '@/integrations/supabase/client';
 import { useHerdStore } from '@/hooks/useHerdStore';
+import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
 
 // Colunas específicas para Nexus 1
 const NEXUS1_COLUMNS = ['ID Fazenda', 'Nome', 'HHP$®', 'TPI', 'NM$', 'CM$', 'FM$', 'GM$', 'F SAV', 'PTAM', 'CFP', 'PTAF', 'PTAF%', 'PTAP', 'PTAP%', 'PL', 'DPR', 'LIV', 'SCS', 'MAST', 'MET', 'RP', 'DA', 'KET', 'MF', 'PTAT', 'UDC', 'FLC', 'SCE', 'DCE', 'SSB', 'DSB', 'H LIV', 'CCR', 'HCR', 'FI', 'GL', 'EFC', 'BWC', 'STA', 'STR', 'DFM', 'RUA', 'RLS', 'RTP', 'FTL', 'RW', 'RLR', 'FTA', 'FLS', 'FUA', 'RUH', 'RUW', 'UCL', 'UDP', 'FTP', 'RFI'];
@@ -733,12 +734,12 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
   }, [predictions]);
   return <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-4">
         <Button variant="outline" onClick={onBack}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Voltar
         </Button>
-        <div>
+        <div className="min-w-0 flex-1 space-y-1">
           <h2 className="text-2xl font-bold flex items-center gap-2">
             <Target className="w-6 h-6" />
             Nexus 1: Predição Genômica
@@ -746,6 +747,9 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
           <p className="text-muted-foreground">
             Baseado em dados genômicos completos - Fórmula: ((PTA Fêmea + PTA Touro) / 2) × 0,93
           </p>
+        </div>
+        <div className="ml-auto">
+          <TutorialButtons slug="nexus" />
         </div>
       </div>
 

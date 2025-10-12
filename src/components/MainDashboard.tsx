@@ -598,7 +598,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
             <h1 className="text-2xl font-bold">ToolSS</h1>
           </div>
 
-          <div className="ml-auto flex items-center space-x-4">
+          <div className="ml-auto flex items-center gap-4">
             <div className="flex items-center space-x-2">
               <Avatar>
                 <AvatarFallback>
@@ -614,9 +614,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
               <LogOut className="w-4 h-4 mr-2" />
               Sair
             </Button>
-            <div className="ml-auto">
-              <TutorialButtons slug="dashboard" />
-            </div>
+            <TutorialButtons slug="dashboard" />
           </div>
         </div>
       </div>
