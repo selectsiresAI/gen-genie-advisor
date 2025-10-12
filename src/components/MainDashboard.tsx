@@ -747,7 +747,8 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
           <div className="pt-8 border-t">
             <div className="text-center text-sm text-muted-foreground">
               <p>ToolSS </p>
-              <p>Desenvolvido para otimizar a genética do seu rebanho</p>
+              <p>Powered by
+Select Sires do Brasil</p>
             </div>
           </div>
         </div>
