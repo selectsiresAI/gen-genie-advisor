@@ -45,31 +45,42 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
 
   async function start(s: string) {
     try {
-      if (__DEV__) console.debug("[tutorial] start called", { slug: s, userId, tenantId, effectiveTenantId });
+      console.log("[tutorial] start called", { slug: s, userId, tenantId, effectiveTenantId });
 
       if (!userId || !effectiveTenantId) {
-        if (__DEV__) console.debug("[tutorial] abort: missing ids", { userId, tenantId, effectiveTenantId, slug: s });
+        console.log("[tutorial] ❌ abort: missing ids", { userId, tenantId, effectiveTenantId, slug: s });
         return;
       }
 
+      console.log("[tutorial] ✓ IDs present, checking if enabled...");
       const enabled = await tutorialsEnabled(effectiveTenantId);
-      if (__DEV__) console.debug("[tutorial] tutorialsEnabled", { effectiveTenantId, enabled });
-      if (!enabled) return;
+      console.log("[tutorial] tutorialsEnabled result:", { effectiveTenantId, enabled });
+      if (!enabled) {
+        console.log("[tutorial] ❌ tutorials not enabled");
+        return;
+      }
 
+      console.log("[tutorial] ✓ Enabled, fetching tutorial...");
       const { steps } = await fetchTutorial(s);
-      if (__DEV__) console.debug("[tutorial] fetched steps", { slug: s, count: steps?.length ?? 0 });
-      if (!steps?.length) return;
+      console.log("[tutorial] fetched steps", { slug: s, count: steps?.length ?? 0, steps });
+      if (!steps?.length) {
+        console.log("[tutorial] ❌ no steps found");
+        return;
+      }
 
+      console.log("[tutorial] ✓ Steps found, getting progress...");
       const progress = await getOrInitProgress({ userId, tenantId: effectiveTenantId, slug: s });
       const startAt = progress.is_completed ? 0 : progress.current_step ?? 0;
-      if (__DEV__) console.debug("[tutorial] progress", { startAt, progress });
+      console.log("[tutorial] progress", { startAt, progress });
 
+      console.log("[tutorial] ✓ Setting state to activate tutorial...");
       setSteps(steps);
       setIdx(Math.min(startAt, steps.length - 1));
       setSlug(s);
       setActive(true);
+      console.log("[tutorial] ✅ Tutorial activated!");
     } catch (error) {
-      console.error("[tutorial] Error starting tutorial:", error);
+      console.error("[tutorial] ❌ Error starting tutorial:", error);
     }
   }
 
