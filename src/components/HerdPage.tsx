@@ -3,9 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowLeft, Users, Search, Plus, Upload, Download, TrendingUp, Trash2, Loader2 } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -49,6 +47,31 @@ const HerdPage: React.FC<HerdPageProps> = ({
   } = useHerdStore();
   const tableRegionRef = useRef<HTMLDivElement | null>(null);
   const selectAllCheckboxRef = useRef<HTMLInputElement | null>(null);
+  const stickyColumnVars = useMemo<React.CSSProperties>(() => ({
+    '--herd-sticky-select-width': '4.75rem',
+    '--herd-sticky-farm-width': '12.5rem',
+    '--herd-sticky-name-width': '14rem',
+    '--herd-sticky-select-left': '0px',
+    '--herd-sticky-farm-left': 'var(--herd-sticky-select-width)',
+    '--herd-sticky-name-left': 'calc(var(--herd-sticky-select-width) + var(--herd-sticky-farm-width))'
+  }), []);
+  const stickyColumnStyles = useMemo(() => ({
+    select: {
+      width: 'var(--herd-sticky-select-width)',
+      minWidth: 'var(--herd-sticky-select-width)',
+      left: 'var(--herd-sticky-select-left)'
+    } as React.CSSProperties,
+    farmId: {
+      width: 'var(--herd-sticky-farm-width)',
+      minWidth: 'var(--herd-sticky-farm-width)',
+      left: 'var(--herd-sticky-farm-left)'
+    } as React.CSSProperties,
+    name: {
+      width: 'var(--herd-sticky-name-width)',
+      minWidth: 'var(--herd-sticky-name-width)',
+      left: 'var(--herd-sticky-name-left)'
+    } as React.CSSProperties
+  }), []);
   const getAutomaticCategory = (birthDate?: string, parityOrder?: number) => {
     if (!birthDate) return 'Indefinida';
     const birth = new Date(birthDate);
@@ -400,11 +423,11 @@ const HerdPage: React.FC<HerdPageProps> = ({
               background: 'radial-gradient(circle at top left, rgba(255,255,255,0.35), transparent 55%)'
             }} aria-hidden="true"></div>
                 <CardHeader className="relative z-10 pb-1">
-                  <CardTitle className="flex items-center gap-3 text-sm uppercase tracking-wide text-slate-50 font-bold">
-                    {stat.icon ? <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white">
+                  <CardTitle className="flex items-center gap-2 text-sm uppercase tracking-wide text-slate-50 font-bold">
+                    {stat.icon && <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white">
                           {stat.icon}
-                        </span> : <span className={`h-2.5 w-2.5 rounded-full ${stat.indicatorColor || 'bg-white/60'}`}></span>}
-                    {stat.label}
+                        </span>}
+                    <span>{stat.label}</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="relative z-10 pt-0">
@@ -500,19 +523,19 @@ const HerdPage: React.FC<HerdPageProps> = ({
                         </AlertDialogContent>
                       </AlertDialog>
                     </div>}
-                  <ScrollArea className="h-[600px] w-full rounded-md border">
-                    <div className="w-full overflow-x-auto pb-4">
-                      <table className="w-full table-auto border-collapse">
-                        <thead className="sticky top-0 z-20 bg-foreground text-background [&>tr>th]:whitespace-nowrap [&>tr>th]:min-w-max [&>tr>th]:align-middle [&>tr>th]:px-3 [&>tr>th]:py-2 [&>tr>th]:text-left [&>tr>th]:text-xs [&>tr>th]:font-semibold [&>tr>th]:tracking-tight">
+                  <div className="relative">
+                    <div className="max-h-[70vh] overflow-x-auto overflow-y-auto rounded-md border" style={stickyColumnVars}>
+                      <table className="w-full min-w-[1200px] table-auto border-collapse">
+                        <thead className="sticky top-0 z-40 bg-foreground text-background shadow-sm [&>tr>th]:sticky [&>tr>th]:top-0 [&>tr>th]:z-40 [&>tr>th]:whitespace-nowrap [&>tr>th]:min-w-max [&>tr>th]:align-middle [&>tr>th]:px-3 [&>tr>th]:py-2 [&>tr>th]:text-left [&>tr>th]:text-xs [&>tr>th]:font-semibold [&>tr>th]:tracking-tight [&>tr>th]:bg-foreground [&>tr>th]:text-background">
                           <tr>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">
+                            <th className="sticky top-0 z-[60] bg-foreground text-background shadow-[6px_0_12px_-6px_rgba(15,23,42,0.45)]" style={stickyColumnStyles.select}>
                               <div className="flex items-center gap-2">
-                                <input type="checkbox" ref={selectAllCheckboxRef} checked={allVisibleSelected} onChange={handleSelectAll} className="h-4 w-4" />
+                                <input type="checkbox" ref={selectAllCheckboxRef} checked={allVisibleSelected} onChange={handleSelectAll} className="h-4 w-4" aria-label="Selecionar todas as fêmeas visíveis" />
                                 Selecionar
                               </div>
                             </th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">ID Fazenda</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Nome</th>
+                            <th className="sticky top-0 z-[55] bg-foreground text-background shadow-[6px_0_12px_-6px_rgba(15,23,42,0.45)]" style={stickyColumnStyles.farmId}>ID Fazenda</th>
+                            <th className="sticky top-0 z-50 bg-foreground text-background shadow-[6px_0_12px_-6px_rgba(15,23,42,0.45)]" style={stickyColumnStyles.name}>Nome</th>
                             <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">ID CDCB / Identificador</th>
                             <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Pai</th>
                             <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Avô Materno</th>
@@ -581,15 +604,15 @@ const HerdPage: React.FC<HerdPageProps> = ({
                             <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">GFI</th>
                           </tr>
                         </thead>
-                      <tbody className="[&>tr>td]:border [&>tr>td]:px-3 [&>tr>td]:py-2 [&>tr>td]:text-xs [&>tr>td]:whitespace-nowrap [&>tr>td]:align-middle">
+                      <tbody className="bg-background [&>tr>td]:border [&>tr>td]:px-3 [&>tr>td]:py-2 [&>tr>td]:text-xs [&>tr>td]:whitespace-nowrap [&>tr>td]:align-middle">
                         {filteredFemales.map(female => {
                           const fonteDisplay = getFonteDisplay(female.fonte);
                           return <tr key={female.id} className="hover:bg-muted/50">
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">
-                              <input type="checkbox" checked={selectedFemales.includes(female.id)} onChange={() => handleSelectFemale(female.id)} className="mr-1" />
+                            <td className="sticky z-30 border bg-background px-3 py-2 text-xs whitespace-nowrap shadow-[6px_0_12px_-6px_rgba(15,23,42,0.3)]" style={stickyColumnStyles.select}>
+                              <input type="checkbox" checked={selectedFemales.includes(female.id)} onChange={() => handleSelectFemale(female.id)} className="mr-1" aria-label={`Selecionar ${female.name}`} />
                             </td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{farm.farm_id}</td>
-                            <td className="border px-3 py-2 text-xs font-medium whitespace-nowrap">{female.name}</td>
+                            <td className="sticky z-20 border bg-background px-3 py-2 text-xs whitespace-nowrap shadow-[6px_0_12px_-6px_rgba(15,23,42,0.3)]" style={stickyColumnStyles.farmId}>{farm.farm_id}</td>
+                            <td className="sticky z-10 border bg-background px-3 py-2 text-xs font-medium whitespace-nowrap shadow-[6px_0_12px_-6px_rgba(15,23,42,0.3)]" style={stickyColumnStyles.name}>{female.name}</td>
                             <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.cdcb_id || female.identifier || '-'}</td>
                             <td className="border px-3 py-2 text-xs whitespace-nowrap">{renderPedigreeCell(female.sire_naab)}</td>
                             <td className="border px-3 py-2 text-xs whitespace-nowrap">{renderPedigreeCell(female.mgs_naab)}</td>
@@ -672,7 +695,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
                       </tbody>
                       </table>
                     </div>
-                  </ScrollArea>
+                  </div>
                 </div>}
             </CardContent>
             </Card>
