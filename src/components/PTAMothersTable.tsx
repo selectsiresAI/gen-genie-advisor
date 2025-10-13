@@ -1,79 +1,108 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RefreshCw, Calculator } from "lucide-react";
-import { usePTAStore } from '@/hooks/usePTAStore';
 import { useHerdStore } from '@/hooks/useHerdStore';
 import { usePlanStore } from '@/hooks/usePlanStore';
 import { useToast } from '@/hooks/use-toast';
+import { useMothersPtaMeans } from "@/hooks/useMothersPtaMeans";
 
 // Default PTAs to display in the table
 const DEFAULT_PTAS = [
-  "HHP$®", "TPI", "NM$", "CM$", "FM$", "GM$", "F SAV", "PTAM", "CFP", 
+  "HHP$®", "TPI", "NM$", "CM$", "FM$", "GM$", "F SAV", "PTAM", "CFP",
   "PTAF", "PTAF%", "PTAP", "PTAP%", "PL", "DPR", "LIV", "SCS", "MAST"
 ];
+
+const METRIC_COLUMNS = [
+  { key: "hhp_dollar" as const, label: "HHP$" },
+  { key: "tpi" as const, label: "TPI" },
+  { key: "nm_dollar" as const, label: "NM$" },
+  { key: "cm_dollar" as const, label: "CM$" },
+  { key: "fm_dollar" as const, label: "FM$" },
+];
+
+type MotherAverageCategory = {
+  heifers: Record<string, number>;
+  primiparous: Record<string, number>;
+  secundiparous: Record<string, number>;
+  multiparous: Record<string, number>;
+};
+
+const CATEGORY_KEY_MAP: Record<string, keyof MotherAverageCategory> = {
+  novilha: "heifers",
+  novilhas: "heifers",
+  primipara: "primiparous",
+  primiparas: "primiparous",
+  secundipara: "secundiparous",
+  secundiparas: "secundiparous",
+  multipara: "multiparous",
+  multiparas: "multiparous",
+};
+
+const normalizeCategory = (category: string) =>
+  category
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z]/g, "");
 
 interface PTAMothersTableProps {
   selectedPTAs?: string[];
   className?: string;
 }
 
-const PTAMothersTable: React.FC<PTAMothersTableProps> = ({ 
-  selectedPTAs = DEFAULT_PTAS, 
-  className = "" 
+const PTAMothersTable: React.FC<PTAMothersTableProps> = ({
+  selectedPTAs: _selectedPTAs = DEFAULT_PTAS,
+  className = ""
 }) => {
   const { toast } = useToast();
   const { selectedHerdId } = useHerdStore();
-  const planStore = usePlanStore();
-  const { 
-    ptaMeansByCategory, 
-    loading, 
-    error, 
-    loadPtaMeansForHerd 
-  } = usePTAStore();
+  const setMotherAverages = usePlanStore((state) => state.setMotherAverages);
+  const { rows, loading, error, refetch } = useMothersPtaMeans(selectedHerdId ?? undefined);
 
-  const [isRecalculating, setIsRecalculating] = useState(false);
-
-  // Load PTA means when herd changes or component mounts
   useEffect(() => {
-    if (selectedHerdId && selectedPTAs.length > 0) {
-      loadPtaMeansForHerd(selectedHerdId, selectedPTAs);
+    if (!rows.length) {
+      setMotherAverages({});
+      return;
     }
-  }, [selectedHerdId, selectedPTAs, loadPtaMeansForHerd]);
 
-  // Sync calculated PTA means with planStore for calculations
-  useEffect(() => {
-    if (Object.keys(ptaMeansByCategory).length > 0) {
-      // Convert our category names to planStore format
-      const categoryMapping = {
-        'novilha': 'heifers',
-        'primipara': 'primiparous',
-        'secundipara': 'secundiparous', 
-        'multipara': 'multiparous'
-      };
+    const motherAverages: MotherAverageCategory = {
+      heifers: {},
+      primiparous: {},
+      secundiparous: {},
+      multiparous: {},
+    };
 
-      const newMotherAverages: Record<string, Record<string, number>> = {};
-      
-      // Initialize categories
-      Object.values(categoryMapping).forEach(categoryKey => {
-        newMotherAverages[categoryKey] = {};
-      });
+    rows.forEach((row) => {
+      const normalized = normalizeCategory(row.category);
+      let categoryKey = CATEGORY_KEY_MAP[normalized];
+      if (!categoryKey) {
+        if (normalized.startsWith("novilha")) categoryKey = "heifers";
+        else if (normalized.startsWith("primipara")) categoryKey = "primiparous";
+        else if (normalized.startsWith("secundipara")) categoryKey = "secundiparous";
+        else if (normalized.startsWith("multipara")) categoryKey = "multiparous";
+      }
+      if (!categoryKey) return;
 
-      // Populate with calculated values
-      selectedPTAs.forEach(ptaLabel => {
-        if (ptaMeansByCategory[ptaLabel]) {
-          Object.entries(categoryMapping).forEach(([ourCategory, planStoreCategory]) => {
-            newMotherAverages[planStoreCategory][ptaLabel] = ptaMeansByCategory[ptaLabel][ourCategory as keyof typeof ptaMeansByCategory[string]] || 0;
-          });
+      const metrics: Array<[string, number | null | undefined]> = [
+        ["HHP$®", row.hhp_dollar],
+        ["HHP$", row.hhp_dollar],
+        ["TPI", row.tpi],
+        ["NM$", row.nm_dollar],
+        ["CM$", row.cm_dollar],
+        ["FM$", row.fm_dollar],
+      ];
+
+      metrics.forEach(([label, value]) => {
+        if (value !== null && value !== undefined) {
+          motherAverages[categoryKey][label] = value;
         }
       });
+    });
 
-      // Update planStore with calculated values
-      planStore.setMotherAverages(newMotherAverages);
-    }
-  }, [ptaMeansByCategory, selectedPTAs, planStore]);
+    setMotherAverages(motherAverages);
+  }, [rows, setMotherAverages]);
 
-  // Manual recalculate function
   const handleRecalculate = async () => {
     if (!selectedHerdId) {
       toast({
@@ -84,31 +113,10 @@ const PTAMothersTable: React.FC<PTAMothersTableProps> = ({
       return;
     }
 
-    setIsRecalculating(true);
-    try {
-      await loadPtaMeansForHerd(selectedHerdId, selectedPTAs);
-      toast({
-        title: "Médias recalculadas",
-        description: "As médias das PTAs foram atualizadas com sucesso.",
-      });
-    } catch (error) {
-      toast({
-        title: "Erro ao recalcular",
-        description: "Erro ao carregar dados do rebanho.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsRecalculating(false);
-    }
+    await refetch();
   };
 
-  // Get value for a specific PTA and category
-  const getPTAValue = (ptaLabel: string, category: string): number => {
-    return ptaMeansByCategory[ptaLabel]?.[category as keyof typeof ptaMeansByCategory[string]] || 0;
-  };
-
-  // Show empty alert if no herd selected or all values are zero
-  const showEmptyAlert = !selectedHerdId || Object.keys(ptaMeansByCategory).length === 0;
+  const showEmptyAlert = !selectedHerdId || (!loading && rows.length === 0 && !error);
 
   return (
     <Card className={className}>
@@ -120,12 +128,12 @@ const PTAMothersTable: React.FC<PTAMothersTableProps> = ({
           </CardTitle>
           <Button
             onClick={handleRecalculate}
-            disabled={loading || isRecalculating || !selectedHerdId}
+            disabled={loading || !selectedHerdId}
             variant="outline"
             size="sm"
             className="flex items-center gap-2"
           >
-            <RefreshCw className={`w-4 h-4 ${(loading || isRecalculating) ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Recalcular
           </Button>
         </div>
@@ -148,65 +156,43 @@ const PTAMothersTable: React.FC<PTAMothersTableProps> = ({
           </div>
         )}
 
-        {(loading || isRecalculating) ? (
+        {loading ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             <span className="ml-2 text-sm text-muted-foreground">
               Carregando médias das PTAs...
             </span>
           </div>
-        ) : (
+        ) : rows.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full border-collapse">
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="border px-3 py-2 text-left text-sm font-medium">Categoria</th>
-                  {selectedPTAs.map(ptaLabel => (
-                    <th key={ptaLabel} className="border px-3 py-2 text-center text-sm font-medium">
-                      {ptaLabel}
+                  {METRIC_COLUMNS.map((column) => (
+                    <th key={column.key} className="border px-3 py-2 text-right text-sm font-medium">
+                      {column.label}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                <tr className="border-b hover:bg-muted/25">
-                  <td className="border px-3 py-2 font-medium text-green-700">Novilhas</td>
-                  {selectedPTAs.map(ptaLabel => (
-                    <td key={ptaLabel} className="border px-3 py-2 text-center">
-                      {getPTAValue(ptaLabel, 'novilha')}
-                    </td>
-                  ))}
-                </tr>
-                <tr className="border-b hover:bg-muted/25">
-                  <td className="border px-3 py-2 font-medium text-purple-700">Primíparas</td>
-                  {selectedPTAs.map(ptaLabel => (
-                    <td key={ptaLabel} className="border px-3 py-2 text-center">
-                      {getPTAValue(ptaLabel, 'primipara')}
-                    </td>
-                  ))}
-                </tr>
-                <tr className="border-b hover:bg-muted/25">
-                  <td className="border px-3 py-2 font-medium text-orange-700">Secundíparas</td>
-                  {selectedPTAs.map(ptaLabel => (
-                    <td key={ptaLabel} className="border px-3 py-2 text-center">
-                      {getPTAValue(ptaLabel, 'secundipara')}
-                    </td>
-                  ))}
-                </tr>
-                <tr className="border-b hover:bg-muted/25">
-                  <td className="border px-3 py-2 font-medium text-red-700">Multíparas</td>
-                  {selectedPTAs.map(ptaLabel => (
-                    <td key={ptaLabel} className="border px-3 py-2 text-center">
-                      {getPTAValue(ptaLabel, 'multipara')}
-                    </td>
-                  ))}
-                </tr>
+                {rows.map((row) => (
+                  <tr key={row.category} className="border-b hover:bg-muted/25">
+                    <td className="border px-3 py-2 font-medium">{row.category}</td>
+                    {METRIC_COLUMNS.map((column) => (
+                      <td key={column.key} className="border px-3 py-2 text-right">
+                        {row[column.key] ?? 0}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-        )}
+        ) : null}
 
-        {!showEmptyAlert && !loading && !isRecalculating && (
+        {!showEmptyAlert && !loading && (
           <div className="mt-4 text-xs text-muted-foreground">
             <p>
               Médias ponderadas por paridade. Valores arredondados para inteiros.
