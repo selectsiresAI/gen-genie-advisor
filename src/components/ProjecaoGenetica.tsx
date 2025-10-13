@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { usePlanStore, AVAILABLE_PTAS, getFemalesByFarm, countFromCategoria, calculateMotherAverages, getBullPTAValue, calculatePopulationStructure } from "../hooks/usePlanStore";
 import { useHerdStore } from "../hooks/useHerdStore";
 import { useFileStore } from "../hooks/useFileStore";
@@ -7,6 +7,11 @@ import { supabase } from '@/integrations/supabase/client';
 import EstruturalPopulacional from './EstruturalPopulacional';
 import PTAMothersTable from './PTAMothersTable';
 import { BullSelector } from '@/components/BullSelector';
+import {
+  PlanObjectiveProvider,
+  usePlanObjective,
+  type ObjectiveChoice,
+} from "@/providers/PlanObjectiveContext";
 
 /**
  * Projeção Genética MVP – Select Sires (Frontend Only, Single File)
@@ -32,6 +37,72 @@ const COLORS = {
   black: "#1C1C1C",
   white: "#F2F2F2",
 };
+
+type BuiltinObjectiveKey = Extract<ObjectiveChoice, { kind: "BUILTIN" }>["key"];
+
+const BUILTIN_OBJECTIVES: { key: BuiltinObjectiveKey; label: string; description: string }[] = [
+  {
+    key: "HHP$",
+    label: "HHP$ — Saúde e Longevidade",
+    description: "Priorização de genética voltada a fertilidade, resistência a doenças e vida produtiva das vacas.",
+  },
+  {
+    key: "TPI",
+    label: "TPI — Total Performance Index",
+    description: "Equilíbrio geral entre produção, conformação e saúde para rebanhos com foco em evolução completa.",
+  },
+  {
+    key: "NM$",
+    label: "NM$ — Net Merit Dollar",
+    description: "Maximiza retorno econômico combinando produção de leite, sólidos e custos de saúde do rebanho.",
+  },
+  {
+    key: "FM$",
+    label: "FM$ — Female Merit",
+    description: "Direcionado a fertilidade, produção e longevidade em sistemas comerciais de leite focados em fêmeas.",
+  },
+  {
+    key: "CM$",
+    label: "CM$ — Cheese Merit",
+    description: "Ênfase em sólidos do leite e qualidade para operações voltadas a queijos e derivados.",
+  },
+];
+
+const BUILTIN_OBJECTIVE_MAP: Record<BuiltinObjectiveKey, typeof BUILTIN_OBJECTIVES[number]> = BUILTIN_OBJECTIVES.reduce(
+  (acc, item) => ({
+    ...acc,
+    [item.key]: item,
+  }),
+  {} as Record<BuiltinObjectiveKey, typeof BUILTIN_OBJECTIVES[number]>
+);
+
+const labelToBuiltin = new Map(BUILTIN_OBJECTIVES.map((item) => [item.label, item.key] as const));
+
+function slugifyObjectiveName(name: string) {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gi, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 120) || "objetivo-personalizado";
+}
+
+function getObjectiveLabel(choice: ObjectiveChoice | null) {
+  if (!choice) return "";
+  if (choice.kind === "BUILTIN") {
+    return BUILTIN_OBJECTIVE_MAP[choice.key]?.label ?? choice.key;
+  }
+  return choice.name;
+}
+
+function objectiveFromLabel(label: string): ObjectiveChoice | null {
+  const trimmed = label.trim();
+  if (!trimmed) return null;
+  const builtinKey = labelToBuiltin.get(trimmed);
+  if (builtinKey) {
+    return { kind: "BUILTIN", key: builtinKey };
+  }
+  return { kind: "CUSTOM", id: slugifyObjectiveName(trimmed), name: trimmed };
+}
 
 // Tipos
 type CategoryKey = "novilhas" | "primiparas" | "secundiparas" | "multiparas";
@@ -590,12 +661,14 @@ function Button({
   onClick,
   children,
   variant = "primary" as const,
-  ariaLabel
+  ariaLabel,
+  disabled,
 }: {
   onClick?: () => void;
   children: React.ReactNode;
   variant?: "primary" | "ghost";
   ariaLabel?: string;
+  disabled?: boolean;
 }) {
   const styles =
     variant === "primary"
@@ -603,8 +676,10 @@ function Button({
       : { background: "transparent", color: COLORS.black, border: `1px solid ${COLORS.gray}` };
   return (
     <button
-      onClick={onClick}
+      type="button"
+      onClick={disabled ? undefined : onClick}
       aria-label={ariaLabel}
+      disabled={disabled}
       style={{
         padding: "8px 12px",
         minHeight: 36,
@@ -615,7 +690,8 @@ function Button({
         display: "inline-flex",
         alignItems: "center",
         gap: 6,
-        cursor: "pointer",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.6 : 1,
         ...styles
       }}
     >
@@ -1241,6 +1317,110 @@ function useCharts() {
   return { ready, createChart };
 }
 
+function PlanObjectiveSetup() {
+  const { objective, setObjective } = usePlanObjective();
+  const [customDraft, setCustomDraft] = useState(() => (objective?.kind === "CUSTOM" ? objective.name : ""));
+
+  useEffect(() => {
+    if (objective?.kind === "CUSTOM") {
+      setCustomDraft(objective.name);
+    } else {
+      setCustomDraft("");
+    }
+  }, [objective]);
+
+  const selectedLabel = getObjectiveLabel(objective);
+
+  const handleSelectBuiltin = useCallback(
+    (key: BuiltinObjectiveKey) => {
+      setObjective({ kind: "BUILTIN", key });
+    },
+    [setObjective]
+  );
+
+  const handleSaveCustom = useCallback(() => {
+    const trimmed = customDraft.trim();
+    if (!trimmed) return;
+    setObjective({ kind: "CUSTOM", id: slugifyObjectiveName(trimmed), name: trimmed });
+  }, [customDraft, setObjective]);
+
+  const handleClear = useCallback(() => {
+    setObjective(null);
+  }, [setObjective]);
+
+  return (
+    <div style={{ display: "grid", gap: 16 }}>
+      <div>
+        <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>Objetivos recomendados Select Sires</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 8 }}>
+          {BUILTIN_OBJECTIVES.map((item) => {
+            const isSelected = objective?.kind === "BUILTIN" && objective.key === item.key;
+            return (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => handleSelectBuiltin(item.key)}
+                style={{
+                  padding: 12,
+                  borderRadius: 12,
+                  border: isSelected ? `2px solid ${COLORS.red}` : `1px solid ${COLORS.gray}`,
+                  background: isSelected ? "#fde8ec" : "#fff",
+                  textAlign: "left",
+                  cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 4,
+                  boxShadow: isSelected ? "0 0 0 2px rgba(190, 30, 45, 0.12)" : "none",
+                  transition: "border-color 0.2s ease, box-shadow 0.2s ease",
+                }}
+              >
+                <span style={{ fontSize: 11, fontWeight: 700, color: COLORS.red }}>{item.key}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.black }}>{item.label}</span>
+                <span style={{ fontSize: 12, color: COLORS.black, opacity: 0.8 }}>{item.description}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>Objetivo personalizado</div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+          <div style={{ flex: 1, minWidth: 240 }}>
+            <Input
+              value={customDraft}
+              onChange={setCustomDraft}
+              placeholder="Descreva um objetivo específico para o rebanho"
+            />
+          </div>
+          <Button onClick={handleSaveCustom} disabled={!customDraft.trim()} ariaLabel="Salvar objetivo personalizado">
+            Salvar objetivo
+          </Button>
+          <Button variant="ghost" onClick={handleClear} disabled={!objective} ariaLabel="Limpar objetivo selecionado">
+            Limpar
+          </Button>
+        </div>
+        <div style={{ fontSize: 12, color: COLORS.black, marginTop: 6 }}>
+          Use este campo para registrar metas específicas do cliente, como foco em sólidos do leite, redução de custos reprodutivos
+          ou melhor posicionamento de mercado.
+        </div>
+      </div>
+
+      <div style={{ background: "#e3f2fd", border: "1px solid #90caf9", borderRadius: 12, padding: 14 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.black }}>Objetivo ativo do plano</div>
+        <div style={{ fontSize: 18, fontWeight: 800, color: COLORS.black, marginTop: 4 }}>
+          {selectedLabel || "Nenhum objetivo definido"}
+        </div>
+        <div style={{ fontSize: 12, color: COLORS.black, marginTop: 4 }}>
+          {selectedLabel
+            ? "Os insights e o ROI são interpretados considerando este direcionamento estratégico do plano."
+            : "Selecione um objetivo sugerido ou cadastre um objetivo personalizado para contextualizar os resultados apresentados."}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCalculations> }) {
   const planStore = usePlanStore();
   const { ready, createChart } = useCharts();
@@ -1536,7 +1716,11 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
           })()}
         </div>
       </Section>
-      
+
+      <Section title="🎯 Configuração do Objetivo Genético">
+        <PlanObjectiveSetup />
+      </Section>
+
       {/* Fórmula e Explicação do ROI */}
       <Section title="Fórmula do ROI">
         <div style={{ backgroundColor: COLORS.white, padding: 20, borderRadius: 10, border: `1px solid ${COLORS.gray}` }}>
@@ -1753,15 +1937,35 @@ export default function ProjecaoGenetica() {
   const calc = useCalculations(state);
   const [page, setPage] = useState<"plano" | "touros" | "resultados" | "pdf">("plano");
 
+  const initialObjectiveChoice = useMemo(() => objectiveFromLabel(state.farm.objective), [state.farm.objective]);
+
+  const handleObjectiveChange = useCallback(
+    (next: ObjectiveChoice | null) => {
+      setState((prev) => {
+        const label = getObjectiveLabel(next);
+        if (prev.farm.objective === label) {
+          return prev;
+        }
+        return {
+          ...prev,
+          farm: { ...prev.farm, objective: label },
+        };
+      });
+    },
+    [setState]
+  );
+
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#FAFAFA", color: COLORS.black }}>
-      <Sidebar current={page} onChange={(p) => setPage(p as any)} onLoadTest={loadTestData} onClear={clearAll} />
-      <main style={{ flex: 1, padding: 16, maxWidth: 1400, margin: "0 auto" }}>
-        {page === "plano" && <PagePlano st={state} setSt={setState} />}
-        {page === "touros" && <PageBulls st={state} setSt={setState} />}
-        {page === "resultados" && <PageResults st={state} calc={calc} />}
-        {page === "pdf" && <PageExport st={state} />}
-      </main>
-    </div>
+    <PlanObjectiveProvider initialObjective={initialObjectiveChoice} onObjectiveChange={handleObjectiveChange}>
+      <div style={{ display: "flex", minHeight: "100vh", background: "#FAFAFA", color: COLORS.black }}>
+        <Sidebar current={page} onChange={(p) => setPage(p as any)} onLoadTest={loadTestData} onClear={clearAll} />
+        <main style={{ flex: 1, padding: 16, maxWidth: 1400, margin: "0 auto" }}>
+          {page === "plano" && <PagePlano st={state} setSt={setState} />}
+          {page === "touros" && <PageBulls st={state} setSt={setState} />}
+          {page === "resultados" && <PageResults st={state} calc={calc} />}
+          {page === "pdf" && <PageExport st={state} />}
+        </main>
+      </div>
+    </PlanObjectiveProvider>
   );
 }
