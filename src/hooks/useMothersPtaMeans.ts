@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/browser";
+import { supabase } from "@/integrations/supabase/client";
 
 export type MothersPtaRow = {
   category: string;
@@ -11,7 +11,6 @@ export type MothersPtaRow = {
 };
 
 export function useMothersPtaMeans(farmId?: string) {
-  const supabase = createClient();
   const [rows, setRows] = useState<MothersPtaRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +22,7 @@ export function useMothersPtaMeans(farmId?: string) {
     if (error) setError(error.message);
     setRows((data as MothersPtaRow[]) ?? []);
     setLoading(false);
-  }, [farmId, supabase]);
+  }, [farmId]);
 
   useEffect(() => { refetch(); }, [refetch]);
 
