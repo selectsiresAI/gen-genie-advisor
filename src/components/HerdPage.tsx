@@ -501,16 +501,16 @@ const HerdPage: React.FC<HerdPageProps> = ({
                   <div className="relative">
                     <div className="max-h-[70vh] overflow-x-auto overflow-y-auto rounded-md border">
                       <table className="w-full min-w-[1200px] table-auto border-collapse">
-                        <thead className="sticky top-0 z-30 bg-foreground text-background shadow-sm [&>tr>th]:whitespace-nowrap [&>tr>th]:min-w-max [&>tr>th]:align-middle [&>tr>th]:px-3 [&>tr>th]:py-2 [&>tr>th]:text-left [&>tr>th]:text-xs [&>tr>th]:font-semibold [&>tr>th]:tracking-tight [&>tr>th]:text-background [&>tr>th]:bg-foreground">
+                        <thead className="sticky top-0 z-40 bg-foreground text-background shadow-sm [&>tr>th]:sticky [&>tr>th]:top-0 [&>tr>th]:z-40 [&>tr>th]:whitespace-nowrap [&>tr>th]:min-w-max [&>tr>th]:align-middle [&>tr>th]:px-3 [&>tr>th]:py-2 [&>tr>th]:text-left [&>tr>th]:text-xs [&>tr>th]:font-semibold [&>tr>th]:tracking-tight [&>tr>th]:bg-foreground [&>tr>th]:text-background">
                           <tr>
-                            <th className="sticky left-0 z-40 min-w-[4rem] w-[4rem] bg-foreground text-background shadow-[6px_0_12px_-6px_rgba(15,23,42,0.45)]">
+                            <th className="left-0 z-[60] min-w-[4rem] w-[4rem] shadow-[6px_0_12px_-6px_rgba(15,23,42,0.45)]">
                               <div className="flex items-center gap-2">
                                 <input type="checkbox" ref={selectAllCheckboxRef} checked={allVisibleSelected} onChange={handleSelectAll} className="h-4 w-4" aria-label="Selecionar todas as fêmeas visíveis" />
                                 Selecionar
                               </div>
                             </th>
-                            <th className="sticky left-16 z-30 min-w-[180px] w-[180px] bg-foreground text-background shadow-[6px_0_12px_-6px_rgba(15,23,42,0.45)]">ID Fazenda</th>
-                            <th className="sticky left-[244px] z-20 min-w-[220px] w-[220px] bg-foreground text-background shadow-[6px_0_12px_-6px_rgba(15,23,42,0.45)]">Nome</th>
+                            <th className="left-16 z-[55] min-w-[180px] w-[180px] shadow-[6px_0_12px_-6px_rgba(15,23,42,0.45)]">ID Fazenda</th>
+                            <th className="left-[244px] z-50 min-w-[220px] w-[220px] shadow-[6px_0_12px_-6px_rgba(15,23,42,0.45)]">Nome</th>
                             <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">ID CDCB / Identificador</th>
                             <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Pai</th>
                             <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Avô Materno</th>
