@@ -15,6 +15,12 @@ import {
   YAxis,
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  buildTrendLine,
+  computeWeightedMean,
+  computeWeightedRegression,
+  type WeightedPoint,
+} from "@/lib/statistics";
 
 export type GeneticAuditSeriesRow = {
   ano: number;
@@ -42,9 +48,15 @@ const COLORS = {
 
 const LOW_SCALE_PTA = new Set(["DPR", "LIV", "SCS"]);
 
+const isFiniteNumber = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value);
+
 const formatNumber = (value: number | null | undefined, digits = 2) => {
-  if (typeof value !== "number" || Number.isNaN(value)) return "-";
-  return value.toFixed(digits);
+  if (!isFiniteNumber(value)) return "-";
+  return value.toLocaleString("pt-BR", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
 };
 
 function computeYDomain(pta: string, data: GeneticAuditSeriesRow[]) {
@@ -76,25 +88,6 @@ function computeYDomain(pta: string, data: GeneticAuditSeriesRow[]) {
   return [Number(min.toFixed(2)), Number(max.toFixed(2))] as [number, number];
 }
 
-function buildTrendLinePoints(data: GeneticAuditSeriesRow[]) {
-  if (!data.length) return [] as Array<{ ano: number; trend: number }>;
-
-  const years = data.map((row) => row.ano);
-  const minYear = Math.min(...years);
-  const maxYear = Math.max(...years);
-  const { slope, intercept } = data[0];
-
-  if (slope == null || intercept == null) return [];
-
-  const firstValue = slope * minYear + intercept;
-  const lastValue = slope * maxYear + intercept;
-
-  return [
-    { ano: minYear, trend: firstValue },
-    { ano: maxYear, trend: lastValue },
-  ];
-}
-
 type ChartPoint = {
   ano: number;
   media: number | null;
@@ -118,13 +111,20 @@ function GeneticAuditTooltip({ active, payload, label }: TooltipProps<number, st
     <div className="rounded-md border border-gray-200 bg-white p-3 text-xs shadow-sm">
       <div className="font-semibold text-gray-800">Ano: {label}</div>
       <div className="mt-1 text-gray-700">
-        Média ponderada: {formatNumber(basePoint?.media ?? null)}
+        Média ponderada: {formatNumber(
+          isFiniteNumber(basePoint?.media)
+            ? basePoint?.media ?? null
+            : null,
+          Math.abs(basePoint?.media ?? 0) >= 100 ? 0 : 2
+        )}
       </div>
       {typeof basePoint?.n === "number" && (
         <div className="text-gray-700">N total: {basePoint?.n}</div>
       )}
       {trendValue != null && (
-        <div className="text-gray-700">Tendência: {formatNumber(trendValue)}</div>
+        <div className="text-gray-700">
+          Tendência: {formatNumber(trendValue, Math.abs(trendValue) >= 100 ? 0 : 2)}
+        </div>
       )}
     </div>
   );
@@ -173,31 +173,59 @@ export default function GeneticAuditStep4Chart({
   }, [farmId, tipoPTA]);
 
   const yDomain = useMemo(() => computeYDomain(tipoPTA, rows), [tipoPTA, rows]);
-  const trendPoints = useMemo(() => buildTrendLinePoints(rows), [rows]);
-  const mediaGeral = rows.length ? rows[0].media_geral : null;
-  const r2 = rows.length ? rows[0].r2 : null;
-
-  const chartData: ChartPoint[] = useMemo(
+  const weightedPoints = useMemo<WeightedPoint[]>(
     () =>
       rows.map((row) => ({
-        ano: row.ano,
-        media: row.media_ponderada_ano,
-        n: row.n_total_ano,
+        x: row.ano,
+        y: row.media_ponderada_ano,
+        weight: row.n_total_ano,
       })),
     [rows]
   );
 
-  const trendData: TrendPoint[] = useMemo(
+  const overallMean = useMemo(
+    () => computeWeightedMean(weightedPoints),
+    [weightedPoints]
+  );
+
+  const regression = useMemo(
+    () => computeWeightedRegression(weightedPoints),
+    [weightedPoints]
+  );
+
+  const trendData = useMemo(
     () =>
-      trendPoints.map((point) => ({
-        ano: point.ano,
-        trend: point.trend,
-      })),
-    [trendPoints]
+      buildTrendLine(weightedPoints, regression.slope, regression.intercept).map(
+        (point) => ({ ano: point.x, trend: point.y })
+      ),
+    [weightedPoints, regression.slope, regression.intercept]
+  );
+
+  const validPointCount = useMemo(
+    () =>
+      weightedPoints.filter(
+        (point) =>
+          Number.isFinite(point.x) &&
+          isFiniteNumber(point.y)
+      ).length,
+    [weightedPoints]
+  );
+
+  const chartData: ChartPoint[] = useMemo(
+    () =>
+      rows
+        .slice()
+        .sort((a, b) => a.ano - b.ano)
+        .map((row) => ({
+          ano: row.ano,
+          media: row.media_ponderada_ano,
+          n: row.n_total_ano,
+        })),
+    [rows]
   );
 
   const showR2 =
-    r2 != null && rows.filter((row) => typeof row.media_ponderada_ano === "number").length >= 3;
+    regression.r2 != null && validPointCount >= 3;
 
   if (loading) {
     return (
@@ -225,7 +253,11 @@ export default function GeneticAuditStep4Chart({
         <h3 className="text-base font-semibold text-foreground">
           {title ?? `Tendência ${tipoPTA.toUpperCase()}`}
         </h3>
-        {showR2 && <span className="text-xs text-muted-foreground">R² = {formatNumber(r2, 3)}</span>}
+        {showR2 && (
+          <span className="text-xs text-muted-foreground">
+            R² = {formatNumber(regression.r2, 3)}
+          </span>
+        )}
       </div>
 
       <div className="h-80 w-full">
@@ -261,8 +293,13 @@ export default function GeneticAuditStep4Chart({
                 dataKey="media"
                 position="top"
                 className="fill-current text-xs"
-                formatter={(value: number | null) =>
-                  typeof value === "number" ? Number(value).toFixed(2) : ""
+              formatter={(value: number | null) =>
+                  isFiniteNumber(value)
+                    ? formatNumber(
+                        value,
+                        Math.abs(value) >= 100 ? 0 : 2
+                      )
+                    : ""
                 }
               />
             </Line>
@@ -280,14 +317,14 @@ export default function GeneticAuditStep4Chart({
               />
             )}
 
-            {typeof mediaGeral === "number" && (
+            {isFiniteNumber(overallMean) && (
               <ReferenceLine
-                y={mediaGeral}
+                y={overallMean}
                 stroke={COLORS.mean}
                 strokeWidth={2}
                 ifOverflow="extendDomain"
                 label={{
-                  value: "Média geral",
+                  value: `Média geral (${formatNumber(overallMean, 2)})`,
                   position: "insideTopRight",
                   fill: COLORS.mean,
                   fontSize: 12,

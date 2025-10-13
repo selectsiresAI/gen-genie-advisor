@@ -16,10 +16,16 @@ import {
   YAxis,
 } from "recharts";
 import { PTA_CATALOG } from "@/lib/pta";
+import {
+  buildTrendLine,
+  computeWeightedMean,
+  computeWeightedRegression,
+  type WeightedPoint,
+} from "@/lib/statistics";
 import { useFemales } from "../hooks";
 import { useAGFilters } from "../store";
 
-type SeriesPoint = { year: number; n: number; mean: number };
+type SeriesPoint = { year: number; n: number; mean: number | null };
 
 type TraitCardProps = {
   traitKey: string;
@@ -30,8 +36,8 @@ type TraitCardProps = {
   domainTicks: number[];
 };
 
-const avg = (values: number[]) =>
-  values.length ? values.reduce((s, v) => s + v, 0) / values.length : 0;
+const isFiniteNumber = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value);
 
 function getYearFromBirth(birth: unknown): number | null {
   if (!birth) return null;
@@ -52,37 +58,6 @@ function getYearFromBirth(birth: unknown): number | null {
   return null;
 }
 
-function computeSlope(points: SeriesPoint[]): number {
-  if (points.length < 2) return 0;
-  const xs = points.map((p) => p.year);
-  const ys = points.map((p) => p.mean);
-  const mx = avg(xs);
-  const my = avg(ys);
-  const varX = avg(xs.map((x) => (x - mx) ** 2));
-  if (!varX) return 0;
-  const cov = avg(xs.map((x, i) => (x - mx) * (ys[i] - my)));
-  return Math.round((cov / varX) * 10) / 10;
-}
-
-function computeTrend(points: SeriesPoint[]) {
-  if (points.length < 2) return [] as Array<{ year: number; trend: number }>;
-  const xs = points.map((p) => p.year);
-  const ys = points.map((p) => p.mean);
-  const mx = avg(xs);
-  const my = avg(ys);
-  const varX = avg(xs.map((x) => (x - mx) ** 2));
-  if (!varX) return [];
-  const cov = avg(xs.map((x, i) => (x - mx) * (ys[i] - my)));
-  const slope = cov / varX;
-  const intercept = my - slope * mx;
-  const firstYear = xs[0];
-  const lastYear = xs[xs.length - 1];
-  return [
-    { year: firstYear, trend: Math.round(intercept + slope * firstYear) },
-    { year: lastYear, trend: Math.round(intercept + slope * lastYear) },
-  ];
-}
-
 const TraitCard = memo(function TraitCard({
   traitKey,
   traitLabel,
@@ -91,32 +66,74 @@ const TraitCard = memo(function TraitCard({
   showTrend,
   domainTicks,
 }: TraitCardProps) {
-  const totals = data.reduce(
-    (acc, p) => {
-      acc.sum += p.mean * p.n;
-      acc.n += p.n;
-      return acc;
-    },
-    { sum: 0, n: 0 }
+  const weightedPoints = useMemo<WeightedPoint[]>(
+    () =>
+      data
+        .filter((point) => isFiniteNumber(point.mean) && point.n > 0)
+        .map((point) => ({
+          x: point.year,
+          y: point.mean,
+          weight: point.n,
+        })),
+    [data]
   );
-  const farmMean = totals.n ? Math.round(totals.sum / totals.n) : 0;
-  const slope = computeSlope(data);
-  const chartData = data.map((p, i) => ({
-    year: p.year,
-    n: p.n,
-    mean: Math.round(p.mean),
-    delta: Math.round(i === 0 ? 0 : p.mean - data[i - 1].mean),
-    farmMean,
-  }));
-  const trend = showTrend ? computeTrend(data) : [];
+
+  const farmMean = useMemo(
+    () => computeWeightedMean(weightedPoints),
+    [weightedPoints]
+  );
+
+  const regression = useMemo(
+    () => computeWeightedRegression(weightedPoints),
+    [weightedPoints]
+  );
+
+  const trend = useMemo(
+    () =>
+      showTrend
+        ? buildTrendLine(weightedPoints, regression.slope, regression.intercept).map(
+            (point) => ({ year: point.x, trend: point.y })
+          )
+        : [],
+    [showTrend, weightedPoints, regression.slope, regression.intercept]
+  );
+
+  const chartData = useMemo(
+    () =>
+      data.map((point, index) => {
+        const prevMean = index > 0 ? data[index - 1]?.mean : null;
+        const delta =
+          isFiniteNumber(point.mean) && isFiniteNumber(prevMean)
+            ? point.mean! - (prevMean ?? 0)
+            : null;
+
+        return {
+          year: point.year,
+          n: point.n,
+          mean: point.mean,
+          delta,
+          farmMean,
+        };
+      }),
+    [data, farmMean]
+  );
+
+  const slopeDigits = Math.abs(regression.slope) >= 10 ? 0 : 2;
+  const slopeText = isFiniteNumber(regression.slope)
+    ? `${regression.slope > 0 ? "+" : regression.slope < 0 ? "-" : ""}${Math.abs(
+        regression.slope
+      ).toLocaleString("pt-BR", {
+        minimumFractionDigits: slopeDigits,
+        maximumFractionDigits: slopeDigits,
+      })}`
+    : "0";
 
   return (
     <div className="rounded-2xl shadow overflow-hidden bg-white">
       <div className="bg-black text-white px-4 py-2 text-sm font-semibold flex items-center justify-between">
         <div className="truncate">{traitLabel}</div>
         <div className="text-xs opacity-90">
-          Tendência: {slope >= 0 ? "+" : ""}
-          {slope}/ano
+          Tendência: {slopeText}/ano
         </div>
       </div>
       <div className="p-3 h-64">
@@ -135,9 +152,36 @@ const TraitCard = memo(function TraitCard({
             <YAxis />
             <Tooltip
               formatter={(value: any, name: string) => {
-                if (name === "mean") return [value, "Média anual"];
-                if (name === "delta") return [value, "Δ vs ano ant."];
-                if (name === "trend") return [value, "Tendência"];
+                if (name === "mean")
+                  return [
+                    isFiniteNumber(value)
+                      ? value.toLocaleString("pt-BR", {
+                          minimumFractionDigits: Math.abs(value) >= 100 ? 0 : 2,
+                          maximumFractionDigits: Math.abs(value) >= 100 ? 0 : 2,
+                        })
+                      : value,
+                    "Média anual",
+                  ];
+                if (name === "delta")
+                  return [
+                    isFiniteNumber(value)
+                      ? value.toLocaleString("pt-BR", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })
+                      : value,
+                    "Δ vs ano ant.",
+                  ];
+                if (name === "trend")
+                  return [
+                    isFiniteNumber(value)
+                      ? value.toLocaleString("pt-BR", {
+                          minimumFractionDigits: Math.abs(value) >= 100 ? 0 : 2,
+                          maximumFractionDigits: Math.abs(value) >= 100 ? 0 : 2,
+                        })
+                      : value,
+                    "Tendência",
+                  ];
                 if (name === "n") return [value, "N"];
                 return [value, name];
               }}
@@ -156,14 +200,18 @@ const TraitCard = memo(function TraitCard({
               name="Média anual"
               stroke="#111827"
               dot={{ r: 4, strokeWidth: 2, stroke: "#111827", fill: "#fff" }}
+              connectNulls
             />
-            {showFarmMean && (
+            {showFarmMean && isFiniteNumber(farmMean) && (
               <ReferenceLine
                 y={farmMean}
                 stroke="#22C3EE"
                 strokeDasharray="6 6"
                 label={{
-                  value: `Média ${farmMean}`,
+                  value: `Média ${farmMean.toLocaleString("pt-BR", {
+                    minimumFractionDigits: Math.abs(farmMean) >= 100 ? 0 : 2,
+                    maximumFractionDigits: Math.abs(farmMean) >= 100 ? 0 : 2,
+                  })}`,
                   position: "insideTopLeft",
                 }}
               />
@@ -213,30 +261,43 @@ export default function Step5Progressao() {
   }, [females]);
 
   const seriesByKey = useMemo(() => {
-    const years = domainTicks;
     const out: Record<string, SeriesPoint[]> = {};
 
     for (const key of ptasSelecionadas) {
-      const byYear = new Map<number, number[]>();
+      const byYear = new Map<number, { sum: number; count: number }>();
+
       for (const f of females as any[]) {
         const y = getYearFromBirth((f as any)?.birth_date);
-        const v = Number((f as any)?.[key]);
-        if (Number.isFinite(y) && Number.isFinite(v)) {
-          const arr = byYear.get(y as number) ?? [];
-          arr.push(v);
-          byYear.set(y as number, arr);
+        const rawValue = (f as any)?.[key];
+        const value =
+          typeof rawValue === "number"
+            ? rawValue
+            : rawValue != null
+            ? Number(rawValue)
+            : null;
+
+        if (Number.isFinite(y) && Number.isFinite(value)) {
+          const current = byYear.get(y as number) ?? { sum: 0, count: 0 };
+          current.sum += value as number;
+          current.count += 1;
+          byYear.set(y as number, current);
         }
       }
 
-      out[key] = years
-        .map((y) => {
-          const arr = byYear.get(y) ?? [];
-          return { year: y, n: arr.length, mean: arr.length ? avg(arr) : 0 };
-        })
-        .filter((p) => p.n > 0);
+      const points: SeriesPoint[] = Array.from(byYear.entries())
+        .map(([year, bucket]) => ({
+          year,
+          n: bucket.count,
+          mean: bucket.count ? bucket.sum / bucket.count : null,
+        }))
+        .filter((point) => point.n > 0 && isFiniteNumber(point.mean))
+        .sort((a, b) => a.year - b.year);
+
+      out[key] = points;
     }
+
     return out;
-  }, [ptasSelecionadas, females, domainTicks]);
+  }, [ptasSelecionadas, females]);
 
   const options = useMemo(
     () =>
