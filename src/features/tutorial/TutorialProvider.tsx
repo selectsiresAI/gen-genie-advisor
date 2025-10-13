@@ -44,29 +44,33 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   const [idx, setIdx] = useState(0);
 
   async function start(s: string) {
-    if (__DEV__) console.debug("[tutorial] start called", { slug: s, userId, tenantId, effectiveTenantId });
+    try {
+      if (__DEV__) console.debug("[tutorial] start called", { slug: s, userId, tenantId, effectiveTenantId });
 
-    if (!userId || !effectiveTenantId) {
-      if (__DEV__) console.debug("[tutorial] abort: missing ids", { userId, tenantId, effectiveTenantId, slug: s });
-      return;
+      if (!userId || !effectiveTenantId) {
+        if (__DEV__) console.debug("[tutorial] abort: missing ids", { userId, tenantId, effectiveTenantId, slug: s });
+        return;
+      }
+
+      const enabled = await tutorialsEnabled(effectiveTenantId);
+      if (__DEV__) console.debug("[tutorial] tutorialsEnabled", { effectiveTenantId, enabled });
+      if (!enabled) return;
+
+      const { steps } = await fetchTutorial(s);
+      if (__DEV__) console.debug("[tutorial] fetched steps", { slug: s, count: steps?.length ?? 0 });
+      if (!steps?.length) return;
+
+      const progress = await getOrInitProgress({ userId, tenantId: effectiveTenantId, slug: s });
+      const startAt = progress.is_completed ? 0 : progress.current_step ?? 0;
+      if (__DEV__) console.debug("[tutorial] progress", { startAt, progress });
+
+      setSteps(steps);
+      setIdx(Math.min(startAt, steps.length - 1));
+      setSlug(s);
+      setActive(true);
+    } catch (error) {
+      console.error("[tutorial] Error starting tutorial:", error);
     }
-
-    const enabled = await tutorialsEnabled(effectiveTenantId);
-    if (__DEV__) console.debug("[tutorial] tutorialsEnabled", { effectiveTenantId, enabled });
-    if (!enabled) return;
-
-    const { steps } = await fetchTutorial(s);
-    if (__DEV__) console.debug("[tutorial] fetched steps", { slug: s, count: steps?.length ?? 0 });
-    if (!steps?.length) return;
-
-    const progress = await getOrInitProgress({ userId, tenantId: effectiveTenantId, slug: s });
-    const startAt = progress.is_completed ? 0 : progress.current_step ?? 0;
-    if (__DEV__) console.debug("[tutorial] progress", { startAt, progress });
-
-    setSteps(steps);
-    setIdx(Math.min(startAt, steps.length - 1));
-    setSlug(s);
-    setActive(true);
   }
 
   async function reset(s: string) {

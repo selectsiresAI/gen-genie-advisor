@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useTutorial } from "./TutorialProvider";
+
 export function TutorialButtons({
   slug
 }: {
@@ -12,9 +13,14 @@ export function TutorialButtons({
     <div className="flex gap-2">
       <Button
         size="sm"
-        onClick={() => {
-          if (process.env.NODE_ENV !== "production") console.debug("[tutorial] button click", slug);
-          t.start(slug);
+        onClick={async () => {
+          console.log("[TutorialButtons] Button clicked!", { slug });
+          try {
+            await t.start(slug);
+            console.log("[TutorialButtons] Start completed", { isActive: t.isActive, step: t.step });
+          } catch (error) {
+            console.error("[TutorialButtons] Error starting tutorial:", error);
+          }
         }}
       >
         Ver tutorial
