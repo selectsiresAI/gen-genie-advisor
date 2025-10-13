@@ -3,9 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowLeft, Users, Search, Plus, Upload, Download, TrendingUp, Trash2, Loader2 } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -400,11 +398,11 @@ const HerdPage: React.FC<HerdPageProps> = ({
               background: 'radial-gradient(circle at top left, rgba(255,255,255,0.35), transparent 55%)'
             }} aria-hidden="true"></div>
                 <CardHeader className="relative z-10 pb-1">
-                  <CardTitle className="flex items-center gap-3 text-sm uppercase tracking-wide text-slate-50 font-bold">
-                    {stat.icon ? <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white">
+                  <CardTitle className="flex items-center gap-2 text-sm uppercase tracking-wide text-slate-50 font-bold">
+                    {stat.icon && <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white">
                           {stat.icon}
-                        </span> : <span className={`h-2.5 w-2.5 rounded-full ${stat.indicatorColor || 'bg-white/60'}`}></span>}
-                    {stat.label}
+                        </span>}
+                    <span>{stat.label}</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="relative z-10 pt-0">
@@ -500,19 +498,19 @@ const HerdPage: React.FC<HerdPageProps> = ({
                         </AlertDialogContent>
                       </AlertDialog>
                     </div>}
-                  <ScrollArea className="h-[600px] w-full rounded-md border">
-                    <div className="w-full overflow-x-auto pb-4">
-                      <table className="w-full table-auto border-collapse">
-                        <thead className="sticky top-0 z-20 bg-foreground text-background [&>tr>th]:whitespace-nowrap [&>tr>th]:min-w-max [&>tr>th]:align-middle [&>tr>th]:px-3 [&>tr>th]:py-2 [&>tr>th]:text-left [&>tr>th]:text-xs [&>tr>th]:font-semibold [&>tr>th]:tracking-tight">
+                  <div className="relative">
+                    <div className="max-h-[70vh] overflow-x-auto overflow-y-auto rounded-md border">
+                      <table className="w-full min-w-[1200px] table-auto border-collapse">
+                        <thead className="sticky top-0 z-30 bg-foreground text-background shadow-sm [&>tr>th]:whitespace-nowrap [&>tr>th]:min-w-max [&>tr>th]:align-middle [&>tr>th]:px-3 [&>tr>th]:py-2 [&>tr>th]:text-left [&>tr>th]:text-xs [&>tr>th]:font-semibold [&>tr>th]:tracking-tight [&>tr>th]:text-background [&>tr>th]:bg-foreground">
                           <tr>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">
+                            <th className="sticky left-0 z-40 min-w-[4rem] w-[4rem] bg-foreground text-background shadow-[6px_0_12px_-6px_rgba(15,23,42,0.45)]">
                               <div className="flex items-center gap-2">
-                                <input type="checkbox" ref={selectAllCheckboxRef} checked={allVisibleSelected} onChange={handleSelectAll} className="h-4 w-4" />
+                                <input type="checkbox" ref={selectAllCheckboxRef} checked={allVisibleSelected} onChange={handleSelectAll} className="h-4 w-4" aria-label="Selecionar todas as fêmeas visíveis" />
                                 Selecionar
                               </div>
                             </th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">ID Fazenda</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Nome</th>
+                            <th className="sticky left-16 z-30 min-w-[180px] w-[180px] bg-foreground text-background shadow-[6px_0_12px_-6px_rgba(15,23,42,0.45)]">ID Fazenda</th>
+                            <th className="sticky left-[244px] z-20 min-w-[220px] w-[220px] bg-foreground text-background shadow-[6px_0_12px_-6px_rgba(15,23,42,0.45)]">Nome</th>
                             <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">ID CDCB / Identificador</th>
                             <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Pai</th>
                             <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Avô Materno</th>
@@ -581,15 +579,15 @@ const HerdPage: React.FC<HerdPageProps> = ({
                             <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">GFI</th>
                           </tr>
                         </thead>
-                      <tbody className="[&>tr>td]:border [&>tr>td]:px-3 [&>tr>td]:py-2 [&>tr>td]:text-xs [&>tr>td]:whitespace-nowrap [&>tr>td]:align-middle">
+                      <tbody className="bg-background [&>tr>td]:border [&>tr>td]:px-3 [&>tr>td]:py-2 [&>tr>td]:text-xs [&>tr>td]:whitespace-nowrap [&>tr>td]:align-middle">
                         {filteredFemales.map(female => {
                           const fonteDisplay = getFonteDisplay(female.fonte);
                           return <tr key={female.id} className="hover:bg-muted/50">
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">
-                              <input type="checkbox" checked={selectedFemales.includes(female.id)} onChange={() => handleSelectFemale(female.id)} className="mr-1" />
+                            <td className="sticky left-0 z-30 border bg-background px-3 py-2 text-xs whitespace-nowrap shadow-[6px_0_12px_-6px_rgba(15,23,42,0.3)] w-[4rem]">
+                              <input type="checkbox" checked={selectedFemales.includes(female.id)} onChange={() => handleSelectFemale(female.id)} className="mr-1" aria-label={`Selecionar ${female.name}`} />
                             </td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{farm.farm_id}</td>
-                            <td className="border px-3 py-2 text-xs font-medium whitespace-nowrap">{female.name}</td>
+                            <td className="sticky left-16 z-20 border bg-background px-3 py-2 text-xs whitespace-nowrap shadow-[6px_0_12px_-6px_rgba(15,23,42,0.3)] w-[180px]">{farm.farm_id}</td>
+                            <td className="sticky left-[244px] z-10 border bg-background px-3 py-2 text-xs font-medium whitespace-nowrap shadow-[6px_0_12px_-6px_rgba(15,23,42,0.3)] w-[220px]">{female.name}</td>
                             <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.cdcb_id || female.identifier || '-'}</td>
                             <td className="border px-3 py-2 text-xs whitespace-nowrap">{renderPedigreeCell(female.sire_naab)}</td>
                             <td className="border px-3 py-2 text-xs whitespace-nowrap">{renderPedigreeCell(female.mgs_naab)}</td>
@@ -672,7 +670,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
                       </tbody>
                       </table>
                     </div>
-                  </ScrollArea>
+                  </div>
                 </div>}
             </CardContent>
             </Card>
