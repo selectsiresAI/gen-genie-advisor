@@ -35,8 +35,10 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   const session = useSupabaseSession();
   const userId = session?.user?.id ?? null;
   const tenantId = useTenantId();
-  // Fallback: se não houver tenant (ex.: Home), usamos userId como “tenant efetivo”
+  // Fallback: se não houver tenant (ex.: Home), usamos userId como "tenant efetivo"
   const effectiveTenantId = tenantId ?? userId ?? null;
+
+  console.log("[TutorialProvider] Render:", { hasSession: !!session, userId, tenantId, effectiveTenantId });
 
   const [active, setActive] = useState(false);
   const [slug, setSlug] = useState<string | null>(null);
@@ -100,6 +102,8 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
 
   const ctx = useMemo<Ctx>(() => ({ start, reset, isActive: active, step: idx }), [active, idx]);
   const step = steps[idx];
+
+  console.log("[TutorialProvider] Current state:", { active, hasStep: !!step, slug, stepIndex: idx, stepsCount: steps.length });
 
   return (
     <TutorialCtx.Provider value={ctx}>
