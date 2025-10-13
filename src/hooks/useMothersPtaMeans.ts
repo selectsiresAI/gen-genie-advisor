@@ -18,7 +18,9 @@ export function useMothersPtaMeans(farmId?: string) {
   const refetch = useCallback(async () => {
     if (!farmId) return;
     setLoading(true); setError(null);
-    const { data, error } = await supabase.rpc("ag_get_mothers_pta_means", { p_farm_id: farmId });
+    const { data, error } = await supabase.rpc("app.ag_get_mothers_pta_means", {
+      p_farm_id: farmId,
+    });
     if (error) setError(error.message);
     setRows((data as MothersPtaRow[]) ?? []);
     setLoading(false);
