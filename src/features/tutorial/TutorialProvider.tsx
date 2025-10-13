@@ -3,7 +3,7 @@ import { createContext, useContext, useMemo, useState } from "react";
 import TourSpotlight from "./TourSpotlight";
 import { fetchTutorial, getOrInitProgress, updateProgress, tutorialsEnabled } from "./api";
 import type { TutorialStep } from "./types";
-import { useSession } from "@supabase/auth-helpers-react";
+import { useSupabaseSession } from "@/hooks/useSupabaseSession";
 
 const __DEV__ = process.env.NODE_ENV !== "production";
 
@@ -32,7 +32,7 @@ export const useTutorial = () => {
 };
 
 export function TutorialProvider({ children }: { children: React.ReactNode }) {
-  const session = useSession();
+  const session = useSupabaseSession();
   const userId = session?.user?.id ?? null;
   const tenantId = useTenantId();
   // Fallback: se não houver tenant (ex.: Home), usamos userId como “tenant efetivo”
