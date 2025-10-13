@@ -11,9 +11,10 @@ import {
   Step1Parentesco,
   Step2TopParents,
   Step3QuartisOverview,
-  Step5Progressao as Step4Progressao,
-  Step6ProgressCompare as Step5ProgressCompare,
-  Step7QuartisIndices as Step6QuartisIndices,
+  Step4PTASeries,
+  Step5Progressao,
+  Step6ProgressCompare,
+  Step7QuartisIndices,
   Step7Distribuicao,
 } from "@/features/auditoria/steps";
 
@@ -37,9 +38,10 @@ export default function AuditoriaGeneticaPage({ farm, onBack }: AuditoriaGenetic
       { key: "parentesco", node: <Step1Parentesco /> },
       { key: "top-parents", node: <Step2TopParents /> },
       { key: "quartis-overview", node: <Step3QuartisOverview /> },
-      { key: "progressao", node: <Step4Progressao /> },
-      { key: "progress-compare", node: <Step5ProgressCompare /> },
-      { key: "quartis-indices", node: <Step6QuartisIndices /> },
+      { key: "pta-series", node: <Step4PTASeries /> },
+      { key: "progressao", node: <Step5Progressao /> },
+      { key: "progress-compare", node: <Step6ProgressCompare /> },
+      { key: "quartis-indices", node: <Step7QuartisIndices /> },
       { key: "distribuicao", node: <Step7Distribuicao /> },
     ],
     []
