@@ -65,22 +65,32 @@ function computeSlope(points: SeriesPoint[]): number {
 }
 
 function computeTrend(points: SeriesPoint[]) {
-  if (points.length < 2) return [] as Array<{ year: number; trend: number }>;
+  if (points.length < 2) return { trendLine: [] as Array<{ year: number; trend: number }>, r2: 0 };
   const xs = points.map((p) => p.year);
   const ys = points.map((p) => p.mean);
   const mx = avg(xs);
   const my = avg(ys);
   const varX = avg(xs.map((x) => (x - mx) ** 2));
-  if (!varX) return [];
+  if (!varX) return { trendLine: [], r2: 0 };
   const cov = avg(xs.map((x, i) => (x - mx) * (ys[i] - my)));
   const slope = cov / varX;
   const intercept = my - slope * mx;
+  
+  // Calcular R²
+  const predictions = xs.map(x => intercept + slope * x);
+  const ssRes = ys.reduce((sum, y, i) => sum + Math.pow(y - predictions[i], 2), 0);
+  const ssTot = ys.reduce((sum, y) => sum + Math.pow(y - my, 2), 0);
+  const r2 = ssTot > 0 ? 1 - (ssRes / ssTot) : 0;
+  
   const firstYear = xs[0];
   const lastYear = xs[xs.length - 1];
-  return [
-    { year: firstYear, trend: Math.round(intercept + slope * firstYear) },
-    { year: lastYear, trend: Math.round(intercept + slope * lastYear) },
-  ];
+  return {
+    trendLine: [
+      { year: firstYear, trend: intercept + slope * firstYear },
+      { year: lastYear, trend: intercept + slope * lastYear },
+    ],
+    r2
+  };
 }
 
 const TraitCard = memo(function TraitCard({
@@ -99,27 +109,28 @@ const TraitCard = memo(function TraitCard({
     },
     { sum: 0, n: 0 }
   );
-  const farmMean = totals.n ? Math.round(totals.sum / totals.n) : 0;
+  const farmMean = totals.n ? totals.sum / totals.n : 0;
   const slope = computeSlope(data);
   const chartData = data.map((p, i) => ({
     year: p.year,
     n: p.n,
-    mean: Math.round(p.mean),
-    delta: Math.round(i === 0 ? 0 : p.mean - data[i - 1].mean),
+    mean: p.mean,
+    delta: i === 0 ? 0 : p.mean - data[i - 1].mean,
     farmMean,
   }));
-  const trend = showTrend ? computeTrend(data) : [];
+  const trendResult = showTrend ? computeTrend(data) : { trendLine: [], r2: 0 };
 
   return (
-    <div className="rounded-2xl shadow overflow-hidden bg-white">
-      <div className="bg-black text-white px-4 py-2 text-sm font-semibold flex items-center justify-between">
-        <div className="truncate">{traitLabel}</div>
-        <div className="text-xs opacity-90">
-          Tendência: {slope >= 0 ? "+" : ""}
-          {slope}/ano
-        </div>
+    <div className="rounded-lg border overflow-hidden bg-card">
+      <div className="border-b px-4 py-3 flex items-center justify-between">
+        <div className="font-semibold text-base">{traitLabel} - Média Anual Por Ano De Nascimento</div>
+        {showTrend && trendResult.r2 > 0 && (
+          <div className="text-xs text-muted-foreground">
+            Tendência (R²={trendResult.r2.toFixed(3)}): {slope >= 0 ? "+" : ""}{slope}/ano
+          </div>
+        )}
       </div>
-      <div className="p-3 h-64">
+      <div className="p-4 h-80">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={chartData}
@@ -135,51 +146,73 @@ const TraitCard = memo(function TraitCard({
             <YAxis />
             <Tooltip
               formatter={(value: any, name: string) => {
-                if (name === "mean") return [value, "Média anual"];
-                if (name === "delta") return [value, "Δ vs ano ant."];
-                if (name === "trend") return [value, "Tendência"];
+                if (name === "mean") return [typeof value === 'number' ? value.toFixed(2) : value, "Média anual " + traitLabel];
+                if (name === "trend") return [typeof value === 'number' ? value.toFixed(2) : value, "Tendência (R²=" + trendResult.r2.toFixed(3) + ")"];
                 if (name === "n") return [value, "N"];
                 return [value, name];
               }}
               labelFormatter={(label) => `Ano ${label}`}
             />
             <Legend />
-            <Area
-              type="monotone"
-              dataKey="mean"
-              fill="rgba(0,0,0,0.08)"
-              stroke="none"
-            />
             <Line
               type="monotone"
               dataKey="mean"
-              name="Média anual"
-              stroke="#111827"
-              dot={{ r: 4, strokeWidth: 2, stroke: "#111827", fill: "#fff" }}
+              name={"Média anual " + traitLabel}
+              stroke="#F59E0B"
+              strokeWidth={2}
+              dot={{ r: 5, strokeWidth: 2, stroke: "#F59E0B", fill: "#fff" }}
             />
             {showFarmMean && (
               <ReferenceLine
                 y={farmMean}
-                stroke="#22C3EE"
-                strokeDasharray="6 6"
+                stroke="#F59E0B"
+                strokeDasharray="5 5"
+                strokeWidth={2}
                 label={{
-                  value: `Média ${farmMean}`,
-                  position: "insideTopLeft",
+                  value: `Média geral (${farmMean.toFixed(2)})`,
+                  position: "insideTopRight",
+                  fill: "#F59E0B",
                 }}
               />
             )}
-            {showTrend && trend.length === 2 && (
+            {showTrend && trendResult.trendLine.length === 2 && (
               <Line
                 type="linear"
                 dataKey="trend"
-                name="Tendência"
-                stroke="#10B981"
+                name={"Tendência (R²=" + trendResult.r2.toFixed(3) + ")"}
+                stroke="#60A5FA"
+                strokeWidth={2}
+                strokeDasharray="5 5"
                 dot={false}
-                data={trend as any}
+                data={trendResult.trendLine as any}
               />
             )}
           </ComposedChart>
         </ResponsiveContainer>
+      </div>
+      
+      <div className="border-t p-4">
+        <h4 className="text-sm font-semibold mb-2">Média Anual {traitLabel} Por Ano</h4>
+        <div className="max-h-64 overflow-auto">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 bg-muted">
+              <tr>
+                <th className="text-left p-2 font-semibold">year</th>
+                <th className="text-right p-2 font-semibold">mean_{traitKey}</th>
+                <th className="text-right p-2 font-semibold">n</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((row, idx) => (
+                <tr key={row.year} className={idx % 2 === 0 ? 'bg-background' : 'bg-muted/30'}>
+                  <td className="p-2">{row.year}</td>
+                  <td className="text-right p-2">{row.mean.toFixed(2)}</td>
+                  <td className="text-right p-2">{row.n}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

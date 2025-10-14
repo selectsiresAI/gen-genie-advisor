@@ -47,14 +47,14 @@ const HerdPage: React.FC<HerdPageProps> = ({
   } = useHerdStore();
   const tableRegionRef = useRef<HTMLDivElement | null>(null);
   const selectAllCheckboxRef = useRef<HTMLInputElement | null>(null);
-  const stickyColumnVars = useMemo<React.CSSProperties>(() => ({
+  const stickyColumnVars = useMemo(() => ({
     '--herd-sticky-select-width': '4.75rem',
     '--herd-sticky-farm-width': '12.5rem',
     '--herd-sticky-name-width': '14rem',
     '--herd-sticky-select-left': '0px',
     '--herd-sticky-farm-left': 'var(--herd-sticky-select-width)',
     '--herd-sticky-name-left': 'calc(var(--herd-sticky-select-width) + var(--herd-sticky-farm-width))'
-  }), []);
+  } as React.CSSProperties), []);
   const stickyColumnStyles = useMemo(() => ({
     select: {
       width: 'var(--herd-sticky-select-width)',
