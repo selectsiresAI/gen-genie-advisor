@@ -119,6 +119,20 @@ const TraitCard = memo(function TraitCard({
     farmMean,
   }));
   const trendResult = showTrend ? computeTrend(data) : { trendLine: [], r2: 0 };
+  
+  // Calcular domínio dinâmico do eixo Y
+  const allValues = [
+    ...chartData.map(d => d.mean),
+    ...(showFarmMean ? [farmMean] : []),
+    ...(showTrend ? trendResult.trendLine.map(t => t.trend) : [])
+  ];
+  const minY = Math.min(...allValues);
+  const maxY = Math.max(...allValues);
+  const padding = Math.abs(maxY - minY) * 0.1;
+  const yDomain: [number, number] = [
+    Math.floor(minY - padding),
+    Math.ceil(maxY + padding)
+  ];
 
   return (
     <div className="rounded-lg border overflow-hidden bg-card">
@@ -134,16 +148,19 @@ const TraitCard = memo(function TraitCard({
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={chartData}
-            margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
+            margin={{ top: 8, right: 16, left: 16, bottom: 8 }}
           >
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis
               type="number"
               dataKey="year"
-              domain={[domainTicks[0], domainTicks[domainTicks.length - 1]]}
-              ticks={domainTicks}
+              domain={['dataMin', 'dataMax']}
+              allowDecimals={false}
             />
-            <YAxis />
+            <YAxis 
+              domain={yDomain}
+              tickFormatter={(value) => value.toFixed(0)}
+            />
             <Tooltip
               formatter={(value: any, name: string) => {
                 if (name === "mean") return [typeof value === 'number' ? value.toFixed(2) : value, "Média anual " + traitLabel];
@@ -232,21 +249,16 @@ export default function Step5Progressao() {
   }, []);
 
   const domainTicks = useMemo(() => {
-    const years: number[] = [];
+    const years = new Set<number>();
     for (const f of females as any[]) {
       const y = getYearFromBirth((f as any)?.birth_date);
-      if (Number.isFinite(y)) years.push(y as number);
+      if (Number.isFinite(y)) years.add(y as number);
     }
-    if (!years.length) return [new Date().getFullYear()];
-    const min = Math.min(...years);
-    const max = Math.max(...years);
-    const ticks: number[] = [];
-    for (let y = min; y <= max; y++) ticks.push(y);
-    return ticks;
+    if (years.size === 0) return [new Date().getFullYear()];
+    return Array.from(years).sort((a, b) => a - b);
   }, [females]);
 
   const seriesByKey = useMemo(() => {
-    const years = domainTicks;
     const out: Record<string, SeriesPoint[]> = {};
 
     for (const key of ptasSelecionadas) {
@@ -261,7 +273,10 @@ export default function Step5Progressao() {
         }
       }
 
-      out[key] = years
+      // Obter apenas os anos que têm dados
+      const yearsWithData = Array.from(byYear.keys()).sort((a, b) => a - b);
+      
+      out[key] = yearsWithData
         .map((y) => {
           const arr = byYear.get(y) ?? [];
           return { year: y, n: arr.length, mean: arr.length ? avg(arr) : 0 };
@@ -269,7 +284,7 @@ export default function Step5Progressao() {
         .filter((p) => p.n > 0);
     }
     return out;
-  }, [ptasSelecionadas, females, domainTicks]);
+  }, [ptasSelecionadas, females]);
 
   const options = useMemo(
     () =>
