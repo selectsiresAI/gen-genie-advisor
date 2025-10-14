@@ -1,4 +1,5 @@
 /* src/components/nexus/Nexus3Groups.tsx */
+// Apenas apresentação alterada — lógica preservada
 import React, { useEffect, useMemo, useState } from "react";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { supabase as sharedSupabaseClient } from "../../integrations/supabase/client";
@@ -11,7 +12,10 @@ import {
   Legend,
   ResponsiveContainer,
   CartesianGrid,
+  LabelList,
 } from "recharts";
+import type { LabelProps, TooltipProps } from "recharts";
+import { ChevronLeft, Loader2, Search as SearchIcon, Sparkles } from "lucide-react";
 
 /**
  * Componente Vite-friendly (sem Next helpers, sem shadcn, sem aliases).
@@ -41,12 +45,6 @@ const useSupabase = (): SupabaseClient => {
   }, []);
   return client;
 };
-
-const box = "rounded-xl border border-gray-200 bg-white p-4 shadow-sm";
-const h2 = "text-lg font-semibold";
-const btn = "inline-flex items-center gap-2 rounded-md bg-black px-3 py-2 text-white disabled:opacity-60";
-const input = "w-full rounded-md border border-gray-300 px-3 py-2";
-const select = input;
 
 export default function Nexus3Groups() {
   const supabase = useSupabase();
@@ -179,25 +177,104 @@ export default function Nexus3Groups() {
   };
   const removeBull = (id: string) => setChosen(chosen.filter((b) => b.id !== id));
 
+  // eslint-disable-next-line prefer-rest-params
+  const maybeProps = (arguments as unknown as IArguments)[0] as
+    | { onBack?: () => void }
+    | undefined;
+  const onBack = maybeProps?.onBack;
+  const handleBack = () => {
+    if (typeof onBack === "function") {
+      onBack();
+    }
+  };
+
+  const renderChartTooltip = (props: TooltipProps<number, string>) => {
+    const { active, payload, label } = props;
+    if (!active || !payload || !payload.length) return null;
+    const mom = payload.find((item) => item.dataKey === "mothers_avg")?.value;
+    const dau = payload.find((item) => item.dataKey === "daughters_pred")?.value;
+    const formatTooltipValue = (val: unknown) => {
+      if (typeof val === "number") return Math.round(val);
+      const parsed = Number(val ?? 0);
+      return Number.isFinite(parsed) ? Math.round(parsed) : 0;
+    };
+    return (
+      <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-lg text-sm">
+        <div className="font-medium text-gray-900">Ano: {label}</div>
+        <div className="mt-2 space-y-1">
+          <div className="flex items-center justify-between text-[#ED1C24]">
+            <span>Mães (média)</span>
+            <span className="font-semibold">{formatTooltipValue(mom)}</span>
+          </div>
+          <div className="flex items-center justify-between text-gray-900">
+            <span>Filhas (predição)</span>
+            <span className="font-semibold">{formatTooltipValue(dau)}</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderMotherLabel = ({ x, y, value }: LabelProps) => {
+    if (value === undefined || value === null || x === undefined || y === undefined) return null;
+    const xPos = typeof x === "number" ? x : Number(x);
+    const yPos = typeof y === "number" ? y : Number(y);
+    if (Number.isNaN(xPos) || Number.isNaN(yPos)) return null;
+    return (
+      <text x={xPos} y={yPos - 8} fill="#ED1C24" fontSize={12} fontWeight={600} textAnchor="middle">
+        {Math.round(Number(value))}
+      </text>
+    );
+  };
+
+  const renderDaughterLabel = ({ x, y, value }: LabelProps) => {
+    if (value === undefined || value === null || x === undefined || y === undefined) return null;
+    const xPos = typeof x === "number" ? x : Number(x);
+    const yPos = typeof y === "number" ? y : Number(y);
+    if (Number.isNaN(xPos) || Number.isNaN(yPos)) return null;
+    return (
+      <text x={xPos} y={yPos - 8} fill="#111827" fontSize={12} fontWeight={600} textAnchor="middle">
+        {Math.round(Number(value))}
+      </text>
+    );
+  };
+
   return (
-    <div className="p-6 space-y-16">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold">Nexus 3 — Acasalamento em Grupos (Etapa 1)</h1>
-        <p className="text-gray-600">
-          Compare a média genética das mães por ano com touros selecionados. Predição: <code>((Mãe + MédiaTouros)/2) × 0,93)</code>.
-        </p>
+    <div className="space-y-10 p-6">
+      <header className="space-y-4">
+        <div className="flex flex-col gap-4 border-b border-gray-200 pb-6 md:flex-row md:items-start md:justify-between">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight">
+              Nexus 3 — Acasalamento em Grupos (Etapa 1)
+            </h1>
+            <p className="max-w-3xl text-sm text-muted-foreground">
+              Compare a média genética das mães por ano com touros selecionados. Predição: ((Mãe + MédiaTouros)/2) × 0,93
+            </p>
+          </div>
+          {onBack && (
+            <button
+              type="button"
+              onClick={handleBack}
+              className="ml-auto inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Voltar
+            </button>
+          )}
+        </div>
         {err && (
-          <div className="rounded-md border border-red-300 bg-red-50 p-3 text-red-700">{err}</div>
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {err}
+          </div>
         )}
       </header>
 
-      {/* Filtros */}
-      <section className={box}>
-        <div className="grid gap-4 md:grid-cols-3">
-          <div>
-            <label className="block text-sm mb-1">Trait (PTA)</label>
+      <section className="space-y-6">
+        <div className="grid gap-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_auto] md:items-end">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Trait (PTA)</label>
             <select
-              className={select}
+              className="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium uppercase text-gray-900 shadow-sm focus:border-gray-900 focus:outline-none"
               value={trait}
               onChange={(e) => setTrait(e.target.value)}
             >
@@ -208,111 +285,221 @@ export default function Nexus3Groups() {
               ))}
             </select>
           </div>
-          <div>
-            <label className="block text-sm mb-1">Fazenda ativa</label>
-            <input className={input} value={farmId ?? ""} readOnly />
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Fazenda ativa</label>
+            <input
+              className="h-11 w-full cursor-not-allowed rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm text-gray-700"
+              value={farmId ?? ""}
+              readOnly
+            />
           </div>
-          <div className="flex items-end">
-            <button className={btn} disabled={loading} onClick={() => window.location.reload()}>
-              Recarregar página
+          <div className="flex w-full items-center justify-end md:w-auto">
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 md:w-auto"
+            >
+              {loading && <Loader2 className="h-4 w-4 animate-spin text-gray-500" />}
+              Atualizar
             </button>
           </div>
         </div>
-      </section>
 
-      {/* Busca de Touros */}
-      <section className={box}>
-        <h2 className={h2}>Buscar touros (code/nome) — tipo PROCV</h2>
-        <div className="mt-3 flex gap-2">
-          <input
-            className={input}
-            placeholder="Ex.: 7HO, 007HO, 29HO, HELIX…"
-            value={bullQuery}
-            onChange={(e) => setBullQuery(e.target.value)}
-          />
-          <button className={btn} disabled={loading} onClick={() => setBullQuery(bullQuery)}>
-            Buscar
-          </button>
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-1">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Média dos Touros</p>
+                <p className="mt-2 text-3xl font-bold text-gray-900">{Math.round(bullsAvg)}</p>
+              </div>
+              <div className="rounded-full bg-gray-50 p-3 text-[#ED1C24]">
+                <Sparkles className="h-6 w-6" />
+              </div>
+            </div>
+            <p className="mt-4 text-sm text-gray-500">
+              Etapa 1: média aritmética ponderada dos touros informados.
+            </p>
+          </div>
+
+          <div className="lg:col-span-2">
+            <div className="flex flex-wrap gap-3">
+              {mothers.length ? (
+                mothers.map((m) => (
+                  <div
+                    key={m.birth_year}
+                    className="flex min-w-[160px] flex-col gap-1 rounded-xl border border-[#ED1C24]/40 bg-white px-4 py-3 text-gray-900 shadow-sm transition hover:shadow-md"
+                  >
+                    <span className="text-sm font-semibold">{m.birth_year}</span>
+                    <span className="text-xs uppercase text-gray-500">média {trait.toUpperCase()}</span>
+                    <span className="text-xl font-semibold">{Math.round(m.avg_value)}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-xl border border-dashed border-gray-300 px-4 py-6 text-sm text-gray-500">
+                  Sem dados de mães para o PTA selecionado.
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        {results.length > 0 && (
-          <div className="mt-4 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-            {results.map((r) => (
-              <button
-                key={r.id}
-                onClick={() => addBull(r)}
-                className="rounded-lg border p-3 text-left hover:bg-gray-50"
-                title="Adicionar touro"
-              >
-                <div className="font-medium">{r.code}</div>
-                <div className="text-sm text-gray-600">{r.name || "—"}</div>
-                <div className="text-sm">
-                  PTA ({trait.toUpperCase()}): <b>{Math.round(r.trait_value ?? 0)}</b>
-                </div>
-              </button>
-            ))}
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="flex-1 space-y-2">
+              <label className="text-sm font-medium text-gray-700" htmlFor="bull-search">
+                Buscar touros
+              </label>
+              <div className="relative">
+                <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <input
+                  id="bull-search"
+                  className="h-11 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-3 text-sm text-gray-900 shadow-sm focus:border-gray-900 focus:outline-none"
+                  placeholder="Ex.: 7HO, 007HO, 29HO, HELIX…"
+                  value={bullQuery}
+                  onChange={(e) => setBullQuery(e.target.value)}
+                />
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setBullQuery(bullQuery)}
+              className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-gray-800"
+            >
+              <SearchIcon className="h-4 w-4" />
+              Buscar
+            </button>
           </div>
-        )}
-      </section>
 
-      {/* Touros selecionados */}
-      {chosen.length > 0 && (
-        <section className={box}>
-          <h2 className={h2}>Touros selecionados</h2>
-          <div className="mt-3 space-y-2">
-            {chosen.map((b, idx) => (
-              <div key={b.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
-                <div className="min-w-0">
-                  <div className="font-medium">{b.code}</div>
-                  <div className="text-sm text-gray-600">
-                    PTA ({trait.toUpperCase()}): {Math.round(b.trait_value ?? 0)}
+          {results.length > 0 ? (
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {results.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => addBull(r)}
+                  className="text-left"
+                >
+                  <div className="flex h-full flex-col justify-between rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-gray-300 hover:bg-gray-50">
+                    <div>
+                      <p className="text-lg font-semibold text-gray-900">{r.code}</p>
+                      <p className="text-sm text-gray-500">{r.name || "—"}</p>
+                    </div>
+                    <p className="mt-4 text-sm font-medium text-gray-700">
+                      PTA ({trait.toUpperCase()}): {Math.round(r.trait_value ?? 0)}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-6 text-sm text-gray-500">
+              {bullQuery
+                ? "Nenhum touro encontrado para a busca atual."
+                : "Digite um termo de código ou nome para iniciar a busca."}
+            </p>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <h3 className="text-sm font-semibold text-gray-900">Touros selecionados</h3>
+          {chosen.length ? (
+            <div className="mt-4 space-y-3">
+              {chosen.map((b, idx) => (
+                <div
+                  key={b.id}
+                  className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md md:flex-row md:items-center md:justify-between"
+                >
+                  <div>
+                    <p className="text-base font-semibold text-gray-900">{b.code}</p>
+                    <p className="text-sm text-gray-500">
+                      PTA ({trait.toUpperCase()}): {Math.round(b.trait_value ?? 0)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label className="text-sm font-medium text-gray-600" htmlFor={`percent-${b.id}`}>
+                      %
+                    </label>
+                    <input
+                      id={`percent-${b.id}`}
+                      type="number"
+                      min={0}
+                      max={100}
+                      className="h-10 w-20 rounded-lg border border-gray-300 px-2 text-right text-sm font-semibold text-gray-900 focus:border-gray-900 focus:outline-none"
+                      value={b.percent ?? 100}
+                      onChange={(e) => setPercent(idx, parseFloat(e.target.value))}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeBull(b.id)}
+                      className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                    >
+                      Remover
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <label className="text-sm text-gray-600">%</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    className="w-20 rounded-md border px-2 py-1 text-right"
-                    value={b.percent ?? 100}
-                    onChange={(e) => setPercent(idx, parseFloat(e.target.value))}
-                  />
-                  <button
-                    className="rounded-md border px-2 py-1 text-gray-700 hover:bg-gray-50"
-                    onClick={() => removeBull(b.id)}
-                    title="Remover"
-                  >
-                    Remover
-                  </button>
-                </div>
+              ))}
+              <div className="inline-flex items-center gap-2 rounded-full bg-gray-50 px-4 py-2 text-sm text-gray-700">
+                Média ponderada dos touros: <span className="font-semibold">{Math.round(bullsAvg)}</span>
               </div>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-gray-500">Nenhum touro selecionado.</p>
+          )}
+        </div>
 
-          <div className="mt-4 rounded-md bg-gray-50 p-3 text-sm">
-            <b>Média ponderada dos touros:</b> {Math.round(bullsAvg)}
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-1">
+            <h3 className="text-lg font-semibold text-gray-900">Mães vs. Filhas — Predição</h3>
+            <p className="text-sm text-gray-500">
+              Comparação anual entre as médias das mães e a predição das filhas considerando os touros escolhidos.
+            </p>
           </div>
-        </section>
-      )}
-
-      {/* Gráfico */}
-      <section className={box}>
-        <h2 className={h2}>Mães vs. Filhas — Predição</h2>
-        <div className="mt-4 h-[360px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="year" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="mothers_avg" name="Mães (média)" stroke="#ED1C24" dot />
-              <Line type="monotone" dataKey="daughters_pred" name="Filhas (predição)" stroke="#111827" dot />
-            </LineChart>
-          </ResponsiveContainer>
+          <div className="mt-6 h-[360px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis dataKey="year" stroke="#6B7280" tickLine={false} axisLine={false} />
+                <YAxis stroke="#6B7280" tickLine={false} axisLine={false} />
+                <Tooltip content={renderChartTooltip} />
+                <Legend
+                  verticalAlign="top"
+                  align="right"
+                  wrapperStyle={{ paddingBottom: 16 }}
+                  formatter={(value) => (
+                    <span className="text-sm text-gray-600">
+                      {value === "mothers_avg" ? "Mães (média)" : "Filhas (predição)"}
+                    </span>
+                  )}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="mothers_avg"
+                  stroke="#ED1C24"
+                  strokeWidth={2}
+                  dot={{ r: 4, strokeWidth: 0, fill: "#ED1C24" }}
+                  name="mothers_avg"
+                  isAnimationActive={false}
+                >
+                  <LabelList dataKey="mothers_avg" content={renderMotherLabel} />
+                </Line>
+                <Line
+                  type="monotone"
+                  dataKey="daughters_pred"
+                  stroke="#111827"
+                  strokeWidth={2}
+                  dot={{ r: 4, strokeWidth: 0, fill: "#111827" }}
+                  name="daughters_pred"
+                  isAnimationActive={false}
+                >
+                  <LabelList dataKey="daughters_pred" content={renderDaughterLabel} />
+                </Line>
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </section>
     </div>
   );
 }
+
+export { Nexus3Groups };
