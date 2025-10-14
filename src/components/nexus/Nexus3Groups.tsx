@@ -151,7 +151,10 @@ export default function Nexus3Groups() {
     if (!chosen.length) return 0;
     const sumW = chosen.reduce((acc, b) => acc + (b.percent ?? 100), 0);
     if (!sumW) return 0;
-    const sum = chosen.reduce((acc, b) => acc + (b.trait_value ?? 0) * (b.percent ?? 100) / 100, 0);
+    const sum = chosen.reduce(
+      (acc, b) => acc + (b.trait_value ?? 0) * (b.percent ?? 100),
+      0
+    );
     return sum / sumW;
   }, [chosen]);
 
