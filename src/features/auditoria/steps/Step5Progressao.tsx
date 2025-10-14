@@ -154,7 +154,8 @@ const TraitCard = memo(function TraitCard({
             <XAxis
               type="number"
               dataKey="year"
-              domain={['dataMin', 'dataMax']}
+              domain={[domainTicks[0], domainTicks[domainTicks.length - 1]]}
+              ticks={domainTicks}
               allowDecimals={false}
             />
             <YAxis 
@@ -255,7 +256,16 @@ export default function Step5Progressao() {
       if (Number.isFinite(y)) years.add(y as number);
     }
     if (years.size === 0) return [new Date().getFullYear()];
-    return Array.from(years).sort((a, b) => a - b);
+    
+    // Criar array com TODOS os anos entre min e max
+    const sortedYears = Array.from(years).sort((a, b) => a - b);
+    const minYear = sortedYears[0];
+    const maxYear = sortedYears[sortedYears.length - 1];
+    const allYears: number[] = [];
+    for (let y = minYear; y <= maxYear; y++) {
+      allYears.push(y);
+    }
+    return allYears;
   }, [females]);
 
   const seriesByKey = useMemo(() => {
@@ -263,6 +273,8 @@ export default function Step5Progressao() {
 
     for (const key of ptasSelecionadas) {
       const byYear = new Map<number, number[]>();
+      
+      // Agrupar valores por ano
       for (const f of females as any[]) {
         const y = getYearFromBirth((f as any)?.birth_date);
         const v = Number((f as any)?.[key]);
@@ -273,18 +285,17 @@ export default function Step5Progressao() {
         }
       }
 
-      // Obter apenas os anos que têm dados
-      const yearsWithData = Array.from(byYear.keys()).sort((a, b) => a - b);
-      
-      out[key] = yearsWithData
+      // Criar série com TODOS os anos do domínio (incluindo anos sem dados)
+      out[key] = domainTicks
         .map((y) => {
           const arr = byYear.get(y) ?? [];
-          return { year: y, n: arr.length, mean: arr.length ? avg(arr) : 0 };
+          if (arr.length === 0) return null; // Não incluir anos sem dados
+          return { year: y, n: arr.length, mean: avg(arr) };
         })
-        .filter((p) => p.n > 0);
+        .filter((p): p is SeriesPoint => p !== null);
     }
     return out;
-  }, [ptasSelecionadas, females]);
+  }, [ptasSelecionadas, females, domainTicks]);
 
   const options = useMemo(
     () =>
