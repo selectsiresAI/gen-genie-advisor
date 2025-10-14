@@ -149,15 +149,44 @@ export function Nexus3Groups({ onBack, initialFarmId, fallbackDefaultFarmId }: N
         description: error.message,
         variant: "destructive",
       });
-    } else if (Array.isArray(data)) {
-      const normalized = (data as string[]).filter(Boolean);
-      setTraits(normalized);
-      if (!trait && normalized.length > 0) {
-        setTrait(normalized[0]);
-      }
+      setTraits([]);
+      setTrait(null);
+      setTraitsLoading(false);
+      return;
     }
+
+    if (!Array.isArray(data)) {
+      setTraits([]);
+      setTrait(null);
+      setTraitsLoading(false);
+      return;
+    }
+
+    const normalized = (data as Array<string | { trait?: string | null }>)
+      .map((entry) => {
+        if (!entry) return null;
+        if (typeof entry === "string") {
+          return entry.trim().toLowerCase();
+        }
+        const traitValue = entry.trait;
+        if (typeof traitValue === "string" && traitValue.trim().length > 0) {
+          return traitValue.trim().toLowerCase();
+        }
+        return null;
+      })
+      .filter((value): value is string => Boolean(value && value.length > 0));
+
+    const uniqueTraits = Array.from(new Set(normalized));
+    setTraits(uniqueTraits);
+
+    if (uniqueTraits.length > 0) {
+      setTrait((current) => current ?? uniqueTraits[0]);
+    } else {
+      setTrait(null);
+    }
+
     setTraitsLoading(false);
-  }, [trait, toast]);
+  }, [toast]);
 
   useEffect(() => {
     loadTraits();
@@ -166,8 +195,9 @@ export function Nexus3Groups({ onBack, initialFarmId, fallbackDefaultFarmId }: N
   const loadMothers = useCallback(async () => {
     if (!trait || !farmId) return;
     setMothersLoading(true);
+    const traitKey = trait?.toLowerCase();
     const { data, error } = await supabase.rpc("nx3_mothers_yearly_avg", {
-      p_trait: trait,
+      p_trait: traitKey,
       p_farm: farmId,
     });
 
@@ -217,10 +247,12 @@ export function Nexus3Groups({ onBack, initialFarmId, fallbackDefaultFarmId }: N
     if (ids.length === 0) return;
 
     setReloadBullsLoading(true);
+    const traitKey = trait.toLowerCase();
+
     supabase
       .rpc("nx3_bulls_by_ids", {
         p_ids: ids,
-        p_trait: trait,
+        p_trait: traitKey,
       })
       .then(({ data, error }) => {
         if (error) {
@@ -341,7 +373,7 @@ export function Nexus3Groups({ onBack, initialFarmId, fallbackDefaultFarmId }: N
     searchDebounceRef.current = window.setTimeout(async () => {
       const { data, error } = await supabase.rpc("nx3_bulls_lookup", {
         p_query: searchQuery.trim(),
-        p_trait: trait,
+        p_trait: trait.toLowerCase(),
         p_limit: 8,
       });
 
