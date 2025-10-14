@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@/lib/supabase/browser";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -48,7 +48,7 @@ interface BullSlotValue {
 }
 
 export function Nexus3Groups({ onBack, initialFarmId, fallbackDefaultFarmId }: Nexus3GroupsProps) {
-  const supabase = useMemo(() => createClientComponentClient(), []);
+  const supabase = useMemo(() => createClient(), []);
   const { toast } = useToast();
   const selectedFarmIdFromStore = usePlanStore((state) => state.selectedFarmId);
 
