@@ -108,6 +108,36 @@ const OBJECTIVE_KEY_TO_PTA_LABELS: Record<BuiltinObjectiveKey, string[]> = {
 
 const FALLBACK_ROI_LABELS = ["NM$", "HHP$®", "HHP$", "TPI", "FM$", "CM$"];
 
+function pickDefaultRoiLabel(selectedPTAs: string[], preferred?: string | null) {
+  if (!selectedPTAs.length) {
+    return null;
+  }
+
+  const trimmed = selectedPTAs.map((label) => label.trim());
+  const normalizedPreferred = preferred?.trim();
+
+  if (normalizedPreferred) {
+    const preferredIndex = trimmed.findIndex((label) => label === normalizedPreferred);
+    if (preferredIndex >= 0) {
+      return selectedPTAs[preferredIndex];
+    }
+  }
+
+  for (const candidate of FALLBACK_ROI_LABELS) {
+    const candidateIndex = trimmed.findIndex((label) => label === candidate);
+    if (candidateIndex >= 0) {
+      return selectedPTAs[candidateIndex];
+    }
+  }
+
+  const dollarIndex = trimmed.findIndex((label) => /\$/.test(label));
+  if (dollarIndex >= 0) {
+    return selectedPTAs[dollarIndex];
+  }
+
+  return selectedPTAs[0] ?? null;
+}
+
 function resolveRoiIndexLabel(objective: ObjectiveChoice | null, selectedPTAs: string[]) {
   const trimmedSelected = selectedPTAs.map((label) => label.trim());
 
@@ -537,13 +567,7 @@ function useCalculations(state: AppState, roiIndexLabel: string | null) {
     const semenFemale = (semen: SemenType) => (semen === "Sexado" ? 0.9 : 0.47);
 
     const selectedPTAs = planStore.selectedPTAList;
-    const roiLabelInSelection = roiIndexLabel && selectedPTAs.includes(roiIndexLabel) ? roiIndexLabel : null;
-    const fallbackRoiLabel =
-      roiLabelInSelection ??
-      selectedPTAs.find((label) => FALLBACK_ROI_LABELS.includes(label)) ??
-      selectedPTAs.find((label) => /\$/.test(label)) ??
-      selectedPTAs[0] ??
-      null;
+    const fallbackRoiLabel = pickDefaultRoiLabel(selectedPTAs, roiIndexLabel);
 
     const byBull = state.bulls.slice(0, state.numberOfBulls).map((b) => {
       const femaleRate = semenFemale(b.semen);
@@ -559,7 +583,7 @@ function useCalculations(state: AppState, roiIndexLabel: string | null) {
       };
 
       const ptaPondNumerator: Record<string, number> = {};
-      planStore.selectedPTAList.forEach(ptaLabel => {
+      selectedPTAs.forEach(ptaLabel => {
         ptaPondNumerator[ptaLabel] = 0;
       });
 
@@ -573,7 +597,7 @@ function useCalculations(state: AppState, roiIndexLabel: string | null) {
         bezPorCat[key] = bez;
         bezerrasTotais += bez;
 
-        planStore.selectedPTAList.forEach((ptaLabel) => {
+        selectedPTAs.forEach((ptaLabel) => {
           const categoryKey = CATEGORY_MAP[key as keyof typeof CATEGORY_MAP];
           const ptaMae = planStore.motherAverages[categoryKey]?.[ptaLabel] || 0;
           const ptaTouro = (b.pta[ptaLabel] === null ? 0 : b.pta[ptaLabel]) || 0;
@@ -583,7 +607,7 @@ function useCalculations(state: AppState, roiIndexLabel: string | null) {
       });
 
       const ptaPond: Record<string, number> = {};
-      planStore.selectedPTAList.forEach((ptaLabel) => {
+      selectedPTAs.forEach((ptaLabel) => {
         ptaPond[ptaLabel] = bezerrasTotais > 0 ? ptaPondNumerator[ptaLabel] / bezerrasTotais : 0;
       });
 
@@ -1432,11 +1456,90 @@ function PlanObjectiveSetup() {
   );
 }
 
+function RoiIndexSelector({
+  options,
+  value,
+  onSelect,
+}: {
+  options: string[];
+  value: string | null;
+  onSelect: (label: string) => void;
+}) {
+  if (!options.length) {
+    return (
+      <div
+        style={{
+          background: "#fff7ed",
+          border: "1px solid #f59e0b",
+          borderRadius: 10,
+          padding: 12,
+          fontSize: 13,
+          color: COLORS.black,
+        }}
+      >
+        Adicione até 5 características no plano genético para escolher qual índice será usado na fórmula do ROI.
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.black }}>
+        Escolha qual característica alimenta a fórmula do ROI:
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {options.map((label) => {
+          const isActive = value?.trim() === label.trim();
+          return (
+            <button
+              key={label}
+              type="button"
+              onClick={() => onSelect(label)}
+              aria-pressed={isActive}
+              style={{
+                padding: "10px 14px",
+                borderRadius: 10,
+                border: isActive ? `2px solid ${COLORS.red}` : `1px solid ${COLORS.gray}`,
+                background: isActive ? "#fde8ec" : "#fff",
+                fontWeight: 700,
+                fontSize: 13,
+                color: COLORS.black,
+                cursor: "pointer",
+                minWidth: 110,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                transition: "border-color 0.2s ease, box-shadow 0.2s ease",
+                boxShadow: isActive ? "0 0 0 2px rgba(190, 30, 45, 0.12)" : "none",
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function PageResults({ st }: { st: AppState }) {
   const planStore = usePlanStore();
+  const selectedPTAs = planStore.selectedPTAList;
   const { objective } = usePlanObjective();
-  const preferredRoiIndexLabel = resolveRoiIndexLabel(objective, planStore.selectedPTAList);
-  const calc = useCalculations(st, preferredRoiIndexLabel);
+  const preferredRoiIndexLabel = resolveRoiIndexLabel(objective, selectedPTAs);
+  const [roiIndexChoice, setRoiIndexChoice] = useState<string | null>(() =>
+    pickDefaultRoiLabel(selectedPTAs, preferredRoiIndexLabel)
+  );
+
+  useEffect(() => {
+    setRoiIndexChoice((prev) => {
+      const next = pickDefaultRoiLabel(selectedPTAs, prev ?? preferredRoiIndexLabel);
+      return next === prev ? prev : next;
+    });
+  }, [selectedPTAs, preferredRoiIndexLabel]);
+
+  const calc = useCalculations(st, roiIndexChoice);
   const { ready, createChart } = useCharts();
   const barRef = useRef<any>(null);
   const pieRef = useRef<any>(null);
@@ -1759,6 +1862,9 @@ function PageResults({ st }: { st: AppState }) {
       {/* Fórmula e Explicação do ROI */}
       <Section title="Fórmula do ROI">
         <div style={{ backgroundColor: COLORS.white, padding: 20, borderRadius: 10, border: `1px solid ${COLORS.gray}` }}>
+          <div style={{ marginBottom: 20 }}>
+            <RoiIndexSelector options={selectedPTAs} value={roiIndexChoice} onSelect={setRoiIndexChoice} />
+          </div>
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 10 }}>Fórmula:</div>
             <div style={{
