@@ -54,7 +54,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
     '--herd-sticky-select-left': '0px',
     '--herd-sticky-farm-left': 'var(--herd-sticky-select-width)',
     '--herd-sticky-name-left': 'calc(var(--herd-sticky-select-width) + var(--herd-sticky-farm-width))'
-  } as React.CSSProperties), []);
+  }) as React.CSSProperties, []);
   const stickyColumnStyles = useMemo(() => ({
     select: {
       width: 'var(--herd-sticky-select-width)',
@@ -367,12 +367,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
             <h1 className="text-xl font-semibold">{farm.farm_name} - Rebanho</h1>
           </div>
           <div className="ml-auto flex items-center gap-3">
-            {onNavigateToCharts && (
-              <Button variant="outline" onClick={onNavigateToCharts}>
-                <TrendingUp className="w-4 h-4 mr-2" />
-                Ver Gráficos
-              </Button>
-            )}
+            {onNavigateToCharts}
             <TutorialButtons slug="rebanho" />
           </div>
         </div>
