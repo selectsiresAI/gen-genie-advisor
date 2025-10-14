@@ -9,9 +9,7 @@ import {
   type SetStateAction,
 } from "react";
 
-export type ObjectiveChoice =
-  | { kind: "BUILTIN"; key: "HHP$" | "TPI" | "NM$" | "FM$" | "CM$" }
-  | { kind: "CUSTOM"; id: string; name: string };
+export type ObjectiveChoice = { kind: "BUILTIN"; key: "HHP$" | "TPI" | "NM$" | "FM$" | "CM$" };
 
 type Ctx = {
   objective: ObjectiveChoice | null;
@@ -23,13 +21,7 @@ function isSameObjective(a: ObjectiveChoice | null, b: ObjectiveChoice | null) {
   if (!a && !b) return true;
   if (!a || !b) return false;
   if (a.kind !== b.kind) return false;
-  if (a.kind === "BUILTIN" && b.kind === "BUILTIN") {
-    return a.key === b.key;
-  }
-  if (a.kind === "CUSTOM" && b.kind === "CUSTOM") {
-    return a.id === b.id && a.name === b.name;
-  }
-  return false;
+  return a.key === b.key;
 }
 
 type ProviderProps = {

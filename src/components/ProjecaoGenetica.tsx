@@ -19,7 +19,7 @@ import {
  * - Sem backend / sem banco. Todos os dados são inseridos manualmente.
  * - Persistência local automática em localStorage.
  * - Cálculos em tempo real (doses por categoria, premissas por categoria, PTA mães por categoria).
- * - ROI em R$ baseado em NM$ ponderado × nº de bezerras − custo de sêmen.
+ * - ROI em R$ baseado no índice econômico selecionado ponderado × nº de bezerras − custo de sêmen.
  * - Gráficos com Chart.js carregado dinamicamente via CDN (jsDelivr).
  * - Exportação PDF com html2canvas + jsPDF (CDN), com fallback para window.print().
  * - Identidade visual Select Sires na UI (cores e tipografia Montserrat sugeridas no index.html do projeto Lovable).
@@ -76,32 +76,56 @@ const BUILTIN_OBJECTIVE_MAP: Record<BuiltinObjectiveKey, typeof BUILTIN_OBJECTIV
   {} as Record<BuiltinObjectiveKey, typeof BUILTIN_OBJECTIVES[number]>
 );
 
-const labelToBuiltin = new Map(BUILTIN_OBJECTIVES.map((item) => [item.label, item.key] as const));
-
-function slugifyObjectiveName(name: string) {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/gi, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 120) || "objetivo-personalizado";
-}
+const labelToBuiltin = new Map<BuiltinObjectiveKey | string, BuiltinObjectiveKey>();
+BUILTIN_OBJECTIVES.forEach((item) => {
+  labelToBuiltin.set(item.label, item.key);
+  labelToBuiltin.set(item.key, item.key);
+});
+labelToBuiltin.set("HHP$®", "HHP$");
 
 function getObjectiveLabel(choice: ObjectiveChoice | null) {
   if (!choice) return "";
-  if (choice.kind === "BUILTIN") {
-    return BUILTIN_OBJECTIVE_MAP[choice.key]?.label ?? choice.key;
-  }
-  return choice.name;
+  return BUILTIN_OBJECTIVE_MAP[choice.key]?.label ?? choice.key;
 }
 
 function objectiveFromLabel(label: string): ObjectiveChoice | null {
   const trimmed = label.trim();
   if (!trimmed) return null;
-  const builtinKey = labelToBuiltin.get(trimmed);
+  const builtinKey = labelToBuiltin.get(trimmed as BuiltinObjectiveKey | string);
   if (builtinKey) {
     return { kind: "BUILTIN", key: builtinKey };
   }
-  return { kind: "CUSTOM", id: slugifyObjectiveName(trimmed), name: trimmed };
+  return null;
+}
+
+const OBJECTIVE_KEY_TO_PTA_LABELS: Record<BuiltinObjectiveKey, string[]> = {
+  "HHP$": ["HHP$®", "HHP$"],
+  TPI: ["TPI"],
+  "NM$": ["NM$"],
+  "FM$": ["FM$"],
+  "CM$": ["CM$"],
+};
+
+const FALLBACK_ROI_LABELS = ["NM$", "HHP$®", "HHP$", "TPI", "FM$", "CM$"];
+
+function resolveRoiIndexLabel(objective: ObjectiveChoice | null, selectedPTAs: string[]) {
+  const trimmedSelected = selectedPTAs.map((label) => label.trim());
+
+  if (objective?.kind === "BUILTIN") {
+    const candidates = OBJECTIVE_KEY_TO_PTA_LABELS[objective.key] ?? [];
+    const matched = candidates.find((candidate) => trimmedSelected.includes(candidate));
+    if (matched) {
+      return matched;
+    }
+  }
+
+  for (const candidate of FALLBACK_ROI_LABELS) {
+    if (trimmedSelected.includes(candidate)) {
+      return candidate;
+    }
+  }
+
+  return trimmedSelected[0] ?? null;
 }
 
 // Tipos
@@ -506,11 +530,20 @@ function useAppState() {
   return { state, setState, loadTestData, clearAll };
 }
 
-function useCalculations(state: AppState) {
+function useCalculations(state: AppState, roiIndexLabel: string | null) {
   const planStore = usePlanStore();
-  
+
   const result = useMemo(() => {
     const semenFemale = (semen: SemenType) => (semen === "Sexado" ? 0.9 : 0.47);
+
+    const selectedPTAs = planStore.selectedPTAList;
+    const roiLabelInSelection = roiIndexLabel && selectedPTAs.includes(roiIndexLabel) ? roiIndexLabel : null;
+    const fallbackRoiLabel =
+      roiLabelInSelection ??
+      selectedPTAs.find((label) => FALLBACK_ROI_LABELS.includes(label)) ??
+      selectedPTAs.find((label) => /\$/.test(label)) ??
+      selectedPTAs[0] ??
+      null;
 
     const byBull = state.bulls.slice(0, state.numberOfBulls).map((b) => {
       const femaleRate = semenFemale(b.semen);
@@ -555,8 +588,7 @@ function useCalculations(state: AppState) {
       });
 
       const custoPorBezerra = bezerrasTotais > 0 ? valorTotal / bezerrasTotais : 0;
-      const nmDollarLabel = planStore.selectedPTAList.find(l => l === "NM$");
-      const retornoGen = nmDollarLabel ? (ptaPond[nmDollarLabel] || 0) * bezerrasTotais : 0;
+      const retornoGen = fallbackRoiLabel ? (ptaPond[fallbackRoiLabel] || 0) * bezerrasTotais : 0;
       const roi = retornoGen - valorTotal;
 
       return {
@@ -578,12 +610,12 @@ function useCalculations(state: AppState) {
     const totalValor = byBull.reduce((s, r) => s + r.valorTotal, 0);
 
     const ptaPondGeral: Record<string, number> = {};
-    planStore.selectedPTAList.forEach(ptaLabel => {
+    selectedPTAs.forEach(ptaLabel => {
       ptaPondGeral[ptaLabel] = 0;
     });
 
     if (totalBez > 0) {
-      planStore.selectedPTAList.forEach((ptaLabel) => {
+      selectedPTAs.forEach((ptaLabel) => {
         const num = byBull.reduce((s, r) => s + (r.ptaPond[ptaLabel] || 0) * r.bezerrasTotais, 0);
         ptaPondGeral[ptaLabel] = num / totalBez;
       });
@@ -591,8 +623,8 @@ function useCalculations(state: AppState) {
 
     const custoMedioBezerra = totalBez > 0 ? totalValor / totalBez : 0;
 
-    return { byBull, totalBez, totalValor, ptaPondGeral, custoMedioBezerra };
-  }, [state, planStore.selectedPTAList, planStore.motherAverages]);
+    return { byBull, totalBez, totalValor, ptaPondGeral, custoMedioBezerra, roiIndexLabel: fallbackRoiLabel };
+  }, [state, planStore.selectedPTAList, planStore.motherAverages, roiIndexLabel]);
 
   return result;
 }
@@ -1319,17 +1351,8 @@ function useCharts() {
 
 function PlanObjectiveSetup() {
   const { objective, setObjective } = usePlanObjective();
-  const [customDraft, setCustomDraft] = useState(() => (objective?.kind === "CUSTOM" ? objective.name : ""));
-
-  useEffect(() => {
-    if (objective?.kind === "CUSTOM") {
-      setCustomDraft(objective.name);
-    } else {
-      setCustomDraft("");
-    }
-  }, [objective]);
-
   const selectedLabel = getObjectiveLabel(objective);
+  const selectedKey = objective?.kind === "BUILTIN" ? objective.key : null;
 
   const handleSelectBuiltin = useCallback(
     (key: BuiltinObjectiveKey) => {
@@ -1338,12 +1361,6 @@ function PlanObjectiveSetup() {
     [setObjective]
   );
 
-  const handleSaveCustom = useCallback(() => {
-    const trimmed = customDraft.trim();
-    if (!trimmed) return;
-    setObjective({ kind: "CUSTOM", id: slugifyObjectiveName(trimmed), name: trimmed });
-  }, [customDraft, setObjective]);
-
   const handleClear = useCallback(() => {
     setObjective(null);
   }, [setObjective]);
@@ -1351,10 +1368,28 @@ function PlanObjectiveSetup() {
   return (
     <div style={{ display: "grid", gap: 16 }}>
       <div>
-        <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>Objetivos recomendados Select Sires</div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 8,
+          }}
+        >
+          <div style={{ fontWeight: 600, fontSize: 14 }}>Objetivos recomendados Select Sires</div>
+          <Button
+            variant="ghost"
+            onClick={handleClear}
+            disabled={!objective}
+            ariaLabel="Limpar objetivo selecionado"
+          >
+            Limpar objetivo
+          </Button>
+        </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 8 }}>
           {BUILTIN_OBJECTIVES.map((item) => {
-            const isSelected = objective?.kind === "BUILTIN" && objective.key === item.key;
+            const isSelected = selectedKey === item.key;
             return (
               <button
                 key={item.key}
@@ -1382,30 +1417,6 @@ function PlanObjectiveSetup() {
           })}
         </div>
       </div>
-
-      <div>
-        <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>Objetivo personalizado</div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-          <div style={{ flex: 1, minWidth: 240 }}>
-            <Input
-              value={customDraft}
-              onChange={setCustomDraft}
-              placeholder="Descreva um objetivo específico para o rebanho"
-            />
-          </div>
-          <Button onClick={handleSaveCustom} disabled={!customDraft.trim()} ariaLabel="Salvar objetivo personalizado">
-            Salvar objetivo
-          </Button>
-          <Button variant="ghost" onClick={handleClear} disabled={!objective} ariaLabel="Limpar objetivo selecionado">
-            Limpar
-          </Button>
-        </div>
-        <div style={{ fontSize: 12, color: COLORS.black, marginTop: 6 }}>
-          Use este campo para registrar metas específicas do cliente, como foco em sólidos do leite, redução de custos reprodutivos
-          ou melhor posicionamento de mercado.
-        </div>
-      </div>
-
       <div style={{ background: "#e3f2fd", border: "1px solid #90caf9", borderRadius: 12, padding: 14 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.black }}>Objetivo ativo do plano</div>
         <div style={{ fontSize: 18, fontWeight: 800, color: COLORS.black, marginTop: 4 }}>
@@ -1414,20 +1425,40 @@ function PlanObjectiveSetup() {
         <div style={{ fontSize: 12, color: COLORS.black, marginTop: 4 }}>
           {selectedLabel
             ? "Os insights e o ROI são interpretados considerando este direcionamento estratégico do plano."
-            : "Selecione um objetivo sugerido ou cadastre um objetivo personalizado para contextualizar os resultados apresentados."}
+            : "Selecione um objetivo sugerido para contextualizar os resultados apresentados."}
         </div>
       </div>
     </div>
   );
 }
 
-function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCalculations> }) {
+function PageResults({ st }: { st: AppState }) {
   const planStore = usePlanStore();
+  const { objective } = usePlanObjective();
+  const preferredRoiIndexLabel = resolveRoiIndexLabel(objective, planStore.selectedPTAList);
+  const calc = useCalculations(st, preferredRoiIndexLabel);
   const { ready, createChart } = useCharts();
   const barRef = useRef<any>(null);
   const pieRef = useRef<any>(null);
   const radarRef = useRef<any>(null);
   const lineRef = useRef<any>(null);
+
+  const roiLabelUsed = calc.roiIndexLabel;
+  const roiIndexDisplayName = roiLabelUsed ? `Índice ${roiLabelUsed}` : "Índice econômico";
+  const roiIndexFormulaLabel = roiLabelUsed ? `${roiLabelUsed} Ponderado` : "Índice ponderado";
+  const roiIndexExplanation = roiLabelUsed
+    ? `Valor médio ponderado do ${roiLabelUsed} dos touros selecionados, considerando o número de doses utilizadas de cada touro.`
+    : "Valor médio ponderado do índice econômico selecionado dos touros, considerando o número de doses utilizadas de cada touro.";
+  const roiIndexAverageValue = roiLabelUsed ? calc.ptaPondGeral[roiLabelUsed] || 0 : 0;
+  const roiTotalValue = roiLabelUsed ? roiIndexAverageValue * calc.totalBez - calc.totalValor : 0;
+  const roiTotalColor = roiLabelUsed ? (roiTotalValue >= 0 ? "#167C2B" : COLORS.red) : COLORS.black;
+  const formatIndexValue = (value: number) => {
+    if (!roiLabelUsed) return "–";
+    if (roiLabelUsed.includes("$")) {
+      return `$${value.toFixed(2)}`;
+    }
+    return PTA_NUM(value);
+  };
 
   const mountCharts = () => {
     // Destroy previous
@@ -1480,7 +1511,7 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
       data: {
         labels: labelsBulls,
         datasets: [{
-          label: "ROI (R$)",
+          label: calc.roiIndexLabel ? `ROI (R$) — Índice ${calc.roiIndexLabel}` : "ROI (R$)",
           data: roiData,
           backgroundColor: roiColors,
           borderColor: roiColors,
@@ -1625,18 +1656,22 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
 
       <Section title="Insights">
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: 12 }}>
-          {/* Maior NM$ */}
+          {/* Maior índice econômico */}
           {(() => {
-            const nmDollarLabel = planStore.selectedPTAList.find(l => l === "NM$");
-            const bestNM = nmDollarLabel ? [...calc.byBull].sort((a, b) => (b.ptaPond[nmDollarLabel] || 0) - (a.ptaPond[nmDollarLabel] || 0))[0] : null;
+            const roiLabel = calc.roiIndexLabel;
+            const bestIndex = roiLabel
+              ? [...calc.byBull].sort((a, b) => (b.ptaPond[roiLabel] || 0) - (a.ptaPond[roiLabel] || 0))[0]
+              : null;
             return (
               <div style={{ border: `1px solid ${COLORS.gray}`, borderRadius: 10, padding: 10 }}>
-                <div style={{ fontSize: 12, color: COLORS.black }}>Maior NM$ médio</div>
+                <div style={{ fontSize: 12, color: COLORS.black }}>
+                  {roiLabel ? `Maior ${roiLabel} médio` : "Maior índice médio"}
+                </div>
                 <div style={{ fontSize: 16, fontWeight: 800 }}>
-                  {bestNM && nmDollarLabel ? `${bestNM.bull.name || bestNM.bull.id}` : "–"}
+                  {bestIndex && roiLabel ? `${bestIndex.bull.name || bestIndex.bull.id}` : "–"}
                 </div>
                 <div style={{ fontSize: 14, color: "#16a34a" }}>
-                  {bestNM && nmDollarLabel ? `${PTA_NUM(bestNM.ptaPond[nmDollarLabel] || 0)}` : "–"}
+                  {bestIndex && roiLabel ? formatIndexValue(bestIndex.ptaPond[roiLabel] || 0) : "–"}
                 </div>
               </div>
             );
@@ -1726,29 +1761,28 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
         <div style={{ backgroundColor: COLORS.white, padding: 20, borderRadius: 10, border: `1px solid ${COLORS.gray}` }}>
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 10 }}>Fórmula:</div>
-            <div style={{ 
-              backgroundColor: '#f8f9fa', 
-              padding: 15, 
-              borderRadius: 8, 
-              fontFamily: 'monospace', 
+            <div style={{
+              backgroundColor: '#f8f9fa',
+              padding: 15,
+              borderRadius: 8,
+              fontFamily: 'monospace',
               fontSize: 14,
               border: `1px solid ${COLORS.gray}`,
               textAlign: 'center',
               fontWeight: 600
             }}>
-              ROI = (NM$ Ponderado × Total de Bezerras) - Custo Total do Sêmen
+              ROI = ({roiIndexFormulaLabel} × Total de Bezerras) - Custo Total do Sêmen
             </div>
           </div>
-          
+
           <div style={{ marginBottom: 15 }}>
             <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 10 }}>Explicação:</div>
             <div style={{ fontSize: 14, lineHeight: 1.6, color: COLORS.black }}>
               <div style={{ marginBottom: 8 }}>
-                <strong>NM$ Ponderado:</strong> Valor médio ponderado do NM$ (Net Merit Dollar) dos touros selecionados, 
-                considerando o número de doses utilizadas de cada touro.
+                <strong>{roiIndexFormulaLabel}:</strong> {roiIndexExplanation}
               </div>
               <div style={{ marginBottom: 8 }}>
-                <strong>Total de Bezerras:</strong> Número total estimado de bezerras fêmeas nascidas 
+                <strong>Total de Bezerras:</strong> Número total estimado de bezerras fêmeas nascidas
                 (considerando taxa de natalidade feminina variável por tipo de sêmen: Sexado 90%, Convencional 47%).
               </div>
               <div style={{ marginBottom: 8 }}>
@@ -1776,26 +1810,23 @@ function PageResults({ st, calc }: { st: AppState; calc: ReturnType<typeof useCa
           </div>
           
           {calc.totalBez > 0 && (
-            <div style={{ 
-              backgroundColor: '#e3f2fd', 
-              padding: 15, 
-              borderRadius: 8, 
+            <div style={{
+              backgroundColor: '#e3f2fd',
+              padding: 15,
+              borderRadius: 8,
               border: '1px solid #90caf9',
-              marginTop: 15 
+              marginTop: 15
             }}>
               <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Valores do Plano Atual:</div>
               <div style={{ fontSize: 13, lineHeight: 1.5 }}>
-                <div>NM$ Ponderado: <strong>${(calc.ptaPondGeral["NM$"] || 0).toFixed(2)}</strong></div>
+                <div>
+                  {roiIndexDisplayName}: <strong>{roiLabelUsed ? formatIndexValue(roiIndexAverageValue) : "–"}</strong>
+                </div>
                 <div>Total de Bezerras: <strong>{calc.totalBez.toLocaleString()}</strong></div>
                 <div>Custo Total: <strong>{BRL(calc.totalValor)}</strong></div>
                 <div style={{ marginTop: 8, fontSize: 14, fontWeight: 600 }}>
-                  ROI Total: <span style={{ color: (() => {
-                    const totalROI = (calc.ptaPondGeral["NM$"] || 0) * calc.totalBez - calc.totalValor;
-                    return totalROI >= 0 ? "#167C2B" : COLORS.red;
-                  })() }}>
-                    {BRL((() => {
-                      return (calc.ptaPondGeral["NM$"] || 0) * calc.totalBez - calc.totalValor;
-                    })())}
+                  ROI Total: <span style={{ color: roiTotalColor }}>
+                    {roiLabelUsed ? BRL(roiTotalValue) : "–"}
                   </span>
                 </div>
               </div>
@@ -1934,7 +1965,6 @@ function Sidebar({ current, onChange, onLoadTest, onClear }: { current: string; 
 
 export default function ProjecaoGenetica() {
   const { state, setState, loadTestData, clearAll } = useAppState();
-  const calc = useCalculations(state);
   const [page, setPage] = useState<"plano" | "touros" | "resultados" | "pdf">("plano");
 
   const initialObjectiveChoice = useMemo(() => objectiveFromLabel(state.farm.objective), [state.farm.objective]);
@@ -1962,7 +1992,7 @@ export default function ProjecaoGenetica() {
         <main style={{ flex: 1, padding: 16, maxWidth: 1400, margin: "0 auto" }}>
           {page === "plano" && <PagePlano st={state} setSt={setState} />}
           {page === "touros" && <PageBulls st={state} setSt={setState} />}
-          {page === "resultados" && <PageResults st={state} calc={calc} />}
+          {page === "resultados" && <PageResults st={state} />}
           {page === "pdf" && <PageExport st={state} />}
         </main>
       </div>
