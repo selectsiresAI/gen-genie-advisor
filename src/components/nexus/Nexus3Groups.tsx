@@ -20,6 +20,7 @@ import { ResponsiveContainer, LineChart, Line, CartesianGrid, Tooltip, XAxis, YA
 import { Loader2, Search, Trash2, ArrowLeft, Sparkles } from "lucide-react";
 import { usePlanStore } from "@/hooks/usePlanStore";
 import { cn } from "@/lib/utils";
+import type { Database } from "@/integrations/supabase/types";
 
 interface Nexus3GroupsProps {
   onBack?: () => void;
@@ -45,6 +46,60 @@ interface BullSlotValue {
   code: string;
   name: string;
   value: number | null;
+}
+
+type BullTableRow = Database["public"]["Tables"]["bulls"]["Row"];
+
+function normalizeBullCode(value: string | null | undefined) {
+  if (!value) return null;
+  return value.replace(/\s+/g, "").toUpperCase().replace(/^0+/, "");
+}
+
+function extractTraitValue(row: BullTableRow, traitKey: string) {
+  const normalizedTrait = traitKey.toLowerCase();
+  const directValue = row[normalizedTrait as keyof BullTableRow];
+
+  if (typeof directValue === "number") {
+    return directValue;
+  }
+
+  const ptas = row.ptas;
+  if (ptas && typeof ptas === "object") {
+    const record = ptas as Record<string, unknown>;
+    const raw = record[normalizedTrait];
+    if (typeof raw === "number") {
+      return raw;
+    }
+    if (typeof raw === "string") {
+      const parsed = Number.parseFloat(raw);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+  }
+
+  return null;
+}
+
+function mapBullRowToSearchRow(row: BullTableRow, traitKey: string): BullSearchRow {
+  const traitValue = extractTraitValue(row, traitKey);
+  const fallbackId = row.id ?? row.code ?? row.registration ?? row.name ?? "unknown";
+  return {
+    id: String(fallbackId),
+    code: row.code,
+    naab: row.code,
+    name: row.name,
+    trait_value: traitValue,
+  };
+}
+
+function buildCodeCandidates(query: string) {
+  const compact = query.replace(/\s+/g, "").toUpperCase();
+  const withoutZeros = compact.replace(/^0+/, "");
+  const candidates = new Set<string>();
+  if (compact) candidates.add(compact);
+  if (withoutZeros) candidates.add(withoutZeros);
+  return Array.from(candidates);
 }
 
 export function Nexus3Groups({ onBack, initialFarmId, fallbackDefaultFarmId }: Nexus3GroupsProps) {
@@ -87,6 +142,165 @@ export function Nexus3Groups({ onBack, initialFarmId, fallbackDefaultFarmId }: N
   const profileLookupAttempted = useRef(false);
   const sessionSyncAttempted = useRef(false);
   const searchDebounceRef = useRef<number | null>(null);
+
+  const mergeBullSearchRows = useCallback((rows: BullSearchRow[]) => {
+    const byId = new Map<string, BullSearchRow>();
+    const byCode = new Map<string, BullSearchRow>();
+
+    rows.forEach((row) => {
+      if (!row) return;
+      if (row.id) {
+        byId.set(row.id, row);
+      }
+      const normalized = normalizeBullCode(row.code ?? row.naab ?? null);
+      if (normalized) {
+        byCode.set(normalized, row);
+      }
+    });
+
+    const merged: BullSearchRow[] = [];
+    const seen = new Set<string>();
+
+    const pushRow = (row: BullSearchRow | undefined) => {
+      if (!row) return;
+      const key = row.id ?? normalizeBullCode(row.code ?? row.naab ?? null);
+      if (!key) return;
+      if (seen.has(key)) return;
+      seen.add(key);
+      merged.push(row);
+    };
+
+    byId.forEach((row) => pushRow(row));
+    byCode.forEach((row) => pushRow(row));
+
+    return merged;
+  }, []);
+
+  const fallbackSearchBulls = useCallback(
+    async (query: string, traitKey: string) => {
+      const trimmed = query.trim();
+      if (!trimmed) return [] as BullSearchRow[];
+
+      const candidates = buildCodeCandidates(trimmed);
+      const collected: BullSearchRow[] = [];
+      const selectColumns = "id, code, name, registration, sire_naab, mgs_naab, mmgs_naab, ptas";
+
+      for (const candidate of candidates) {
+        if (!candidate) continue;
+        const { data, error } = await supabase
+          .from("bulls")
+          .select(selectColumns)
+          .ilike("code", `%${candidate}%`)
+          .limit(8);
+
+        if (error) {
+          console.error("Erro na busca alternativa por código", error);
+          continue;
+        }
+
+        if (Array.isArray(data)) {
+          data.forEach((row) => collected.push(mapBullRowToSearchRow(row as BullTableRow, traitKey)));
+        }
+
+        if (collected.length >= 8) {
+          return mergeBullSearchRows(collected).slice(0, 8);
+        }
+      }
+
+      const orFilters = [
+        `name.ilike.%${trimmed}%`,
+        `registration.ilike.%${trimmed}%`,
+        `sire_naab.ilike.%${trimmed}%`,
+        `mgs_naab.ilike.%${trimmed}%`,
+        `mmgs_naab.ilike.%${trimmed}%`,
+      ];
+
+      const { data, error } = await supabase
+        .from("bulls")
+        .select(selectColumns)
+        .or(orFilters.join(","))
+        .limit(8);
+
+      if (error) {
+        console.error("Erro na busca alternativa por nome", error);
+        return mergeBullSearchRows(collected).slice(0, 8);
+      }
+
+      if (Array.isArray(data)) {
+        data.forEach((row) => collected.push(mapBullRowToSearchRow(row as BullTableRow, traitKey)));
+      }
+
+      return mergeBullSearchRows(collected).slice(0, 8);
+    },
+    [mergeBullSearchRows, supabase]
+  );
+
+  const fallbackLoadBullsByIdentifiers = useCallback(
+    async (ids: string[], codes: string[], traitKey: string) => {
+      const selectColumns = "id, code, name, registration, ptas";
+      const collected: BullSearchRow[] = [];
+      const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
+
+      if (uniqueIds.length > 0) {
+        const { data, error } = await supabase
+          .from("bulls")
+          .select(selectColumns)
+          .in("id", uniqueIds)
+          .limit(uniqueIds.length);
+
+        if (!error && Array.isArray(data)) {
+          data.forEach((row) => collected.push(mapBullRowToSearchRow(row as BullTableRow, traitKey)));
+        }
+      }
+
+      const uniqueCodes = Array.from(new Set(codes.filter(Boolean)));
+      if (uniqueCodes.length > 0) {
+        const candidateSet = new Set<string>();
+
+        uniqueCodes.forEach((code) => {
+          const trimmed = code.trim();
+          if (trimmed) {
+            candidateSet.add(trimmed);
+            candidateSet.add(trimmed.toUpperCase());
+            buildCodeCandidates(trimmed).forEach((candidate) => {
+              if (candidate) {
+                candidateSet.add(candidate);
+                if (!candidate.startsWith("0")) {
+                  candidateSet.add(`0${candidate}`);
+                }
+              }
+            });
+          }
+        });
+
+        const existingNormalized = new Set(
+          collected
+            .map((row) => normalizeBullCode(row.code ?? row.naab ?? null))
+            .filter((code): code is string => Boolean(code))
+        );
+
+        const codesToQuery = Array.from(candidateSet).filter((code) => {
+          const normalized = normalizeBullCode(code);
+          return normalized ? !existingNormalized.has(normalized) : true;
+        });
+
+        if (codesToQuery.length > 0) {
+          const { data, error } = await supabase
+            .from("bulls")
+            .select(selectColumns)
+            .in("code", codesToQuery)
+            .limit(codesToQuery.length);
+
+          if (!error && Array.isArray(data)) {
+            data.forEach((row) => collected.push(mapBullRowToSearchRow(row as BullTableRow, traitKey)));
+          }
+        }
+      }
+
+      return mergeBullSearchRows(collected);
+    },
+    [mergeBullSearchRows, supabase]
+  );
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -316,56 +530,97 @@ export function Nexus3Groups({ onBack, initialFarmId, fallbackDefaultFarmId }: N
   useEffect(() => {
     if (!trait) return;
     const ids = bullSlots.map((slot) => slot?.id).filter(Boolean) as string[];
-    if (ids.length === 0) return;
+    const codes = bullSlots
+      .map((slot) => slot?.code)
+      .filter((code): code is string => Boolean(code));
+    if (ids.length === 0 && codes.length === 0) return;
 
     setReloadBullsLoading(true);
     const traitKey = trait.toLowerCase();
+
+    const applyResults = (rows: BullSearchRow[]) => {
+      if (!rows || rows.length === 0) return;
+
+      const byId = new Map<string, BullSearchRow>();
+      const byCode = new Map<string, BullSearchRow>();
+
+      rows.forEach((row) => {
+        if (!row) return;
+        if (row.id) {
+          byId.set(row.id, row);
+        }
+        const normalized = normalizeBullCode(row.code ?? row.naab ?? null);
+        if (normalized) {
+          byCode.set(normalized, row);
+        }
+      });
+
+      setBullSlots((current) => {
+        let changed = false;
+        const updated = current.map((slot) => {
+          if (!slot) return slot;
+          const normalizedCode = normalizeBullCode(slot.code);
+          const fresh = byId.get(slot.id) ?? (normalizedCode ? byCode.get(normalizedCode) : undefined);
+          if (!fresh) return slot;
+
+          const nextValue = fresh.trait_value ?? null;
+          const nextName = fresh.name ?? slot.name;
+          const nextCode = fresh.code ?? slot.code;
+
+          if (slot.value === nextValue && slot.name === nextName && slot.code === nextCode) {
+            return slot;
+          }
+          changed = true;
+          return {
+            ...slot,
+            name: nextName,
+            code: nextCode ?? slot.code,
+            value: nextValue,
+          };
+        });
+
+        return changed ? updated : current;
+      });
+    };
+
+    if (ids.length === 0) {
+      fallbackLoadBullsByIdentifiers(ids, codes, traitKey)
+        .then(applyResults)
+        .finally(() => setReloadBullsLoading(false));
+      return;
+    }
 
     supabase
       .rpc("nx3_bulls_by_ids", {
         p_ids: ids,
         p_trait: traitKey,
       })
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (error) {
           console.error("Erro ao recarregar touros", error);
-          toast({
-            title: "Erro ao recarregar touros",
-            description: error.message,
-            variant: "destructive",
-          });
+          const fallbackRows = await fallbackLoadBullsByIdentifiers(ids, codes, traitKey);
+          if (fallbackRows.length > 0) {
+            applyResults(fallbackRows);
+          } else {
+            toast({
+              title: "Erro ao recarregar touros",
+              description: error.message,
+              variant: "destructive",
+            });
+          }
           return;
         }
 
-        if (!Array.isArray(data)) return;
-        const byId = new Map<string, BullSearchRow>();
-        (data as BullSearchRow[]).forEach((row) => {
-          if (row.id) {
-            byId.set(row.id, row);
-          }
-        });
+        if (Array.isArray(data) && data.length > 0) {
+          applyResults(data as BullSearchRow[]);
+          return;
+        }
 
-        setBullSlots((current) => {
-          let changed = false;
-          const updated = current.map((slot) => {
-            if (!slot) return slot;
-            const fresh = slot.id ? byId.get(slot.id) : null;
-            const nextValue = fresh?.trait_value ?? null;
-            if (slot.value === nextValue) {
-              return slot;
-            }
-            changed = true;
-            return {
-              ...slot,
-              value: nextValue,
-            };
-          });
-
-          return changed ? updated : current;
-        });
+        const fallbackRows = await fallbackLoadBullsByIdentifiers(ids, codes, traitKey);
+        applyResults(fallbackRows);
       })
       .finally(() => setReloadBullsLoading(false));
-  }, [bullSlots, supabase, trait, toast]);
+  }, [bullSlots, fallbackLoadBullsByIdentifiers, supabase, trait, toast]);
 
   useEffect(() => {
     const values = bullSlots
@@ -443,23 +698,37 @@ export function Nexus3Groups({ onBack, initialFarmId, fallbackDefaultFarmId }: N
 
     setSearchLoading(true);
     searchDebounceRef.current = window.setTimeout(async () => {
+      const traitKey = trait.toLowerCase();
+      let rows: BullSearchRow[] = [];
+
       const { data, error } = await supabase.rpc("nx3_bulls_lookup", {
         p_query: searchQuery.trim(),
-        p_trait: trait.toLowerCase(),
+        p_trait: traitKey,
         p_limit: 8,
       });
 
+      if (Array.isArray(data)) {
+        rows = data as BullSearchRow[];
+      }
+
       if (error) {
         console.error("Erro na busca de touros", error);
-        toast({
-          title: "Erro na busca",
-          description: error.message,
-          variant: "destructive",
-        });
-        setSearchResults([]);
-      } else if (Array.isArray(data)) {
-        setSearchResults(data as BullSearchRow[]);
       }
+
+      if (!rows || rows.length === 0) {
+        const fallbackRows = await fallbackSearchBulls(searchQuery.trim(), traitKey);
+        rows = fallbackRows;
+
+        if (error && fallbackRows.length === 0) {
+          toast({
+            title: "Erro na busca",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
+      }
+
+      setSearchResults(mergeBullSearchRows(rows).slice(0, 8));
       setSearchLoading(false);
     }, 250);
 
@@ -468,7 +737,7 @@ export function Nexus3Groups({ onBack, initialFarmId, fallbackDefaultFarmId }: N
         window.clearTimeout(searchDebounceRef.current);
       }
     };
-  }, [searchOpenFor, searchQuery, supabase, trait, toast]);
+  }, [fallbackSearchBulls, mergeBullSearchRows, searchOpenFor, searchQuery, supabase, trait, toast]);
 
   const chartData = useMemo(() => {
     const sortedYears = [...selectedYears].sort((a, b) => Number(a) - Number(b));
