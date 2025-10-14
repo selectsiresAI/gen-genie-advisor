@@ -3,10 +3,13 @@ import { usePlanStore, AVAILABLE_PTAS, getFemalesByFarm, countFromCategoria, cal
 import { useHerdStore } from "../hooks/useHerdStore";
 import { useFileStore } from "../hooks/useFileStore";
 import { toast } from "sonner";
-import { supabase } from '@/integrations/supabase/client';
-import EstruturalPopulacional from './EstruturalPopulacional';
-import PTAMothersTable from './PTAMothersTable';
-import { BullSelector } from '@/components/BullSelector';
+import { supabase } from "@/integrations/supabase/client";
+import EstruturalPopulacional from "./EstruturalPopulacional";
+import PTAMothersTable from "./PTAMothersTable";
+import { BullSelector } from "@/components/BullSelector";
+import { IM5Configurator, type IM5Config } from "@/components/plano-genetico/IM5Configurator";
+import { IM5Results } from "@/components/plano-genetico/IM5Results";
+import { usePlanBulls } from "@/hooks/usePlanBulls";
 import {
   PlanObjectiveProvider,
   usePlanObjective,
@@ -37,6 +40,9 @@ const COLORS = {
   black: "#1C1C1C",
   white: "#F2F2F2",
 };
+
+const DEFAULT_IM5_FARM_ID = "065c3148-35f5-45a9-b4b9-5923e75a29be";
+const DEFAULT_IM5_PLAN_ID = "SEU_PLAN_ID_AQUI"; // ⚠️ Ajuste para usar o plano selecionado
 
 type BuiltinObjectiveKey = Extract<ObjectiveChoice, { kind: "BUILTIN" }>["key"];
 
@@ -1442,6 +1448,9 @@ function RoiIndexSelector({
 
 function PageResults({ st }: { st: AppState }) {
   const planStore = usePlanStore();
+  const farmIdForIM5 = planStore.selectedFarmId ?? DEFAULT_IM5_FARM_ID;
+  const { bulls: planBulls, loading: im5Loading, error: im5Error } = usePlanBulls(DEFAULT_IM5_PLAN_ID);
+  const [im5Config, setIm5Config] = useState<IM5Config | null>(null);
   const selectedPTAs = planStore.selectedPTAList;
   const { objective } = usePlanObjective();
   const preferredRoiIndexLabel = resolveRoiIndexLabel(objective, selectedPTAs);
@@ -1585,6 +1594,23 @@ function PageResults({ st }: { st: AppState }) {
               <div style={{ fontSize: 22, fontWeight: 800 }}>{PTA_NUM(calc.ptaPondGeral[ptaLabel] || 0)}</div>
             </div>
           ))}
+        </div>
+      </Section>
+
+      <Section title="IM5$ — Custo-benefício por Touro">
+        <div className="flex flex-col gap-4">
+          <IM5Configurator farmId={farmIdForIM5} onApply={setIm5Config} />
+          {im5Error && (
+            <div style={{ color: COLORS.red, fontSize: 12 }}>{im5Error}</div>
+          )}
+          {im5Loading && (
+            <div style={{ fontSize: 12, color: "#555" }}>Carregando touros…</div>
+          )}
+          <IM5Results
+            farmId={farmIdForIM5}
+            bulls={planBulls}
+            config={im5Config}
+          />
         </div>
       </Section>
 
