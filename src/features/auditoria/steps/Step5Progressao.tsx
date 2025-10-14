@@ -172,33 +172,62 @@ const TraitCard = memo(function TraitCard({
               labelFormatter={(label) => `Ano ${label}`}
             />
             <Legend />
+            
+            {/* Linha de referência no zero */}
+            <ReferenceLine
+              y={0}
+              stroke="hsl(var(--foreground))"
+              strokeWidth={2}
+              label={{
+                value: "0",
+                position: "insideLeft",
+                fill: "hsl(var(--foreground))",
+              }}
+            />
+            
             <Line
               type="monotone"
               dataKey="mean"
               name={"Média anual " + traitLabel}
-              stroke="#F59E0B"
+              stroke="hsl(var(--foreground))"
               strokeWidth={2}
-              dot={{ r: 5, strokeWidth: 2, stroke: "#F59E0B", fill: "#fff" }}
+              dot={(props: any) => {
+                const { cx, cy, payload } = props;
+                const isNegative = payload.mean < 0;
+                return (
+                  <circle
+                    cx={cx}
+                    cy={cy}
+                    r={5}
+                    fill={isNegative ? "#EF4444" : "#3B82F6"}
+                    stroke={isNegative ? "#EF4444" : "#3B82F6"}
+                    strokeWidth={2}
+                  />
+                );
+              }}
             />
+            
             {showFarmMean && (
               <ReferenceLine
                 y={farmMean}
                 stroke="#F59E0B"
                 strokeDasharray="5 5"
-                strokeWidth={2}
+                strokeWidth={1.5}
                 label={{
                   value: `Média geral (${farmMean.toFixed(2)})`,
                   position: "insideTopRight",
                   fill: "#F59E0B",
+                  fontSize: 12,
                 }}
               />
             )}
+            
             {showTrend && trendResult.trendLine.length === 2 && (
               <Line
                 type="linear"
                 dataKey="trend"
                 name={"Tendência (R²=" + trendResult.r2.toFixed(3) + ")"}
-                stroke="#60A5FA"
+                stroke="#10B981"
                 strokeWidth={2}
                 strokeDasharray="5 5"
                 dot={false}
