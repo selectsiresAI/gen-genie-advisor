@@ -6,7 +6,13 @@ export function isLowScalePTA(pta: string) {
 
 // Casas decimais sugeridas por PTA (labels/tooltip)
 export function decimalsForPTA(pta: string) {
-  return isLowScalePTA(pta) ? 2 : 0;
+  const normalized = pta.toUpperCase();
+  if (isLowScalePTA(normalized)) return 2;
+
+  // HHP$, NM$, CM$, etc. should keep cents precision so the chart matches manual calculations
+  if (normalized.includes("$")) return 2;
+
+  return 0;
 }
 
 /**
