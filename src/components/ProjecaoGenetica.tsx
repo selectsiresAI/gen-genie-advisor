@@ -1373,77 +1373,6 @@ function useCharts() {
   return { ready, createChart };
 }
 
-function PlanObjectiveSetup() {
-  const { objective, setObjective } = usePlanObjective();
-  const selectedKey = objective?.kind === "BUILTIN" ? objective.key : null;
-
-  const handleSelectBuiltin = useCallback(
-    (key: BuiltinObjectiveKey) => {
-      setObjective({ kind: "BUILTIN", key });
-    },
-    [setObjective]
-  );
-
-  const handleClear = useCallback(() => {
-    setObjective(null);
-  }, [setObjective]);
-
-  return (
-    <div style={{ display: "grid", gap: 16 }}>
-      <div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 8,
-            marginBottom: 8,
-          }}
-        >
-          <div style={{ fontWeight: 600, fontSize: 14 }}>Objetivos recomendados Select Sires</div>
-          <Button
-            variant="ghost"
-            onClick={handleClear}
-            disabled={!objective}
-            ariaLabel="Limpar objetivo selecionado"
-          >
-            Limpar objetivo
-          </Button>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 8 }}>
-          {BUILTIN_OBJECTIVES.map((item) => {
-            const isSelected = selectedKey === item.key;
-            return (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => handleSelectBuiltin(item.key)}
-                style={{
-                  padding: 12,
-                  borderRadius: 12,
-                  border: isSelected ? `2px solid ${COLORS.red}` : `1px solid ${COLORS.gray}`,
-                  background: isSelected ? "#fde8ec" : "#fff",
-                  textAlign: "left",
-                  cursor: "pointer",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 4,
-                  boxShadow: isSelected ? "0 0 0 2px rgba(190, 30, 45, 0.12)" : "none",
-                  transition: "border-color 0.2s ease, box-shadow 0.2s ease",
-                }}
-              >
-                <span style={{ fontSize: 11, fontWeight: 700, color: COLORS.red }}>{item.key}</span>
-                <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.black }}>{item.label}</span>
-                <span style={{ fontSize: 12, color: COLORS.black, opacity: 0.8 }}>{item.description}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function RoiIndexSelector({
   options,
   value,
@@ -1841,10 +1770,6 @@ function PageResults({ st }: { st: AppState }) {
             );
           })()}
         </div>
-      </Section>
-
-      <Section title="🎯 Configuração do Objetivo Genético">
-        <PlanObjectiveSetup />
       </Section>
 
       {/* Fórmula e Explicação do ROI */}
