@@ -49,6 +49,17 @@ interface BullSlotValue {
 
 export function Nexus3Groups({ onBack, initialFarmId, fallbackDefaultFarmId }: Nexus3GroupsProps) {
   const supabase = useMemo(() => createClient(), []);
+  const supabaseProjectRef = useMemo(() => {
+    try {
+      const restUrl = (supabase as unknown as { restUrl?: string }).restUrl;
+      if (!restUrl) return null;
+      const host = new URL(restUrl).host;
+      return host.split(".")[0] ?? null;
+    } catch (error) {
+      console.error("Não foi possível determinar o project ref do Supabase", error);
+      return null;
+    }
+  }, [supabase]);
   const { toast } = useToast();
   const selectedFarmIdFromStore = usePlanStore((state) => state.selectedFarmId);
 
@@ -74,7 +85,69 @@ export function Nexus3Groups({ onBack, initialFarmId, fallbackDefaultFarmId }: N
   const [searchResults, setSearchResults] = useState<BullSearchRow[]>([]);
 
   const profileLookupAttempted = useRef(false);
+  const sessionSyncAttempted = useRef(false);
   const searchDebounceRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (!supabaseProjectRef) return;
+    if (sessionSyncAttempted.current) return;
+    sessionSyncAttempted.current = true;
+
+    const restoreSessionFromCookie = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        return;
+      }
+
+      const cookieName = `sb-${supabaseProjectRef}-auth-token`;
+      const cookie = document.cookie
+        .split("; ")
+        .find((entry) => entry.startsWith(`${cookieName}=`));
+
+      if (!cookie) {
+        return;
+      }
+
+      const [, rawValue] = cookie.split("=");
+      if (!rawValue) {
+        return;
+      }
+
+      try {
+        const decoded = decodeURIComponent(rawValue);
+        const parsed = JSON.parse(decoded);
+
+        const accessToken =
+          parsed?.access_token ??
+          parsed?.session?.access_token ??
+          parsed?.currentSession?.access_token ??
+          null;
+        const refreshToken =
+          parsed?.refresh_token ??
+          parsed?.session?.refresh_token ??
+          parsed?.currentSession?.refresh_token ??
+          null;
+
+        if (!accessToken || !refreshToken) {
+          return;
+        }
+
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
+        if (error) {
+          console.error("Erro ao restaurar sessão do Supabase a partir do cookie", error);
+        }
+      } catch (error) {
+        console.error("Erro ao interpretar cookie de sessão do Supabase", error);
+      }
+    };
+
+    restoreSessionFromCookie();
+  }, [supabase, supabaseProjectRef]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
