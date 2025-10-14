@@ -1375,7 +1375,6 @@ function useCharts() {
 
 function PlanObjectiveSetup() {
   const { objective, setObjective } = usePlanObjective();
-  const selectedLabel = getObjectiveLabel(objective);
   const selectedKey = objective?.kind === "BUILTIN" ? objective.key : null;
 
   const handleSelectBuiltin = useCallback(
@@ -1439,17 +1438,6 @@ function PlanObjectiveSetup() {
               </button>
             );
           })}
-        </div>
-      </div>
-      <div style={{ background: "#e3f2fd", border: "1px solid #90caf9", borderRadius: 12, padding: 14 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.black }}>Objetivo ativo do plano</div>
-        <div style={{ fontSize: 18, fontWeight: 800, color: COLORS.black, marginTop: 4 }}>
-          {selectedLabel || "Nenhum objetivo definido"}
-        </div>
-        <div style={{ fontSize: 12, color: COLORS.black, marginTop: 4 }}>
-          {selectedLabel
-            ? "Os insights e o ROI são interpretados considerando este direcionamento estratégico do plano."
-            : "Selecione um objetivo sugerido para contextualizar os resultados apresentados."}
         </div>
       </div>
     </div>
