@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import NexusEntryPage from './NexusEntryPage';
 import Nexus1GenomicPrediction from './Nexus1GenomicPrediction';
 import Nexus2PedigreePrediction from './Nexus2PedigreePrediction';
-import { Nexus3Groups } from './nexus/Nexus3Groups';
+import Nexus3Groups from "./Nexus3Groups";
 
 type SelectedMethod = 'entry' | 'nexus1' | 'nexus2' | 'nexus3';
 
