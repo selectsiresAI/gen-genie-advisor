@@ -43,7 +43,18 @@ export default function PTAChartStep4({ farmId, tipoPTA, title }: Props) {
         p_farm_id: farmId, p_tipo_pta: tipoPTA
       });
       if (error) setErr(error.message);
-      else setRows((data ?? []) as Row[]);
+      else {
+        const normalized = (data ?? []).map((row) => ({
+          ...row,
+          ano: Number(row.ano),
+          media_anual: Number(row.media_anual),
+          media_geral: Number(row.media_geral),
+          slope: row.slope == null ? null : Number(row.slope),
+          intercept: row.intercept == null ? null : Number(row.intercept),
+          r2: row.r2 == null ? null : Number(row.r2),
+        })) as Row[];
+        setRows(normalized);
+      }
       setLoading(false);
     })();
   }, [supabase, farmId, tipoPTA]);
@@ -67,6 +78,7 @@ export default function PTAChartStep4({ farmId, tipoPTA, title }: Props) {
   const eqText = (slope != null && intercept != null)
     ? `y = ${slope.toFixed(dec)}·x ${intercept >= 0 ? "+" : "−"} ${Math.abs(intercept).toFixed(dec)}`
     : null;
+  const trendLegendLabel = showR2 ? `Tendência (R²=${r2!.toFixed(3)})` : "Tendência";
 
   function exportCSV() {
     const header = ["ano","media_anual","media_geral","slope","intercept","r2"];
@@ -153,7 +165,7 @@ export default function PTAChartStep4({ farmId, tipoPTA, title }: Props) {
                 type="linear"
                 data={tPoints}
                 dataKey="tendencia"
-                name="Tendência"
+                name={trendLegendLabel}
                 stroke={COLORS.trend}
                 strokeDasharray="6 4"
                 dot={false}
@@ -167,7 +179,11 @@ export default function PTAChartStep4({ farmId, tipoPTA, title }: Props) {
               y={mediaGeral}
               stroke={COLORS.media}
               strokeWidth={2}
-              label={{ value: `Média do rebanho`, position: "insideTopRight", fill: COLORS.media }}
+              label={{
+                value: `Média do rebanho (${mediaGeral.toFixed(dec)})`,
+                position: "insideTopRight",
+                fill: COLORS.media,
+              }}
             />
           </LineChart>
         </ResponsiveContainer>
