@@ -15,6 +15,99 @@ export function decimalsForPTA(pta: string) {
   return 0;
 }
 
+const isFiniteNumber = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value);
+
+export type YearlyPoint = {
+  ano: number;
+  media: number | null;
+  n: number | null;
+};
+
+type YearBucket = {
+  weightedSum: number;
+  totalWeight: number;
+  fallbackSum: number;
+  fallbackCount: number;
+};
+
+/**
+ * Converte linhas do Supabase (que podem conter duplicidades por ano)
+ * em uma série agregada por ano com média ponderada.
+ */
+export function buildYearlySeries(
+  rows: { ano: number; media_ponderada_ano: number | null; n_total_ano: number | null }[]
+): YearlyPoint[] {
+  const buckets = new Map<number, YearBucket>();
+
+  for (const row of rows) {
+    const year = Number(row.ano);
+    if (!Number.isFinite(year)) continue;
+
+    const value = row.media_ponderada_ano;
+    if (!isFiniteNumber(value)) continue;
+
+    const weight = row.n_total_ano;
+    const bucket = buckets.get(year) ?? {
+      weightedSum: 0,
+      totalWeight: 0,
+      fallbackSum: 0,
+      fallbackCount: 0,
+    };
+
+    if (isFiniteNumber(weight) && weight > 0) {
+      bucket.weightedSum += value * weight;
+      bucket.totalWeight += weight;
+    } else {
+      bucket.fallbackSum += value;
+      bucket.fallbackCount += 1;
+    }
+
+    buckets.set(year, bucket);
+  }
+
+  return Array.from(buckets.entries())
+    .map<YearlyPoint>(([ano, bucket]) => {
+      if (bucket.totalWeight > 0) {
+        return {
+          ano,
+          media: bucket.weightedSum / bucket.totalWeight,
+          n: bucket.totalWeight,
+        };
+      }
+
+      if (bucket.fallbackCount > 0) {
+        return {
+          ano,
+          media: bucket.fallbackSum / bucket.fallbackCount,
+          n: bucket.fallbackCount,
+        };
+      }
+
+      return { ano, media: null, n: null };
+    })
+    .sort((a, b) => a.ano - b.ano);
+}
+
+/**
+ * Média ponderada global usando n (total de animais) como peso.
+ */
+export function computeWeightedMean(points: YearlyPoint[]) {
+  let weighted = 0;
+  let totalWeight = 0;
+
+  for (const point of points) {
+    if (!isFiniteNumber(point.media)) continue;
+
+    const weight = isFiniteNumber(point.n) && point.n > 0 ? point.n : 1;
+    weighted += point.media * weight;
+    totalWeight += weight;
+  }
+
+  if (totalWeight === 0) return null;
+  return weighted / totalWeight;
+}
+
 /**
  * Retorna [min, max] para o eixo Y com base nos valores da série e no tipo de PTA.
  * Regras:

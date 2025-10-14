@@ -17,10 +17,13 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 
 import {
+  buildYearlySeries,
+  computeWeightedMean,
   computeYDomain,
   decimalsForPTA,
   isLowScalePTA,
   trendLinePoints,
+  YearlyPoint,
 } from "./ptautils";
 
 type Row = {
@@ -103,36 +106,58 @@ export default function GeneticAuditStep4Chart({ farmId, tipoPTA, title }: Props
 
   const decimals = useMemo(() => decimalsForPTA(tipoPTA), [tipoPTA]);
 
-  const data = useMemo(
-    () =>
-      rows.map((r) => ({
-        ano: r.ano,
-        media: r.media_ponderada_ano ?? null,
-        n: r.n_total_ano ?? null,
-      })),
+  const series = useMemo<YearlyPoint[]>(() => buildYearlySeries(rows), [rows]);
+
+  const regressionRow = useMemo(
+    () => rows.find((row) => row.slope != null && row.intercept != null) ?? null,
     [rows]
   );
 
-  const mediaGeral = rows[0]?.media_geral ?? null;
-  const r2 = rows[0]?.r2 ?? null;
   const tPoints = useMemo(
-    () => trendLinePoints(rows, rows[0]?.slope, rows[0]?.intercept),
-    [rows]
+    () =>
+      trendLinePoints(
+        series,
+        regressionRow?.slope ?? undefined,
+        regressionRow?.intercept ?? undefined
+      ),
+    [series, regressionRow]
   );
+
+  const computedMean = useMemo(() => computeWeightedMean(series), [series]);
+
+  const mediaGeral = useMemo(() => {
+    const serverMean = rows.find((row) => row.media_geral != null)?.media_geral ?? null;
+
+    if (typeof serverMean === "number" && Number.isFinite(serverMean)) {
+      if (
+        typeof computedMean === "number" &&
+        Number.isFinite(computedMean) &&
+        Math.abs(serverMean - computedMean) > 0.005
+      ) {
+        return computedMean;
+      }
+
+      return serverMean;
+    }
+
+    return computedMean;
+  }, [computedMean, rows]);
 
   const yDomain = useMemo(() => {
     const yValues = [
-      ...data.map((d) => (d.media ?? NaN)),
+      ...series.map((point) => point.media ?? NaN),
       ...(typeof mediaGeral === "number" ? [mediaGeral] : []),
       ...tPoints.map((p) => p.trend),
     ].filter((value): value is number => Number.isFinite(value));
 
     return computeYDomain(tipoPTA, yValues);
-  }, [data, mediaGeral, tPoints, tipoPTA]);
+  }, [mediaGeral, series, tPoints, tipoPTA]);
+
+  const r2 = regressionRow?.r2 ?? null;
 
   const showR2 = useMemo(
-    () => r2 != null && data.filter((d) => d.media != null).length >= 3,
-    [data, r2]
+    () => r2 != null && series.filter((point) => point.media != null).length >= 3,
+    [r2, series]
   );
 
   if (loading)
@@ -156,7 +181,7 @@ export default function GeneticAuditStep4Chart({ farmId, tipoPTA, title }: Props
 
       <div className="h-80 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
+          <LineChart data={series} margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
             <CartesianGrid stroke={COLORS.grid} strokeDasharray="3 3" />
             <XAxis
               dataKey="ano"
@@ -170,16 +195,21 @@ export default function GeneticAuditStep4Chart({ farmId, tipoPTA, title }: Props
               tick={{ fill: COLORS.axis }}
             />
             <Tooltip
-              formatter={(value, name) => {
-                if (name === "media" || name === "trend" || name === "mean") {
+              formatter={(value, name, payload) => {
+                const dataKey = (payload && "dataKey" in payload
+                  ? (payload as { dataKey?: string }).dataKey
+                  : undefined) as string | undefined;
+
+                const key = dataKey ?? (typeof name === "string" ? name : "");
+                if (key === "media" || key === "trend" || key === "mean") {
                   const numericValue =
                     typeof value === "number" ? value : Number(value);
                   if (!Number.isFinite(numericValue)) return [value, name];
 
                   const label =
-                    name === "media"
+                    key === "media"
                       ? "Média ponderada"
-                      : name === "trend"
+                      : key === "trend"
                         ? "Tendência"
                         : "Média geral";
 
@@ -206,11 +236,12 @@ export default function GeneticAuditStep4Chart({ farmId, tipoPTA, title }: Props
               <LabelList
                 dataKey="media"
                 position="top"
-                formatter={(value) =>
-                  value != null && value !== ""
-                    ? Number(value).toFixed(decimals)
-                    : ""
-                }
+                formatter={(value) => {
+                  const numericValue =
+                    typeof value === "number" ? value : Number(value);
+                  if (!Number.isFinite(numericValue)) return "";
+                  return numericValue.toFixed(decimals);
+                }}
               />
             </Line>
 
