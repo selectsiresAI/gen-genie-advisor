@@ -8,7 +8,7 @@ import EstruturalPopulacional from "./EstruturalPopulacional";
 import PTAMothersTable from "./PTAMothersTable";
 import { BullSelector } from "@/components/BullSelector";
 import { IM5Configurator, type IM5Config } from "@/components/plano-genetico/IM5Configurator";
-import { IM5Results } from "@/components/plano-genetico/IM5Results";
+import { IM5Results, type IM5Row } from "@/components/plano-genetico/IM5Results";
 import { usePlanBulls } from "@/hooks/usePlanBulls";
 import {
   PlanObjectiveProvider,
@@ -566,17 +566,33 @@ function useAppState() {
   return { state, setState, loadTestData, clearAll };
 }
 
-function useCalculations(state: AppState, roiIndexLabel: string | null) {
+type RoiBasis =
+  | { mode: "INDEX"; label: string | null }
+  | { mode: "IM5"; config: IM5Config | null; rows: IM5Row[] };
+
+function useCalculations(state: AppState, roiBasis: RoiBasis) {
   const planStore = usePlanStore();
 
   const result = useMemo(() => {
     const semenFemale = (semen: SemenType) => (semen === "Sexado" ? 0.9 : 0.47);
 
     const selectedPTAs = planStore.selectedPTAList;
-    const fallbackRoiLabel = pickDefaultRoiLabel(selectedPTAs, roiIndexLabel);
+    const isIM5Mode = roiBasis.mode === "IM5" && roiBasis.config;
+    const fallbackRoiLabel = isIM5Mode
+      ? "IM5$"
+      : pickDefaultRoiLabel(selectedPTAs, roiBasis.mode === "INDEX" ? roiBasis.label : null);
+    const im5RowsById =
+      isIM5Mode
+        ? new Map(roiBasis.rows.map((row) => [row.id, row]))
+        : new Map<string, IM5Row>();
+    const im5FemaleRate = isIM5Mode ? clamp01(roiBasis.config?.femaleRate ?? 0.47) : null;
+    const im5Conception = isIM5Mode ? clamp01(roiBasis.config?.conceptionRate ?? 0.35) : null;
+    let im5WeightedSum = 0;
+    let im5TotalBez = 0;
 
     const byBull = state.bulls.slice(0, state.numberOfBulls).map((b) => {
-      const femaleRate = semenFemale(b.semen);
+      const im5Row = isIM5Mode ? im5RowsById.get(b.id) : null;
+      const femaleRate = isIM5Mode ? im5FemaleRate ?? semenFemale(b.semen) : semenFemale(b.semen);
       const dosesTotal = CATEGORIES.reduce((s, c) => s + (b.doses[c.key] || 0), 0);
       const valorTotal = dosesTotal * (b.pricePerDose || 0);
 
@@ -595,7 +611,9 @@ function useCalculations(state: AppState, roiIndexLabel: string | null) {
 
       CATEGORIES.forEach(({ key }) => {
         const doses = b.doses[key] || 0;
-        const conc = clamp01((state.repro.conception[key] || 0) / 100);
+        const conc = isIM5Mode
+          ? im5Conception ?? clamp01((state.repro.conception[key] || 0) / 100)
+          : clamp01((state.repro.conception[key] || 0) / 100);
         const preex = clamp01((state.repro.preex[key] || 0) / 100);
         const prenhezes = doses * conc;
         const prenhezesConfirm = prenhezes * preex;
@@ -618,7 +636,17 @@ function useCalculations(state: AppState, roiIndexLabel: string | null) {
       });
 
       const custoPorBezerra = bezerrasTotais > 0 ? valorTotal / bezerrasTotais : 0;
-      const retornoGen = fallbackRoiLabel ? (ptaPond[fallbackRoiLabel] || 0) * bezerrasTotais : 0;
+      const im5Value = isIM5Mode ? im5Row?.im5 ?? 0 : 0;
+      if (isIM5Mode && bezerrasTotais > 0) {
+        im5WeightedSum += im5Value * bezerrasTotais;
+        im5TotalBez += bezerrasTotais;
+      }
+      const retornoGen =
+        isIM5Mode
+          ? im5Value * bezerrasTotais
+          : fallbackRoiLabel
+          ? (ptaPond[fallbackRoiLabel] || 0) * bezerrasTotais
+          : 0;
       const roi = retornoGen - valorTotal;
 
       return {
@@ -629,6 +657,7 @@ function useCalculations(state: AppState, roiIndexLabel: string | null) {
         bezPorCat,
         bezerrasTotais,
         ptaPond,
+        im5Value,
         custoPorBezerra,
         retornoGen,
         roi,
@@ -652,9 +681,18 @@ function useCalculations(state: AppState, roiIndexLabel: string | null) {
     }
 
     const custoMedioBezerra = totalBez > 0 ? totalValor / totalBez : 0;
+    const im5AverageValue = im5TotalBez > 0 ? im5WeightedSum / im5TotalBez : 0;
 
-    return { byBull, totalBez, totalValor, ptaPondGeral, custoMedioBezerra, roiIndexLabel: fallbackRoiLabel };
-  }, [state, planStore.selectedPTAList, planStore.motherAverages, roiIndexLabel]);
+    return {
+      byBull,
+      totalBez,
+      totalValor,
+      ptaPondGeral,
+      custoMedioBezerra,
+      roiIndexLabel: fallbackRoiLabel,
+      im5AverageValue,
+    };
+  }, [state, planStore.selectedPTAList, planStore.motherAverages, roiBasis]);
 
   return result;
 }
@@ -1446,17 +1484,124 @@ function RoiIndexSelector({
   );
 }
 
+function RoiBasisSelector({
+  options,
+  roiMode,
+  onModeChange,
+  roiIndexChoice,
+  onSelectIndex,
+  im5Ready,
+  hasIm5Config,
+  im5Traits,
+}: {
+  options: string[];
+  roiMode: "INDEX" | "IM5";
+  onModeChange: (mode: "INDEX" | "IM5") => void;
+  roiIndexChoice: string | null;
+  onSelectIndex: (label: string) => void;
+  im5Ready: boolean;
+  hasIm5Config: boolean;
+  im5Traits: string[];
+}) {
+  const buttonBaseStyle = {
+    padding: "10px 14px",
+    borderRadius: 10,
+    fontWeight: 700,
+    fontSize: 13,
+    cursor: "pointer",
+    minWidth: 150,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center" as const,
+    gap: 6,
+    transition: "border-color 0.2s ease, box-shadow 0.2s ease",
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        <button
+          type="button"
+          onClick={() => onModeChange("INDEX")}
+          style={{
+            ...buttonBaseStyle,
+            border: roiMode === "INDEX" ? `2px solid ${COLORS.red}` : `1px solid ${COLORS.gray}`,
+            background: roiMode === "INDEX" ? "#fde8ec" : "#fff",
+            color: COLORS.black,
+            boxShadow: roiMode === "INDEX" ? "0 0 0 2px rgba(190, 30, 45, 0.12)" : "none",
+          }}
+        >
+          Índices prontos
+        </button>
+        <button
+          type="button"
+          onClick={() => hasIm5Config && onModeChange("IM5")}
+          disabled={!hasIm5Config}
+          style={{
+            ...buttonBaseStyle,
+            border:
+              roiMode === "IM5" ? `2px solid ${COLORS.red}` : `1px solid ${COLORS.gray}`,
+            background: roiMode === "IM5" ? "#fde8ec" : "#fff",
+            color: hasIm5Config ? COLORS.black : "#9ca3af",
+            boxShadow: roiMode === "IM5" ? "0 0 0 2px rgba(190, 30, 45, 0.12)" : "none",
+            opacity: hasIm5Config ? 1 : 0.6,
+            cursor: hasIm5Config ? "pointer" : "not-allowed",
+          }}
+        >
+          IM5$ personalizado
+        </button>
+      </div>
+
+      {roiMode === "INDEX" ? (
+        <RoiIndexSelector options={options} value={roiIndexChoice} onSelect={onSelectIndex} />
+      ) : (
+        <div
+          style={{
+            border: `1px solid ${im5Ready ? COLORS.red : COLORS.gray}`,
+            borderRadius: 10,
+            padding: 12,
+            background: im5Ready ? "#fff5f5" : "#f8fafc",
+            color: COLORS.black,
+            fontSize: 13,
+          }}
+        >
+          {im5Ready ? (
+            <>
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>IM5$ ativo na fórmula do ROI</div>
+              <div style={{ marginBottom: 4 }}>
+                Pesos aplicados para os traços: {im5Traits.join(", ") || "–"}.
+              </div>
+              <div>Atualize os pesos ou clique em “Calcular” novamente para recalcular o ROI.</div>
+            </>
+          ) : (
+            <>
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>Configure o IM5$</div>
+              <div>
+                Defina os traços, pesos e clique em “Calcular” para liberar o IM5$ na fórmula do ROI.
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PageResults({ st }: { st: AppState }) {
   const planStore = usePlanStore();
   const farmIdForIM5 = planStore.selectedFarmId ?? DEFAULT_IM5_FARM_ID;
   const { bulls: planBulls, loading: im5Loading, error: im5Error } = usePlanBulls(DEFAULT_IM5_PLAN_ID);
   const [im5Config, setIm5Config] = useState<IM5Config | null>(null);
+  const [im5Rows, setIm5Rows] = useState<IM5Row[]>([]);
+  const [roiMode, setRoiMode] = useState<"INDEX" | "IM5">("INDEX");
   const selectedPTAs = planStore.selectedPTAList;
   const { objective } = usePlanObjective();
   const preferredRoiIndexLabel = resolveRoiIndexLabel(objective, selectedPTAs);
   const [roiIndexChoice, setRoiIndexChoice] = useState<string | null>(() =>
     pickDefaultRoiLabel(selectedPTAs, preferredRoiIndexLabel)
   );
+
+  const im5Ready = useMemo(() => (im5Config ? im5Rows.length > 0 : false), [im5Config, im5Rows]);
 
   useEffect(() => {
     setRoiIndexChoice((prev) => {
@@ -1465,7 +1610,24 @@ function PageResults({ st }: { st: AppState }) {
     });
   }, [selectedPTAs, preferredRoiIndexLabel]);
 
-  const calc = useCalculations(st, roiIndexChoice);
+  useEffect(() => {
+    setIm5Rows([]);
+  }, [im5Config]);
+
+  useEffect(() => {
+    if (roiMode === "IM5" && !im5Config) {
+      setRoiMode("INDEX");
+    }
+  }, [roiMode, im5Config]);
+
+  const roiBasis = useMemo<RoiBasis>(() => {
+    if (roiMode === "IM5") {
+      return { mode: "IM5", config: im5Config, rows: im5Rows };
+    }
+    return { mode: "INDEX", label: roiIndexChoice };
+  }, [roiMode, im5Config, im5Rows, roiIndexChoice]);
+
+  const calc = useCalculations(st, roiBasis);
   const { ready, createChart } = useCharts();
   const barRef = useRef<any>(null);
   const pieRef = useRef<any>(null);
@@ -1473,16 +1635,34 @@ function PageResults({ st }: { st: AppState }) {
   const lineRef = useRef<any>(null);
 
   const roiLabelUsed = calc.roiIndexLabel;
-  const roiIndexDisplayName = roiLabelUsed ? `Índice ${roiLabelUsed}` : "Índice econômico";
-  const roiIndexFormulaLabel = roiLabelUsed ? `${roiLabelUsed} Ponderado` : "Índice ponderado";
-  const roiIndexExplanation = roiLabelUsed
+  const isIm5Selected = roiLabelUsed === "IM5$";
+  const roiIndexDisplayName = isIm5Selected
+    ? "IM5$ (R$/filha)"
+    : roiLabelUsed
+    ? `Índice ${roiLabelUsed}`
+    : "Índice econômico";
+  const roiIndexFormulaLabel = isIm5Selected
+    ? "IM5$ ponderado"
+    : roiLabelUsed
+    ? `${roiLabelUsed} Ponderado`
+    : "Índice ponderado";
+  const roiIndexExplanation = isIm5Selected
+    ? "Retorno econômico médio por filha gerado com base nas PTAs e pesos definidos no IM5$, ponderado pelo número de bezerras geradas por touro."
+    : roiLabelUsed
     ? `Valor médio ponderado do ${roiLabelUsed} dos touros selecionados, considerando o número de doses utilizadas de cada touro.`
     : "Valor médio ponderado do índice econômico selecionado dos touros, considerando o número de doses utilizadas de cada touro.";
-  const roiIndexAverageValue = roiLabelUsed ? calc.ptaPondGeral[roiLabelUsed] || 0 : 0;
+  const roiIndexAverageValue = isIm5Selected
+    ? calc.im5AverageValue
+    : roiLabelUsed
+    ? calc.ptaPondGeral[roiLabelUsed] || 0
+    : 0;
   const roiTotalValue = roiLabelUsed ? roiIndexAverageValue * calc.totalBez - calc.totalValor : 0;
   const roiTotalColor = roiLabelUsed ? (roiTotalValue >= 0 ? "#167C2B" : COLORS.red) : COLORS.black;
   const formatIndexValue = (value: number) => {
     if (!roiLabelUsed) return "–";
+    if (isIm5Selected) {
+      return BRL(value);
+    }
     if (roiLabelUsed.includes("$")) {
       return `$${value.toFixed(2)}`;
     }
@@ -1610,6 +1790,7 @@ function PageResults({ st }: { st: AppState }) {
             farmId={farmIdForIM5}
             bulls={planBulls}
             config={im5Config}
+            onComputed={setIm5Rows}
           />
         </div>
       </Section>
@@ -1705,19 +1886,32 @@ function PageResults({ st }: { st: AppState }) {
           {/* Maior índice econômico */}
           {(() => {
             const roiLabel = calc.roiIndexLabel;
+            const isIm5 = roiLabel === "IM5$";
             const bestIndex = roiLabel
-              ? [...calc.byBull].sort((a, b) => (b.ptaPond[roiLabel] || 0) - (a.ptaPond[roiLabel] || 0))[0]
+              ? [...calc.byBull].sort((a, b) =>
+                  isIm5
+                    ? (b.im5Value || 0) - (a.im5Value || 0)
+                    : (b.ptaPond[roiLabel] || 0) - (a.ptaPond[roiLabel] || 0)
+                )[0]
               : null;
             return (
               <div style={{ border: `1px solid ${COLORS.gray}`, borderRadius: 10, padding: 10 }}>
                 <div style={{ fontSize: 12, color: COLORS.black }}>
-                  {roiLabel ? `Maior ${roiLabel} médio` : "Maior índice médio"}
+                  {roiLabel
+                    ? isIm5
+                      ? "Maior IM5$ médio"
+                      : `Maior ${roiLabel} médio`
+                    : "Maior índice médio"}
                 </div>
                 <div style={{ fontSize: 16, fontWeight: 800 }}>
                   {bestIndex && roiLabel ? `${bestIndex.bull.name || bestIndex.bull.id}` : "–"}
                 </div>
                 <div style={{ fontSize: 14, color: "#16a34a" }}>
-                  {bestIndex && roiLabel ? formatIndexValue(bestIndex.ptaPond[roiLabel] || 0) : "–"}
+                  {bestIndex && roiLabel
+                    ? isIm5
+                      ? formatIndexValue(bestIndex.im5Value || 0)
+                      : formatIndexValue(bestIndex.ptaPond[roiLabel] || 0)
+                    : "–"}
                 </div>
               </div>
             );
@@ -1802,7 +1996,16 @@ function PageResults({ st }: { st: AppState }) {
       <Section title="Fórmula do ROI">
         <div style={{ backgroundColor: COLORS.white, padding: 20, borderRadius: 10, border: `1px solid ${COLORS.gray}` }}>
           <div style={{ marginBottom: 20 }}>
-            <RoiIndexSelector options={selectedPTAs} value={roiIndexChoice} onSelect={setRoiIndexChoice} />
+            <RoiBasisSelector
+              options={selectedPTAs}
+              roiMode={roiMode}
+              onModeChange={setRoiMode}
+              roiIndexChoice={roiIndexChoice}
+              onSelectIndex={setRoiIndexChoice}
+              im5Ready={im5Ready}
+              hasIm5Config={!!im5Config}
+              im5Traits={im5Config?.traits ?? []}
+            />
           </div>
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 10 }}>Fórmula:</div>

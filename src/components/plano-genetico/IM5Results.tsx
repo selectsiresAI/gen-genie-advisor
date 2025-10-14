@@ -13,23 +13,35 @@ function fmtMoney(v: number) {
   })}`;
 }
 
+export type IM5Row = {
+  id: string;
+  bull: string;
+  im5: number;
+  ret_per_preg: number;
+  ret_per_dose_conv: number;
+  ret_per_dose_sexed: number;
+  missingPTA: boolean;
+};
+
 export function IM5Results({
   farmId,
   bulls,
   config,
+  onComputed,
 }: {
   farmId: string;
   bulls: PlanBull[];
   config: IM5Config | null;
+  onComputed?: (rows: IM5Row[]) => void;
 }) {
   const supabase = useMemo(() => createClient(), []);
-  const [rows, setRows] = useState<any[]>([]);
+  const [rows, setRows] = useState<IM5Row[]>([]);
   const [loading, setLoading] = useState(false);
 
   async function compute() {
     if (!config) return;
     setLoading(true);
-    const out: any[] = [];
+    const out: IM5Row[] = [];
 
     for (const b of bulls) {
       const { data, error } = await supabase.rpc("ag_im5_bull_value", {
@@ -57,6 +69,7 @@ export function IM5Results({
         (config.traits.includes("DPR_PP") && b.dpr == null);
 
       out.push({
+        id: b.id,
         bull: b.name,
         im5,
         ret_per_preg: retPerPreg,
@@ -67,6 +80,7 @@ export function IM5Results({
     }
 
     setRows(out);
+    onComputed?.(out);
     setLoading(false);
   }
 
