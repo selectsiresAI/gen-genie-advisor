@@ -14,6 +14,8 @@ import { read, utils, writeFileXLSX } from 'xlsx';
 import { supabase } from '@/integrations/supabase/client';
 import { useHerdStore } from '@/hooks/useHerdStore';
 import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
+import { searchBulls } from '@/supabase/queries/bulls';
+import type { BullsDenormSelection } from '@/supabase/queries/bulls';
 
 // Colunas específicas para Nexus 1
 const NEXUS1_COLUMNS = ['ID Fazenda', 'Nome', 'HHP$®', 'TPI', 'NM$', 'CM$', 'FM$', 'GM$', 'F SAV', 'PTAM', 'CFP', 'PTAF', 'PTAF%', 'PTAP', 'PTAP%', 'PL', 'DPR', 'LIV', 'SCS', 'MAST', 'MET', 'RP', 'DA', 'KET', 'MF', 'PTAT', 'UDC', 'FLC', 'SCE', 'DCE', 'SSB', 'DSB', 'H LIV', 'CCR', 'HCR', 'FI', 'GL', 'EFC', 'BWC', 'STA', 'STR', 'DFM', 'RUA', 'RLS', 'RTP', 'FTL', 'RW', 'RLR', 'FTA', 'FLS', 'FUA', 'RUH', 'RUW', 'UCL', 'UDP', 'FTP', 'RFI'];
@@ -59,9 +61,9 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
 
   // Estados para busca de touros
   const [naabSearch, setNaabSearch] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<BullsDenormSelection[]>([]);
   const [searchingBulls, setSearchingBulls] = useState(false);
-  const [selectedBullsFromSearch, setSelectedBullsFromSearch] = useState<any[]>([]);
+  const [selectedBullsFromSearch, setSelectedBullsFromSearch] = useState<BullsDenormSelection[]>([]);
 
   // Filtros para fêmeas do banco
   const [selectedClassifications, setSelectedClassifications] = useState<string[]>(['donor', 'inter', 'recipient']);
@@ -314,14 +316,10 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
     }
     setSearchingBulls(true);
     try {
-      // Buscar diretamente na view bulls_denorm_member que contém todos os dados necessários
-      const {
-        data,
-        error
-      } = await supabase.from('bulls_denorm_member').select('*').or(`code.ilike.%${naabSearch.trim()}%,name.ilike.%${naabSearch.trim()}%`).limit(20);
-      if (error) throw error;
+      // Buscar touros utilizando a função centralizada de busca no Supabase
+      const data = await searchBulls(naabSearch.trim(), 20);
       console.log('Touros encontrados no banco:', data);
-      setSearchResults(data || []);
+      setSearchResults(data);
       if (!data || data.length === 0) {
         toast({
           title: 'Nenhum touro encontrado',
@@ -347,8 +345,8 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
   };
 
   // Adicionar touro selecionado da busca
-  const addBullFromSearch = (bull: any) => {
-    if (selectedBullsFromSearch.find(b => b.id === bull.id)) {
+  const addBullFromSearch = (bull: BullsDenormSelection) => {
+    if (selectedBullsFromSearch.some(b => b.code === bull.code)) {
       toast({
         title: 'Touro já selecionado',
         description: 'Este touro já foi adicionado à seleção',
@@ -365,8 +363,8 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
   };
 
   // Remover touro da seleção
-  const removeBullFromSearch = (bullId: string) => {
-    setSelectedBullsFromSearch(prev => prev.filter(b => b.id !== bullId));
+  const removeBullFromSearch = (bullCode: string | null) => {
+    setSelectedBullsFromSearch(prev => prev.filter(b => b.code !== bullCode));
   };
 
   // Converter touros selecionados para formato esperado
@@ -960,14 +958,14 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
                 {searchResults.length > 0 && <div className="space-y-2">
                     <Label>Resultados da Busca:</Label>
                     <div className="max-h-60 overflow-y-auto space-y-2">
-                       {searchResults.map(bull => <div key={bull.id} className="flex items-center justify-between p-3 border rounded-lg">
+                       {searchResults.map((bull, index) => <div key={bull.code || bull.id || index} className="flex items-center justify-between p-3 border rounded-lg">
                           <div>
                             <p className="font-medium">{bull.name}</p>
                             <p className="text-sm text-muted-foreground">
                               {bull.code} | TPI: {bull.tpi || 'N/A'} | NM$: {bull.nm_dollar || 'N/A'}
                             </p>
                           </div>
-                          <Button size="sm" onClick={() => addBullFromSearch(bull)} disabled={selectedBullsFromSearch.find(b => b.id === bull.id)}>
+                          <Button size="sm" onClick={() => addBullFromSearch(bull)} disabled={selectedBullsFromSearch.some(b => b.code === bull.code)}>
                             <Plus className="w-4 h-4 mr-1" />
                             Adicionar
                           </Button>
@@ -979,14 +977,14 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
                 {selectedBullsFromSearch.length > 0 && <div className="space-y-2">
                     <Label>Touros Selecionados ({selectedBullsFromSearch.length}):</Label>
                     <div className="space-y-2">
-                      {selectedBullsFromSearch.map(bull => <div key={bull.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                      {selectedBullsFromSearch.map((bull, index) => <div key={bull.code || bull.id || index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                           <div>
                             <p className="font-medium">{bull.name}</p>
                             <p className="text-sm text-muted-foreground">
                               {bull.code} | TPI: {bull.tpi || 'N/A'} | NM$: {bull.nm_dollar || 'N/A'}
                             </p>
                           </div>
-                          <Button size="sm" variant="outline" onClick={() => removeBullFromSearch(bull.id)}>
+                          <Button size="sm" variant="outline" onClick={() => removeBullFromSearch(bull.code ?? null)}>
                             <X className="w-4 h-4" />
                           </Button>
                         </div>)}
