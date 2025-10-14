@@ -389,7 +389,10 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
             </div>
           </div>
           <div className="container mx-auto px-4 py-8">
-            <NexusApp />
+            <NexusApp
+              selectedFarmId={selectedFarm?.farm_id}
+              defaultFarmId={userProfile?.default_farm_id ?? null}
+            />
           </div>
         </div>;
     }
