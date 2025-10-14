@@ -99,14 +99,15 @@ export function Nexus3Groups({ onBack, initialFarmId, fallbackDefaultFarmId }: N
   }, [farmId, selectedFarmIdFromStore]);
 
   useEffect(() => {
-    if (farmId || profileLookupAttempted.current) return;
-
-    profileLookupAttempted.current = true;
+    if (farmId) return;
 
     if (fallbackDefaultFarmId) {
       setFarmId(fallbackDefaultFarmId);
       return;
     }
+
+    if (profileLookupAttempted.current) return;
+    profileLookupAttempted.current = true;
 
     setResolvingFarm(true);
     supabase.auth
@@ -209,8 +210,7 @@ export function Nexus3Groups({ onBack, initialFarmId, fallbackDefaultFarmId }: N
     loadMothers();
   }, [loadMothers]);
 
-  // Recarrega os touros apenas quando o trait mudar para evitar loops
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Recarrega os touros quando o trait for alterado para atualizar as PTAs selecionadas
   useEffect(() => {
     if (!trait) return;
     const ids = bullSlots.map((slot) => slot?.id).filter(Boolean) as string[];
@@ -241,19 +241,27 @@ export function Nexus3Groups({ onBack, initialFarmId, fallbackDefaultFarmId }: N
           }
         });
 
-        setBullSlots((current) =>
-          current.map((slot) => {
+        setBullSlots((current) => {
+          let changed = false;
+          const updated = current.map((slot) => {
             if (!slot) return slot;
             const fresh = slot.id ? byId.get(slot.id) : null;
+            const nextValue = fresh?.trait_value ?? null;
+            if (slot.value === nextValue) {
+              return slot;
+            }
+            changed = true;
             return {
               ...slot,
-              value: fresh?.trait_value ?? null,
+              value: nextValue,
             };
-          })
-        );
+          });
+
+          return changed ? updated : current;
+        });
       })
       .finally(() => setReloadBullsLoading(false));
-  }, [trait, toast]);
+  }, [bullSlots, trait, toast]);
 
   useEffect(() => {
     const values = bullSlots
@@ -555,6 +563,13 @@ export function Nexus3Groups({ onBack, initialFarmId, fallbackDefaultFarmId }: N
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Carregando médias das mães...
                 </div>
+              ) : Object.keys(mothers).length === 0 ? (
+                <Card className="border-dashed border-slate-200 bg-white/70">
+                  <CardContent className="py-8 text-center text-sm text-slate-600">
+                    Nenhum dado de mães encontrado para este trait. Ajuste a fazenda selecionada ou escolha outro trait para
+                    começar.
+                  </CardContent>
+                </Card>
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {Object.entries(mothers)
