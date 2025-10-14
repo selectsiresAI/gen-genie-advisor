@@ -1,6 +1,7 @@
 /* src/components/nexus/Nexus3Groups.tsx */
 import React, { useEffect, useMemo, useState } from "react";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { supabase as sharedSupabaseClient } from "../../integrations/supabase/client";
 import {
   LineChart,
   Line,
@@ -22,14 +23,21 @@ type BullRow = { id: string; code: string; name?: string; trait_value: number; p
 
 const useSupabase = (): SupabaseClient => {
   const client = useMemo(() => {
-    const url = import.meta.env.VITE_SUPABASE_URL as string;
-    const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+    const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+    const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+
     if (!url || !key) {
       // Mostra no console para facilitar debug caso falte env
-      // (evita crash do app)
-      console.warn("VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY ausentes no .env");
+      // e reusa o client compartilhado configurado em @/integrations.
+      console.warn(
+        "VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY ausentes no .env; reutilizando o client padrão"
+      );
+      return sharedSupabaseClient;
     }
-    return createClient(url, key, { auth: { persistSession: true, autoRefreshToken: true } });
+
+    return createClient(url, key, {
+      auth: { persistSession: true, autoRefreshToken: true },
+    });
   }, []);
   return client;
 };
