@@ -2,10 +2,10 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Dna, Calendar, ArrowRight, TrendingUp, FileSpreadsheet } from 'lucide-react';
+import { Dna, Calendar, ArrowRight, TrendingUp, FileSpreadsheet, Users } from 'lucide-react';
 import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
 interface NexusEntryPageProps {
-  onSelectMethod: (method: 'nexus1' | 'nexus2') => void;
+  onSelectMethod: (method: 'nexus1' | 'nexus2' | 'nexus3') => void;
 }
 const NexusEntryPage: React.FC<NexusEntryPageProps> = ({
   onSelectMethod
@@ -28,7 +28,7 @@ const NexusEntryPage: React.FC<NexusEntryPageProps> = ({
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8 max-w-6xl mx-auto">
         {/* Nexus 1 - Predição Genômica */}
         <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/50">
           <CardHeader className="text-center pb-4">
@@ -90,6 +90,38 @@ const NexusEntryPage: React.FC<NexusEntryPageProps> = ({
             <Button onClick={() => onSelectMethod('nexus2')} size="lg" variant="secondary" className="w-full text-neutral-50 bg-red-700 hover:bg-red-600">
               <Calendar className="w-4 h-4 mr-2" />
               Usar Nexus 2
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Nexus 3 - Acasalamento em Grupos */}
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/50">
+          <CardHeader className="text-center pb-4">
+            <div className="mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-red-50">
+              <Users className="w-8 h-8 text-red-500" />
+            </div>
+            <CardTitle className="text-xl">Nexus 3: Acasalamento em Grupos</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Compare médias anuais das mães e preveja o impacto dos touros escolhidos
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <h4 className="font-semibold text-sm">Características:</h4>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• Seleção de trait com PTAs carregadas via Supabase</li>
+                <li>• Médias das mães por ano com edição manual</li>
+                <li>• Busca rápida de touros com até 3 slots</li>
+                <li>• Gráfico Mães vs. Filhas com projeção Nexus</li>
+              </ul>
+            </div>
+            <div className="p-3 rounded-lg bg-rose-100">
+              <p className="text-xs font-medium text-zinc-950 text-center">Ideal para planejar lotes e acasalamentos coletivos</p>
+            </div>
+            <Button onClick={() => onSelectMethod('nexus3')} size="lg" variant="secondary" className="w-full text-neutral-50 bg-red-700 hover:bg-red-600">
+              <Users className="w-4 h-4 mr-2" />
+              Usar Nexus 3
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </CardContent>
