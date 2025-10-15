@@ -1537,6 +1537,7 @@ export default function SegmentationPage({
                       <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">Categoria</th>
                       <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">Fonte</th>
                       {segmentationEnabled && <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">Classificação</th>}
+                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">CustomScore</th>
                       <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">HHP$®</th>
                       <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">TPI</th>
                       <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">NM$</th>
@@ -1595,7 +1596,6 @@ export default function SegmentationPage({
                       <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">Beta-Casein</th>
                       <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">Kappa-Casein</th>
                       <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">GFI</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">CustomScore</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1627,11 +1627,12 @@ export default function SegmentationPage({
                               {fonteInfo.label}
                             </Badge>}
                         </td>
-                         {segmentationEnabled && <td className="border border-border px-2 py-1 text-xs">
+                        {segmentationEnabled && <td className="border border-border px-2 py-1 text-xs">
                               {a.Classification && <span className={`px-2 py-1 rounded text-xs font-medium border ${a.Classification === "Superior" ? "bg-accent/20 text-accent border-accent" : a.Classification === "Intermediário" ? "bg-amber-100 text-amber-800 border-amber-500 dark:bg-amber-950/30 dark:text-amber-300" : "bg-destructive/20 text-destructive border-destructive"}`}>
                                   {a.Classification}
                                 </span>}
                             </td>}
+                        <td className="border border-border px-2 py-1 text-xs font-bold">{(a as any).CustomScore !== undefined ? Number((a as any).CustomScore).toFixed(1) : '-'}</td>
                         <td className="border border-border px-2 py-1 text-xs">{(a as any).hhp_dollar !== undefined && (a as any).hhp_dollar !== null ? Number((a as any).hhp_dollar).toFixed(0) : '-'}</td>
                         <td className="border border-border px-2 py-1 text-xs">{(a as any).tpi || '-'}</td>
                         <td className="border border-border px-2 py-1 text-xs">{(a as any).nm_dollar || '-'}</td>
@@ -1690,7 +1691,6 @@ export default function SegmentationPage({
                         <td className="border border-border px-2 py-1 text-xs">{(a as any).beta_casein || '-'}</td>
                         <td className="border border-border px-2 py-1 text-xs">{(a as any).kappa_casein || '-'}</td>
                         <td className="border border-border px-2 py-1 text-xs">{(a as any).gfi || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs font-bold">{(a as any).CustomScore !== undefined ? Number((a as any).CustomScore).toFixed(1) : '-'}</td>
                       </tr>;
                   })}
                   </tbody>
