@@ -749,22 +749,30 @@ export default function SegmentationPage({
     setGates(prev => prev.filter((_, idx) => idx !== i));
   }
   function exportToExcel() {
+    const metricColumns = ANIMAL_METRIC_COLUMNS;
+
     const preparedRows = sortedAnimals.map(a => {
       const fonteInfo = getFonteDisplay((a as any).fonte);
       const customScore = sanitizeNumber(a.CustomScore ?? null);
+
+      const metrics = metricColumns.map(column => {
+        const rawValue = (a as any)[column.key];
+        if (column.numeric) {
+          return sanitizeNumber(rawValue ?? null);
+        }
+        if (rawValue === null || rawValue === undefined) {
+          return "";
+        }
+        return String(rawValue);
+      });
+
       return {
         id: a.__idKey ? (a as any)[a.__idKey] : a.id ?? "",
         nome: a.__nameKey ? (a as any)[a.__nameKey] : a.name ?? "",
         Fonte: fonteInfo.label === '—' ? '' : fonteInfo.label,
-        "HHP$": sanitizeNumber((a as any).hhp_dollar ?? a.hhp_dollar ?? null),
-        TPI: sanitizeNumber((a as any).tpi ?? a.tpi ?? null),
-        "NM$": sanitizeNumber((a as any).nm_dollar ?? a.nm_dollar ?? null),
-        PTAM: sanitizeNumber((a as any).ptam ?? a.ptam ?? null),
-        PTAF: sanitizeNumber((a as any).ptaf ?? a.ptaf ?? null),
-        SCS: sanitizeNumber((a as any).scs ?? a.scs ?? null),
-        DPR: sanitizeNumber((a as any).dpr ?? a.dpr ?? null),
         CustomScore: customScore,
-        Classificacao: a.Classification ?? ""
+        Classificacao: a.Classification ?? "",
+        metrics
       };
     });
 
@@ -777,20 +785,15 @@ export default function SegmentationPage({
     const maxScore = shouldIncludeNormalized ? Math.max(...numericScores) : 0;
     const scoreRange = maxScore - minScore;
 
+    const metricHeaders = metricColumns.map(column => column.label);
     const headers = [
       "id",
       "nome",
       "Fonte",
-      "HHP$",
-      "TPI",
-      "NM$",
-      "PTAM",
-      "PTAF",
-      "SCS",
-      "DPR",
       "CustomScore",
       ...(shouldIncludeNormalized ? ["CustomScore_Normalizado"] : []),
-      "Classificacao"
+      "Classificacao",
+      ...metricHeaders
     ];
 
     const dataRows = preparedRows.map(row => {
@@ -804,16 +807,10 @@ export default function SegmentationPage({
         row.id,
         row.nome,
         row.Fonte,
-        row["HHP$"],
-        row.TPI,
-        row["NM$"],
-        row.PTAM,
-        row.PTAF,
-        row.SCS,
-        row.DPR,
         row.CustomScore,
         ...(shouldIncludeNormalized ? [normalizedScore] : []),
-        row.Classificacao
+        row.Classificacao,
+        ...row.metrics
       ];
     });
 
@@ -859,16 +856,10 @@ export default function SegmentationPage({
       { wch: 38 }, // id
       { wch: 18 }, // nome
       { wch: 10 }, // Fonte
-      { wch: 10 }, // HHP$
-      { wch: 10 }, // TPI
-      { wch: 10 }, // NM$
-      { wch: 10 }, // PTAM
-      { wch: 10 }, // PTAF
-      { wch: 10 }, // SCS
-      { wch: 10 }, // DPR
       { wch: 16 }, // CustomScore
       ...(shouldIncludeNormalized ? [{ wch: 16 }] : []), // CustomScore_Normalizado
-      { wch: 12 } // Classificacao
+      { wch: 12 }, // Classificacao
+      ...metricColumns.map(column => ({ wch: column.numeric ? 10 : 12 }))
     ];
 
     const workbook = XLSXUtils.book_new();
