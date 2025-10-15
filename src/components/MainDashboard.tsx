@@ -187,8 +187,12 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
     console.log('🏠 Entrando na fazenda e carregando rebanho automaticamente:', farm.farm_name);
   };
   const handleBackToDashboard = () => {
-    setCurrentView('dashboard');
-    setSelectedFarm(null);
+    if (currentView === 'farm' || !selectedFarm) {
+      setCurrentView('dashboard');
+      setSelectedFarm(null);
+    } else {
+      setCurrentView('farm');
+    }
   };
   const moduleSections: Array<{
     title: string;
