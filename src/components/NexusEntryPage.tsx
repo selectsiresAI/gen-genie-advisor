@@ -98,7 +98,7 @@ const NexusEntryPage: React.FC<NexusEntryPageProps> = ({
               <Users className="w-8 h-8 text-red-500" />
             </div>
             <CardTitle className="text-xl">Nexus 3: Acasalamento em Grupos</CardTitle>
-            <p className="text-sm text-muted-foreground">Compare médias das mães e preveja o impacto dos touros escolhidos</p>
+            <p className="text-sm text-muted-foreground">Analise o impacto dos touros escolhidos</p>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
