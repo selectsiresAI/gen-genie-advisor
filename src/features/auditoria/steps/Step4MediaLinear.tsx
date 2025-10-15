@@ -143,7 +143,7 @@ export default function Step4MediaLinear() {
 
   const chartData = useMemo(() => {
     const traitMap = new Map<string, { [group: string]: number }>();
-    
+
     rows.forEach((row) => {
       if (!traitMap.has(row.trait_key)) {
         traitMap.set(row.trait_key, {});
@@ -156,6 +156,36 @@ export default function Step4MediaLinear() {
       ...groups,
       avgValue: Object.values(groups).reduce((a, b) => a + b, 0) / Object.values(groups).length,
     }));
+  }, [rows]);
+
+  const axisConfig = useMemo(() => {
+    if (rows.length === 0) {
+      return {
+        domain: ["auto", "auto"] as [number | "auto", number | "auto"],
+        tickCount: undefined as number | undefined,
+      };
+    }
+
+    const values = rows.map((row) => row.mean_value ?? 0);
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
+
+    if (!Number.isFinite(minValue) || !Number.isFinite(maxValue)) {
+      return {
+        domain: ["auto", "auto"] as [number | "auto", number | "auto"],
+        tickCount: undefined as number | undefined,
+      };
+    }
+
+    const range = maxValue - minValue;
+    const tickStep = range > 0 ? range / 5 : 0.2;
+    const domainPadding = tickStep || 0.2;
+    const tickCount = range < 0.5 ? 8 : 6;
+
+    return {
+      domain: [minValue - domainPadding, maxValue + domainPadding] as [number, number],
+      tickCount,
+    };
   }, [rows]);
 
   return (
@@ -231,7 +261,13 @@ export default function Step4MediaLinear() {
               margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
             >
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" />
+              <XAxis
+                type="number"
+                domain={axisConfig.domain}
+                tickCount={axisConfig.tickCount}
+                tickFormatter={(value) => Number(value).toFixed(2)}
+                allowDecimals
+              />
               <YAxis dataKey="trait" type="category" width={90} />
               <Tooltip />
               <Bar dataKey="avgValue" fill="hsl(var(--muted))">
