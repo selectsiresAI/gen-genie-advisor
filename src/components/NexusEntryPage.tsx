@@ -36,9 +36,7 @@ const NexusEntryPage: React.FC<NexusEntryPageProps> = ({
               <Dna className="w-8 h-8 text-red-500" />
             </div>
             <CardTitle className="text-xl">Nexus 1: Predição Genômica</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Baseado em dados genômicos completos de fêmeas e touros
-            </p>
+            <p className="text-sm text-muted-foreground">Baseado em dados genômicos de fêmeas e touros</p>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
