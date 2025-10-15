@@ -13,6 +13,7 @@ import { generateSegmentationPDF, generatePDFBlob } from '@/utils/pdfGenerator';
 import { useFileStore } from '@/hooks/useFileStore';
 import { fetchFemalesDenormByFarm, isCompleteFemaleRow, type CompleteFemaleDenormRow } from '@/supabase/queries/females';
 import { cn } from "@/lib/utils";
+import { utils as XLSXUtils, writeFile as writeXLSXFile } from "xlsx";
 interface Farm {
   id: string;
   farm_id: string;
@@ -133,33 +134,44 @@ const DEMO_ANIMALS: Female[] = [{
 // Utilitários
 // ────────────────────────────────────────────────────────────────────
 const getKey = (trait: string): string => ALIAS[trait] ?? trait.toLowerCase().replace(/[^\w]/g, '_');
-function toCSV(rows: any[]): string {
-  if (!rows || !rows.length) return "";
-  const headers = Object.keys(rows[0]);
-  const lines = [headers.join(",")];
-  for (const r of rows) {
-    const line = headers.map(h => {
-      const v = r[h];
-      if (v === null || v === undefined) return "";
-      const s = String(v).replace(/"/g, '""');
-      return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s}"` : s;
-    }).join(",");
-    lines.push(line);
+function sanitizeNumber(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
   }
-  return lines.join("\n");
-}
-function downloadText(filename: string, text: string) {
-  const blob = new Blob([text], {
-    type: "text/csv;charset=utf-8;"
-  });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.setAttribute("download", filename);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  const trimmed = String(value).trim();
+  if (!trimmed) return null;
+  const cleaned = trimmed.replace(/\s+/g, "");
+  const direct = Number(cleaned);
+  if (!Number.isNaN(direct)) return direct;
+
+  const numeric = cleaned.replace(/[^0-9.,-]/g, "");
+  if (!numeric) return null;
+  const lastComma = numeric.lastIndexOf(",");
+  const lastDot = numeric.lastIndexOf(".");
+  const hasComma = lastComma !== -1;
+  const hasDot = lastDot !== -1;
+
+  let normalized = numeric;
+  if (hasComma && hasDot) {
+    if (lastComma > lastDot) {
+      normalized = numeric.replace(/\./g, "").replace(",", ".");
+    } else {
+      normalized = numeric.replace(/,/g, "");
+    }
+  } else if (hasComma) {
+    const parts = numeric.split(",");
+    if (parts.length === 2 && parts[1].length === 3 && parts[0].length > 0) {
+      normalized = parts.join("");
+    } else {
+      normalized = numeric.replace(/,/g, ".");
+    }
+  } else if (hasDot) {
+    normalized = numeric.replace(/,/g, "");
+  }
+
+  const parsed = Number(normalized);
+  return Number.isNaN(parsed) ? null : parsed;
 }
 function formatDate(dateString: string | null | undefined): string {
   if (!dateString) return '-';
@@ -684,26 +696,132 @@ export default function SegmentationPage({
   function removeGate(i: number) {
     setGates(prev => prev.filter((_, idx) => idx !== i));
   }
-  function exportCSV() {
-    const rows = filteredAnimals.map(a => {
+  function exportToExcel() {
+    const preparedRows = filteredAnimals.map(a => {
       const fonteInfo = getFonteDisplay((a as any).fonte);
+      const customScore = sanitizeNumber(a.CustomScore ?? null);
       return {
         id: a.__idKey ? (a as any)[a.__idKey] : a.id ?? "",
         nome: a.__nameKey ? (a as any)[a.__nameKey] : a.name ?? "",
         Fonte: fonteInfo.label === '—' ? '' : fonteInfo.label,
-        "HHP$": a.hhp_dollar ?? "",
-        TPI: a.tpi ?? "",
-        "NM$": a.nm_dollar ?? "",
-        PTAM: a.ptam ?? "",
-        PTAF: a.ptaf ?? "",
-        SCS: a.scs ?? "",
-        DPR: a.dpr ?? "",
-        CustomScore: a.CustomScore,
+        "HHP$": sanitizeNumber((a as any).hhp_dollar ?? a.hhp_dollar ?? null),
+        TPI: sanitizeNumber((a as any).tpi ?? a.tpi ?? null),
+        "NM$": sanitizeNumber((a as any).nm_dollar ?? a.nm_dollar ?? null),
+        PTAM: sanitizeNumber((a as any).ptam ?? a.ptam ?? null),
+        PTAF: sanitizeNumber((a as any).ptaf ?? a.ptaf ?? null),
+        SCS: sanitizeNumber((a as any).scs ?? a.scs ?? null),
+        DPR: sanitizeNumber((a as any).dpr ?? a.dpr ?? null),
+        CustomScore: customScore,
         Classificacao: a.Classification ?? ""
       };
     });
-    const csv = toCSV(rows);
-    downloadText("segmentacao_custom_index.csv", csv);
+
+    const numericScores = preparedRows
+      .map(row => row.CustomScore)
+      .filter((value): value is number => typeof value === 'number' && !Number.isNaN(value));
+
+    const shouldIncludeNormalized = numericScores.length > 0;
+    const minScore = shouldIncludeNormalized ? Math.min(...numericScores) : 0;
+    const maxScore = shouldIncludeNormalized ? Math.max(...numericScores) : 0;
+    const scoreRange = maxScore - minScore;
+
+    const headers = [
+      "id",
+      "nome",
+      "Fonte",
+      "HHP$",
+      "TPI",
+      "NM$",
+      "PTAM",
+      "PTAF",
+      "SCS",
+      "DPR",
+      "CustomScore",
+      ...(shouldIncludeNormalized ? ["CustomScore_Normalizado"] : []),
+      "Classificacao"
+    ];
+
+    const dataRows = preparedRows.map(row => {
+      const normalizedScore = shouldIncludeNormalized && typeof row.CustomScore === 'number' && !Number.isNaN(row.CustomScore)
+        ? (scoreRange === 0
+          ? 100
+          : Math.round((((row.CustomScore - minScore) / scoreRange) * 100) * 100) / 100)
+        : null;
+
+      return [
+        row.id,
+        row.nome,
+        row.Fonte,
+        row["HHP$"],
+        row.TPI,
+        row["NM$"],
+        row.PTAM,
+        row.PTAF,
+        row.SCS,
+        row.DPR,
+        row.CustomScore,
+        ...(shouldIncludeNormalized ? [normalizedScore] : []),
+        row.Classificacao
+      ];
+    });
+
+    const worksheet = XLSXUtils.aoa_to_sheet([
+      headers,
+      ...dataRows
+    ]);
+
+    const range = worksheet['!ref'] ? XLSXUtils.decode_range(worksheet['!ref']) : null;
+    const customScoreColumnIndex = headers.indexOf("CustomScore");
+    const normalizedColumnIndex = shouldIncludeNormalized ? headers.indexOf("CustomScore_Normalizado") : -1;
+
+    if (range) {
+      for (let rowIdx = range.s.r + 1; rowIdx <= range.e.r; rowIdx++) {
+        if (customScoreColumnIndex >= 0) {
+          const cellAddress = XLSXUtils.encode_cell({ c: customScoreColumnIndex, r: rowIdx });
+          const cell = worksheet[cellAddress];
+          if (cell && cell.v !== null && cell.v !== undefined) {
+            const parsed = typeof cell.v === 'number' ? cell.v : sanitizeNumber(cell.v);
+            if (parsed !== null) {
+              cell.v = parsed;
+              cell.t = 'n';
+              cell.z = "0.00";
+            }
+          }
+        }
+        if (normalizedColumnIndex >= 0) {
+          const cellAddress = XLSXUtils.encode_cell({ c: normalizedColumnIndex, r: rowIdx });
+          const cell = worksheet[cellAddress];
+          if (cell && cell.v !== null && cell.v !== undefined) {
+            const parsed = typeof cell.v === 'number' ? cell.v : sanitizeNumber(cell.v);
+            if (parsed !== null) {
+              cell.v = parsed;
+              cell.t = 'n';
+              cell.z = "0.00";
+            }
+          }
+        }
+      }
+    }
+
+    worksheet['!cols'] = [
+      { wch: 38 }, // id
+      { wch: 18 }, // nome
+      { wch: 10 }, // Fonte
+      { wch: 10 }, // HHP$
+      { wch: 10 }, // TPI
+      { wch: 10 }, // NM$
+      { wch: 10 }, // PTAM
+      { wch: 10 }, // PTAF
+      { wch: 10 }, // SCS
+      { wch: 10 }, // DPR
+      { wch: 16 }, // CustomScore
+      ...(shouldIncludeNormalized ? [{ wch: 16 }] : []), // CustomScore_Normalizado
+      { wch: 12 } // Classificacao
+    ];
+
+    const workbook = XLSXUtils.book_new();
+    XLSXUtils.book_append_sheet(workbook, worksheet, "Segmentacao");
+    writeXLSXFile(workbook, "segmentacao_custom_index.xlsx");
   }
   const saveSegmentationToDatabase = async () => {
     if (!segmentationEnabled || !segmentationTriggered) {
@@ -1322,12 +1440,12 @@ export default function SegmentationPage({
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <button onClick={exportCSV} className="flex items-center gap-2 rounded-xl border border-border bg-background px-4 py-2 text-sm text-foreground transition-colors hover:bg-muted">
-                  <Download size={18} /> Exportar CSV
+                <button onClick={exportToExcel} className="flex items-center gap-2 rounded-xl border border-border bg-background px-4 py-2 text-sm text-foreground transition-colors hover:bg-muted">
+                  <Download size={18} /> Exportar Excel
                 </button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Baixar dados da segmentação em planilha CSV</p>
+                <p>Baixar dados da segmentação em planilha Excel</p>
               </TooltipContent>
             </Tooltip>
 
@@ -1419,6 +1537,7 @@ export default function SegmentationPage({
                       <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">Categoria</th>
                       <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">Fonte</th>
                       {segmentationEnabled && <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">Classificação</th>}
+                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">CustomScore</th>
                       <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">HHP$®</th>
                       <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">TPI</th>
                       <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">NM$</th>
@@ -1477,7 +1596,6 @@ export default function SegmentationPage({
                       <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">Beta-Casein</th>
                       <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">Kappa-Casein</th>
                       <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">GFI</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">CustomScore</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1509,11 +1627,12 @@ export default function SegmentationPage({
                               {fonteInfo.label}
                             </Badge>}
                         </td>
-                         {segmentationEnabled && <td className="border border-border px-2 py-1 text-xs">
+                        {segmentationEnabled && <td className="border border-border px-2 py-1 text-xs">
                               {a.Classification && <span className={`px-2 py-1 rounded text-xs font-medium border ${a.Classification === "Superior" ? "bg-accent/20 text-accent border-accent" : a.Classification === "Intermediário" ? "bg-amber-100 text-amber-800 border-amber-500 dark:bg-amber-950/30 dark:text-amber-300" : "bg-destructive/20 text-destructive border-destructive"}`}>
                                   {a.Classification}
                                 </span>}
                             </td>}
+                        <td className="border border-border px-2 py-1 text-xs font-bold">{(a as any).CustomScore !== undefined ? Number((a as any).CustomScore).toFixed(1) : '-'}</td>
                         <td className="border border-border px-2 py-1 text-xs">{(a as any).hhp_dollar !== undefined && (a as any).hhp_dollar !== null ? Number((a as any).hhp_dollar).toFixed(0) : '-'}</td>
                         <td className="border border-border px-2 py-1 text-xs">{(a as any).tpi || '-'}</td>
                         <td className="border border-border px-2 py-1 text-xs">{(a as any).nm_dollar || '-'}</td>
@@ -1572,7 +1691,6 @@ export default function SegmentationPage({
                         <td className="border border-border px-2 py-1 text-xs">{(a as any).beta_casein || '-'}</td>
                         <td className="border border-border px-2 py-1 text-xs">{(a as any).kappa_casein || '-'}</td>
                         <td className="border border-border px-2 py-1 text-xs">{(a as any).gfi || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs font-bold">{(a as any).CustomScore !== undefined ? Number((a as any).CustomScore).toFixed(1) : '-'}</td>
                       </tr>;
                   })}
                   </tbody>
