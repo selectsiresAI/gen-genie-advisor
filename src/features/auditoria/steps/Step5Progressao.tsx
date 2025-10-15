@@ -33,6 +33,73 @@ type TraitCardProps = {
 const avg = (values: number[]) =>
   values.length ? values.reduce((s, v) => s + v, 0) / values.length : 0;
 
+const DEFAULT_TICK_STEP = 0.5;
+const TRAIT_TICK_STEPS: Record<string, number> = {
+  scs: 0.3,
+};
+
+const EPSILON = 1e-9;
+
+function resolveTickStep(traitKey: string) {
+  const normalized = traitKey.toLowerCase();
+  return TRAIT_TICK_STEPS[normalized] ?? DEFAULT_TICK_STEP;
+}
+
+function buildAxisDomain(values: number[], step: number) {
+  if (!Number.isFinite(step) || step <= 0) {
+    return { domain: [-1, 1] as [number, number], ticks: [-1, 0, 1] };
+  }
+
+  const finiteValues = values.filter((value) => Number.isFinite(value)) as number[];
+
+  if (finiteValues.length === 0) {
+    const baseline = step * 2;
+    const safeMin = Number((-baseline).toFixed(4));
+    const safeMax = Number(baseline.toFixed(4));
+    const safeStep = Number(step.toFixed(4));
+    const ticks: number[] = [];
+    for (let tick = safeMin; tick <= safeMax + safeStep / 2; tick += safeStep) {
+      ticks.push(Number(tick.toFixed(2)));
+    }
+    return { domain: [safeMin, safeMax] as [number, number], ticks };
+  }
+
+  const includeZero = [...finiteValues, 0];
+  let minValue = Math.min(...includeZero);
+  let maxValue = Math.max(...includeZero);
+
+  if (minValue === maxValue) {
+    minValue -= step;
+    maxValue += step;
+  } else {
+    const padding = step * 0.25;
+    minValue -= padding;
+    maxValue += padding;
+  }
+
+  const alignDown = (value: number) => Math.floor((value + EPSILON) / step) * step;
+  const alignUp = (value: number) => Math.ceil((value - EPSILON) / step) * step;
+
+  let domainMin = alignDown(minValue);
+  let domainMax = alignUp(maxValue);
+
+  if (domainMin === domainMax) {
+    domainMin -= step;
+    domainMax += step;
+  }
+
+  const safeMin = Number(domainMin.toFixed(4));
+  const safeMax = Number(domainMax.toFixed(4));
+  const safeStep = Number(step.toFixed(4));
+
+  const ticks: number[] = [];
+  for (let tick = safeMin; tick <= safeMax + safeStep / 2; tick += safeStep) {
+    ticks.push(Number(tick.toFixed(2)));
+  }
+
+  return { domain: [safeMin, safeMax] as [number, number], ticks };
+}
+
 function getYearFromBirth(birth: unknown): number | null {
   if (!birth) return null;
   if (birth instanceof Date) return birth.getFullYear();
@@ -118,21 +185,22 @@ const TraitCard = memo(function TraitCard({
     delta: i === 0 ? 0 : p.mean - data[i - 1].mean,
     farmMean,
   }));
-  const trendResult = showTrend ? computeTrend(data) : { trendLine: [], r2: 0 };
-  
-  // Calcular domínio dinâmico do eixo Y
-  const allValues = [
-    ...chartData.map(d => d.mean),
-    ...(showFarmMean ? [farmMean] : []),
-    ...(showTrend ? trendResult.trendLine.map(t => t.trend) : [])
-  ];
-  const minY = Math.min(...allValues);
-  const maxY = Math.max(...allValues);
-  const padding = Math.abs(maxY - minY) * 0.1;
-  const yDomain: [number, number] = [
-    Math.floor(minY - padding),
-    Math.ceil(maxY + padding)
-  ];
+  const trendResult = useMemo(
+    () => (showTrend ? computeTrend(data) : { trendLine: [], r2: 0 }),
+    [data, showTrend]
+  );
+
+  const tickStep = useMemo(() => resolveTickStep(traitKey), [traitKey]);
+
+  const axis = useMemo(() => {
+    const values = [
+      ...data.map((point) => point.mean),
+      showFarmMean ? farmMean : null,
+      ...(showTrend ? trendResult.trendLine.map((point) => point.trend) : []),
+    ].filter((value): value is number => Number.isFinite(value));
+
+    return buildAxisDomain(values, tickStep);
+  }, [data, farmMean, showFarmMean, showTrend, tickStep, trendResult]);
 
   return (
     <div className="rounded-lg border overflow-hidden bg-card">
@@ -158,9 +226,11 @@ const TraitCard = memo(function TraitCard({
               ticks={domainTicks}
               allowDecimals={false}
             />
-            <YAxis 
-              domain={yDomain}
-              tickFormatter={(value) => value.toFixed(0)}
+            <YAxis
+              domain={axis.domain}
+              ticks={axis.ticks}
+              tickFormatter={(value) => value.toFixed(2)}
+              allowDecimals
             />
             <Tooltip
               formatter={(value: any, name: string) => {
