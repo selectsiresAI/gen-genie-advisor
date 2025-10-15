@@ -1,8 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
 import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
 import { useRegisterChart } from "@/components/pdf/useRegisterChart";
@@ -109,6 +118,24 @@ function toNumber(x: any): number | null {
   if (x == null) return null;
   const v = Number(String(x).replace(",", "."));
   return Number.isFinite(v) ? v : null;
+}
+
+function arraysEqual(a: string[], b: string[]) {
+  if (a.length !== b.length) return false;
+  return a.every((value, index) => value === b[index]);
+}
+
+function sanitizeSelection(
+  prev: string[],
+  defaults: string[],
+  present: string[]
+) {
+  if (!present.length) return [];
+  const valid = prev.filter((key) => present.includes(key));
+  if (valid.length) return valid;
+  const fallback = defaults.filter((key) => present.includes(key));
+  if (fallback.length) return fallback;
+  return [...present];
 }
 
 export default function Step6ProgressCompare() {
@@ -278,7 +305,6 @@ function writeCategoriesToLS(farmId: string | number, pairs: Array<{ id: string;
 }
 
 // Tooltip do radar exibindo os valores BRUTOS (não normalizados)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function RadarTooltip(props: any) {
   const { active, payload, label, groupA, groupB } = props;
   if (!active || !payload?.length) return null;
@@ -307,9 +333,12 @@ function Step6ProgressCompareContent() {
   const [lsPairsApplied, setLsPairsApplied] = useState(0);
 
   const [rows, setRows] = useState<any[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
 
   const [groupA, setGroupA] = useState<string>("Novilha");
   const [groupB, setGroupB] = useState<string>("Primípara");
+  const [tableTraits, setTableTraits] = useState<string[]>(DEFAULT_TABLE_TRAITS);
+  const [chartTraits, setChartTraits] = useState<string[]>(DEFAULT_CHART_TRAITS);
 
 
   const cardRef = useRef<HTMLDivElement>(null);
@@ -453,9 +482,13 @@ function Step6ProgressCompareContent() {
       ...cats.filter((c) => !AGE_VALUES.includes(c as any)),
     ];
 
-    if (!ordered.includes(groupA) || !ordered.includes(groupB)) {
-      setGroupA(ordered[0] || "Grupo A");
-      setGroupB(ordered[1] || ordered[0] || "Grupo B");
+    setCategories(ordered);
+
+    if (ordered.length) {
+      setGroupA((prev) => (ordered.includes(prev) ? prev : ordered[0] || "Grupo A"));
+      setGroupB((prev) =>
+        ordered.includes(prev) ? prev : ordered[1] || ordered[0] || "Grupo B"
+      );
     }
 
     setLoading(false);
@@ -499,16 +532,15 @@ function Step6ProgressCompareContent() {
     [meansByCategory]
   );
 
-  const tableTraits = useMemo(() => {
-    const defaults = DEFAULT_TABLE_TRAITS.filter((key) => presentPTAs.includes(key));
-    if (defaults.length > 0) return defaults;
-    return presentPTAs.slice(0, Math.min(6, presentPTAs.length));
-  }, [presentPTAs]);
-
-  const chartTraits = useMemo(() => {
-    const defaults = DEFAULT_CHART_TRAITS.filter((key) => presentPTAs.includes(key));
-    if (defaults.length > 0) return defaults;
-    return presentPTAs.slice(0, Math.min(8, presentPTAs.length));
+  useEffect(() => {
+    setTableTraits((prev) => {
+      const next = sanitizeSelection(prev, DEFAULT_TABLE_TRAITS, presentPTAs);
+      return arraysEqual(prev, next) ? prev : next;
+    });
+    setChartTraits((prev) => {
+      const next = sanitizeSelection(prev, DEFAULT_CHART_TRAITS, presentPTAs);
+      return arraysEqual(prev, next) ? prev : next;
+    });
   }, [presentPTAs]);
 
   /* ------------------- Tabela + Radar normalizado ------------------- */
@@ -555,6 +587,40 @@ function Step6ProgressCompareContent() {
     return { table, radar, presentPTAs };
   }, [meansByCategory, groupA, groupB, tableTraits, chartTraits, presentPTAs]);
 
+  const traitBadges = (
+    selection: string[],
+    setSelection: Dispatch<SetStateAction<string[]>>
+  ) => (
+    <div className="flex flex-wrap gap-2">
+      {ALL_PTA_KEYS
+        .map((key) => ({ key, label: PTA_LABELS[key] || key.toUpperCase() }))
+        .sort((a, b) => a.label.localeCompare(b.label))
+        .map(({ key, label }) => {
+          const enabled = presentPTAs.includes(key);
+          const active = selection.includes(key);
+          return (
+            <Badge
+              key={key}
+              variant={active ? "default" : "outline"}
+              className={`cursor-pointer ${
+                enabled ? "" : "pointer-events-none opacity-40"
+              }`}
+              onClick={() =>
+                enabled &&
+                setSelection((prev) =>
+                  prev.includes(key)
+                    ? prev.filter((item) => item !== key)
+                    : [...prev, key]
+                )
+              }
+            >
+              {label}
+            </Badge>
+          );
+        })}
+    </div>
+  );
+
   return (
     <Card ref={cardRef}>
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -568,23 +634,65 @@ function Step6ProgressCompareContent() {
       </CardHeader>
 
       <CardContent className="space-y-6">
-        <div className="rounded-lg border bg-muted/20 p-4">
-          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-            <span>Fonte: <b>{sourceTable || "—"}</b></span>
-            <span>Categoria: <b>{categoryCol || "—"}</b></span>
-            <span>ID: <b>{idCol || "—"}</b></span>
-            <span>Registros: <b>{rows.length}</b></span>
-            <span>
-              LocalStorage: <b>{usedLocalStorage ? `sim (${lsPairsApplied} / ${lsKeysScanned})` : "não"}</b>
-            </span>
-            <span>
-              PTAs com dados:&nbsp;
-              <b>
-                {presentPTAs.length
-                  ? presentPTAs.map((k) => PTA_LABELS[k] ?? k).join(", ")
-                  : "—"}
-              </b>
-            </span>
+        <div className="pdf-ignore space-y-4">
+          <div className="rounded-lg border bg-muted/20 p-4">
+            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+              <span>Fonte: <b>{sourceTable || "—"}</b></span>
+              <span>Categoria: <b>{categoryCol || "—"}</b></span>
+              <span>ID: <b>{idCol || "—"}</b></span>
+              <span>Registros: <b>{rows.length}</b></span>
+              <span>
+                LocalStorage: <b>{usedLocalStorage ? `sim (${lsPairsApplied} / ${lsKeysScanned})` : "não"}</b>
+              </span>
+              <span>
+                PTAs com dados:&nbsp;
+                <b>
+                  {presentPTAs.length
+                    ? presentPTAs.map((k) => PTA_LABELS[k] ?? k).join(", ")
+                    : "—"}
+                </b>
+              </span>
+            </div>
+          </div>
+
+          {categories.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-medium">Atalhos:</span>
+              {categories.map((c) => (
+                <Badge
+                  key={`ga-${c}`}
+                  variant={groupA === c ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => setGroupA(c)}
+                >
+                  {c}
+                </Badge>
+              ))}
+              <span className="mx-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                VS
+              </span>
+              {categories.map((c) => (
+                <Badge
+                  key={`gb-${c}`}
+                  variant={groupB === c ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => setGroupB(c)}
+                >
+                  {c}
+                </Badge>
+              ))}
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <div className="text-sm font-semibold">PTAs para Tabela:</div>
+              {traitBadges(tableTraits, setTableTraits)}
+            </div>
+            <div className="space-y-2">
+              <div className="text-sm font-semibold">PTAs para Gráfico:</div>
+              {traitBadges(chartTraits, setChartTraits)}
+            </div>
           </div>
         </div>
 
