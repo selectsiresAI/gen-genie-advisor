@@ -50,7 +50,7 @@ const NexusEntryPage: React.FC<NexusEntryPageProps> = ({
               </ul>
             </div>
             <div className="p-3 rounded-lg bg-rose-100">
-              <p className="text-xs font-medium text-zinc-950 text-center">Ideal quando você possui dados genômicos completos das fêmeas</p>
+              <p className="text-xs font-medium text-zinc-950 text-center">Ideal para dados genômicos das fêmeas</p>
             </div>
             <Button onClick={() => onSelectMethod('nexus1')} size="lg" className="w-full text-white bg-red-700 hover:bg-red-600">
               <FileSpreadsheet className="w-4 h-4 mr-2" />
@@ -77,7 +77,7 @@ const NexusEntryPage: React.FC<NexusEntryPageProps> = ({
                 <li>• Predição individual ou em lote</li>
                 
                 <li>• Integração com banco de touros</li>
-                <li>• Upload de planilhas para processamento em lote</li>
+                <li>• Upload de planilhas </li>
               </ul>
             </div>
             <div className="p-3 rounded-lg bg-red-100">
@@ -104,7 +104,7 @@ const NexusEntryPage: React.FC<NexusEntryPageProps> = ({
             <div className="space-y-2">
               <h4 className="font-semibold text-sm">Características:</h4>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Seleção de trait com PTAs carregadas via Supabase</li>
+                <li>• Seleção de PTAs carregadas via banco</li>
                 <li>• Médias das mães por ano com edição manual</li>
                 <li>• Busca rápida de touros com até 3 slots</li>
                 <li>• Gráfico Mães vs. Filhas com projeção Nexus</li>
