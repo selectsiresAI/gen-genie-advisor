@@ -67,9 +67,7 @@ const NexusEntryPage: React.FC<NexusEntryPageProps> = ({
               
             </div>
             <CardTitle className="text-xl">Nexus 2: Predição por Pedigree</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Baseado no pedigrê: Pai, Avô e Bisavô Materno
-            </p>
+            <p className="text-sm text-muted-foreground">Baseado no pedigree: Pai, Avô e Bisavô Materno</p>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
