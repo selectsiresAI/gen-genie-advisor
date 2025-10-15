@@ -79,7 +79,7 @@ const NexusEntryPage: React.FC<NexusEntryPageProps> = ({
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li>• Entrada por NAAB dos ancestrais</li>
                 <li>• Predição individual ou em lote</li>
-                <li>• Pesos: Pai (57%) + Avô Mat. (28%) + Bisavô Mat. (15%)</li>
+                <li>• Pai (57%) + Avô Mat. (28%) + Bisavô Mat. (15%)</li>
                 <li>• Integração com banco de touros</li>
                 <li>• Upload de planilhas para processamento em lote</li>
               </ul>
