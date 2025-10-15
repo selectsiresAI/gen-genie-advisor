@@ -28,6 +28,39 @@ const DEFAULT_TRAITS = [
   "sta","str","dfm","rua","rls","rtp","ftl","rw","rlr","fta","fls","fua","ruh","ruw","ucl","udp","ftp"
 ];
 
+const DEFAULT_TICK_STEP = 0.5;
+const TRAIT_TICK_STEPS: Record<string, number> = {
+  scs: 0.03,
+  ptaf_pct: 0.03,
+  ptap_pct: 0.03,
+};
+
+const SCS_FIXED_TICKS = [
+  2.4,
+  2.45,
+  2.55,
+  2.6,
+  2.65,
+  2.7,
+  2.75,
+  2.8,
+  2.85,
+  2.9,
+  2.95,
+  3.0,
+  3.05,
+  3.1,
+  3.15,
+  3.25,
+  3.35,
+  3.4,
+].map((value) => Number(value.toFixed(2)));
+
+const SCS_FIXED_DOMAIN: [number, number] = [
+  SCS_FIXED_TICKS[0],
+  SCS_FIXED_TICKS[SCS_FIXED_TICKS.length - 1],
+];
+
 export default function Step4MediaLinear() {
   const { farmId } = useAGFilters();
   const [mode, setMode] = useState<Mode>("coarse");
@@ -143,7 +176,7 @@ export default function Step4MediaLinear() {
 
   const chartData = useMemo(() => {
     const traitMap = new Map<string, { [group: string]: number }>();
-    
+
     rows.forEach((row) => {
       if (!traitMap.has(row.trait_key)) {
         traitMap.set(row.trait_key, {});
@@ -156,6 +189,115 @@ export default function Step4MediaLinear() {
       ...groups,
       avgValue: Object.values(groups).reduce((a, b) => a + b, 0) / Object.values(groups).length,
     }));
+  }, [rows]);
+
+  const axisConfig = useMemo(() => {
+    const defaultConfig = {
+      domain: ["auto", "auto"] as [number | "auto", number | "auto"],
+      ticks: undefined as number[] | undefined,
+    };
+
+    if (rows.length === 0) {
+      return defaultConfig;
+    }
+
+    const normalizedTraits = rows.reduce((acc, row) => {
+      if (row.trait_key) {
+        acc.add(row.trait_key.toLowerCase());
+      }
+      return acc;
+    }, new Set<string>());
+
+    if (normalizedTraits.size === 1 && normalizedTraits.has("scs")) {
+      return {
+        domain: [...SCS_FIXED_DOMAIN] as [number, number],
+        ticks: [...SCS_FIXED_TICKS],
+      };
+    }
+
+    const getStepForTrait = (traitKey: string) => {
+      const normalized = traitKey.toLowerCase();
+      return TRAIT_TICK_STEPS[normalized] ?? DEFAULT_TICK_STEP;
+    };
+
+    const stepCandidates = rows.reduce((acc, row) => {
+      if (row.trait_key) {
+        acc.add(getStepForTrait(row.trait_key));
+      }
+      return acc;
+    }, new Set<number>());
+
+    let step = DEFAULT_TICK_STEP;
+    if (stepCandidates.size === 1) {
+      step = stepCandidates.values().next().value;
+    } else if (stepCandidates.size > 1) {
+      step = Math.max(...Array.from(stepCandidates));
+    }
+
+    if (!Number.isFinite(step) || step <= 0) {
+      step = DEFAULT_TICK_STEP;
+    }
+
+    const values = rows
+      .map((row) => row.mean_value)
+      .filter((value): value is number => Number.isFinite(value));
+
+    if (values.length === 0) {
+      return defaultConfig;
+    }
+
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
+
+    if (!Number.isFinite(minValue) || !Number.isFinite(maxValue)) {
+      return defaultConfig;
+    }
+
+    let paddedMin = minValue;
+    let paddedMax = maxValue;
+
+    if (minValue === maxValue) {
+      paddedMin = minValue - step * 2;
+      paddedMax = maxValue + step * 2;
+    } else {
+      paddedMin = minValue - step;
+      paddedMax = maxValue + step;
+    }
+
+    const alignedMin = Math.floor(paddedMin / step) * step;
+    const alignedMax = Math.ceil(paddedMax / step) * step;
+
+    if (!Number.isFinite(alignedMin) || !Number.isFinite(alignedMax)) {
+      return defaultConfig;
+    }
+
+    const safeStep = Number(step.toFixed(6));
+    const safeMin = Number(alignedMin.toFixed(6));
+    const safeMax = Number(alignedMax.toFixed(6));
+
+    if (safeStep <= 0 || safeMin === Infinity || safeMax === -Infinity) {
+      return defaultConfig;
+    }
+
+    const ticks: number[] = [];
+    const estimatedTickCount = Math.max(Math.round((safeMax - safeMin) / safeStep) + 1, 2);
+    const maxTicks = Math.min(estimatedTickCount + 2, 200);
+    for (
+      let tick = safeMin, count = 0;
+      tick <= safeMax + safeStep / 2 && count < maxTicks;
+      tick += safeStep, count += 1
+    ) {
+      ticks.push(Number(tick.toFixed(6)));
+    }
+
+    if (ticks.length === 0) {
+      return defaultConfig;
+    }
+
+    return {
+      domain: [safeMin, safeMax] as [number, number],
+      ticks,
+    };
   }, [rows]);
 
   return (
@@ -231,7 +373,13 @@ export default function Step4MediaLinear() {
               margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
             >
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" />
+              <XAxis
+                type="number"
+                domain={axisConfig.domain}
+                ticks={axisConfig.ticks}
+                tickFormatter={(value) => Number(value).toFixed(2)}
+                allowDecimals
+              />
               <YAxis dataKey="trait" type="category" width={90} />
               <Tooltip />
               <Bar dataKey="avgValue" fill="hsl(var(--muted))">
