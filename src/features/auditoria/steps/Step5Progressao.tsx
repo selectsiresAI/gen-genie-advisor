@@ -42,6 +42,32 @@ const TRAIT_TICK_STEPS: Record<string, number> = {
 
 const EPSILON = 1e-9;
 
+const SCS_FIXED_TICKS = [
+  2.4,
+  2.45,
+  2.55,
+  2.6,
+  2.65,
+  2.7,
+  2.75,
+  2.8,
+  2.85,
+  2.9,
+  2.95,
+  3.0,
+  3.05,
+  3.1,
+  3.15,
+  3.25,
+  3.35,
+  3.4,
+].map((value) => Number(value.toFixed(2)));
+
+const SCS_FIXED_DOMAIN: [number, number] = [
+  SCS_FIXED_TICKS[0],
+  SCS_FIXED_TICKS[SCS_FIXED_TICKS.length - 1],
+];
+
 function resolveTickStep(traitKey: string) {
   const normalized = traitKey.toLowerCase();
   return TRAIT_TICK_STEPS[normalized] ?? DEFAULT_TICK_STEP;
@@ -195,6 +221,13 @@ const TraitCard = memo(function TraitCard({
   const tickStep = useMemo(() => resolveTickStep(traitKey), [traitKey]);
 
   const axis = useMemo(() => {
+    if (traitKey.toLowerCase() === "scs") {
+      return {
+        domain: [...SCS_FIXED_DOMAIN] as [number, number],
+        ticks: [...SCS_FIXED_TICKS],
+      };
+    }
+
     const values = [
       ...data.map((point) => point.mean),
       showFarmMean ? farmMean : null,
@@ -202,7 +235,7 @@ const TraitCard = memo(function TraitCard({
     ].filter((value): value is number => Number.isFinite(value));
 
     return buildAxisDomain(values, tickStep);
-  }, [data, farmMean, showFarmMean, showTrend, tickStep, trendResult]);
+  }, [data, farmMean, showFarmMean, showTrend, tickStep, traitKey, trendResult]);
 
   return (
     <div className="rounded-lg border overflow-hidden bg-card">

@@ -35,6 +35,32 @@ const TRAIT_TICK_STEPS: Record<string, number> = {
   ptap_pct: 0.03,
 };
 
+const SCS_FIXED_TICKS = [
+  2.4,
+  2.45,
+  2.55,
+  2.6,
+  2.65,
+  2.7,
+  2.75,
+  2.8,
+  2.85,
+  2.9,
+  2.95,
+  3.0,
+  3.05,
+  3.1,
+  3.15,
+  3.25,
+  3.35,
+  3.4,
+].map((value) => Number(value.toFixed(2)));
+
+const SCS_FIXED_DOMAIN: [number, number] = [
+  SCS_FIXED_TICKS[0],
+  SCS_FIXED_TICKS[SCS_FIXED_TICKS.length - 1],
+];
+
 export default function Step4MediaLinear() {
   const { farmId } = useAGFilters();
   const [mode, setMode] = useState<Mode>("coarse");
@@ -173,6 +199,20 @@ export default function Step4MediaLinear() {
 
     if (rows.length === 0) {
       return defaultConfig;
+    }
+
+    const normalizedTraits = rows.reduce((acc, row) => {
+      if (row.trait_key) {
+        acc.add(row.trait_key.toLowerCase());
+      }
+      return acc;
+    }, new Set<string>());
+
+    if (normalizedTraits.size === 1 && normalizedTraits.has("scs")) {
+      return {
+        domain: [...SCS_FIXED_DOMAIN] as [number, number],
+        ticks: [...SCS_FIXED_TICKS],
+      };
     }
 
     const getStepForTrait = (traitKey: string) => {
