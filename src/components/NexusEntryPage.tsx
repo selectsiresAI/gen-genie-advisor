@@ -85,7 +85,7 @@ const NexusEntryPage: React.FC<NexusEntryPageProps> = ({
               </ul>
             </div>
             <div className="p-3 rounded-lg bg-red-100">
-              <p className="text-xs font-medium text-slate-950 text-center">Ideal quando você tem apenas informações de pedigree</p>
+              <p className="text-xs font-medium text-slate-950 text-center">Ideal quando tem apenas informações de pedigree</p>
             </div>
             <Button onClick={() => onSelectMethod('nexus2')} size="lg" variant="secondary" className="w-full text-neutral-50 bg-red-700 hover:bg-red-600">
               <Calendar className="w-4 h-4 mr-2" />
