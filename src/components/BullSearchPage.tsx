@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowLeft, Search, Upload, Download, Beaker } from "lucide-react";
 import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
+import SortableHeader from '@/components/animals/SortableHeader';
+import { ANIMAL_METRIC_COLUMNS } from '@/constants/animalMetrics';
+import { useAnimalTableSort } from '@/hooks/useAnimalTableSort';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 interface Bull {
@@ -469,33 +472,71 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
   }, [bulls]);
 
   // Calculate weighted scores for bulls
-  const rankedBulls = useMemo(() => {
-    const bullsWithScores = bulls.map(bull => {
-      const score = (bull.tpi || 0) * weights.TPI + (bull.nm_dollar || 0) * weights.NM_dollar + (bull.hhp_dollar || 0) * weights.HHP_dollar + (bull.ptam || 0) * weights.PTAM + (bull.cfp || 0) * weights.CFP;
-      return {
-        ...bull,
-        score
-      };
-    });
-    return bullsWithScores.filter(bull => {
-      const normalizedSearch = searchTerm.toLowerCase();
-      const pedigreeCandidates = [
-        bull.sire_name,
-        bull.mgs_name,
-        bull.mmgs_name,
-        bull.sire_naab,
-        bull.mgs_naab,
-        bull.mmgs_naab
-      ]
-        .filter(Boolean)
-        .map(value => value!.toLowerCase());
-      const matchesSearch = bull.name.toLowerCase().includes(normalizedSearch) || bull.code.toLowerCase().includes(normalizedSearch) || pedigreeCandidates.some(candidate => candidate.includes(normalizedSearch));
-      const matchesCompany = !selectedEmpresa || selectedEmpresa === "todas" || selectedEmpresa === "Todas" || bull.company && bull.company.toLowerCase().includes(selectedEmpresa.toLowerCase());
-      const matchesYear = !selectedYear || selectedYear === "all-years" || bull.birth_date && new Date(bull.birth_date).getFullYear().toString() === selectedYear;
-      return matchesSearch && matchesCompany && matchesYear;
-    }).sort((a, b) => (b.score || 0) - (a.score || 0));
-  }, [bulls, weights, searchTerm, selectedEmpresa, selectedYear]);
+  const bullsWithScores = useMemo(() => bulls.map(bull => ({
+    ...bull,
+    score: (bull.tpi || 0) * weights.TPI + (bull.nm_dollar || 0) * weights.NM_dollar + (bull.hhp_dollar || 0) * weights.HHP_dollar + (bull.ptam || 0) * weights.PTAM + (bull.cfp || 0) * weights.CFP
+  })), [bulls, weights]);
+
+  const filteredBulls = useMemo(() => bullsWithScores.filter(bull => {
+    const normalizedSearch = searchTerm.toLowerCase();
+    const pedigreeCandidates = [
+      bull.sire_name,
+      bull.mgs_name,
+      bull.mmgs_name,
+      bull.sire_naab,
+      bull.mgs_naab,
+      bull.mmgs_naab
+    ]
+      .filter(Boolean)
+      .map(value => value!.toLowerCase());
+    const matchesSearch = bull.name.toLowerCase().includes(normalizedSearch) || bull.code.toLowerCase().includes(normalizedSearch) || pedigreeCandidates.some(candidate => candidate.includes(normalizedSearch));
+    const matchesCompany = !selectedEmpresa || selectedEmpresa === "todas" || selectedEmpresa === "Todas" || bull.company && bull.company.toLowerCase().includes(selectedEmpresa.toLowerCase());
+    const matchesYear = !selectedYear || selectedYear === "all-years" || bull.birth_date && new Date(bull.birth_date).getFullYear().toString() === selectedYear;
+    return matchesSearch && matchesCompany && matchesYear;
+  }), [bullsWithScores, searchTerm, selectedEmpresa, selectedYear]);
+
+  const getBullSortValue = useCallback((bull: Bull, column: string) => {
+    switch (column) {
+      case 'code':
+        return bull.code;
+      case 'name':
+        return bull.name;
+      case 'registration':
+        return bull.registration ?? '';
+      case 'sire_naab':
+        return bull.sire_naab ?? bull.sire_name ?? '';
+      case 'mgs_naab':
+        return bull.mgs_naab ?? bull.mgs_name ?? '';
+      case 'mmgs_naab':
+        return bull.mmgs_naab ?? bull.mmgs_name ?? '';
+      case 'birth_date':
+        return bull.birth_date ? new Date(bull.birth_date).getTime() : null;
+      case 'company':
+        return bull.company ?? '';
+      case 'score':
+        return bull.score ?? null;
+      default:
+        return (bull as Record<string, unknown>)[column] ?? '';
+    }
+  }, []);
+
+  const {
+    sortedItems: rankedBulls,
+    sortConfig: bullSortConfig,
+    requestSort: handleSortBulls
+  } = useAnimalTableSort(filteredBulls, getBullSortValue, { column: 'score', direction: 'desc' });
   const totalWeight = Object.values(weights).reduce((sum, weight) => sum + weight, 0);
+  const formatBullMetricValue = (bull: Bull, key: string) => {
+    const rawValue = (bull as Record<string, unknown>)[key];
+    if (rawValue === null || rawValue === undefined || rawValue === '') {
+      return '-';
+    }
+    if (key === 'hhp_dollar') {
+      const numericValue = Number(rawValue);
+      return Number.isNaN(numericValue) ? rawValue : numericValue.toFixed(0);
+    }
+    return rawValue as React.ReactNode;
+  };
   const handleBullToggle = (code: string) => {
     setSelectedBulls(prev => prev.includes(code) ? prev.filter(n => n !== code) : [...prev, code]);
   };
@@ -921,142 +962,42 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
                   <thead className="sticky top-0 z-10">
                     <tr>
                       <th className="px-2 py-1 bg-foreground text-background text-xs">✓</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">NAAB</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">Nome</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">Registro</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">Pai</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">Avô Materno</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">Bisavô Materno</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">Data de Nascimento</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">Empresa</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">HHP$®</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">TPI</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">NM$</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">CM$</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">FM$</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">GM$</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">F SAV</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">PTAM</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">CFP</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">PTAF</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">PTAF%</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">PTAP</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">PTAP%</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">PL</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">DPR</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">LIV</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">SCS</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">MAST</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">MET</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">RP</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">DA</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">KET</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">MF</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">PTAT</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">UDC</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">FLC</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">SCE</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">DCE</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">SSB</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">DSB</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">H LIV</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">CCR</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">HCR</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">FI</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">BWC</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">STA</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">STR</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">DFM</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">RUA</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">RLS</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">RTP</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">FTL</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">RW</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">RLR</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">FTA</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">FLS</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">FUA</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">RUH</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">RUW</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">UCL</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">UDP</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">FTP</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">RFI</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">Beta-Caseina</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">Kappa-Caseina</th>
-                      <th className="px-2 py-1 bg-foreground text-background text-xs">GFI</th>
+                      <SortableHeader column="code" label="NAAB" sortConfig={bullSortConfig} onSort={handleSortBulls} className="px-2 py-1 bg-foreground text-background text-xs" />
+                      <SortableHeader column="name" label="Nome" sortConfig={bullSortConfig} onSort={handleSortBulls} className="px-2 py-1 bg-foreground text-background text-xs" />
+                      <SortableHeader column="registration" label="Registro" sortConfig={bullSortConfig} onSort={handleSortBulls} className="px-2 py-1 bg-foreground text-background text-xs" />
+                      <SortableHeader column="sire_naab" label="Pai" sortConfig={bullSortConfig} onSort={handleSortBulls} className="px-2 py-1 bg-foreground text-background text-xs" />
+                      <SortableHeader column="mgs_naab" label="Avô Materno" sortConfig={bullSortConfig} onSort={handleSortBulls} className="px-2 py-1 bg-foreground text-background text-xs" />
+                      <SortableHeader column="mmgs_naab" label="Bisavô Materno" sortConfig={bullSortConfig} onSort={handleSortBulls} className="px-2 py-1 bg-foreground text-background text-xs" />
+                      <SortableHeader column="birth_date" label="Data de Nascimento" sortConfig={bullSortConfig} onSort={handleSortBulls} className="px-2 py-1 bg-foreground text-background text-xs" />
+                      <SortableHeader column="company" label="Empresa" sortConfig={bullSortConfig} onSort={handleSortBulls} className="px-2 py-1 bg-foreground text-background text-xs" />
+                      <SortableHeader column="score" label="Score" sortConfig={bullSortConfig} onSort={handleSortBulls} className="px-2 py-1 bg-foreground text-background text-xs" />
+                      {ANIMAL_METRIC_COLUMNS.map(column => (
+                        <SortableHeader key={column.key} column={column.key} label={column.label} sortConfig={bullSortConfig} onSort={handleSortBulls} className="px-2 py-1 bg-foreground text-background text-xs" />
+                      ))}
                     </tr>
                   </thead>
                    <tbody>
-                      {rankedBulls.map((bull, index) => <tr key={bull.code} className={index % 2 === 0 ? "bg-muted/50" : ""}>
-                         <td className="px-2 py-1 text-center">
-                           <input type="checkbox" checked={selectedBulls.includes(bull.code)} onChange={() => handleBullToggle(bull.code)} />
-                         </td>
-                         <td className="px-2 py-1 font-mono text-xs">{bull.code}</td>
-                         <td className="px-2 py-1 font-medium text-xs">{bull.name}</td>
-                         <td className="px-2 py-1 font-mono text-xs">{bull.registration}</td>
-                         <td className="px-2 py-1 text-xs">{bull.sire_name || bull.sire_naab || '-'}</td>
-                         <td className="px-2 py-1 text-xs">{bull.mgs_name || bull.mgs_naab || '-'}</td>
-                         <td className="px-2 py-1 text-xs">{bull.mmgs_name || bull.mmgs_naab || '-'}</td>
+                      {rankedBulls.map((bull, index) => (
+                        <tr key={bull.code} className={index % 2 === 0 ? "bg-muted/50" : ""}>
+                          <td className="px-2 py-1 text-center">
+                            <input type="checkbox" checked={selectedBulls.includes(bull.code)} onChange={() => handleBullToggle(bull.code)} />
+                          </td>
+                          <td className="px-2 py-1 font-mono text-xs">{bull.code}</td>
+                          <td className="px-2 py-1 font-medium text-xs">{bull.name}</td>
+                          <td className="px-2 py-1 font-mono text-xs">{bull.registration}</td>
+                          <td className="px-2 py-1 text-xs">{bull.sire_name || bull.sire_naab || '-'}</td>
+                          <td className="px-2 py-1 text-xs">{bull.mgs_name || bull.mgs_naab || '-'}</td>
+                          <td className="px-2 py-1 text-xs">{bull.mmgs_name || bull.mmgs_naab || '-'}</td>
                           <td className="px-2 py-1 text-xs">{bull.birth_date}</td>
                           <td className="px-2 py-1 text-xs">{bull.company || '-'}</td>
-                         <td className="px-2 py-1 text-center text-xs">{bull.hhp_dollar}</td>
-                         <td className="px-2 py-1 text-center text-xs">{bull.tpi}</td>
-                         <td className="px-2 py-1 text-center text-xs">{bull.nm_dollar}</td>
-                         <td className="px-2 py-1 text-center text-xs">{bull.cm_dollar}</td>
-                         <td className="px-2 py-1 text-center text-xs">{bull.fm_dollar}</td>
-                         <td className="px-2 py-1 text-center text-xs">{bull.gm_dollar}</td>
-                         <td className="px-2 py-1 text-center text-xs">{bull.f_sav}</td>
-                         <td className="px-2 py-1 text-center text-xs">{bull.ptam}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.cfp}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.ptaf}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.ptaf_pct}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.ptap}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.ptap_pct}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.pl}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.dpr}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.liv}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.scs}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.mast}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.met}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.rp}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.da}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.ket}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.mf}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.ptat}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.udc}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.flc}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.sce}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.dce}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.ssb}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.dsb}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.h_liv}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.ccr}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.hcr}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.fi}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.bwc}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.sta}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.str}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.dfm}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.rua}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.rls}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.rtp}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.ftl}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.rw}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.rlr}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.fta}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.fls}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.fua}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.ruh}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.ruw}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.ucl}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.udp}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.ftp}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.rfi}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.beta_casein}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.kappa_casein}</td>
-                          <td className="px-2 py-1 text-center text-xs">{bull.gfi}</td>
-                        </tr>)}
+                          <td className="px-2 py-1 text-center text-xs">{bull.score !== undefined ? bull.score.toFixed(0) : '-'}</td>
+                          {ANIMAL_METRIC_COLUMNS.map(column => (
+                            <td key={column.key} className="px-2 py-1 text-center text-xs">
+                              {formatBullMetricValue(bull, column.key)}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>
