@@ -44,7 +44,7 @@ const NexusEntryPage: React.FC<NexusEntryPageProps> = ({
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li>• Upload de banco de fêmeas ou uso do rebanho</li>
                 <li>• Seleção de 1, 2 ou 3 touros por fêmea</li>
-                <li>• Fórmula: ((PTA Fêmea + PTA Touro) / 2) × 0,93</li>
+                
                 <li>• Múltiplas predições por fêmea</li>
                 <li>• Análise de todos os PTAs disponíveis</li>
               </ul>
@@ -75,7 +75,7 @@ const NexusEntryPage: React.FC<NexusEntryPageProps> = ({
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li>• Entrada por NAAB dos ancestrais</li>
                 <li>• Predição individual ou em lote</li>
-                <li>• Pai (57%) + Avô Mat. (28%) + Bisavô Mat. (15%)</li>
+                
                 <li>• Integração com banco de touros</li>
                 <li>• Upload de planilhas para processamento em lote</li>
               </ul>
