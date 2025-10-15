@@ -28,6 +28,11 @@ const DEFAULT_TRAITS = [
   "sta","str","dfm","rua","rls","rtp","ftl","rw","rlr","fta","fls","fua","ruh","ruw","ucl","udp","ftp"
 ];
 
+const DEFAULT_TICK_STEP = 0.5;
+const TRAIT_TICK_STEPS: Record<string, number> = {
+  scs: 0.3,
+};
+
 export default function Step4MediaLinear() {
   const { farmId } = useAGFilters();
   const [mode, setMode] = useState<Mode>("coarse");
@@ -159,32 +164,97 @@ export default function Step4MediaLinear() {
   }, [rows]);
 
   const axisConfig = useMemo(() => {
+    const defaultConfig = {
+      domain: ["auto", "auto"] as [number | "auto", number | "auto"],
+      ticks: undefined as number[] | undefined,
+    };
+
     if (rows.length === 0) {
-      return {
-        domain: ["auto", "auto"] as [number | "auto", number | "auto"],
-        tickCount: undefined as number | undefined,
-      };
+      return defaultConfig;
     }
 
-    const values = rows.map((row) => row.mean_value ?? 0);
+    const getStepForTrait = (traitKey: string) => {
+      const normalized = traitKey.toLowerCase();
+      return TRAIT_TICK_STEPS[normalized] ?? DEFAULT_TICK_STEP;
+    };
+
+    const stepCandidates = rows.reduce((acc, row) => {
+      if (row.trait_key) {
+        acc.add(getStepForTrait(row.trait_key));
+      }
+      return acc;
+    }, new Set<number>());
+
+    let step = DEFAULT_TICK_STEP;
+    if (stepCandidates.size === 1) {
+      step = stepCandidates.values().next().value;
+    } else if (stepCandidates.size > 1) {
+      step = Math.max(...Array.from(stepCandidates));
+    }
+
+    if (!Number.isFinite(step) || step <= 0) {
+      step = DEFAULT_TICK_STEP;
+    }
+
+    const values = rows
+      .map((row) => row.mean_value)
+      .filter((value): value is number => Number.isFinite(value));
+
+    if (values.length === 0) {
+      return defaultConfig;
+    }
+
     const minValue = Math.min(...values);
     const maxValue = Math.max(...values);
 
     if (!Number.isFinite(minValue) || !Number.isFinite(maxValue)) {
-      return {
-        domain: ["auto", "auto"] as [number | "auto", number | "auto"],
-        tickCount: undefined as number | undefined,
-      };
+      return defaultConfig;
     }
 
-    const range = maxValue - minValue;
-    const tickStep = range > 0 ? range / 5 : 0.2;
-    const domainPadding = tickStep || 0.2;
-    const tickCount = range < 0.5 ? 8 : 6;
+    let paddedMin = minValue;
+    let paddedMax = maxValue;
+
+    if (minValue === maxValue) {
+      paddedMin = minValue - step * 2;
+      paddedMax = maxValue + step * 2;
+    } else {
+      paddedMin = minValue - step;
+      paddedMax = maxValue + step;
+    }
+
+    const alignedMin = Math.floor(paddedMin / step) * step;
+    const alignedMax = Math.ceil(paddedMax / step) * step;
+
+    if (!Number.isFinite(alignedMin) || !Number.isFinite(alignedMax)) {
+      return defaultConfig;
+    }
+
+    const safeStep = Number(step.toFixed(6));
+    const safeMin = Number(alignedMin.toFixed(6));
+    const safeMax = Number(alignedMax.toFixed(6));
+
+    if (safeStep <= 0 || safeMin === Infinity || safeMax === -Infinity) {
+      return defaultConfig;
+    }
+
+    const ticks: number[] = [];
+    const estimatedTickCount = Math.max(Math.round((safeMax - safeMin) / safeStep) + 1, 2);
+    const maxTicks = Math.min(estimatedTickCount + 2, 200);
+    for (
+      let tick = safeMin, count = 0;
+      tick <= safeMax + safeStep / 2 && count < maxTicks;
+      tick += safeStep, count += 1
+    ) {
+      ticks.push(Number(tick.toFixed(6)));
+    }
+
+    if (ticks.length === 0) {
+      return defaultConfig;
+    }
 
     return {
-      domain: [minValue - domainPadding, maxValue + domainPadding] as [number, number],
-      tickCount,
+      domain: [safeMin, safeMax] as [number, number],
+      ticks,
     };
   }, [rows]);
 
@@ -264,7 +334,7 @@ export default function Step4MediaLinear() {
               <XAxis
                 type="number"
                 domain={axisConfig.domain}
-                tickCount={axisConfig.tickCount}
+                ticks={axisConfig.ticks}
                 tickFormatter={(value) => Number(value).toFixed(2)}
                 allowDecimals
               />
