@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,9 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
+import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
+import { useRegisterChart } from "@/components/pdf/useRegisterChart";
 
 const DEFAULT_SELECTED: string[] = ["hhp_dollar"];
 const BINS = 20;
@@ -65,6 +68,41 @@ type TraitSeries = {
   data: { bin: string; n: number }[];
   total: number;
 };
+
+function HistogramCard({ step, series }: { step: number; series: TraitSeries }) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const title = `${series.label}`;
+  useRegisterChart(`step${step}-distribuicao-${series.traitKey}`, step, `${series.label} (n=${series.total})`, cardRef);
+
+  return (
+    <Card ref={cardRef} className="mx-auto flex w-full max-w-3xl flex-col">
+      <CardHeader className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <CardTitle className="text-base">
+          {title} <span className="text-xs text-muted-foreground">(n={series.total})</span>
+        </CardTitle>
+        <SingleExportButton
+          targetRef={cardRef}
+          step={step}
+          title={`${series.label} (n=${series.total})`}
+          slug={`Distribuicao_${series.traitKey}`}
+        />
+      </CardHeader>
+      <CardContent className="flex-1 px-4 pb-4">
+        <div className="h-48 sm:h-56">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={series.data}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="bin" tick={{ fontSize: 10 }} interval={3} />
+              <YAxis allowDecimals={false} />
+              <Tooltip />
+              <Bar dataKey="n" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function Step7Distribuicao() {
   const { farmId } = useAGFilters();
@@ -147,17 +185,19 @@ export default function Step7Distribuicao() {
   }, [farmId, selected, allTraits]);
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Step 7 — Distribuição de PTAs</CardTitle>
-        <div className="text-sm text-muted-foreground">
-          Selecione as características para visualizar a distribuição (histograma). Inicia em HHP$.
-        </div>
-      </CardHeader>
+    <ChartExportProvider>
+      <BatchExportBar step={7} />
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Step 7 — Distribuição de PTAs</CardTitle>
+          <div className="text-sm text-muted-foreground">
+            Selecione as características para visualizar a distribuição (histograma). Inicia em HHP$.
+          </div>
+        </CardHeader>
 
-      <CardContent className="space-y-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-2 flex-wrap">
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm">
@@ -219,40 +259,24 @@ export default function Step7Distribuicao() {
                   );
                 })}
             </div>
+            </div>
+
+            {loading && <div className="text-sm text-muted-foreground">Carregando…</div>}
           </div>
 
-          {loading && <div className="text-sm text-muted-foreground">Carregando…</div>}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {series.map((s) => (
-            <Card key={s.traitKey} className="h-64">
-              <CardHeader className="py-3">
-                <CardTitle className="text-base">
-                  {s.label} <span className="text-muted-foreground text-xs">(n={s.total})</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="h-[200px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={s.data}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="bin" tick={{ fontSize: 10 }} interval={3} />
-                    <YAxis allowDecimals={false} />
-                    <Tooltip />
-                    <Bar dataKey="n" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {series.length === 0 && (
-          <div className="text-sm text-muted-foreground">
-            Selecione ao menos uma PTA para visualizar a distribuição.
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {series.map((s) => (
+              <HistogramCard key={s.traitKey} step={7} series={s} />
+            ))}
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          {series.length === 0 && (
+            <div className="text-sm text-muted-foreground">
+              Selecione ao menos uma PTA para visualizar a distribuição.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </ChartExportProvider>
   );
 }

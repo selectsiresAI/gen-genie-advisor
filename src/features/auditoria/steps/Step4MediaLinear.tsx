@@ -13,6 +13,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from "recharts";
 import { useAGFilters } from "../store";
+import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
+import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
+import { useRegisterChart } from "@/components/pdf/useRegisterChart";
 
 type Mode = "coarse" | "full";
 
@@ -61,7 +64,7 @@ const SCS_FIXED_DOMAIN: [number, number] = [
   SCS_FIXED_TICKS[SCS_FIXED_TICKS.length - 1],
 ];
 
-export default function Step4MediaLinear() {
+function Step4MediaLinearContent() {
   const { farmId } = useAGFilters();
   const [mode, setMode] = useState<Mode>("coarse");
   const [normalize, setNormalize] = useState(false);
@@ -72,6 +75,9 @@ export default function Step4MediaLinear() {
   const [err, setErr] = useState<string | null>(null);
 
   const aliveRef = useRef(true);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const chartTitle = "Média Linear";
+  useRegisterChart("step4-media-linear", 4, chartTitle, cardRef);
   useEffect(() => {
     aliveRef.current = true;
     return () => {
@@ -301,9 +307,10 @@ export default function Step4MediaLinear() {
   }, [rows]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Média Linear</CardTitle>
+    <Card ref={cardRef}>
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <CardTitle>{chartTitle}</CardTitle>
+        <SingleExportButton targetRef={cardRef} step={4} title={chartTitle} slug="MEDIA_LINEAR" />
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-center gap-3">
@@ -337,9 +344,7 @@ export default function Step4MediaLinear() {
                 variant={on ? "default" : "outline"}
                 className="cursor-pointer"
                 onClick={() =>
-                  setTraits((prev) =>
-                    on ? prev.filter((i) => i !== key) : [...prev, key]
-                  )
+                  setTraits((prev) => (on ? prev.filter((i) => i !== key) : [...prev, key]))
                 }
               >
                 {label}
@@ -347,9 +352,7 @@ export default function Step4MediaLinear() {
             );
           })}
           {badges.length === 0 && (
-            <span className="text-sm text-muted-foreground">
-              Nenhuma PTA disponível.
-            </span>
+            <span className="text-sm text-muted-foreground">Nenhuma PTA disponível.</span>
           )}
         </div>
 
@@ -357,9 +360,7 @@ export default function Step4MediaLinear() {
           <div className="py-6 text-center text-muted-foreground">Carregando…</div>
         )}
 
-        {err && (
-          <div className="py-6 text-center text-destructive">{err}</div>
-        )}
+        {err && <div className="py-6 text-center text-destructive">{err}</div>}
 
         {!loading && !err && rows.length === 0 && (
           <div className="py-6 text-center text-muted-foreground">Sem dados.</div>
@@ -396,5 +397,14 @@ export default function Step4MediaLinear() {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+export default function Step4MediaLinear() {
+  return (
+    <ChartExportProvider>
+      <BatchExportBar step={4} />
+      <Step4MediaLinearContent />
+    </ChartExportProvider>
   );
 }

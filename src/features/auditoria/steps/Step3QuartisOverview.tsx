@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAGFilters } from "@/features/auditoria/store";
 import { PTA_CATALOG } from "@/lib/pta";
+import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
+import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
+import { useRegisterChart } from "@/components/pdf/useRegisterChart";
 
 type Row = {
   trait_key: string;
@@ -30,8 +33,11 @@ function safeCols(keys: string[]) {
   );
 }
 
-export default function Step3QuartisOverview() {
+function Step3QuartisOverviewContent() {
   const { farmId } = useAGFilters();
+  const quartisCardRef = useRef<HTMLDivElement>(null);
+  const chartTitle = "Quartis – Top 25% vs Bottom 25%";
+  useRegisterChart("step3-quartis-top-bottom", 3, chartTitle, quartisCardRef);
 
   const traitCatalog = PTA_CATALOG ?? [];
   const allTraits = useMemo(
@@ -160,7 +166,7 @@ export default function Step3QuartisOverview() {
   }, [farmId]); // recarrega ao trocar o rebanho
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
       {/* Box de seleção de PTAs */}
       <Card className="xl:col-span-1">
         <CardHeader className="pb-2">
@@ -181,7 +187,7 @@ export default function Step3QuartisOverview() {
                 const label = labelOf(k);
                 const checked = selected.includes(k);
                 return (
-                  <label key={k} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <label key={k} className="flex cursor-pointer items-center gap-2 text-sm">
                     <Checkbox
                       checked={checked}
                       onCheckedChange={(v) => toggleTrait(k, Boolean(v))}
@@ -202,9 +208,15 @@ export default function Step3QuartisOverview() {
       </Card>
 
       {/* Tabela com as médias */}
-      <Card className="xl:col-span-3">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Quartis – Top 25% vs Bottom 25%</CardTitle>
+      <Card ref={quartisCardRef} className="xl:col-span-3">
+        <CardHeader className="flex flex-col gap-3 pb-2 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle className="text-base">{chartTitle}</CardTitle>
+          <SingleExportButton
+            targetRef={quartisCardRef}
+            step={3}
+            title={chartTitle}
+            slug="QUARTIS_TOP_BOTTOM"
+          />
         </CardHeader>
         <CardContent>
           <div className="w-full overflow-x-auto">
@@ -246,5 +258,14 @@ export default function Step3QuartisOverview() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function Step3QuartisOverview() {
+  return (
+    <ChartExportProvider>
+      <BatchExportBar step={3} />
+      <Step3QuartisOverviewContent />
+    </ChartExportProvider>
   );
 }
