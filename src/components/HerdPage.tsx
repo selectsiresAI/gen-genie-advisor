@@ -13,6 +13,9 @@ import { fetchFemalesDenormByFarm, isCompleteFemaleRow, type CompleteFemaleDenor
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { t } from '@/lib/i18n';
 import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
+import SortableHeader from '@/components/animals/SortableHeader';
+import { ANIMAL_METRIC_COLUMNS } from '@/constants/animalMetrics';
+import { useAnimalTableSort } from '@/hooks/useAnimalTableSort';
 interface Farm {
   farm_id: string;
   farm_name: string;
@@ -232,7 +235,41 @@ const HerdPage: React.FC<HerdPageProps> = ({
       return matchesSearch && matchesYear;
     });
   }, [females, searchTerm, selectedYear]);
-  const visibleFemaleIds = useMemo(() => filteredFemales.map(female => female.id), [filteredFemales]);
+
+  const getFemaleSortValue = useCallback((female: Female, column: string) => {
+    switch (column) {
+      case 'farm_id':
+        return farm.farm_id;
+      case 'name':
+        return female.name;
+      case 'cdcb_identifier':
+        return female.cdcb_id || female.identifier || '';
+      case 'sire_naab':
+        return female.sire_naab || female.sire_name || '';
+      case 'mgs_naab':
+        return female.mgs_naab || female.mgs_name || '';
+      case 'mmgs_naab':
+        return female.mmgs_naab || female.mmgs_name || '';
+      case 'birth_date':
+        return female.birth_date ? new Date(female.birth_date).getTime() : null;
+      case 'parity_order':
+        return female.parity_order ?? null;
+      case 'category':
+        return getAutomaticCategory(female.birth_date, female.parity_order);
+      case 'fonte':
+        return female.fonte || '';
+      default:
+        return (female as Record<string, unknown>)[column] ?? '';
+    }
+  }, [farm.farm_id, getAutomaticCategory]);
+
+  const {
+    sortedItems: sortedFemales,
+    sortConfig: femaleSortConfig,
+    requestSort: handleSortFemales
+  } = useAnimalTableSort(filteredFemales, getFemaleSortValue);
+
+  const visibleFemaleIds = useMemo(() => sortedFemales.map(female => female.id), [sortedFemales]);
   const selectedVisibleCount = useMemo(() => visibleFemaleIds.filter(id => selectedFemales.includes(id)).length, [visibleFemaleIds, selectedFemales]);
   const allVisibleSelected = visibleFemaleIds.length > 0 && selectedVisibleCount === visibleFemaleIds.length;
   const partiallyVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
@@ -263,6 +300,17 @@ const HerdPage: React.FC<HerdPageProps> = ({
         {code && <span className="font-medium">{code}</span>}
         {name && <span className="text-[11px] text-muted-foreground">{name}</span>}
       </div>;
+  };
+  const formatMetricValue = (female: Female, key: string) => {
+    const rawValue = (female as Record<string, unknown>)[key];
+    if (rawValue === null || rawValue === undefined || rawValue === '') {
+      return '-';
+    }
+    if (key === 'hhp_dollar') {
+      const numericValue = Number(rawValue);
+      return Number.isNaN(numericValue) ? rawValue : numericValue.toFixed(0);
+    }
+    return rawValue as React.ReactNode;
   };
   const handleSelectFemale = (femaleId: string) => {
     setSelectedFemales(prev => prev.includes(femaleId) ? prev.filter(id => id !== femaleId) : [...prev, femaleId]);
@@ -316,7 +364,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
     }
   };
   const handleExport = () => {
-    if (filteredFemales.length === 0) {
+    if (sortedFemales.length === 0) {
       toast({
         title: "Nenhum dado para exportar",
         description: "Não há fêmeas para exportar.",
@@ -327,7 +375,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
 
     // Create CSV with all columns from females_denorm
     const headers = ['ID Fazenda', 'Nome', 'ID CDCB', 'Identificador', 'Data Nascimento', 'Ordem de Parto', 'Categoria', 'Fonte', 'Pai NAAB', 'Avô Materno NAAB', 'BisAvô Materno NAAB', 'HHP$', 'TPI', 'NM$', 'CM$', 'FM$', 'GM$', 'F SAV', 'PTAM', 'CFP', 'PTAF', 'PTAF%', 'PTAP', 'PTAP%', 'PL', 'DPR', 'LIV', 'SCS', 'MAST', 'MET', 'RP', 'DA', 'KET', 'MF', 'PTAT', 'UDC', 'FLC', 'SCE', 'DCE', 'SSB', 'DSB', 'H LIV', 'CCR', 'HCR', 'FI', 'GL', 'EFC', 'BWC', 'STA', 'STR', 'DFM', 'RUA', 'RLS', 'RTP', 'FTL', 'RW', 'RLR', 'FTA', 'FLS', 'FUA', 'RUH', 'RUW', 'UCL', 'UDP', 'FTP', 'RFI', 'Beta-Casein', 'Kappa-Casein', 'GFI', 'Criado Em', 'Atualizado Em'];
-    const csvData = filteredFemales.map(female => [farm.farm_id, female.name, female.cdcb_id || '', female.identifier || '', female.birth_date ? formatDate(female.birth_date) : '', female.parity_order || '', getAutomaticCategory(female.birth_date, female.parity_order), female.fonte || '', female.sire_naab || '', female.mgs_naab || '', female.mmgs_naab || '', female.hhp_dollar || '', female.tpi || '', female.nm_dollar || '', female.cm_dollar || '', female.fm_dollar || '', female.gm_dollar || '', female.f_sav || '', female.ptam || '', female.cfp || '', female.ptaf || '', female.ptaf_pct || '', female.ptap || '', female.ptap_pct || '', female.pl || '', female.dpr || '', female.liv || '', female.scs || '', female.mast || '', female.met || '', female.rp || '', female.da || '', female.ket || '', female.mf || '', female.ptat || '', female.udc || '', female.flc || '', female.sce || '', female.dce || '', female.ssb || '', female.dsb || '', female.h_liv || '', female.ccr || '', female.hcr || '', female.fi || '', female.gl || '', female.efc || '', female.bwc || '', female.sta || '', female.str || '', female.dfm || '', female.rua || '', female.rls || '', female.rtp || '', female.ftl || '', female.rw || '', female.rlr || '', female.fta || '', female.fls || '', female.fua || '', female.ruh || '', female.ruw || '', female.ucl || '', female.udp || '', female.ftp || '', female.rfi || '', female.beta_casein || '', female.kappa_casein || '', female.gfi || '', formatDate(female.created_at), female.updated_at ? formatDate(female.updated_at) : '']);
+    const csvData = sortedFemales.map(female => [farm.farm_id, female.name, female.cdcb_id || '', female.identifier || '', female.birth_date ? formatDate(female.birth_date) : '', female.parity_order || '', getAutomaticCategory(female.birth_date, female.parity_order), female.fonte || '', female.sire_naab || '', female.mgs_naab || '', female.mmgs_naab || '', female.hhp_dollar || '', female.tpi || '', female.nm_dollar || '', female.cm_dollar || '', female.fm_dollar || '', female.gm_dollar || '', female.f_sav || '', female.ptam || '', female.cfp || '', female.ptaf || '', female.ptaf_pct || '', female.ptap || '', female.ptap_pct || '', female.pl || '', female.dpr || '', female.liv || '', female.scs || '', female.mast || '', female.met || '', female.rp || '', female.da || '', female.ket || '', female.mf || '', female.ptat || '', female.udc || '', female.flc || '', female.sce || '', female.dce || '', female.ssb || '', female.dsb || '', female.h_liv || '', female.ccr || '', female.hcr || '', female.fi || '', female.gl || '', female.efc || '', female.bwc || '', female.sta || '', female.str || '', female.dfm || '', female.rua || '', female.rls || '', female.rtp || '', female.ftl || '', female.rw || '', female.rlr || '', female.fta || '', female.fls || '', female.fua || '', female.ruh || '', female.ruw || '', female.ucl || '', female.udp || '', female.ftp || '', female.rfi || '', female.beta_casein || '', female.kappa_casein || '', female.gfi || '', formatDate(female.created_at), female.updated_at ? formatDate(female.updated_at) : '']);
 
     // Convert to CSV format
     const csvContent = [headers.join(','), ...csvData.map(row => row.map(cell => {
@@ -353,7 +401,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
     URL.revokeObjectURL(url);
     toast({
       title: "Exportação concluída",
-      description: `${filteredFemales.length} fêmeas exportadas com sucesso!`
+      description: `${sortedFemales.length} fêmeas exportadas com sucesso!`
     });
   };
   return <div className="min-h-screen bg-background">
@@ -469,7 +517,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
               {loading ? <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                   <p className="text-muted-foreground mt-2">Carregando rebanho...</p>
-                </div> : filteredFemales.length === 0 ? <div className="text-center py-8">
+                </div> : sortedFemales.length === 0 ? <div className="text-center py-8">
                   <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-semibold mb-2">
                     {females.length === 0 ? 'Nenhuma fêmea cadastrada' : 'Nenhuma fêmea encontrada'}
@@ -529,78 +577,92 @@ const HerdPage: React.FC<HerdPageProps> = ({
                                 Selecionar
                               </div>
                             </th>
-                            <th className="sticky top-0 z-[55] bg-foreground text-background shadow-[6px_0_12px_-6px_rgba(15,23,42,0.45)]" style={stickyColumnStyles.farmId}>ID Fazenda</th>
-                            <th className="sticky top-0 z-50 bg-foreground text-background shadow-[6px_0_12px_-6px_rgba(15,23,42,0.45)]" style={stickyColumnStyles.name}>Nome</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">ID CDCB / Identificador</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Pai</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Avô Materno</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Bisavô Materno</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Data de Nascimento</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Ordem de Parto</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Categoria</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Fonte</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">HHP$®</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">TPI</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">NM$</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">CM$</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">FM$</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">GM$</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">F SAV</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">PTAM</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">CFP</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">PTAF</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">PTAF%</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">PTAP</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">PTAP%</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">PL</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">DPR</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">LIV</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">SCS</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">MAST</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">MET</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">RP</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">DA</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">KET</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">MF</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">PTAT</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">UDC</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">FLC</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">SCE</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">DCE</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">SSB</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">DSB</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">H LIV</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">CCR</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">HCR</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">FI</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">GL</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">EFC</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">BWC</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">STA</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">STR</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">DFM</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">RUA</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">RLS</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">RTP</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">FTL</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">RW</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">RLR</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">FTA</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">FLS</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">FUA</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">RUH</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">RUW</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">UCL</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">UDP</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">FTP</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">RFI</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Beta-Casein</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">Kappa-Casein</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">GFI</th>
+                            <SortableHeader
+                              column="farm_id"
+                              label="ID Fazenda"
+                              sortConfig={femaleSortConfig}
+                              onSort={handleSortFemales}
+                              className="sticky top-0 z-[55] bg-foreground text-background shadow-[6px_0_12px_-6px_rgba(15,23,42,0.45)] px-3 py-2 text-left text-xs font-semibold whitespace-nowrap"
+                              style={stickyColumnStyles.farmId}
+                            />
+                            <SortableHeader
+                              column="name"
+                              label="Nome"
+                              sortConfig={femaleSortConfig}
+                              onSort={handleSortFemales}
+                              className="sticky top-0 z-50 bg-foreground text-background shadow-[6px_0_12px_-6px_rgba(15,23,42,0.45)] px-3 py-2 text-left text-xs font-semibold whitespace-nowrap"
+                              style={stickyColumnStyles.name}
+                            />
+                            <SortableHeader
+                              column="cdcb_identifier"
+                              label="ID CDCB / Identificador"
+                              sortConfig={femaleSortConfig}
+                              onSort={handleSortFemales}
+                              className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap"
+                            />
+                            <SortableHeader
+                              column="sire_naab"
+                              label="Pai"
+                              sortConfig={femaleSortConfig}
+                              onSort={handleSortFemales}
+                              className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap"
+                            />
+                            <SortableHeader
+                              column="mgs_naab"
+                              label="Avô Materno"
+                              sortConfig={femaleSortConfig}
+                              onSort={handleSortFemales}
+                              className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap"
+                            />
+                            <SortableHeader
+                              column="mmgs_naab"
+                              label="Bisavô Materno"
+                              sortConfig={femaleSortConfig}
+                              onSort={handleSortFemales}
+                              className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap"
+                            />
+                            <SortableHeader
+                              column="birth_date"
+                              label="Data de Nascimento"
+                              sortConfig={femaleSortConfig}
+                              onSort={handleSortFemales}
+                              className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap"
+                            />
+                            <SortableHeader
+                              column="parity_order"
+                              label="Ordem de Parto"
+                              sortConfig={femaleSortConfig}
+                              onSort={handleSortFemales}
+                              className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap"
+                            />
+                            <SortableHeader
+                              column="category"
+                              label="Categoria"
+                              sortConfig={femaleSortConfig}
+                              onSort={handleSortFemales}
+                              className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap"
+                            />
+                            <SortableHeader
+                              column="fonte"
+                              label="Fonte"
+                              sortConfig={femaleSortConfig}
+                              onSort={handleSortFemales}
+                              className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap"
+                            />
+                            {ANIMAL_METRIC_COLUMNS.map(column => (
+                              <SortableHeader
+                                key={column.key}
+                                column={column.key}
+                                label={column.label}
+                                sortConfig={femaleSortConfig}
+                                onSort={handleSortFemales}
+                                className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap"
+                              />
+                            ))}
                           </tr>
                         </thead>
                       <tbody className="bg-background [&>tr>td]:border [&>tr>td]:px-3 [&>tr>td]:py-2 [&>tr>td]:text-xs [&>tr>td]:whitespace-nowrap [&>tr>td]:align-middle">
-                        {filteredFemales.map(female => {
+                        {sortedFemales.map(female => {
                           const fonteDisplay = getFonteDisplay(female.fonte);
                           return <tr key={female.id} className="hover:bg-muted/50">
                             <td className="sticky z-30 border bg-background px-3 py-2 text-xs whitespace-nowrap shadow-[6px_0_12px_-6px_rgba(15,23,42,0.3)]" style={stickyColumnStyles.select}>
@@ -627,64 +689,11 @@ const HerdPage: React.FC<HerdPageProps> = ({
                             <td className="border px-3 py-2 text-xs whitespace-nowrap">
                               {fonteDisplay.label === '—' ? <span className="text-muted-foreground">—</span> : <Badge variant="outline" className={fonteDisplay.className}>{fonteDisplay.label}</Badge>}
                             </td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.hhp_dollar ? Number(female.hhp_dollar).toFixed(0) : '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.tpi || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.nm_dollar || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.cm_dollar || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.fm_dollar || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.gm_dollar || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.f_sav || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.ptam || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.cfp || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.ptaf || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.ptaf_pct || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.ptap || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.ptap_pct || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.pl || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.dpr || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.liv || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.scs || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.mast || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.met || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.rp || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.da || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.ket || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.mf || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.ptat || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.udc || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.flc || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.sce || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.dce || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.ssb || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.dsb || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.h_liv || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.ccr || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.hcr || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.fi || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.gl || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.efc || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.bwc || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.sta || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.str || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.dfm || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.rua || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.rls || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.rtp || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.ftl || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.rw || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.rlr || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.fta || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.fls || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.fua || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.ruh || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.ruw || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.ucl || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.udp || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.ftp || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.rfi || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.beta_casein || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.kappa_casein || '-'}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.gfi || '-'}</td>
+                            {ANIMAL_METRIC_COLUMNS.map(column => (
+                              <td key={column.key} className="border px-3 py-2 text-xs whitespace-nowrap">
+                                {formatMetricValue(female, column.key)}
+                              </td>
+                            ))}
                             </tr>;
                         })}
                       </tbody>

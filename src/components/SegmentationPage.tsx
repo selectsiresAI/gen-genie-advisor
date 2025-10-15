@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { Download, Settings, Filter, Check, X, RefreshCw, ArrowLeft, TrendingUp, PieChart, BarChart3, Sliders, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -7,6 +7,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
+import SortableHeader from '@/components/animals/SortableHeader';
+import { ANIMAL_METRIC_COLUMNS } from '@/constants/animalMetrics';
+import { useAnimalTableSort } from '@/hooks/useAnimalTableSort';
 import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
 import { generateSegmentationPDF, generatePDFBlob } from '@/utils/pdfGenerator';
@@ -640,6 +643,55 @@ export default function SegmentationPage({
     return result;
   }, [segmentedAnimals, animalSearch, categoryFilter, classificationFilter]);
 
+  const getAnimalSortValue = useCallback((animal: Female, column: string) => {
+    const record = animal as Record<string, unknown>;
+    switch (column) {
+      case 'farm_id':
+        return record.farm_id ?? '';
+      case 'name':
+        return animal.__nameKey ? (animal as Record<string, unknown>)[animal.__nameKey] ?? '' : record.name ?? '';
+      case 'cdcb_id':
+        return record.cdcb_id ?? record.identifier ?? '';
+      case 'sire_naab':
+        return record.sire_naab ?? record.sire_name ?? '';
+      case 'mgs_naab':
+        return record.mgs_naab ?? record.mgs_name ?? '';
+      case 'mmgs_naab':
+        return record.mmgs_naab ?? record.mmgs_name ?? '';
+      case 'birth_date':
+        return record.birth_date ? new Date(record.birth_date as string).getTime() : null;
+      case 'parity_order':
+        return record.parity_order ?? null;
+      case 'category':
+        return getAutomaticCategory(record.birth_date as string | undefined, record.parity_order as number | undefined);
+      case 'fonte':
+        return record.fonte ?? '';
+      case 'Classification':
+        return (animal as any).Classification ?? '';
+      case 'CustomScore':
+        return (animal as any).CustomScore ?? null;
+      default:
+        return record[column] ?? '';
+    }
+  }, [getAutomaticCategory]);
+
+  const {
+    sortedItems: sortedAnimals,
+    sortConfig: animalSortConfig,
+    requestSort: handleSortAnimals
+  } = useAnimalTableSort(filteredAnimals, getAnimalSortValue);
+  const formatAnimalMetricValue = (animal: Female, key: string) => {
+    const rawValue = (animal as Record<string, unknown>)[key];
+    if (rawValue === null || rawValue === undefined || rawValue === '') {
+      return '-';
+    }
+    if (key === 'hhp_dollar') {
+      const numericValue = Number(rawValue);
+      return Number.isNaN(numericValue) ? rawValue : numericValue.toFixed(0);
+    }
+    return rawValue as React.ReactNode;
+  };
+
   // Chart data
   const chartData = useMemo(() => [{
     name: 'Superior',
@@ -697,7 +749,7 @@ export default function SegmentationPage({
     setGates(prev => prev.filter((_, idx) => idx !== i));
   }
   function exportToExcel() {
-    const preparedRows = filteredAnimals.map(a => {
+    const preparedRows = sortedAnimals.map(a => {
       const fonteInfo = getFonteDisplay((a as any).fonte);
       const customScore = sanitizeNumber(a.CustomScore ?? null);
       return {
@@ -886,7 +938,7 @@ export default function SegmentationPage({
           selectedTraits,
           weights
         } : undefined,
-        femalesData: filteredAnimals,
+        femalesData: sortedAnimals,
         date: new Date().toLocaleDateString('pt-BR')
       };
       const pdf = await generateSegmentationPDF(reportData);
@@ -901,7 +953,7 @@ export default function SegmentationPage({
         metadata: {
           createdAt: new Date().toISOString(),
           size: pdfBlob.size,
-          description: `Relatório de segmentação com ${filteredAnimals.length} fêmeas`,
+          description: `Relatório de segmentação com ${sortedAnimals.length} fêmeas`,
           filters: reportData.filters,
           settings: reportData.customSettings
         },
@@ -1494,7 +1546,7 @@ export default function SegmentationPage({
                 </div>}
 
               <div className="text-sm text-foreground">
-                <span className="font-medium">Resultados: {filteredAnimals.length} animais</span>
+                <span className="font-medium">Resultados: {sortedAnimals.length} animais</span>
                 {animalSearch.trim() && <span className="ml-2">(busca: "{animalSearch.trim()}")</span>}
               </div>
             </div>
@@ -1517,7 +1569,7 @@ export default function SegmentationPage({
               </div>
 
               {segmentationEnabled && <div className="text-sm text-foreground">
-                  Exibindo: {filteredAnimals.length} de {segmentedAnimals.length} animais
+                  Exibindo: {sortedAnimals.length} de {segmentedAnimals.length} animais
                 </div>}
             </div>
           </div>
@@ -1526,84 +1578,32 @@ export default function SegmentationPage({
                 <table className="w-full text-sm border-collapse">
                   <thead className="sticky top-0 z-20">
                     <tr className="border-b border-border bg-muted text-foreground">
-                      <th className="border border-border px-2 py-1 text-left text-xs font-medium">ID Fazenda</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs font-medium">Nome</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">ID CDCB</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">Pai</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">Avô Materno</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">Bisavô Materno</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">Data de Nascimento</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">Ordem de Parto</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">Categoria</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">Fonte</th>
-                      {segmentationEnabled && <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">Classificação</th>}
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">CustomScore</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">HHP$®</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">TPI</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">NM$</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">CM$</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">FM$</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">GM$</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">F SAV</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">PTAM</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">CFP</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">PTAF</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">PTAF%</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">PTAP</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">PTAP%</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">PL</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">DPR</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">LIV</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">SCS</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">MAST</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">MET</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">RP</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">DA</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">KET</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">MF</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">PTAT</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">UDC</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">FLC</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">SCE</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">DCE</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">SSB</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">DSB</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">H LIV</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">CCR</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">HCR</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">FI</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">GL</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">EFC</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">BWC</th>
-                      <th className="border border-border bg-secondary px-2 py-1 text-left text-xs font-medium">STA</th>
-                      <th className="border border-border bg-secondary px-2 py-1 text-left text-xs font-medium">STR</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">DFM</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">RUA</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">RLS</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">RTP</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">FTL</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">RW</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">RLR</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">FTA</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">FLS</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">FUA</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">RUH</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">RUW</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">UCL</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">UDP</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">FTP</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">RFI</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">Beta-Casein</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">Kappa-Casein</th>
-                      <th className="border border-border px-2 py-1 text-left text-xs bg-secondary">GFI</th>
+                      <SortableHeader column="farm_id" label="ID Fazenda" sortConfig={animalSortConfig} onSort={handleSortAnimals} className="border border-border px-2 py-1 text-left text-xs font-medium" />
+                      <SortableHeader column="name" label="Nome" sortConfig={animalSortConfig} onSort={handleSortAnimals} className="border border-border px-2 py-1 text-left text-xs font-medium" />
+                      <SortableHeader column="cdcb_id" label="ID CDCB" sortConfig={animalSortConfig} onSort={handleSortAnimals} className="border border-border px-2 py-1 text-left text-xs font-medium bg-secondary" />
+                      <SortableHeader column="sire_naab" label="Pai" sortConfig={animalSortConfig} onSort={handleSortAnimals} className="border border-border px-2 py-1 text-left text-xs font-medium bg-secondary" />
+                      <SortableHeader column="mgs_naab" label="Avô Materno" sortConfig={animalSortConfig} onSort={handleSortAnimals} className="border border-border px-2 py-1 text-left text-xs font-medium bg-secondary" />
+                      <SortableHeader column="mmgs_naab" label="Bisavô Materno" sortConfig={animalSortConfig} onSort={handleSortAnimals} className="border border-border px-2 py-1 text-left text-xs font-medium bg-secondary" />
+                      <SortableHeader column="birth_date" label="Data de Nascimento" sortConfig={animalSortConfig} onSort={handleSortAnimals} className="border border-border px-2 py-1 text-left text-xs font-medium bg-secondary" />
+                      <SortableHeader column="parity_order" label="Ordem de Parto" sortConfig={animalSortConfig} onSort={handleSortAnimals} className="border border-border px-2 py-1 text-left text-xs font-medium bg-secondary" />
+                      <SortableHeader column="category" label="Categoria" sortConfig={animalSortConfig} onSort={handleSortAnimals} className="border border-border px-2 py-1 text-left text-xs font-medium bg-secondary" />
+                      <SortableHeader column="fonte" label="Fonte" sortConfig={animalSortConfig} onSort={handleSortAnimals} className="border border-border px-2 py-1 text-left text-xs font-medium bg-secondary" />
+                      {segmentationEnabled && (
+                        <SortableHeader column="Classification" label="Classificação" sortConfig={animalSortConfig} onSort={handleSortAnimals} className="border border-border px-2 py-1 text-left text-xs font-medium bg-secondary" />
+                      )}
+                      <SortableHeader column="CustomScore" label="CustomScore" sortConfig={animalSortConfig} onSort={handleSortAnimals} className="border border-border px-2 py-1 text-left text-xs font-medium bg-secondary" />
+                      {ANIMAL_METRIC_COLUMNS.map(column => (
+                        <SortableHeader key={column.key} column={column.key} label={column.label} sortConfig={animalSortConfig} onSort={handleSortAnimals} className="border border-border px-2 py-1 text-left text-xs font-medium bg-secondary" />
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredAnimals.map((a, idx) => {
+                    {sortedAnimals.map((a, idx) => {
                     const classificationBg = a.Classification === "Superior" ? "bg-accent/10" : a.Classification === "Intermediário" ? "bg-amber-50 dark:bg-amber-950/20" : a.Classification === "Inferior" ? "bg-destructive/10" : "";
                     const category = getAutomaticCategory((a as any).birth_date, (a as any).parity_order);
                     const fonteInfo = getFonteDisplay((a as any).fonte);
-                    return <tr key={a.__idKey ? (a as any)[a.__idKey] : a.id ?? idx} className={`border-b border-secondary text-foreground hover:opacity-90 ${segmentationEnabled && a.Classification ? classificationBg : ""}`}>
+                    return (
+                      <tr key={a.__idKey ? (a as any)[a.__idKey] : a.id ?? idx} className={`border-b border-secondary text-foreground hover:opacity-90 ${segmentationEnabled && a.Classification ? classificationBg : ""}`}>
                         <td className="border border-border px-2 py-1 text-xs">{(a as any).farm_id || '-'}</td>
                         <td className="border border-border px-2 py-1 text-xs font-medium">{a.__nameKey ? (a as any)[a.__nameKey] : (a as any).name ?? ''}</td>
                         <td className="border border-border px-2 py-1 text-xs">{(a as any).cdcb_id || (a as any).identifier || '-'}</td>
@@ -1633,65 +1633,13 @@ export default function SegmentationPage({
                                 </span>}
                             </td>}
                         <td className="border border-border px-2 py-1 text-xs font-bold">{(a as any).CustomScore !== undefined ? Number((a as any).CustomScore).toFixed(1) : '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).hhp_dollar !== undefined && (a as any).hhp_dollar !== null ? Number((a as any).hhp_dollar).toFixed(0) : '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).tpi || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).nm_dollar || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).cm_dollar || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).fm_dollar || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).gm_dollar || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).f_sav || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).ptam || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).cfp || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).ptaf || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).ptaf_pct || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).ptap || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).ptap_pct || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).pl || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).dpr || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).liv || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).scs || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).mast || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).met || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).rp || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).da || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).ket || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).mf || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).ptat || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).udc || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).flc || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).sce || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).dce || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).ssb || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).dsb || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).h_liv || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).ccr || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).hcr || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).fi || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).gl || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).efc || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).bwc || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).sta || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).str || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).dfm || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).rua || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).rls || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).rtp || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).ftl || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).rw || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).rlr || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).fta || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).fls || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).fua || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).ruh || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).ruw || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).ucl || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).udp || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).ftp || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).rfi || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).beta_casein || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).kappa_casein || '-'}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).gfi || '-'}</td>
-                      </tr>;
+                        {ANIMAL_METRIC_COLUMNS.map(column => (
+                          <td key={column.key} className="border border-border px-2 py-1 text-xs">
+                            {formatAnimalMetricValue(a, column.key)}
+                          </td>
+                        ))}
+                      </tr>
+                    );
                   })}
                   </tbody>
                 </table>
