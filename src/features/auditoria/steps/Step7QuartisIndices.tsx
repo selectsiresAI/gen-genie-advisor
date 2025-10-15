@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import {
@@ -13,6 +13,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { useAGFilters } from "../store";
+import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
+import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
+import { useRegisterChart } from "@/components/pdf/useRegisterChart";
 
 const ALL_PTA_COLUMNS = [
   "hhp_dollar", "tpi", "nm_dollar", "cm_dollar", "fm_dollar", "gm_dollar",
@@ -51,6 +54,9 @@ export default function Step7QuartisIndices() {
   const [indexB, setIndexB] = useState("nm_dollar");
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const chartTitle = "Quartis — Índices (A vs B)";
+  useRegisterChart("step7-quartis-indices", 7, chartTitle, cardRef);
 
   useEffect(() => {
     if (farmId) {
@@ -115,107 +121,106 @@ export default function Step7QuartisIndices() {
   }, [rows]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Quartis — Índices (A vs B)</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <Select value={indexA} onValueChange={setIndexA}>
-            <SelectTrigger className="w-56">
-              <SelectValue placeholder="Índice A" />
-            </SelectTrigger>
-            <SelectContent>
-              {INDEX_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={indexB} onValueChange={setIndexB}>
-            <SelectTrigger className="w-56">
-              <SelectValue placeholder="Índice B" />
-            </SelectTrigger>
-            <SelectContent>
-              {INDEX_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="sm" onClick={load} disabled={loading}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            Atualizar
-          </Button>
-        </div>
-
-
-        {loading && (
-          <div className="py-6 text-center text-muted-foreground">Carregando dados...</div>
-        )}
-
-        {!loading && rows.length === 0 && (
-          <div className="py-6 text-center text-muted-foreground">Sem dados.</div>
-        )}
-
-        {!loading && rows.length > 0 && (
-          <div className="space-y-6">
-            <div className="overflow-x-auto relative">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="border-b">
-                    <th className="sticky left-0 z-10 bg-background py-2 px-2 text-left font-semibold border-r">Index</th>
-                    <th className="sticky left-[80px] z-10 bg-background py-2 px-2 text-left font-semibold border-r">Group</th>
-                    {ALL_PTA_COLUMNS.map((t) => (
-                      <th key={t} className="py-2 px-2 text-left font-semibold whitespace-nowrap">
-                        {t.toUpperCase()}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {tableDataByIndex.map((row, idx) => (
-                    <tr
-                      key={`${row.index}-${row.group}-${idx}`}
-                      className={`border-b ${
-                        row.index === "Difference" ? "bg-muted/30 font-semibold" : ""
-                      }`}
-                    >
-                      <td className="sticky left-0 z-10 bg-background py-2 px-2 border-r">
-                        {row.index === "IndexA"
-                          ? getIndexDisplayLabel(indexA)
-                          : row.index === "IndexB"
-                          ? getIndexDisplayLabel(indexB)
-                          : row.index}
-                      </td>
-                      <td className="sticky left-[80px] z-10 bg-background py-2 px-2 border-r">
-                        {row.group}
-                      </td>
-                      {ALL_PTA_COLUMNS.map((t) => {
-                        const val = row[t] as number | undefined;
-                        const isPositive = val && val > 0;
-                        const isDiff = row.index === "Difference";
-                        return (
-                          <td
-                            key={t}
-                            className={`py-2 px-2 whitespace-nowrap ${
-                              isDiff && isPositive ? "text-green-600" : ""
-                            }`}
-                          >
-                            {val != null ? Math.round(val) : "-"}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+    <ChartExportProvider>
+      <BatchExportBar step={7} />
+      <Card ref={cardRef}>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle>Quartis — Índices (A vs B)</CardTitle>
+          <SingleExportButton targetRef={cardRef} step={7} title={chartTitle} slug="Quartis_Indices" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <Select value={indexA} onValueChange={setIndexA}>
+              <SelectTrigger className="w-56">
+                <SelectValue placeholder="Índice A" />
+              </SelectTrigger>
+              <SelectContent>
+                {INDEX_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={indexB} onValueChange={setIndexB}>
+              <SelectTrigger className="w-56">
+                <SelectValue placeholder="Índice B" />
+              </SelectTrigger>
+              <SelectContent>
+                {INDEX_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              Atualizar
+            </Button>
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          {loading && (
+            <div className="py-6 text-center text-muted-foreground">Carregando dados...</div>
+          )}
+
+          {!loading && rows.length === 0 && (
+            <div className="py-6 text-center text-muted-foreground">Sem dados.</div>
+          )}
+
+          {!loading && rows.length > 0 && (
+            <div className="space-y-6">
+              <div className="relative overflow-x-auto">
+                <table className="w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="sticky left-0 z-10 border-r bg-background py-2 px-2 text-left font-semibold">Index</th>
+                      <th className="sticky left-[80px] z-10 border-r bg-background py-2 px-2 text-left font-semibold">Group</th>
+                      {ALL_PTA_COLUMNS.map((t) => (
+                        <th key={t} className="py-2 px-2 whitespace-nowrap text-left font-semibold">
+                          {t.toUpperCase()}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tableDataByIndex.map((row, idx) => (
+                      <tr
+                        key={`${row.index}-${row.group}-${idx}`}
+                        className={`border-b ${row.index === "Difference" ? "bg-muted/30 font-semibold" : ""}`}
+                      >
+                        <td className="sticky left-0 z-10 border-r bg-background py-2 px-2">
+                          {row.index === "IndexA"
+                            ? getIndexDisplayLabel(indexA)
+                            : row.index === "IndexB"
+                            ? getIndexDisplayLabel(indexB)
+                            : row.index}
+                        </td>
+                        <td className="sticky left-[80px] z-10 border-r bg-background py-2 px-2">{row.group}</td>
+                        {ALL_PTA_COLUMNS.map((t) => {
+                          const val = row[t] as number | undefined;
+                          const isPositive = val && val > 0;
+                          const isDiff = row.index === "Difference";
+                          return (
+                            <td
+                              key={t}
+                              className={`whitespace-nowrap py-2 px-2 ${
+                                isDiff && isPositive ? "text-green-600" : ""
+                              }`}
+                            >
+                              {val != null ? Math.round(val) : "-"}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </ChartExportProvider>
   );
 }

@@ -13,6 +13,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from "recharts";
 import { useAGFilters } from "../store";
+import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
+import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
+import { useRegisterChart } from "@/components/pdf/useRegisterChart";
 
 type Mode = "coarse" | "full";
 
@@ -72,6 +75,9 @@ export default function Step4MediaLinear() {
   const [err, setErr] = useState<string | null>(null);
 
   const aliveRef = useRef(true);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const chartTitle = "Média Linear";
+  useRegisterChart("step4-media-linear", 4, chartTitle, cardRef);
   useEffect(() => {
     aliveRef.current = true;
     return () => {
@@ -301,12 +307,15 @@ export default function Step4MediaLinear() {
   }, [rows]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Média Linear</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-center gap-3">
+    <ChartExportProvider>
+      <BatchExportBar step={4} />
+      <Card ref={cardRef}>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle>{chartTitle}</CardTitle>
+          <SingleExportButton targetRef={cardRef} step={4} title={chartTitle} slug="MEDIA_LINEAR" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
           <Select value={mode} onValueChange={(v) => setMode(v as Mode)}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Agrupamento" />
@@ -326,75 +335,76 @@ export default function Step4MediaLinear() {
             />
             Normalizar pela média da fazenda
           </label>
-        </div>
+          </div>
 
-        <div className="flex flex-wrap gap-2">
-          {badges.map(({ key, label }) => {
-            const on = traits.includes(key);
-            return (
-              <Badge
-                key={key}
-                variant={on ? "default" : "outline"}
-                className="cursor-pointer"
-                onClick={() =>
-                  setTraits((prev) =>
-                    on ? prev.filter((i) => i !== key) : [...prev, key]
-                  )
-                }
-              >
-                {label}
-              </Badge>
-            );
-          })}
-          {badges.length === 0 && (
-            <span className="text-sm text-muted-foreground">
-              Nenhuma PTA disponível.
-            </span>
+          <div className="flex flex-wrap gap-2">
+            {badges.map(({ key, label }) => {
+              const on = traits.includes(key);
+              return (
+                <Badge
+                  key={key}
+                  variant={on ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() =>
+                    setTraits((prev) =>
+                      on ? prev.filter((i) => i !== key) : [...prev, key]
+                    )
+                  }
+                >
+                  {label}
+                </Badge>
+              );
+            })}
+            {badges.length === 0 && (
+              <span className="text-sm text-muted-foreground">
+                Nenhuma PTA disponível.
+              </span>
+            )}
+          </div>
+
+          {loading && (
+            <div className="py-6 text-center text-muted-foreground">Carregando…</div>
           )}
-        </div>
 
-        {loading && (
-          <div className="py-6 text-center text-muted-foreground">Carregando…</div>
-        )}
+          {err && (
+            <div className="py-6 text-center text-destructive">{err}</div>
+          )}
 
-        {err && (
-          <div className="py-6 text-center text-destructive">{err}</div>
-        )}
+          {!loading && !err && rows.length === 0 && (
+            <div className="py-6 text-center text-muted-foreground">Sem dados.</div>
+          )}
 
-        {!loading && !err && rows.length === 0 && (
-          <div className="py-6 text-center text-muted-foreground">Sem dados.</div>
-        )}
-
-        {!loading && !err && chartData.length > 0 && (
-          <ResponsiveContainer width="100%" height={Math.max(400, chartData.length * 25)}>
-            <BarChart
-              data={chartData}
-              layout="vertical"
-              margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                type="number"
-                domain={axisConfig.domain}
-                ticks={axisConfig.ticks}
-                tickFormatter={(value) => Number(value).toFixed(2)}
-                allowDecimals
-              />
-              <YAxis dataKey="trait" type="category" width={90} />
-              <Tooltip />
-              <Bar dataKey="avgValue" fill="hsl(var(--muted))">
-                <LabelList dataKey="avgValue" position="right" formatter={(val: number) => val.toFixed(2)} />
-                {chartData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={entry.avgValue >= 0 ? "hsl(var(--muted))" : "hsl(var(--muted-foreground))"}
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        )}
-      </CardContent>
-    </Card>
+          {!loading && !err && chartData.length > 0 && (
+            <ResponsiveContainer width="100%" height={Math.max(400, chartData.length * 25)}>
+              <BarChart
+                data={chartData}
+                layout="vertical"
+                margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  type="number"
+                  domain={axisConfig.domain}
+                  ticks={axisConfig.ticks}
+                  tickFormatter={(value) => Number(value).toFixed(2)}
+                  allowDecimals
+                />
+                <YAxis dataKey="trait" type="category" width={90} />
+                <Tooltip />
+                <Bar dataKey="avgValue" fill="hsl(var(--muted))">
+                  <LabelList dataKey="avgValue" position="right" formatter={(val: number) => val.toFixed(2)} />
+                  {chartData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={entry.avgValue >= 0 ? "hsl(var(--muted))" : "hsl(var(--muted-foreground))"}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+    </ChartExportProvider>
   );
 }

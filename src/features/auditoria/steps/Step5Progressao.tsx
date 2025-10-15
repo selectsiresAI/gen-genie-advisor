@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState, memo } from "react";
+import { useEffect, useMemo, useRef, useState, memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RefreshCw } from "lucide-react";
 import {
-  Area,
   CartesianGrid,
   ComposedChart,
   Legend,
@@ -18,6 +17,9 @@ import {
 import { PTA_CATALOG } from "@/lib/pta";
 import { useFemales } from "../hooks";
 import { useAGFilters } from "../store";
+import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
+import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
+import { useRegisterChart } from "@/components/pdf/useRegisterChart";
 
 type SeriesPoint = { year: number; n: number; mean: number };
 
@@ -237,136 +239,155 @@ const TraitCard = memo(function TraitCard({
     return buildAxisDomain(values, tickStep);
   }, [data, farmMean, showFarmMean, showTrend, tickStep, traitKey, trendResult]);
 
+  const cardRef = useRef<HTMLDivElement>(null);
+  const displayTitle = `${traitLabel} - Média Anual Por Ano De Nascimento`;
+  useRegisterChart(`step5-${traitKey}`, 5, displayTitle, cardRef);
+
   return (
-    <div className="rounded-lg border overflow-hidden bg-card">
-      <div className="border-b px-4 py-3 flex items-center justify-between">
-        <div className="font-semibold text-base">{traitLabel} - Média Anual Por Ano De Nascimento</div>
-        {showTrend && trendResult.r2 > 0 && (
-          <div className="text-xs text-muted-foreground">
-            Tendência (R²={trendResult.r2.toFixed(3)}): {slope >= 0 ? "+" : ""}{slope}/ano
-          </div>
-        )}
-      </div>
-      <div className="p-4 h-80">
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart
-            data={chartData}
-            margin={{ top: 8, right: 16, left: 16, bottom: 8 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis
-              type="number"
-              dataKey="year"
-              domain={[domainTicks[0], domainTicks[domainTicks.length - 1]]}
-              ticks={domainTicks}
-              allowDecimals={false}
-            />
-            <YAxis
-              domain={axis.domain}
-              ticks={axis.ticks}
-              tickFormatter={(value) => value.toFixed(2)}
-              allowDecimals
-            />
-            <Tooltip
-              formatter={(value: any, name: string) => {
-                if (name === "mean") return [typeof value === 'number' ? value.toFixed(2) : value, "Média anual " + traitLabel];
-                if (name === "trend") return [typeof value === 'number' ? value.toFixed(2) : value, "Tendência (R²=" + trendResult.r2.toFixed(3) + ")"];
-                if (name === "n") return [value, "N"];
-                return [value, name];
-              }}
-              labelFormatter={(label) => `Ano ${label}`}
-            />
-            <Legend />
-            
-            {/* Linha de referência no zero */}
-            <ReferenceLine
-              y={0}
-              stroke="hsl(var(--foreground))"
-              strokeWidth={2}
-              label={{
-                value: "0",
-                position: "insideLeft",
-                fill: "hsl(var(--foreground))",
-              }}
-            />
-            
-            <Line
-              type="monotone"
-              dataKey="mean"
-              name={"Média anual " + traitLabel}
-              stroke="hsl(var(--foreground))"
-              strokeWidth={2}
-              dot={(props: any) => {
-                const { cx, cy, payload } = props;
-                const isNegative = payload.mean < 0;
-                return (
-                  <circle
-                    cx={cx}
-                    cy={cy}
-                    r={5}
-                    fill={isNegative ? "#EF4444" : "#3B82F6"}
-                    stroke={isNegative ? "#EF4444" : "#3B82F6"}
-                    strokeWidth={2}
-                  />
-                );
-              }}
-            />
-            
-            {showFarmMean && (
+    <Card ref={cardRef} className="overflow-hidden">
+      <CardHeader className="flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <CardTitle className="text-base font-semibold">{displayTitle}</CardTitle>
+          {showTrend && trendResult.r2 > 0 && (
+            <div className="text-xs text-muted-foreground">
+              Tendência (R²={trendResult.r2.toFixed(3)}): {slope >= 0 ? "+" : ""}
+              {slope}/ano
+            </div>
+          )}
+        </div>
+        <SingleExportButton
+          targetRef={cardRef}
+          step={5}
+          title={displayTitle}
+          slug={`Progressao_${traitKey}`}
+        />
+      </CardHeader>
+      <CardContent className="space-y-4 p-0">
+        <div className="h-80 px-4 pt-4">
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart
+              data={chartData}
+              margin={{ top: 8, right: 16, left: 16, bottom: 8 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                type="number"
+                dataKey="year"
+                domain={[domainTicks[0], domainTicks[domainTicks.length - 1]]}
+                ticks={domainTicks}
+                allowDecimals={false}
+              />
+              <YAxis
+                domain={axis.domain}
+                ticks={axis.ticks}
+                tickFormatter={(value) => value.toFixed(2)}
+                allowDecimals
+              />
+              <Tooltip
+                formatter={(value: any, name: string) => {
+                  if (name === "mean")
+                    return [typeof value === "number" ? value.toFixed(2) : value, "Média anual " + traitLabel];
+                  if (name === "trend")
+                    return [
+                      typeof value === "number" ? value.toFixed(2) : value,
+                      "Tendência (R²=" + trendResult.r2.toFixed(3) + ")",
+                    ];
+                  if (name === "n") return [value, "N"];
+                  return [value, name];
+                }}
+                labelFormatter={(label) => `Ano ${label}`}
+              />
+              <Legend />
+
               <ReferenceLine
-                y={farmMean}
-                stroke="#F59E0B"
-                strokeDasharray="5 5"
-                strokeWidth={1.5}
+                y={0}
+                stroke="hsl(var(--foreground))"
+                strokeWidth={2}
                 label={{
-                  value: `Média geral (${farmMean.toFixed(2)})`,
-                  position: "insideTopRight",
-                  fill: "#F59E0B",
-                  fontSize: 12,
+                  value: "0",
+                  position: "insideLeft",
+                  fill: "hsl(var(--foreground))",
                 }}
               />
-            )}
-            
-            {showTrend && trendResult.trendLine.length === 2 && (
+
               <Line
-                type="linear"
-                dataKey="trend"
-                name={"Tendência (R²=" + trendResult.r2.toFixed(3) + ")"}
-                stroke="#10B981"
+                type="monotone"
+                dataKey="mean"
+                name={"Média anual " + traitLabel}
+                stroke="hsl(var(--foreground))"
                 strokeWidth={2}
-                strokeDasharray="5 5"
-                dot={false}
-                data={trendResult.trendLine as any}
+                dot={(props: any) => {
+                  const { cx, cy, payload } = props;
+                  const isNegative = payload.mean < 0;
+                  return (
+                    <circle
+                      cx={cx}
+                      cy={cy}
+                      r={5}
+                      fill={isNegative ? "#EF4444" : "#3B82F6"}
+                      stroke={isNegative ? "#EF4444" : "#3B82F6"}
+                      strokeWidth={2}
+                    />
+                  );
+                }}
               />
-            )}
-          </ComposedChart>
-        </ResponsiveContainer>
-      </div>
-      
-      <div className="border-t p-4">
-        <h4 className="text-sm font-semibold mb-2">Média Anual {traitLabel} Por Ano</h4>
-        <div className="max-h-64 overflow-auto">
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-muted">
-              <tr>
-                <th className="text-left p-2 font-semibold">year</th>
-                <th className="text-right p-2 font-semibold">mean_{traitKey}</th>
-                <th className="text-right p-2 font-semibold">n</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((row, idx) => (
-                <tr key={row.year} className={idx % 2 === 0 ? 'bg-background' : 'bg-muted/30'}>
-                  <td className="p-2">{row.year}</td>
-                  <td className="text-right p-2">{row.mean.toFixed(2)}</td>
-                  <td className="text-right p-2">{row.n}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+              {showFarmMean && (
+                <ReferenceLine
+                  y={farmMean}
+                  stroke="#F59E0B"
+                  strokeDasharray="5 5"
+                  strokeWidth={1.5}
+                  label={{
+                    value: `Média geral (${farmMean.toFixed(2)})`,
+                    position: "insideTopRight",
+                    fill: "#F59E0B",
+                    fontSize: 12,
+                  }}
+                />
+              )}
+
+              {showTrend && trendResult.trendLine.length === 2 && (
+                <Line
+                  type="linear"
+                  dataKey="trend"
+                  name={"Tendência (R²=" + trendResult.r2.toFixed(3) + ")"}
+                  stroke="#10B981"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  dot={false}
+                  data={trendResult.trendLine as any}
+                />
+              )}
+            </ComposedChart>
+          </ResponsiveContainer>
         </div>
-      </div>
-    </div>
+
+        <div className="border-t px-4 pb-4 pt-4">
+          <h4 className="mb-2 text-sm font-semibold">Média Anual {traitLabel} Por Ano</h4>
+          <div className="max-h-64 overflow-auto">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-muted">
+                <tr>
+                  <th className="p-2 text-left font-semibold">year</th>
+                  <th className="p-2 text-right font-semibold">mean_{traitKey}</th>
+                  <th className="p-2 text-right font-semibold">n</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((row, idx) => (
+                  <tr key={row.year} className={idx % 2 === 0 ? "bg-background" : "bg-muted/30"}>
+                    <td className="p-2">{row.year}</td>
+                    <td className="p-2 text-right">{row.mean.toFixed(2)}</td>
+                    <td className="p-2 text-right">{row.n}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 });
 
@@ -443,84 +464,85 @@ export default function Step5Progressao() {
     PTA_CATALOG.find((i) => i.key === key)?.label ?? key.toUpperCase();
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Progressão Genética — Seleção de PTAs</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {options.map((pta) => {
-              const active = ptasSelecionadas.includes(pta.key);
+    <ChartExportProvider>
+      <BatchExportBar step={5} />
+      <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Progressão Genética — Seleção de PTAs</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {options.map((pta) => {
+                const active = ptasSelecionadas.includes(pta.key);
+                return (
+                  <button
+                    key={pta.key}
+                    onClick={() =>
+                      setPTAs(
+                        active
+                          ? ptasSelecionadas.filter((k: string) => k !== pta.key)
+                          : [...ptasSelecionadas, pta.key]
+                      )
+                    }
+                    className={`rounded-xl border px-3 py-2 text-sm ${
+                      active ? "border-emerald-300 bg-emerald-50" : "hover:bg-gray-50"
+                    }`}
+                    title={pta.group}
+                  >
+                    {pta.label}
+                  </button>
+                );
+              })}
+              <div className="ml-auto flex items-center gap-3">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="accent-black"
+                    checked={showFarmMean}
+                    onChange={(e) => setShowFarmMean(e.target.checked)}
+                  />
+                  Mostrar média da fazenda
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="accent-black"
+                    checked={showTrend}
+                    onChange={(e) => setShowTrend(e.target.checked)}
+                  />
+                  Mostrar tendência
+                </label>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12 text-muted-foreground">
+            <RefreshCw className="mr-2 h-6 w-6 animate-spin" /> Carregando dados...
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {ptasSelecionadas.map((key) => {
+              const data = seriesByKey[key];
+              if (!data?.length) return null;
+              const label = labelOf(key);
               return (
-                <button
-                  key={pta.key}
-                  onClick={() =>
-                    setPTAs(
-                      active
-                        ? ptasSelecionadas.filter((k: string) => k !== pta.key)
-                        : [...ptasSelecionadas, pta.key]
-                    )
-                  }
-                  className={`px-3 py-2 rounded-xl border text-sm ${
-                    active
-                      ? "bg-emerald-50 border-emerald-300"
-                      : "hover:bg-gray-50"
-                  }`}
-                  title={pta.group}
-                >
-                  {pta.label}
-                </button>
+                <TraitCard
+                  key={key}
+                  traitKey={key}
+                  traitLabel={label}
+                  data={data}
+                  showFarmMean={showFarmMean}
+                  showTrend={showTrend}
+                  domainTicks={domainTicks}
+                />
               );
             })}
-            <div className="ml-auto flex items-center gap-3">
-              <label className="text-sm flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  className="accent-black"
-                  checked={showFarmMean}
-                  onChange={(e) => setShowFarmMean(e.target.checked)}
-                />
-                Mostrar média da fazenda
-              </label>
-              <label className="text-sm flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  className="accent-black"
-                  checked={showTrend}
-                  onChange={(e) => setShowTrend(e.target.checked)}
-                />
-                Mostrar tendência
-              </label>
-            </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {isLoading ? (
-        <div className="flex items-center justify-center py-12 text-muted-foreground">
-          <RefreshCw className="w-6 h-6 animate-spin mr-2" /> Carregando dados...
-        </div>
-      ) : (
-        <div className="grid md:grid-cols-2 gap-4">
-          {ptasSelecionadas.map((key) => {
-            const data = seriesByKey[key];
-            if (!data?.length) return null;
-            const label = labelOf(key);
-            return (
-              <TraitCard
-                key={key}
-                traitKey={key}
-                traitLabel={label}
-                data={data}
-                showFarmMean={showFarmMean}
-                showTrend={showTrend}
-                domainTicks={domainTicks}
-              />
-            );
-          })}
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </ChartExportProvider>
   );
 }
