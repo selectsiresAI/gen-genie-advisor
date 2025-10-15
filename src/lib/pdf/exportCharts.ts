@@ -29,6 +29,7 @@ async function captureElement(el: HTMLElement, targetWidthPx: number) {
     useCORS: true,
     backgroundColor: "#ffffff",
     logging: false,
+    ignoreElements: (element) => element.classList?.contains("pdf-ignore") ?? false,
   });
   return canvas;
 }

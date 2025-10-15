@@ -48,7 +48,7 @@ const getIndexDisplayLabel = (value: string) => {
   return option?.label ?? value.toUpperCase();
 };
 
-export default function Step7QuartisIndices() {
+function Step7QuartisIndicesContent() {
   const { farmId } = useAGFilters();
   const [indexA, setIndexA] = useState("hhp_dollar");
   const [indexB, setIndexB] = useState("nm_dollar");
@@ -121,106 +121,112 @@ export default function Step7QuartisIndices() {
   }, [rows]);
 
   return (
+    <Card ref={cardRef}>
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <CardTitle>Quartis — Índices (A vs B)</CardTitle>
+        <SingleExportButton targetRef={cardRef} step={7} title={chartTitle} slug="Quartis_Indices" />
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <Select value={indexA} onValueChange={setIndexA}>
+            <SelectTrigger className="w-56">
+              <SelectValue placeholder="Índice A" />
+            </SelectTrigger>
+            <SelectContent>
+              {INDEX_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={indexB} onValueChange={setIndexB}>
+            <SelectTrigger className="w-56">
+              <SelectValue placeholder="Índice B" />
+            </SelectTrigger>
+            <SelectContent>
+              {INDEX_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            Atualizar
+          </Button>
+        </div>
+
+        {loading && (
+          <div className="py-6 text-center text-muted-foreground">Carregando dados...</div>
+        )}
+
+        {!loading && rows.length === 0 && (
+          <div className="py-6 text-center text-muted-foreground">Sem dados.</div>
+        )}
+
+        {!loading && rows.length > 0 && (
+          <div className="space-y-6">
+            <div className="relative overflow-x-auto">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="sticky left-0 z-10 border-r bg-background py-2 px-2 text-left font-semibold">Index</th>
+                    <th className="sticky left-[80px] z-10 border-r bg-background py-2 px-2 text-left font-semibold">Group</th>
+                    {ALL_PTA_COLUMNS.map((t) => (
+                      <th key={t} className="py-2 px-2 whitespace-nowrap text-left font-semibold">
+                        {t.toUpperCase()}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {tableDataByIndex.map((row, idx) => (
+                    <tr
+                      key={`${row.index}-${row.group}-${idx}`}
+                      className={`border-b ${row.index === "Difference" ? "bg-muted/30 font-semibold" : ""}`}
+                    >
+                      <td className="sticky left-0 z-10 border-r bg-background py-2 px-2">
+                        {row.index === "IndexA"
+                          ? getIndexDisplayLabel(indexA)
+                          : row.index === "IndexB"
+                          ? getIndexDisplayLabel(indexB)
+                          : row.index}
+                      </td>
+                      <td className="sticky left-[80px] z-10 border-r bg-background py-2 px-2">{row.group}</td>
+                      {ALL_PTA_COLUMNS.map((t) => {
+                        const val = row[t] as number | undefined;
+                        const isPositive = val && val > 0;
+                        const isDiff = row.index === "Difference";
+                        return (
+                          <td
+                            key={t}
+                            className={`whitespace-nowrap py-2 px-2 ${
+                              isDiff && isPositive ? "text-green-600" : ""
+                            }`}
+                          >
+                            {val != null ? Math.round(val) : "-"}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function Step7QuartisIndices() {
+  return (
     <ChartExportProvider>
       <BatchExportBar step={7} />
-      <Card ref={cardRef}>
-        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle>Quartis — Índices (A vs B)</CardTitle>
-          <SingleExportButton targetRef={cardRef} step={7} title={chartTitle} slug="Quartis_Indices" />
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <Select value={indexA} onValueChange={setIndexA}>
-              <SelectTrigger className="w-56">
-                <SelectValue placeholder="Índice A" />
-              </SelectTrigger>
-              <SelectContent>
-                {INDEX_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={indexB} onValueChange={setIndexB}>
-              <SelectTrigger className="w-56">
-                <SelectValue placeholder="Índice B" />
-              </SelectTrigger>
-              <SelectContent>
-                {INDEX_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button variant="outline" size="sm" onClick={load} disabled={loading}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              Atualizar
-            </Button>
-          </div>
-
-          {loading && (
-            <div className="py-6 text-center text-muted-foreground">Carregando dados...</div>
-          )}
-
-          {!loading && rows.length === 0 && (
-            <div className="py-6 text-center text-muted-foreground">Sem dados.</div>
-          )}
-
-          {!loading && rows.length > 0 && (
-            <div className="space-y-6">
-              <div className="relative overflow-x-auto">
-                <table className="w-full border-collapse text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="sticky left-0 z-10 border-r bg-background py-2 px-2 text-left font-semibold">Index</th>
-                      <th className="sticky left-[80px] z-10 border-r bg-background py-2 px-2 text-left font-semibold">Group</th>
-                      {ALL_PTA_COLUMNS.map((t) => (
-                        <th key={t} className="py-2 px-2 whitespace-nowrap text-left font-semibold">
-                          {t.toUpperCase()}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tableDataByIndex.map((row, idx) => (
-                      <tr
-                        key={`${row.index}-${row.group}-${idx}`}
-                        className={`border-b ${row.index === "Difference" ? "bg-muted/30 font-semibold" : ""}`}
-                      >
-                        <td className="sticky left-0 z-10 border-r bg-background py-2 px-2">
-                          {row.index === "IndexA"
-                            ? getIndexDisplayLabel(indexA)
-                            : row.index === "IndexB"
-                            ? getIndexDisplayLabel(indexB)
-                            : row.index}
-                        </td>
-                        <td className="sticky left-[80px] z-10 border-r bg-background py-2 px-2">{row.group}</td>
-                        {ALL_PTA_COLUMNS.map((t) => {
-                          const val = row[t] as number | undefined;
-                          const isPositive = val && val > 0;
-                          const isDiff = row.index === "Difference";
-                          return (
-                            <td
-                              key={t}
-                              className={`whitespace-nowrap py-2 px-2 ${
-                                isDiff && isPositive ? "text-green-600" : ""
-                              }`}
-                            >
-                              {val != null ? Math.round(val) : "-"}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <Step7QuartisIndicesContent />
     </ChartExportProvider>
   );
 }

@@ -33,8 +33,10 @@ export function SingleExportButton({
 
   return (
     <Button
-      variant="default"
-      className="bg-[#ED1C24] hover:opacity-90 text-white"
+      type="button"
+      size="sm"
+      variant="outline"
+      className="pdf-ignore h-8 px-3 text-xs font-medium border-[#ED1C24] text-[#ED1C24] hover:bg-[#ED1C24]/10"
       onClick={async () => {
         if (!targetRef.current) return;
         await exportSingleChartToPDF(targetRef.current, {

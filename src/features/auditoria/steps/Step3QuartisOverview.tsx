@@ -33,7 +33,7 @@ function safeCols(keys: string[]) {
   );
 }
 
-export default function Step3QuartisOverview() {
+function Step3QuartisOverviewContent() {
   const { farmId } = useAGFilters();
   const quartisCardRef = useRef<HTMLDivElement>(null);
   const chartTitle = "Quartis – Top 25% vs Bottom 25%";
@@ -166,100 +166,106 @@ export default function Step3QuartisOverview() {
   }, [farmId]); // recarrega ao trocar o rebanho
 
   return (
-    <ChartExportProvider>
-      <BatchExportBar step={3} />
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
-        {/* Box de seleção de PTAs */}
-        <Card className="xl:col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Selecionar características</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={selectAll}>
-                Selecionar todas
-              </Button>
-              <Button size="sm" variant="outline" onClick={clearAll}>
-                Limpar
-              </Button>
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
+      {/* Box de seleção de PTAs */}
+      <Card className="xl:col-span-1">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Selecionar características</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={selectAll}>
+              Selecionar todas
+            </Button>
+            <Button size="sm" variant="outline" onClick={clearAll}>
+              Limpar
+            </Button>
+          </div>
+          <ScrollArea className="h-64 rounded border p-2">
+            <div className="space-y-2">
+              {allTraits.map((k) => {
+                const label = labelOf(k);
+                const checked = selected.includes(k);
+                return (
+                  <label key={k} className="flex cursor-pointer items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={(v) => toggleTrait(k, Boolean(v))}
+                    />
+                    <span className="truncate" title={k}>{label}</span>
+                  </label>
+                );
+              })}
             </div>
-            <ScrollArea className="h-64 rounded border p-2">
-              <div className="space-y-2">
-                {allTraits.map((k) => {
-                  const label = labelOf(k);
-                  const checked = selected.includes(k);
+          </ScrollArea>
+
+          <Button onClick={loadData} disabled={isLoading}>
+            {isLoading ? "Calculando..." : "Atualizar"}
+          </Button>
+
+          {errorMsg && <div className="text-sm text-red-600">{errorMsg}</div>}
+        </CardContent>
+      </Card>
+
+      {/* Tabela com as médias */}
+      <Card ref={quartisCardRef} className="xl:col-span-3">
+        <CardHeader className="flex flex-col gap-3 pb-2 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle className="text-base">{chartTitle}</CardTitle>
+          <SingleExportButton
+            targetRef={quartisCardRef}
+            step={3}
+            title={chartTitle}
+            slug="QUARTIS_TOP_BOTTOM"
+          />
+        </CardHeader>
+        <CardContent>
+          <div className="w-full overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left border-b">
+                  <th className="py-2 pr-3">PTA</th>
+                  <th className="py-2 pr-3">N total</th>
+                  <th className="py-2 pr-3">Top 25% (N)</th>
+                  <th className="py-2 pr-3">Média Top 25%</th>
+                  <th className="py-2 pr-3">Bottom 25% (N)</th>
+                  <th className="py-2 pr-3">Média Bottom 25%</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => {
+                  const label = labelOf(r.trait_key);
                   return (
-                    <label key={k} className="flex cursor-pointer items-center gap-2 text-sm">
-                      <Checkbox
-                        checked={checked}
-                        onCheckedChange={(v) => toggleTrait(k, Boolean(v))}
-                      />
-                      <span className="truncate" title={k}>{label}</span>
-                    </label>
+                    <tr key={r.trait_key} className="border-b last:border-0">
+                      <td className="py-2 pr-3">{label}</td>
+                      <td className="py-2 pr-3">{r.n_total}</td>
+                      <td className="py-2 pr-3">{r.top_n}</td>
+                      <td className="py-2 pr-3">{r.top_mean != null ? r.top_mean.toFixed(2) : "—"}</td>
+                      <td className="py-2 pr-3">{r.bottom_n}</td>
+                      <td className="py-2 pr-3">{r.bottom_mean != null ? r.bottom_mean.toFixed(2) : "—"}</td>
+                    </tr>
                   );
                 })}
-              </div>
-            </ScrollArea>
-
-            <Button onClick={loadData} disabled={isLoading}>
-              {isLoading ? "Calculando..." : "Atualizar"}
-            </Button>
-
-            {errorMsg && <div className="text-sm text-red-600">{errorMsg}</div>}
-          </CardContent>
-        </Card>
-
-        {/* Tabela com as médias */}
-        <Card ref={quartisCardRef} className="xl:col-span-3">
-          <CardHeader className="flex flex-col gap-3 pb-2 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-base">{chartTitle}</CardTitle>
-            <SingleExportButton
-              targetRef={quartisCardRef}
-              step={3}
-              title={chartTitle}
-              slug="QUARTIS_TOP_BOTTOM"
-            />
-          </CardHeader>
-          <CardContent>
-            <div className="w-full overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left border-b">
-                    <th className="py-2 pr-3">PTA</th>
-                    <th className="py-2 pr-3">N total</th>
-                    <th className="py-2 pr-3">Top 25% (N)</th>
-                    <th className="py-2 pr-3">Média Top 25%</th>
-                    <th className="py-2 pr-3">Bottom 25% (N)</th>
-                    <th className="py-2 pr-3">Média Bottom 25%</th>
+                {rows.length === 0 && !errorMsg && (
+                  <tr>
+                    <td colSpan={6} className="py-6 text-muted-foreground">
+                      Selecione características e clique em “Atualizar”.
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => {
-                    const label = labelOf(r.trait_key);
-                    return (
-                      <tr key={r.trait_key} className="border-b last:border-0">
-                        <td className="py-2 pr-3">{label}</td>
-                        <td className="py-2 pr-3">{r.n_total}</td>
-                        <td className="py-2 pr-3">{r.top_n}</td>
-                        <td className="py-2 pr-3">{r.top_mean != null ? r.top_mean.toFixed(2) : "—"}</td>
-                        <td className="py-2 pr-3">{r.bottom_n}</td>
-                        <td className="py-2 pr-3">{r.bottom_mean != null ? r.bottom_mean.toFixed(2) : "—"}</td>
-                      </tr>
-                    );
-                  })}
-                  {rows.length === 0 && !errorMsg && (
-                    <tr>
-                      <td colSpan={6} className="py-6 text-muted-foreground">
-                        Selecione características e clique em “Atualizar”.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+export default function Step3QuartisOverview() {
+  return (
+    <ChartExportProvider>
+      <BatchExportBar step={3} />
+      <Step3QuartisOverviewContent />
     </ChartExportProvider>
   );
 }

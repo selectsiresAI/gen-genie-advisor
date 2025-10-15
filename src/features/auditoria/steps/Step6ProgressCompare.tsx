@@ -1,8 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
+import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
+import { useRegisterChart } from "@/components/pdf/useRegisterChart";
 import { Badge } from "@/components/ui/badge";
 import {
   RadarChart,
@@ -107,6 +110,15 @@ function toNumber(x: any): number | null {
   if (x == null) return null;
   const v = Number(String(x).replace(",", "."));
   return Number.isFinite(v) ? v : null;
+}
+
+export default function Step6ProgressCompare() {
+  return (
+    <ChartExportProvider>
+      <BatchExportBar step={5} />
+      <Step6ProgressCompareContent />
+    </ChartExportProvider>
+  );
 }
 
 function resolveTraitValue(row: any, canonical: string): number | null {
@@ -286,7 +298,7 @@ function RadarTooltip(props: any) {
 type MeansByCategory = Record<string, Record<string, number | null>>;
 
 /* ================== Componente ================== */
-export default function Step6ProgressCompare() {
+function Step6ProgressCompareContent() {
   const { farmId } = useAGFilters();
 
   const [loading, setLoading] = useState(false);
@@ -305,6 +317,10 @@ export default function Step6ProgressCompare() {
 
   const [tableTraits, setTableTraits] = useState<string[]>(DEFAULT_TABLE_TRAITS);
   const [chartTraits, setChartTraits] = useState<string[]>(DEFAULT_CHART_TRAITS);
+
+  const cardRef = useRef<HTMLDivElement>(null);
+  const chartTitle = "Comparação por Categoria (Step 5)";
+  useRegisterChart("step5-comparacao-categorias", 5, chartTitle, cardRef);
 
   const fetchData = useCallback(async () => {
     if (!farmId) {
@@ -555,9 +571,15 @@ export default function Step6ProgressCompare() {
   );
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Comparação por Categoria (Step 5)</CardTitle>
+    <Card ref={cardRef}>
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <CardTitle>{chartTitle}</CardTitle>
+        <SingleExportButton
+          targetRef={cardRef}
+          step={5}
+          title={chartTitle}
+          slug="Comparacao_Categorias"
+        />
       </CardHeader>
 
       <CardContent className="space-y-6">
