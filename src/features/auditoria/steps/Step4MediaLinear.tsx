@@ -30,7 +30,9 @@ const DEFAULT_TRAITS = [
 
 const DEFAULT_TICK_STEP = 0.5;
 const TRAIT_TICK_STEPS: Record<string, number> = {
-  scs: 0.3,
+  scs: 0.03,
+  ptaf_pct: 0.03,
+  ptap_pct: 0.03,
 };
 
 export default function Step4MediaLinear() {
