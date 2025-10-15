@@ -75,8 +75,8 @@ function HistogramCard({ step, series }: { step: number; series: TraitSeries }) 
   useRegisterChart(`step${step}-distribuicao-${series.traitKey}`, step, `${series.label} (n=${series.total})`, cardRef);
 
   return (
-    <Card ref={cardRef} className="h-64">
-      <CardHeader className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
+    <Card ref={cardRef} className="mx-auto flex w-full max-w-3xl flex-col">
+      <CardHeader className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle className="text-base">
           {title} <span className="text-xs text-muted-foreground">(n={series.total})</span>
         </CardTitle>
@@ -87,16 +87,18 @@ function HistogramCard({ step, series }: { step: number; series: TraitSeries }) 
           slug={`Distribuicao_${series.traitKey}`}
         />
       </CardHeader>
-      <CardContent className="h-[200px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={series.data}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="bin" tick={{ fontSize: 10 }} interval={3} />
-            <YAxis allowDecimals={false} />
-            <Tooltip />
-            <Bar dataKey="n" />
-          </BarChart>
-        </ResponsiveContainer>
+      <CardContent className="flex-1 px-4 pb-4">
+        <div className="h-48 sm:h-56">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={series.data}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="bin" tick={{ fontSize: 10 }} interval={3} />
+              <YAxis allowDecimals={false} />
+              <Tooltip />
+              <Bar dataKey="n" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   );

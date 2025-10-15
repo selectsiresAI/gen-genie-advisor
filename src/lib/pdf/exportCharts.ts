@@ -21,17 +21,49 @@ function getElementWidth(el: HTMLElement) {
   return el.clientWidth || rect.width || 1;
 }
 
+const IGNORE_CLASSES = new Set([
+  "pdf-ignore",
+  "recharts-tooltip-wrapper",
+]);
+
 async function captureElement(el: HTMLElement, targetWidthPx: number) {
   const width = getElementWidth(el);
   const scale = width > 0 ? Math.min(2, targetWidthPx / width) : 1;
-  const canvas = await html2canvas(el, {
-    scale: Number.isFinite(scale) && scale > 0 ? scale : 1,
-    useCORS: true,
-    backgroundColor: "#ffffff",
-    logging: false,
-    ignoreElements: (element) => element.classList?.contains("pdf-ignore") ?? false,
-  });
-  return canvas;
+  const hiddenTooltips: Array<{ element: HTMLElement; display: string | null }> = [];
+
+  if (typeof document !== "undefined") {
+    const tooltips = document.querySelectorAll<HTMLElement>(".recharts-tooltip-wrapper");
+    tooltips.forEach((tooltip) => {
+      hiddenTooltips.push({ element: tooltip, display: tooltip.style.display || null });
+      tooltip.dataset.pdfIgnore = "true";
+      tooltip.style.display = "none";
+    });
+  }
+
+  try {
+    const canvas = await html2canvas(el, {
+      scale: Number.isFinite(scale) && scale > 0 ? scale : 1,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+      logging: false,
+      ignoreElements: (element) => {
+        if (!(element instanceof HTMLElement)) return false;
+        if (element.dataset?.pdfIgnore === "true") return true;
+        const { classList } = element;
+        if (!classList) return false;
+        return Array.from(classList).some((cls) => IGNORE_CLASSES.has(cls));
+      },
+    });
+    return canvas;
+  } finally {
+    hiddenTooltips.forEach(({ element, display }) => {
+      if (display !== null) element.style.display = display;
+      else element.style.removeProperty("display");
+      if (element.dataset?.pdfIgnore === "true") {
+        delete element.dataset.pdfIgnore;
+      }
+    });
+  }
 }
 
 export async function exportSingleChartToPDF(el: HTMLElement, opts: ExportOptions) {

@@ -6,7 +6,6 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
 import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
 import { useRegisterChart } from "@/components/pdf/useRegisterChart";
-import { Badge } from "@/components/ui/badge";
 import {
   RadarChart,
   PolarGrid,
@@ -278,8 +277,8 @@ function writeCategoriesToLS(farmId: string | number, pairs: Array<{ id: string;
   window.localStorage.setItem(prefKey(farmId), JSON.stringify(obj));
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // Tooltip do radar exibindo os valores BRUTOS (não normalizados)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function RadarTooltip(props: any) {
   const { active, payload, label, groupA, groupB } = props;
   if (!active || !payload?.length) return null;
@@ -292,8 +291,6 @@ function RadarTooltip(props: any) {
     </div>
   );
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
-
 /* ================== Tipos ================== */
 type MeansByCategory = Record<string, Record<string, number | null>>;
 
@@ -310,13 +307,10 @@ function Step6ProgressCompareContent() {
   const [lsPairsApplied, setLsPairsApplied] = useState(0);
 
   const [rows, setRows] = useState<any[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
 
   const [groupA, setGroupA] = useState<string>("Novilha");
   const [groupB, setGroupB] = useState<string>("Primípara");
 
-  const [tableTraits, setTableTraits] = useState<string[]>(DEFAULT_TABLE_TRAITS);
-  const [chartTraits, setChartTraits] = useState<string[]>(DEFAULT_CHART_TRAITS);
 
   const cardRef = useRef<HTMLDivElement>(null);
   const chartTitle = "Comparação por Categoria (Step 5)";
@@ -324,8 +318,13 @@ function Step6ProgressCompareContent() {
 
   const fetchData = useCallback(async () => {
     if (!farmId) {
-      setRows([]); setCategories([]); setSourceTable(""); setCategoryCol(""); setIdCol("");
-      setUsedLocalStorage(false); setLsKeysScanned(0); setLsPairsApplied(0);
+      setRows([]);
+      setSourceTable("");
+      setCategoryCol("");
+      setIdCol("");
+      setUsedLocalStorage(false);
+      setLsKeysScanned(0);
+      setLsPairsApplied(0);
       return;
     }
     setLoading(true);
@@ -453,7 +452,6 @@ function Step6ProgressCompareContent() {
       ...AGE_VALUES.filter((c) => cats.includes(c)),
       ...cats.filter((c) => !AGE_VALUES.includes(c as any)),
     ];
-    setCategories(ordered);
 
     if (!ordered.includes(groupA) || !ordered.includes(groupB)) {
       setGroupA(ordered[0] || "Grupo A");
@@ -493,14 +491,30 @@ function Step6ProgressCompareContent() {
     return out;
   }, [rows, categoryCol]);
 
+  const presentPTAs = useMemo(
+    () =>
+      ALL_PTA_KEYS.filter((key) =>
+        Object.values(meansByCategory).some((group) => group && group[key] != null)
+      ),
+    [meansByCategory]
+  );
+
+  const tableTraits = useMemo(() => {
+    const defaults = DEFAULT_TABLE_TRAITS.filter((key) => presentPTAs.includes(key));
+    if (defaults.length > 0) return defaults;
+    return presentPTAs.slice(0, Math.min(6, presentPTAs.length));
+  }, [presentPTAs]);
+
+  const chartTraits = useMemo(() => {
+    const defaults = DEFAULT_CHART_TRAITS.filter((key) => presentPTAs.includes(key));
+    if (defaults.length > 0) return defaults;
+    return presentPTAs.slice(0, Math.min(8, presentPTAs.length));
+  }, [presentPTAs]);
+
   /* ------------------- Tabela + Radar normalizado ------------------- */
   const view = useMemo(() => {
     const A = meansByCategory[groupA] || {};
     const B = meansByCategory[groupB] || {};
-
-    const presentPTAs = ALL_PTA_KEYS.filter((k) =>
-      Object.values(meansByCategory).some((m) => m && m[k] != null)
-    );
 
     const tTraits = tableTraits.filter((k) => presentPTAs.includes(k));
     const cTraits = chartTraits.filter((k) => presentPTAs.includes(k));
@@ -539,36 +553,7 @@ function Step6ProgressCompareContent() {
     });
 
     return { table, radar, presentPTAs };
-  }, [meansByCategory, groupA, groupB, tableTraits, chartTraits]);
-
-  /* -------- UI helpers -------- */
-  const traitBadges = (
-    source: string[],
-    setSource: (updater: (prev: string[]) => string[]) => void
-  ) => (
-    <div className="flex flex-wrap gap-2">
-      {ALL_PTA_KEYS
-        .map((key) => ({ key, label: PTA_LABELS[key] || key.toUpperCase() }))
-        .sort((a, b) => a.label.localeCompare(b.label))
-        .map(({ key, label }) => {
-          const on = source.includes(key);
-          const enabled = view.presentPTAs.includes(key);
-          return (
-            <Badge
-              key={key}
-              variant={on ? "default" : "outline"}
-              className={`cursor-pointer ${enabled ? "" : "opacity-40 pointer-events-none"}`}
-              onClick={() =>
-                enabled &&
-                setSource((prev) => (on ? prev.filter((t) => t !== key) : [...prev, key]))
-              }
-            >
-              {label}
-            </Badge>
-          );
-        })}
-    </div>
-  );
+  }, [meansByCategory, groupA, groupB, tableTraits, chartTraits, presentPTAs]);
 
   return (
     <Card ref={cardRef}>
@@ -583,59 +568,24 @@ function Step6ProgressCompareContent() {
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {/* DEBUG */}
-        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-          <span>Fonte: <b>{sourceTable || "—"}</b></span>
-          <span>Categoria: <b>{categoryCol || "—"}</b></span>
-          <span>ID: <b>{idCol || "—"}</b></span>
-          <span>Registros: <b>{rows.length}</b></span>
-          <span>
-            LocalStorage: <b>{usedLocalStorage ? `sim (${lsPairsApplied} / ${lsKeysScanned})` : "não"}</b>
-          </span>
-          <span>
-            PTAs com dados:&nbsp;
-            <b>
-              {view.presentPTAs.length
-                ? view.presentPTAs.map((k) => PTA_LABELS[k] ?? k).join(", ")
-                : "—"}
-            </b>
-          </span>
-        </div>
-
-        {/* Atalhos: A vs B */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium">Atalhos:</span>
-          {categories.map((c) => (
-            <Badge
-              key={`ga-${c}`}
-              variant={groupA === c ? "default" : "outline"}
-              className="cursor-pointer"
-              onClick={() => setGroupA(c)}
-            >
-              {c}
-            </Badge>
-          ))}
-          <span className="mx-2 uppercase tracking-wide text-xs text-muted-foreground">VS</span>
-          {categories.map((c) => (
-            <Badge
-              key={`gb-${c}`}
-              variant={groupB === c ? "default" : "outline"}
-              className="cursor-pointer"
-              onClick={() => setGroupB(c)}
-            >
-              {c}
-            </Badge>
-          ))}
-        </div>
-
-        {/* Seletores de PTAs */}
-        <div className="space-y-2">
-          <div className="text-sm font-semibold">PTAs para Tabela:</div>
-          {traitBadges(tableTraits, (fn) => setTableTraits(fn))}
-        </div>
-        <div className="space-y-2">
-          <div className="text-sm font-semibold">PTAs para Gráfico:</div>
-          {traitBadges(chartTraits, (fn) => setChartTraits(fn))}
+        <div className="rounded-lg border bg-muted/20 p-4">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+            <span>Fonte: <b>{sourceTable || "—"}</b></span>
+            <span>Categoria: <b>{categoryCol || "—"}</b></span>
+            <span>ID: <b>{idCol || "—"}</b></span>
+            <span>Registros: <b>{rows.length}</b></span>
+            <span>
+              LocalStorage: <b>{usedLocalStorage ? `sim (${lsPairsApplied} / ${lsKeysScanned})` : "não"}</b>
+            </span>
+            <span>
+              PTAs com dados:&nbsp;
+              <b>
+                {presentPTAs.length
+                  ? presentPTAs.map((k) => PTA_LABELS[k] ?? k).join(", ")
+                  : "—"}
+              </b>
+            </span>
+          </div>
         </div>
 
         {loading && <div className="py-6 text-center text-muted-foreground">Carregando dados…</div>}
@@ -647,84 +597,94 @@ function Step6ProgressCompareContent() {
         )}
 
         {!loading && rows.length > 0 && categoryCol && (
-          <div className="space-y-8">
-            {/* Tabela */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="border-b">
-                    <th className="py-2 px-2 text-left font-semibold">Group</th>
-                    {tableTraits
-                      .filter((k) => view.presentPTAs.includes(k))
-                      .map((t) => (
-                        <th key={`th-${t}`} className="py-2 px-2 text-left font-semibold">
+          <div className="space-y-6">
+            <div className="text-sm font-semibold text-muted-foreground">
+              Comparação {groupA} vs {groupB}
+            </div>
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+              <div className="overflow-x-auto rounded-lg border bg-background">
+                <table className="w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/30">
+                      <th className="py-2 px-3 text-left font-semibold">Grupo</th>
+                      {tableTraits.map((t) => (
+                        <th key={`th-${t}`} className="py-2 px-3 text-left font-semibold">
                           {(PTA_LABELS[t] ?? t).toUpperCase()}
                         </th>
                       ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {view.table.rows.map((r: any, idx: number) => (
-                    <tr key={`row-${idx}-${r.label}`} className={`border-b ${idx === 2 ? "bg-muted/30" : ""}`}>
-                      <td className="py-2 px-2 font-medium">{r.label}</td>
-                      {tableTraits
-                        .filter((k) => view.presentPTAs.includes(k))
-                        .map((t) => {
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {view.table.rows.map((r: any, idx: number) => (
+                      <tr
+                        key={`row-${idx}-${r.label}`}
+                        className={`border-b ${idx === 2 ? "bg-muted/20" : ""}`}
+                      >
+                        <td className="py-2 px-3 font-medium">{r.label}</td>
+                        {tableTraits.map((t) => {
                           const val = r[t] as number | null | undefined;
                           const isChange = idx === 2;
                           const isPos = (val ?? 0) > 0;
                           return (
-                            <td key={`td-${t}`} className={`py-2 px-2 ${isChange ? (isPos ? "text-green-600" : "text-red-600") : ""}`}>
+                            <td
+                              key={`td-${t}`}
+                              className={`py-2 px-3 ${
+                                isChange ? (isPos ? "text-green-600" : "text-red-600") : ""
+                              }`}
+                            >
                               {val == null ? "-" : Number(val).toFixed(2)}
                             </td>
                           );
                         })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Radar normalizado */}
-            {view.radar.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold mb-2">Rate of Change</h4>
-                <ResponsiveContainer width="100%" height={420}>
-                  <RadarChart data={view.radar} startAngle={90} endAngle={-270}>
-                    <PolarGrid gridType="circle" />
-                    <PolarAngleAxis dataKey="trait" tick={{ fontSize: 12 }} />
-                    <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
-
-                    {/* FAIXAS 100/75/50/25 */}
-                    <Radar dataKey="band100" stroke="none" fill="hsl(var(--muted-foreground))" fillOpacity={0.16} isAnimationActive={false} />
-                    <Radar dataKey="band75"  stroke="none" fill="hsl(var(--muted-foreground))" fillOpacity={0.12} isAnimationActive={false} />
-                    <Radar dataKey="band50"  stroke="none" fill="hsl(var(--muted-foreground))" fillOpacity={0.09} isAnimationActive={false} />
-                    <Radar dataKey="band25"  stroke="none" fill="hsl(var(--muted-foreground))" fillOpacity={0.06} isAnimationActive={false} />
-
-                    <Radar
-                      name={groupA}
-                      dataKey="Group A"
-                      stroke="hsl(var(--primary))"
-                      strokeWidth={2.5}
-                      fill="hsl(var(--primary))"
-                      fillOpacity={0.22}
-                    />
-                    <Radar
-                      name={groupB}
-                      dataKey="Group B"
-                      stroke="hsl(var(--muted-foreground))"
-                      strokeWidth={3}
-                      strokeDasharray="6 6"
-                      fill="hsl(var(--muted-foreground))"
-                      fillOpacity={0.14}
-                    />
-
-                    <Legend />
-                    <Tooltip content={(props) => <RadarTooltip {...props} groupA={groupA} groupB={groupB} />} />
-                  </RadarChart>
-                </ResponsiveContainer>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            )}
+
+              {view.radar.length > 0 && (
+                <div className="flex flex-col rounded-lg border bg-background p-4">
+                  <h4 className="text-sm font-semibold text-muted-foreground">
+                    Rate of Change ({groupA} vs {groupB})
+                  </h4>
+                  <div className="mt-4 h-[320px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadarChart data={view.radar} startAngle={90} endAngle={-270}>
+                        <PolarGrid gridType="circle" />
+                        <PolarAngleAxis dataKey="trait" tick={{ fontSize: 12 }} />
+                        <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
+
+                        <Radar dataKey="band100" stroke="none" fill="hsl(var(--muted-foreground))" fillOpacity={0.16} isAnimationActive={false} />
+                        <Radar dataKey="band75" stroke="none" fill="hsl(var(--muted-foreground))" fillOpacity={0.12} isAnimationActive={false} />
+                        <Radar dataKey="band50" stroke="none" fill="hsl(var(--muted-foreground))" fillOpacity={0.09} isAnimationActive={false} />
+                        <Radar dataKey="band25" stroke="none" fill="hsl(var(--muted-foreground))" fillOpacity={0.06} isAnimationActive={false} />
+
+                        <Radar
+                          name={groupA}
+                          dataKey="Group A"
+                          stroke="hsl(var(--primary))"
+                          strokeWidth={2.5}
+                          fill="hsl(var(--primary))"
+                          fillOpacity={0.22}
+                        />
+                        <Radar
+                          name={groupB}
+                          dataKey="Group B"
+                          stroke="hsl(var(--muted-foreground))"
+                          strokeWidth={3}
+                          strokeDasharray="6 6"
+                          fill="hsl(var(--muted-foreground))"
+                          fillOpacity={0.14}
+                        />
+
+                        <Legend />
+                        <Tooltip content={(props) => <RadarTooltip {...props} groupA={groupA} groupB={groupB} />} />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </CardContent>
