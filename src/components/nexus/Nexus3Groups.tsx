@@ -188,7 +188,7 @@ export default function Nexus3Groups() {
     }
   };
 
-  const renderChartTooltip = (props: TooltipProps<number, string>) => {
+  const renderChartTooltip = (props: any) => {
     const { active, payload, label } = props;
     if (!active || !payload || !payload.length) return null;
     const mom = payload.find((item) => item.dataKey === "mothers_avg")?.value;

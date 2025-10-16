@@ -245,11 +245,11 @@ const HerdPage: React.FC<HerdPageProps> = ({
       case 'cdcb_identifier':
         return female.cdcb_id || female.identifier || '';
       case 'sire_naab':
-        return female.sire_naab || female.sire_name || '';
+        return female.sire_naab || '';
       case 'mgs_naab':
-        return female.mgs_naab || female.mgs_name || '';
+        return female.mgs_naab || '';
       case 'mmgs_naab':
-        return female.mmgs_naab || female.mmgs_name || '';
+        return female.mmgs_naab || '';
       case 'birth_date':
         return female.birth_date ? new Date(female.birth_date).getTime() : null;
       case 'parity_order':
@@ -415,7 +415,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
             <h1 className="text-xl font-semibold">{farm.farm_name} - Rebanho</h1>
           </div>
           <div className="ml-auto flex items-center gap-3">
-            {onNavigateToCharts}
+            {typeof onNavigateToCharts === 'function' ? null : onNavigateToCharts}
             <TutorialButtons slug="rebanho" />
           </div>
         </div>
@@ -691,7 +691,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
                             </td>
                             {ANIMAL_METRIC_COLUMNS.map(column => (
                               <td key={column.key} className="border px-3 py-2 text-xs whitespace-nowrap">
-                                {formatMetricValue(female, column.key)}
+                                {formatMetricValue(female, column.key) as React.ReactNode}
                               </td>
                             ))}
                             </tr>;

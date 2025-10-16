@@ -516,7 +516,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
       case 'score':
         return bull.score ?? null;
       default:
-        return (bull as Record<string, unknown>)[column] ?? '';
+        return (bull as any)[column] ?? '';
     }
   }, []);
 
@@ -526,8 +526,8 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
     requestSort: handleSortBulls
   } = useAnimalTableSort(filteredBulls, getBullSortValue, { column: 'score', direction: 'desc' });
   const totalWeight = Object.values(weights).reduce((sum, weight) => sum + weight, 0);
-  const formatBullMetricValue = (bull: Bull, key: string) => {
-    const rawValue = (bull as Record<string, unknown>)[key];
+  const formatBullMetricValue = (bull: Bull, key: string): React.ReactNode => {
+    const rawValue = (bull as any)[key];
     if (rawValue === null || rawValue === undefined || rawValue === '') {
       return '-';
     }

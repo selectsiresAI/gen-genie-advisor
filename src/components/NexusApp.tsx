@@ -28,13 +28,7 @@ const NexusApp: React.FC<NexusAppProps> = ({ selectedFarmId, defaultFarmId }) =>
     case 'nexus2':
       return <Nexus2PedigreePrediction onBack={handleBack} selectedFarmId={selectedFarmId} />;
     case 'nexus3':
-      return (
-        <Nexus3Groups
-          onBack={handleBack}
-          initialFarmId={selectedFarmId ?? undefined}
-          fallbackDefaultFarmId={defaultFarmId ?? undefined}
-        />
-      );
+      return <Nexus3Groups />;
     default:
       return <NexusEntryPage onSelectMethod={handleMethodSelection} />;
   }

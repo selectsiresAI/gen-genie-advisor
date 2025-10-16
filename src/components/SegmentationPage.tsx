@@ -1626,7 +1626,7 @@ export default function SegmentationPage({
                         <td className="border border-border px-2 py-1 text-xs font-bold">{(a as any).CustomScore !== undefined ? Number((a as any).CustomScore).toFixed(1) : '-'}</td>
                         {ANIMAL_METRIC_COLUMNS.map(column => (
                           <td key={column.key} className="border border-border px-2 py-1 text-xs">
-                            {formatAnimalMetricValue(a, column.key)}
+                            {formatAnimalMetricValue(a, column.key) as React.ReactNode}
                           </td>
                         ))}
                       </tr>
