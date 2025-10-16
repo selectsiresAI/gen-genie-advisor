@@ -214,6 +214,26 @@ const buildResultExportRows = (rows: BatchRow[]) =>
       };
     });
 
+const extractErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (error && typeof error === 'object') {
+    if ('message' in error && typeof (error as { message?: unknown }).message === 'string') {
+      return (error as { message: string }).message;
+    }
+
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return String(error);
+    }
+  }
+
+  return String(error);
+};
+
 const buildResultInsertRows = (rows: BatchRow[], farmId: string) => {
   const nowIso = new Date().toISOString();
 
@@ -651,7 +671,7 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
       });
     } catch (error) {
       console.error('Erro ao enviar resultados para o rebanho:', error);
-      const description = error instanceof Error ? error.message : String(error);
+      const description = extractErrorMessage(error);
       toast({
         variant: 'destructive',
         title: t('nexus2.batch.toast.sendError'),
