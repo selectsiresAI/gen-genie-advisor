@@ -8,9 +8,11 @@ import Nexus2PredictionBatch from './nexus2/Nexus2PredictionBatch';
 import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
 interface Nexus2PedigreePredictionProps {
   onBack: () => void;
+  selectedFarmId?: string | null;
 }
 const Nexus2PedigreePrediction: React.FC<Nexus2PedigreePredictionProps> = ({
-  onBack
+  onBack,
+  selectedFarmId
 }) => {
   return <div className="space-y-6">
       {/* Header */}
@@ -40,7 +42,7 @@ const Nexus2PedigreePrediction: React.FC<Nexus2PedigreePredictionProps> = ({
           <Nexus2PredictionIndividual />
         </TabsContent>
         <TabsContent value="batch" className="space-y-6">
-          <Nexus2PredictionBatch />
+          <Nexus2PredictionBatch selectedFarmId={selectedFarmId} />
         </TabsContent>
       </Tabs>
     </div>;

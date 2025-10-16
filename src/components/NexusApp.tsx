@@ -26,7 +26,7 @@ const NexusApp: React.FC<NexusAppProps> = ({ selectedFarmId, defaultFarmId }) =>
     case 'nexus1':
       return <Nexus1GenomicPrediction onBack={handleBack} />;
     case 'nexus2':
-      return <Nexus2PedigreePrediction onBack={handleBack} />;
+      return <Nexus2PedigreePrediction onBack={handleBack} selectedFarmId={selectedFarmId} />;
     case 'nexus3':
       return (
         <Nexus3Groups
