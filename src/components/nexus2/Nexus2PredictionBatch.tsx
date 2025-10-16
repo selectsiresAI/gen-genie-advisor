@@ -9,13 +9,15 @@ import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { getBullByNaab } from '@/supabase/queries/bulls';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import {
   BullSummary,
   PREDICTION_TRAITS,
   calculatePedigreePrediction,
   formatPredictionValue,
   mapBullRecord,
-  type PredictionResult
+  type PredictionResult,
+  type PredictionTraitKey
 } from '@/services/prediction.service';
 import { read, utils, writeFileXLSX, SSF } from 'xlsx';
 
@@ -234,7 +236,9 @@ const extractErrorMessage = (error: unknown): string => {
   return String(error);
 };
 
-const buildResultInsertRows = (rows: BatchRow[], farmId: string) => {
+type FemaleInsert = Database['public']['Tables']['females']['Insert'];
+
+const buildResultInsertRows = (rows: BatchRow[], farmId: string): FemaleInsert[] => {
   const nowIso = new Date().toISOString();
 
   return rows
@@ -243,7 +247,7 @@ const buildResultInsertRows = (rows: BatchRow[], farmId: string) => {
       const name = row.nome?.trim() || `Predição ${row.lineNumber}`;
       const identifier = row.idFazenda?.trim() || row.nome?.trim() || `predicao-${row.lineNumber}`;
 
-      const insertRecord: Record<string, unknown> = {
+      const insertRecord: FemaleInsert = {
         farm_id: farmId,
         name,
         identifier,
@@ -251,20 +255,21 @@ const buildResultInsertRows = (rows: BatchRow[], farmId: string) => {
         sire_naab: row.naabPai || null,
         mgs_naab: row.naabAvoMaterno || null,
         mmgs_naab: row.naabBisavoMaterno || null,
-        birth_date: normalizeBirthDate(row.dataNascimento),
+        birth_date: normalizeBirthDate(row.dataNascimento) ?? null,
         created_at: nowIso,
         updated_at: nowIso,
-        last_prediction_date: nowIso,
-        last_prediction_method: 'pedigree',
-        last_prediction_value: row.prediction?.tpi ?? null,
         ptas: null
       };
 
-      for (const trait of PREDICTION_TRAITS) {
-        insertRecord[trait.key] = row.prediction?.[trait.key] ?? null;
-      }
+      const predictionValues = PREDICTION_TRAITS.reduce((acc, trait) => {
+        acc[trait.key] = row.prediction?.[trait.key] ?? null;
+        return acc;
+      }, {} as Partial<Record<PredictionTraitKey, number | null>>);
 
-      return insertRecord;
+      return {
+        ...insertRecord,
+        ...(predictionValues as Partial<FemaleInsert>)
+      };
     });
 };
 
@@ -656,7 +661,7 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
 
       for (let index = 0; index < data.length; index += batchSize) {
         const chunk = data.slice(index, index + batchSize);
-        const { error } = await supabase.from('females').insert(chunk as any);
+        const { error } = await supabase.from('females').insert(chunk);
 
         if (error) {
           throw error;
