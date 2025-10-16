@@ -48,6 +48,8 @@ const translations = {
     "nexus2.batch.actions.exportResultsCsv": "Exportar resultados (.csv)",
     "nexus2.batch.actions.exportErrorsXlsx": "Exportar erros (.xlsx)",
     "nexus2.batch.actions.exportErrorsCsv": "Exportar erros (.csv)",
+    "nexus2.batch.actions.sendToHerd": "Enviar direto para o rebanho",
+    "nexus2.batch.actions.sendingToHerd": "Enviando...",
     "nexus2.batch.error.emptyRow": "Linha vazia",
     "nexus2.batch.error.duplicateInRow": "NAAB duplicado na mesma linha",
     "nexus2.batch.error.duplicateRow": "Duplicado com linhas:",
@@ -70,7 +72,12 @@ const translations = {
     "nexus2.batch.toast.processError": "Erro ao calcular as predições em lote.",
     "nexus2.batch.toast.noResultsToExport": "Não há resultados calculados para exportar.",
     "nexus2.batch.toast.noErrorsToExport": "Não há erros para exportar.",
-    "nexus2.batch.toast.exportSuccess": "Exportação concluída!"
+    "nexus2.batch.toast.exportSuccess": "Exportação concluída!",
+    "nexus2.batch.toast.noFarmSelected": "Selecione um rebanho para enviar as predições.",
+    "nexus2.batch.toast.noResultsToSend": "Não há resultados calculados para enviar.",
+    "nexus2.batch.toast.sendSuccess": "Resultados enviados para o rebanho!",
+    "nexus2.batch.toast.sendSuccessDescription": "{{count}} fêmea{{plural}} atualizada{{plural}} com sucesso.",
+    "nexus2.batch.toast.sendError": "Erro ao enviar para o rebanho."
   }
 } as const;
 

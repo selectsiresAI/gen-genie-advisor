@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { Download, FileSpreadsheet, Loader2, Upload, X } from 'lucide-react';
+import { Download, FileSpreadsheet, Loader2, Send, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,13 +9,15 @@ import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { getBullByNaab } from '@/supabase/queries/bulls';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import {
   BullSummary,
   PREDICTION_TRAITS,
   calculatePedigreePrediction,
   formatPredictionValue,
   mapBullRecord,
-  type PredictionResult
+  type PredictionResult,
+  type PredictionTraitKey
 } from '@/services/prediction.service';
 import { read, utils, writeFileXLSX, SSF } from 'xlsx';
 
@@ -120,23 +122,28 @@ const buildErrorExportRows = (rows: BatchRow[]) =>
         .join(' | ')
     }));
 
+const normalizeBirthDate = (dateStr: string): string | null => {
+  if (!dateStr) return null;
+
+  if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+    return dateStr.slice(0, 10);
+  }
+
+  const parts = dateStr.split('/');
+  if (parts.length === 3) {
+    return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+  }
+
+  return dateStr;
+};
+
 const buildResultExportRows = (rows: BatchRow[]) =>
   rows
     .filter((row) => row.status === 'valid' && row.prediction)
     .map((row) => {
-      // Convert date from DD/MM/YYYY to YYYY-MM-DD format for import
-      const convertDate = (dateStr: string) => {
-        if (!dateStr) return '';
-        const parts = dateStr.split('/');
-        if (parts.length === 3) {
-          return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-        }
-        return dateStr;
-      };
-
       // Map PTA values with exact column names required for import
       const pred = row.prediction;
-      
+
       return {
         id: '',
         farm_id: '',
@@ -146,7 +153,7 @@ const buildResultExportRows = (rows: BatchRow[]) =>
         sire_naab: row.naabPai,
         mgs_naab: row.naabAvoMaterno,
         mmgs_naab: row.naabBisavoMaterno,
-        birth_date: convertDate(row.dataNascimento),
+        birth_date: normalizeBirthDate(row.dataNascimento) ?? '',
         ptas: '',
         created_at: '',
         updated_at: '',
@@ -209,6 +216,63 @@ const buildResultExportRows = (rows: BatchRow[]) =>
       };
     });
 
+const extractErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (error && typeof error === 'object') {
+    if ('message' in error && typeof (error as { message?: unknown }).message === 'string') {
+      return (error as { message: string }).message;
+    }
+
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return String(error);
+    }
+  }
+
+  return String(error);
+};
+
+type FemaleInsert = Database['public']['Tables']['females']['Insert'];
+
+const buildResultInsertRows = (rows: BatchRow[], farmId: string): FemaleInsert[] => {
+  const nowIso = new Date().toISOString();
+
+  return rows
+    .filter((row) => row.status === 'valid' && row.prediction)
+    .map((row) => {
+      const name = row.nome?.trim() || `Predição ${row.lineNumber}`;
+      const identifier = row.idFazenda?.trim() || row.nome?.trim() || `predicao-${row.lineNumber}`;
+
+      const insertRecord: FemaleInsert = {
+        farm_id: farmId,
+        name,
+        identifier,
+        fonte: 'Predição',
+        sire_naab: row.naabPai || null,
+        mgs_naab: row.naabAvoMaterno || null,
+        mmgs_naab: row.naabBisavoMaterno || null,
+        birth_date: normalizeBirthDate(row.dataNascimento) ?? null,
+        created_at: nowIso,
+        updated_at: nowIso,
+        ptas: null
+      };
+
+      const predictionValues = PREDICTION_TRAITS.reduce((acc, trait) => {
+        acc[trait.key] = row.prediction?.[trait.key] ?? null;
+        return acc;
+      }, {} as Partial<Record<PredictionTraitKey, number | null>>);
+
+      return {
+        ...insertRecord,
+        ...(predictionValues as Partial<FemaleInsert>)
+      };
+    });
+};
+
 const saveSheet = (data: Record<string, string>[], sheetName: string, filename: string, format: 'xlsx' | 'csv') => {
   const worksheet = utils.json_to_sheet(data);
   const workbook = utils.book_new();
@@ -231,7 +295,11 @@ const saveSheet = (data: Record<string, string>[], sheetName: string, filename: 
   URL.revokeObjectURL(url);
 };
 
-const Nexus2PredictionBatch: React.FC = () => {
+interface Nexus2PredictionBatchProps {
+  selectedFarmId?: string | null;
+}
+
+const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedFarmId }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { toast } = useToast();
 
@@ -239,6 +307,7 @@ const Nexus2PredictionBatch: React.FC = () => {
   const [fileName, setFileName] = useState<string | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSendingToHerd, setIsSendingToHerd] = useState(false);
 
   const validRows = useMemo(() => rows.filter((row) => row.status === 'valid'), [rows]);
   const invalidRows = useMemo(() => rows.filter((row) => row.status === 'invalid'), [rows]);
@@ -565,6 +634,59 @@ const Nexus2PredictionBatch: React.FC = () => {
     });
   };
 
+  const sendResultsToHerd = async () => {
+    if (!selectedFarmId) {
+      toast({
+        variant: 'destructive',
+        title: t('nexus2.batch.toast.noFarmSelected')
+      });
+      return;
+    }
+
+    const data = buildResultInsertRows(rows, selectedFarmId);
+
+    if (!data.length) {
+      toast({
+        variant: 'destructive',
+        title: t('nexus2.batch.toast.noResultsToSend')
+      });
+      return;
+    }
+
+    setIsSendingToHerd(true);
+
+    try {
+      const batchSize = 200;
+      let totalInserted = 0;
+
+      for (let index = 0; index < data.length; index += batchSize) {
+        const chunk = data.slice(index, index + batchSize);
+        const { error } = await supabase.from('females').insert(chunk);
+
+        if (error) {
+          throw error;
+        }
+
+        totalInserted += chunk.length;
+      }
+
+      toast({
+        title: t('nexus2.batch.toast.sendSuccess'),
+        description: t('nexus2.batch.toast.sendSuccessDescription', { count: totalInserted })
+      });
+    } catch (error) {
+      console.error('Erro ao enviar resultados para o rebanho:', error);
+      const description = extractErrorMessage(error);
+      toast({
+        variant: 'destructive',
+        title: t('nexus2.batch.toast.sendError'),
+        description
+      });
+    } finally {
+      setIsSendingToHerd(false);
+    }
+  };
+
   return (
     <div data-tour="nexus:lote.processamento">
       <Card>
@@ -728,6 +850,23 @@ const Nexus2PredictionBatch: React.FC = () => {
                 <span className="flex items-center gap-2">
                   <Download className="h-4 w-4" />
                   {t('nexus2.batch.actions.exportResultsXlsx')}
+                </span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={sendResultsToHerd}
+                disabled={!hasPredictions || isSendingToHerd}
+              >
+                <span className="flex items-center gap-2">
+                  {isSendingToHerd ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                  {isSendingToHerd
+                    ? t('nexus2.batch.actions.sendingToHerd')
+                    : t('nexus2.batch.actions.sendToHerd')}
                 </span>
               </Button>
               <Button
