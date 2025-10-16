@@ -139,9 +139,9 @@ const buildResultExportRows = (rows: BatchRow[]) =>
       
       return {
         id: '',
-        farm_id: row.idFazenda,
+        farm_id: '',
         name: row.nome,
-        identifier: '',
+        identifier: row.nome,
         cdcb_id: '',
         sire_naab: row.naabPai,
         mgs_naab: row.naabAvoMaterno,
