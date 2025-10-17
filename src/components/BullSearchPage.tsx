@@ -12,6 +12,8 @@ import { ANIMAL_METRIC_COLUMNS } from '@/constants/animalMetrics';
 import { useAnimalTableSort } from '@/hooks/useAnimalTableSort';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { processNormalizedRowsInBatchesMultiColumn } from '@/utils/importProcessing';
+import type { NormalizedRow } from '@/utils/importProcessing';
 interface Bull {
   id: string;
   code: string;
@@ -568,6 +570,17 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const generateImportBatchId = () => {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+      }
+      return `import-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    };
+
+    let importBatchId: string | null = null;
+    let importSummary: { processed: number; total: number; valid: number; invalid: number } | null = null;
+
     try {
       setLoading(true);
       toast({
@@ -575,7 +588,15 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
         description: "Processando arquivo de touros..."
       });
 
-      // Read CSV file
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) {
+        throw authError;
+      }
+      const userId = authData?.user?.id;
+      if (!userId) {
+        throw new Error("Usuário não autenticado.");
+      }
+
       const text = await file.text();
       const lines = text.split('\n').filter(line => line.trim());
       if (lines.length < 2) {
@@ -587,7 +608,6 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
         return;
       }
 
-      // Parse CSV
       const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
       const rows = lines.slice(1).map(line => {
         const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
@@ -597,15 +617,18 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
         });
         return row;
       });
+
       let successCount = 0;
       let errorCount = 0;
       const errors: string[] = [];
+      const normalizedRows: NormalizedRow[] = [];
+      importBatchId = generateImportBatchId();
+      const startedAt = new Date().toISOString();
 
-      // Process each row
       const normalizeString = (value: any) => {
-        if (typeof value !== 'string') return null;
-        const trimmed = value.trim();
-        return trimmed.length > 0 ? trimmed : null;
+        if (value === undefined || value === null) return null;
+        const str = String(value).trim();
+        return str.length > 0 ? str : null;
       };
 
       const extractPedigreeNames = (row: Record<string, any>) => {
@@ -664,25 +687,46 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
         };
       };
 
-      for (const row of rows) {
+      for (const [index, row] of rows.entries()) {
         try {
           const { sireName, mgsName, mmgsName } = extractPedigreeNames(row);
-          // Prepare bull data, ignoring empty id and handling all columns
+
+          const resolvedCode = normalizeString(
+            row.code || row.NAAB || row.Code || row.naab || row['NAAB Code'] || row['Código'] || row['codigo']
+          );
+          const resolvedSireNaab = normalizeString(row.sire_naab || row.sire || row.Sire || row['Sire NAAB']);
+          const resolvedMgsNaab = normalizeString(row.mgs_naab || row.mgs || row.MGS || row['MGS NAAB']);
+          const resolvedMmgsNaab = normalizeString(row.mmgs_naab || row.mmgs || row.MMGS || row['MMGS NAAB']);
+
+          const normalizedRow: NormalizedRow = {
+            import_batch_id: importBatchId,
+            uploader_user_id: userId,
+            row_number: index + 1,
+            original_row: row,
+            sire_name: sireName,
+            mgs_name: mgsName,
+            mmgs_name: mmgsName
+          };
+          if (resolvedCode) normalizedRow.naab = resolvedCode;
+          if (resolvedSireNaab) normalizedRow.sire_naab = resolvedSireNaab;
+          if (resolvedMgsNaab) normalizedRow.mgs_naab = resolvedMgsNaab;
+          if (resolvedMmgsNaab) normalizedRow.mmgs_naab = resolvedMmgsNaab;
+          normalizedRows.push(normalizedRow);
+
           const bullData: any = {
-            code: row.code || row.NAAB || row.Code,
+            code: resolvedCode || row.code || row.NAAB || row.Code,
             name: row.name || row.Nome || row.Name,
             registration: row.registration || row.Registro || row.Registration || null,
             birth_date: row.birth_date || row['Data de Nascimento'] || row.BirthDate || null,
             company: row.company || row.Empresa || row.Company || null,
-            sire_naab: row.sire_naab || row.sire || row.Sire || null,
-            mgs_naab: row.mgs_naab || row.mgs || row.MGS || null,
-            mmgs_naab: row.mmgs_naab || row.mmgs || row.MMGS || null,
+            sire_naab: resolvedSireNaab,
+            mgs_naab: resolvedMgsNaab,
+            mmgs_naab: resolvedMmgsNaab,
             sire_name: sireName,
             mgs_name: mgsName,
             mmgs_name: mmgsName,
             beta_casein: row.beta_casein || row['Beta-Caseina'] || row.BetaCasein || null,
             kappa_casein: row.kappa_casein || row['Kappa-Caseina'] || row.KappaCasein || null,
-            // Numeric fields - convert to number or null
             hhp_dollar: parseFloat(row.hhp_dollar || row['HHP$®'] || row.HHP) || null,
             tpi: parseFloat(row.tpi || row.TPI) || null,
             nm_dollar: parseFloat(row.nm_dollar || row['NM$'] || row.NM) || null,
@@ -739,24 +783,19 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
             gfi: parseFloat(row.gfi || row.GFI) || null
           };
 
-          // Handle id field: convert empty strings to null, keep valid UUIDs
-          if (row.id && row.id.trim() !== '') {
+          if (row.id && typeof row.id === 'string' && row.id.trim() !== '') {
             bullData.id = row.id.trim();
           } else {
-            bullData.id = null; // Let Supabase generate UUID
+            bullData.id = null;
           }
 
-          // Skip rows without required code field
           if (!bullData.code) {
-            errors.push(`Linha ignorada: código (NAAB) não encontrado`);
+            errors.push(`Linha ${index + 2} ignorada: código (NAAB) não encontrado`);
             errorCount++;
             continue;
           }
 
-          // UPSERT: Insert or update on conflict
-          const {
-            error
-          } = await supabase.from('bulls').upsert(bullData, {
+          const { error } = await supabase.from('bulls').upsert(bullData, {
             onConflict: 'code',
             ignoreDuplicates: false
           });
@@ -769,23 +808,49 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
           }
         } catch (rowError) {
           console.error('Error processing row:', rowError);
-          errors.push(`Erro na linha: ${rowError}`);
+          errors.push(`Erro na linha ${index + 2}: ${rowError instanceof Error ? rowError.message : rowError}`);
           errorCount++;
         }
       }
 
-      // Show results
+      if (normalizedRows.length > 0 && importBatchId) {
+        importSummary = await processNormalizedRowsInBatchesMultiColumn(supabase, normalizedRows, {
+          lookupChunkSize: 200,
+          writeBatchSize: 100,
+          progressCallback: (processed, total) => {
+            console.debug(`Resolved ${processed}/${total} NAABs during import batch ${importBatchId}`);
+          }
+        });
+
+        const { error: logError } = await supabase.from('bulls_import_log').insert({
+          import_batch_id: importBatchId,
+          uploader_user_id: userId,
+          total_rows: importSummary.total,
+          valid_rows: importSummary.valid,
+          invalid_rows: importSummary.invalid,
+          started_at: startedAt,
+          committed_at: new Date().toISOString(),
+          meta: {
+            file_name: file.name,
+            success_count: successCount,
+            error_count: errorCount
+          }
+        });
+        if (logError) {
+          throw logError;
+        }
+      }
+
       if (successCount > 0) {
         toast({
           title: "Import concluído",
           description: `${successCount} touros importados com sucesso${errorCount > 0 ? `. ${errorCount} erros encontrados.` : '.'}`
         });
 
-        // Reload bulls data
         await loadBulls();
       }
+
       if (errors.length > 0 && errors.length <= 5) {
-        // Show first few errors
         toast({
           title: "Erros encontrados",
           description: errors.slice(0, 3).join('; '),
@@ -798,6 +863,14 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
           variant: "destructive"
         });
       }
+
+      if (importSummary) {
+        toast({
+          title: "Validação de NAABs concluída",
+          description: `${importSummary.valid} registro(s) válido(s) e ${importSummary.invalid} registro(s) com pendências.`,
+          variant: importSummary.invalid > 0 ? "destructive" : "default"
+        });
+      }
     } catch (error) {
       console.error('Upload error:', error);
       toast({
@@ -807,16 +880,8 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
       });
     } finally {
       setLoading(false);
-      // Clear file input
       e.target.value = '';
     }
-    setTimeout(() => {
-      toast({
-        title: "Touros importados",
-        description: "Banco de touros atualizado com sucesso!"
-      });
-      loadBulls(); // Reload data
-    }, 2000);
   };
   const handleExport = () => {
     if (rankedBulls.length === 0) return;
