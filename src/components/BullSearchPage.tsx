@@ -11,7 +11,7 @@ import SortableHeader from '@/components/animals/SortableHeader';
 import { ANIMAL_METRIC_COLUMNS } from '@/constants/animalMetrics';
 import { useAnimalTableSort } from '@/hooks/useAnimalTableSort';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, supabaseAnonKey } from '@/integrations/supabase/client';
 interface Bull {
   id: string;
   code: string;
@@ -96,6 +96,10 @@ interface BullSearchPageProps {
   onBullsSelected?: (selectedBulls: string[]) => void;
   onGoToBotijao?: () => void;
 }
+
+const IMPORT_BULLS_FUNCTION_BASE_URL = 'https://gzvweejdtycxzxrjplpc.functions.supabase.co/import-bulls';
+const IMPORT_BULLS_UPLOAD_URL = `${IMPORT_BULLS_FUNCTION_BASE_URL}/upload`;
+const IMPORT_BULLS_COMMIT_URL = `${IMPORT_BULLS_FUNCTION_BASE_URL}/commit`;
 const BullSearchPage: React.FC<BullSearchPageProps> = ({
   farm,
   onBack,
@@ -568,255 +572,152 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     try {
       setLoading(true);
       toast({
         title: "Upload iniciado",
-        description: "Processando arquivo de touros..."
+        description: "Enviando arquivo de touros..."
       });
 
-      // Read CSV file
-      const text = await file.text();
-      const lines = text.split('\n').filter(line => line.trim());
-      if (lines.length < 2) {
-        toast({
-          title: "Erro no arquivo",
-          description: "Arquivo CSV deve conter pelo menos um cabeçalho e uma linha de dados.",
-          variant: "destructive"
-        });
-        return;
+      const [{ data: authData, error: authError }, { data: sessionData, error: sessionError }] = await Promise.all([
+        supabase.auth.getUser(),
+        supabase.auth.getSession()
+      ]);
+      if (authError) {
+        throw authError;
+      }
+      if (sessionError) {
+        throw sessionError;
       }
 
-      // Parse CSV
-      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-      const rows = lines.slice(1).map(line => {
-        const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
-        const row: any = {};
-        headers.forEach((header, index) => {
-          row[header] = values[index] || null;
-        });
-        return row;
+      const userId = authData?.user?.id;
+      if (!userId) {
+        throw new Error("Usuário não autenticado.");
+      }
+
+      const accessToken = sessionData?.session?.access_token;
+      if (!accessToken) {
+        throw new Error('Token de acesso não disponível para autenticação.');
+      }
+
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle();
+      if (profileError) {
+        throw profileError;
+      }
+
+      const profileId = profileData?.id ?? userId;
+
+      const form = new FormData();
+      form.append('file', file);
+      form.append('user_id', userId);
+      form.append('profile_id', profileId);
+      form.append('farm_id', farm.farm_id);
+
+      const authHeaders: Record<string, string> = {
+        Authorization: `Bearer ${accessToken}`,
+        apikey: supabaseAnonKey,
+      };
+
+      const uploadResponse = await fetch(IMPORT_BULLS_UPLOAD_URL, {
+        method: 'POST',
+        body: form,
+        headers: authHeaders,
       });
-      let successCount = 0;
-      let errorCount = 0;
-      const errors: string[] = [];
 
-      // Process each row
-      const normalizeString = (value: any) => {
-        if (typeof value !== 'string') return null;
-        const trimmed = value.trim();
-        return trimmed.length > 0 ? trimmed : null;
-      };
-
-      const extractPedigreeNames = (row: Record<string, any>) => {
-        const rawPedigree = normalizeString(row.pedigree || row.Pedigre || row.Pedigree);
-        const pedigreeParts = rawPedigree
-          ? rawPedigree
-              .split(/[xX/\\>-]/)
-              .map(part => part.trim())
-              .filter(Boolean)
-          : [];
-
-        const getCandidate = (...candidates: (string | null | undefined)[]) => {
-          for (const candidate of candidates) {
-            const normalized = normalizeString(candidate);
-            if (normalized) {
-              return normalized;
-            }
-          }
-          return null;
-        };
-
-        const sireName = getCandidate(
-          row.sire_name,
-          row['sire_name'],
-          row['Sire Name'],
-          row['SireName'],
-          row['Nome Pai'],
-          row['Pai'],
-          pedigreeParts[0]
-        );
-
-        const mgsName = getCandidate(
-          row.mgs_name,
-          row['mgs_name'],
-          row['Maternal Grandsire'],
-          row['Avô Materno'],
-          row['Avo Materno'],
-          row['MaternalGrandSire'],
-          pedigreeParts[1]
-        );
-
-        const mmgsName = getCandidate(
-          row.mmgs_name,
-          row['mmgs_name'],
-          row['Maternal Great Grandsire'],
-          row['Bisavô Materno'],
-          row['Bisavo Materno'],
-          row['MaternalGreatGrandSire'],
-          pedigreeParts[2]
-        );
-
-        return {
-          sireName,
-          mgsName,
-          mmgsName
-        };
-      };
-
-      for (const row of rows) {
-        try {
-          const { sireName, mgsName, mmgsName } = extractPedigreeNames(row);
-          // Prepare bull data, ignoring empty id and handling all columns
-          const bullData: any = {
-            code: row.code || row.NAAB || row.Code,
-            name: row.name || row.Nome || row.Name,
-            registration: row.registration || row.Registro || row.Registration || null,
-            birth_date: row.birth_date || row['Data de Nascimento'] || row.BirthDate || null,
-            company: row.company || row.Empresa || row.Company || null,
-            sire_naab: row.sire_naab || row.sire || row.Sire || null,
-            mgs_naab: row.mgs_naab || row.mgs || row.MGS || null,
-            mmgs_naab: row.mmgs_naab || row.mmgs || row.MMGS || null,
-            sire_name: sireName,
-            mgs_name: mgsName,
-            mmgs_name: mmgsName,
-            beta_casein: row.beta_casein || row['Beta-Caseina'] || row.BetaCasein || null,
-            kappa_casein: row.kappa_casein || row['Kappa-Caseina'] || row.KappaCasein || null,
-            // Numeric fields - convert to number or null
-            hhp_dollar: parseFloat(row.hhp_dollar || row['HHP$®'] || row.HHP) || null,
-            tpi: parseFloat(row.tpi || row.TPI) || null,
-            nm_dollar: parseFloat(row.nm_dollar || row['NM$'] || row.NM) || null,
-            cm_dollar: parseFloat(row.cm_dollar || row['CM$'] || row.CM) || null,
-            fm_dollar: parseFloat(row.fm_dollar || row['FM$'] || row.FM) || null,
-            gm_dollar: parseFloat(row.gm_dollar || row['GM$'] || row.GM) || null,
-            f_sav: parseFloat(row.f_sav || row['F SAV'] || row.FSAV) || null,
-            ptam: parseFloat(row.ptam || row.PTAM) || null,
-            cfp: parseFloat(row.cfp || row.CFP) || null,
-            ptaf: parseFloat(row.ptaf || row.PTAF) || null,
-            ptaf_pct: parseFloat(row.ptaf_pct || row['PTAF%'] || row.PTAF_PCT) || null,
-            ptap: parseFloat(row.ptap || row.PTAP) || null,
-            ptap_pct: parseFloat(row.ptap_pct || row['PTAP%'] || row.PTAP_PCT) || null,
-            pl: parseFloat(row.pl || row.PL) || null,
-            dpr: parseFloat(row.dpr || row.DPR) || null,
-            liv: parseFloat(row.liv || row.LIV) || null,
-            scs: parseFloat(row.scs || row.SCS) || null,
-            mast: parseFloat(row.mast || row.MAST) || null,
-            met: parseFloat(row.met || row.MET) || null,
-            rp: parseFloat(row.rp || row.RP) || null,
-            da: parseFloat(row.da || row.DA) || null,
-            ket: parseFloat(row.ket || row.KET) || null,
-            mf: parseFloat(row.mf || row.MF) || null,
-            ptat: parseFloat(row.ptat || row.PTAT) || null,
-            udc: parseFloat(row.udc || row.UDC) || null,
-            flc: parseFloat(row.flc || row.FLC) || null,
-            sce: parseFloat(row.sce || row.SCE) || null,
-            dce: parseFloat(row.dce || row.DCE) || null,
-            ssb: parseFloat(row.ssb || row.SSB) || null,
-            dsb: parseFloat(row.dsb || row.DSB) || null,
-            h_liv: parseFloat(row.h_liv || row['H LIV'] || row.HLIV) || null,
-            ccr: parseFloat(row.ccr || row.CCR) || null,
-            hcr: parseFloat(row.hcr || row.HCR) || null,
-            fi: parseFloat(row.fi || row.FI) || null,
-            bwc: parseFloat(row.bwc || row.BWC) || null,
-            sta: parseFloat(row.sta || row.STA) || null,
-            str: parseFloat(row.str || row.STR) || null,
-            dfm: parseFloat(row.dfm || row.DFM) || null,
-            rua: parseFloat(row.rua || row.RUA) || null,
-            rls: parseFloat(row.rls || row.RLS) || null,
-            rtp: parseFloat(row.rtp || row.RTP) || null,
-            ftl: parseFloat(row.ftl || row.FTL) || null,
-            rw: parseFloat(row.rw || row.RW) || null,
-            rlr: parseFloat(row.rlr || row.RLR) || null,
-            fta: parseFloat(row.fta || row.FTA) || null,
-            fls: parseFloat(row.fls || row.FLS) || null,
-            fua: parseFloat(row.fua || row.FUA) || null,
-            ruh: parseFloat(row.ruh || row.RUH) || null,
-            ruw: parseFloat(row.ruw || row.RUW) || null,
-            ucl: parseFloat(row.ucl || row.UCL) || null,
-            udp: parseFloat(row.udp || row.UDP) || null,
-            ftp: parseFloat(row.ftp || row.FTP) || null,
-            rfi: parseFloat(row.rfi || row.RFI) || null,
-            gfi: parseFloat(row.gfi || row.GFI) || null
-          };
-
-          // Handle id field: convert empty strings to null, keep valid UUIDs
-          if (row.id && row.id.trim() !== '') {
-            bullData.id = row.id.trim();
-          } else {
-            bullData.id = null; // Let Supabase generate UUID
-          }
-
-          // Skip rows without required code field
-          if (!bullData.code) {
-            errors.push(`Linha ignorada: código (NAAB) não encontrado`);
-            errorCount++;
-            continue;
-          }
-
-          // UPSERT: Insert or update on conflict
-          const {
-            error
-          } = await supabase.from('bulls').upsert(bullData, {
-            onConflict: 'code',
-            ignoreDuplicates: false
-          });
-          if (error) {
-            console.error('Error inserting bull:', error);
-            errors.push(`Erro no touro ${bullData.code}: ${error.message}`);
-            errorCount++;
-          } else {
-            successCount++;
-          }
-        } catch (rowError) {
-          console.error('Error processing row:', rowError);
-          errors.push(`Erro na linha: ${rowError}`);
-          errorCount++;
-        }
+      const uploadText = await uploadResponse.text();
+      let uploadJson: any;
+      try {
+        uploadJson = uploadText ? JSON.parse(uploadText) : {};
+      } catch (parseError) {
+        console.error('upload failed', uploadResponse.status, uploadText);
+        throw new Error(`Resposta inválida do upload (${uploadResponse.status}): ${uploadText}`);
       }
 
-      // Show results
-      if (successCount > 0) {
-        toast({
-          title: "Import concluído",
-          description: `${successCount} touros importados com sucesso${errorCount > 0 ? `. ${errorCount} erros encontrados.` : '.'}`
-        });
+      console.log('upload response status', uploadResponse.status);
+      console.log('upload response body', uploadJson);
 
-        // Reload bulls data
-        await loadBulls();
+      if (!uploadResponse.ok) {
+        console.error('upload failed', uploadResponse.status, uploadText);
+        const err = uploadJson?.error || uploadJson || `Upload falhou: ${uploadResponse.status}`;
+        throw new Error(typeof err === 'string' ? err : JSON.stringify(err));
       }
-      if (errors.length > 0 && errors.length <= 5) {
-        // Show first few errors
+
+      const importBatchId = uploadJson?.import_batch_id as string | undefined;
+      if (!importBatchId) {
+        throw new Error('Upload não retornou import_batch_id.');
+      }
+
+      const commitResponse = await fetch(IMPORT_BULLS_COMMIT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders,
+        },
+        body: JSON.stringify({
+          import_batch_id: importBatchId,
+          uploader_user_id: userId,
+          profile_id: profileId,
+          farm_id: farm.farm_id
+        })
+      });
+
+      const commitText = await commitResponse.text();
+      let commitJson: any;
+      try {
+        commitJson = commitText ? JSON.parse(commitText) : {};
+      } catch (parseError) {
+        console.error('commit failed', commitResponse.status, commitText);
+        throw new Error(`Resposta inválida do commit (${commitResponse.status}): ${commitText}`);
+      }
+
+      console.log('commit response status', commitResponse.status);
+      console.log('commit response body', commitJson);
+
+      if (!commitResponse.ok) {
+        console.error('commit failed', commitResponse.status, commitText);
+        const err = commitJson?.error || commitJson || `Commit falhou: ${commitResponse.status}`;
+        throw new Error(typeof err === 'string' ? err : JSON.stringify(err));
+      }
+
+      const {
+        inserted = 0,
+        updated = 0,
+        skipped = 0,
+        invalid = 0,
+        total_rows: totalRows = uploadJson?.total_rows
+      } = commitJson || {};
+
+      toast({
+        title: "Importação concluída",
+        description: `Processamos ${totalRows ?? inserted + updated + skipped} linha(s): ${inserted} inserida(s), ${updated} atualizada(s) e ${skipped} ignorada(s).`
+      });
+
+      if (invalid > 0) {
         toast({
-          title: "Erros encontrados",
-          description: errors.slice(0, 3).join('; '),
-          variant: "destructive"
-        });
-      } else if (errors.length > 5) {
-        toast({
-          title: `Múltiplos erros (${errors.length})`,
-          description: "Verifique o formato do arquivo CSV",
+          title: "Importação com pendências",
+          description: `${invalid} registro(s) marcado(s) como inválido(s). Verifique o log na tabela de staging.`,
           variant: "destructive"
         });
       }
+
+      await loadBulls();
     } catch (error) {
       console.error('Upload error:', error);
+      const message = error instanceof Error ? error.message : 'Falha ao processar o arquivo CSV';
       toast({
         title: "Erro no upload",
-        description: "Falha ao processar o arquivo CSV",
+        description: message,
         variant: "destructive"
       });
     } finally {
       setLoading(false);
-      // Clear file input
       e.target.value = '';
     }
-    setTimeout(() => {
-      toast({
-        title: "Touros importados",
-        description: "Banco de touros atualizado com sucesso!"
-      });
-      loadBulls(); // Reload data
-    }, 2000);
   };
   const handleExport = () => {
     if (rankedBulls.length === 0) return;

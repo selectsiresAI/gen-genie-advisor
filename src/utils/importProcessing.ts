@@ -63,15 +63,18 @@ async function upsertStagingRowsSupabase(
   if (!rows || rows.length === 0) return;
   const chunks = chunkArray(rows, writeChunkSize);
   for (const c of chunks) {
-    const payload = c.map((r: any) => ({
-      import_batch_id: r.import_batch_id ?? null,
-      uploader_user_id: r.uploader_user_id ?? null,
-      row_number: r.row_number ?? null,
-      raw_row: r.raw_row ?? {},
-      mapped_row: r.mapped_row ?? null,
-      is_valid: r.is_valid ?? false,
-      errors: r.errors ?? [],
-    }));
+    const payload = c.map((r: any) => {
+      const rawRow = r.original_row ?? r.raw_row ?? r.raw ?? r;
+      return {
+        import_batch_id: r.import_batch_id ?? null,
+        uploader_user_id: r.uploader_user_id ?? null,
+        row_number: r.row_number ?? null,
+        raw_row: rawRow ?? {},
+        mapped_row: r.mapped_row ?? null,
+        is_valid: r.is_valid ?? false,
+        errors: r.errors ?? [],
+      };
+    });
 
     const { error } = await supabase.from('bulls_import_staging').insert(payload);
     if (error) {
@@ -97,6 +100,8 @@ export async function processNormalizedRowsInBatchesMultiColumn(
   const globalCache = new Map<string, any>();
   const rowChunks = chunkArray(normalizedRows, writeBatchSize);
   let processed = 0;
+  let validCount = 0;
+  let invalidCount = 0;
 
   for (const rowsChunk of rowChunks) {
     // collect NAABs not in cache
@@ -167,9 +172,14 @@ export async function processNormalizedRowsInBatchesMultiColumn(
 
     await upsertStagingRowsSupabase(supabase, mappedRows, writeBatchSize);
 
+    for (const row of mappedRows) {
+      if (row.is_valid) validCount += 1;
+      else invalidCount += 1;
+    }
+
     processed += rowsChunk.length;
     if (options?.progressCallback) options.progressCallback(processed, totalRows);
   }
 
-  return { processed, total: totalRows };
+  return { processed, total: totalRows, valid: validCount, invalid: invalidCount };
 }
