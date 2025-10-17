@@ -141,16 +141,10 @@ async function upsertStagingRowsSupabase(
       };
     });
 
-    try {
-      const { data, error } = await supabase.from('bulls_import_staging').insert(payload).select('id, import_batch_id, row_number, is_valid');
-      if (error) {
-        console.error('[import] upsertStagingRowsSupabase error', error);
-        throw error;
-      }
-      console.debug('[import] inserted staging rows chunk', { inserted: data?.length ?? payload.length });
-    } catch (err) {
-      console.error('[import] upsertStagingRowsSupabase exception', err);
-      throw err;
+    const { error } = await supabase.from('bulls_import_staging').insert(payload);
+    if (error) {
+      console.error('upsertStagingRowsSupabase error', error);
+      throw error;
     }
   }
 }
@@ -261,8 +255,6 @@ export async function processNormalizedRowsInBatchesMultiColumn(
 
     console.info(`[import] processed ${processed}/${totalRows} (valid=${validCount} invalid=${invalidCount})`);
   }
-
-  console.info('[import] finished processing', { processed, totalRows, validCount, invalidCount });
 
   return { processed, total: totalRows, valid: validCount, invalid: invalidCount };
 }

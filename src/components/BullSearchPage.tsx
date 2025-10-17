@@ -582,22 +582,50 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
         description: "Enviando arquivo de touros..."
       });
 
-      const { data: authData, error: authError } = await supabase.auth.getUser();
+      const [{ data: authData, error: authError }, { data: sessionData, error: sessionError }] = await Promise.all([
+        supabase.auth.getUser(),
+        supabase.auth.getSession()
+      ]);
       if (authError) {
         throw authError;
       }
+      if (sessionError) {
+        throw sessionError;
+      }
+
       const userId = authData?.user?.id;
       if (!userId) {
         throw new Error("Usuário não autenticado.");
       }
 
+      const accessToken = sessionData?.session?.access_token;
+      if (!accessToken) {
+        throw new Error('Token de acesso não disponível para autenticação.');
+      }
+
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle();
+      if (profileError) {
+        throw profileError;
+      }
+
+      const profileId = profileData?.id ?? userId;
+
       const form = new FormData();
       form.append('file', file);
       form.append('user_id', userId);
+      form.append('profile_id', profileId);
+      form.append('farm_id', farm.farm_id);
 
       const uploadResponse = await fetch(IMPORT_BULLS_UPLOAD_URL, {
         method: 'POST',
-        body: form
+        body: form,
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
       });
 
       const uploadText = await uploadResponse.text();
@@ -626,11 +654,14 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
       const commitResponse = await fetch(IMPORT_BULLS_COMMIT_URL, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`
         },
         body: JSON.stringify({
           import_batch_id: importBatchId,
-          uploader_user_id: userId
+          uploader_user_id: userId,
+          profile_id: profileId,
+          farm_id: farm.farm_id
         })
       });
 
