@@ -257,6 +257,87 @@ export type Database = {
         }
         Relationships: []
       }
+      bulls_import_log: {
+        Row: {
+          committed_at: string | null
+          id: number
+          import_batch_id: string
+          inserted: number | null
+          invalid_rows: number
+          meta: Json | null
+          skipped: number | null
+          started_at: string | null
+          total_rows: number
+          updated: number | null
+          uploader_user_id: string
+          valid_rows: number
+        }
+        Insert: {
+          committed_at?: string | null
+          id?: number
+          import_batch_id: string
+          inserted?: number | null
+          invalid_rows: number
+          meta?: Json | null
+          skipped?: number | null
+          started_at?: string | null
+          total_rows: number
+          updated?: number | null
+          uploader_user_id: string
+          valid_rows: number
+        }
+        Update: {
+          committed_at?: string | null
+          id?: number
+          import_batch_id?: string
+          inserted?: number | null
+          invalid_rows?: number
+          meta?: Json | null
+          skipped?: number | null
+          started_at?: string | null
+          total_rows?: number
+          updated?: number | null
+          uploader_user_id?: string
+          valid_rows?: number
+        }
+        Relationships: []
+      }
+      bulls_import_staging: {
+        Row: {
+          created_at: string | null
+          errors: Json | null
+          id: number
+          import_batch_id: string
+          is_valid: boolean | null
+          mapped_row: Json | null
+          raw_row: Json
+          row_number: number
+          uploader_user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          errors?: Json | null
+          id?: number
+          import_batch_id: string
+          is_valid?: boolean | null
+          mapped_row?: Json | null
+          raw_row: Json
+          row_number: number
+          uploader_user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          errors?: Json | null
+          id?: number
+          import_batch_id?: string
+          is_valid?: boolean | null
+          mapped_row?: Json | null
+          raw_row?: Json
+          row_number?: number
+          uploader_user_id?: string
+        }
+        Relationships: []
+      }
       economic_indices: {
         Row: {
           created_at: string | null
@@ -1079,6 +1160,30 @@ export type Database = {
           },
         ]
       }
+      header_aliases_bulls: {
+        Row: {
+          alias_pattern: string
+          canonical: string
+          created_at: string | null
+          example: string | null
+          id: number
+        }
+        Insert: {
+          alias_pattern: string
+          canonical: string
+          created_at?: string | null
+          example?: string | null
+          id?: number
+        }
+        Update: {
+          alias_pattern?: string
+          canonical?: string
+          created_at?: string | null
+          example?: string | null
+          id?: number
+        }
+        Relationships: []
+      }
       matings: {
         Row: {
           bull_id: string
@@ -1500,6 +1605,123 @@ export type Database = {
           udc?: string | null
           udp?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      staging_farms: {
+        Row: {
+          created_by_email: string | null
+          imported_at: string | null
+          metadata: Json | null
+          name: string | null
+          owner_name: string | null
+          raw_id: string | null
+          raw_row_number: number | null
+        }
+        Insert: {
+          created_by_email?: string | null
+          imported_at?: string | null
+          metadata?: Json | null
+          name?: string | null
+          owner_name?: string | null
+          raw_id?: string | null
+          raw_row_number?: number | null
+        }
+        Update: {
+          created_by_email?: string | null
+          imported_at?: string | null
+          metadata?: Json | null
+          name?: string | null
+          owner_name?: string | null
+          raw_id?: string | null
+          raw_row_number?: number | null
+        }
+        Relationships: []
+      }
+      staging_females: {
+        Row: {
+          birth_date: string | null
+          category: string | null
+          cdcb_id: string | null
+          farm_id: string | null
+          farm_name: string | null
+          fonte: string | null
+          identifier: string | null
+          imported_at: string | null
+          metadata: Json | null
+          mgs_naab: string | null
+          name: string | null
+          parity_order: string | null
+          raw_id: string | null
+          raw_row_number: number | null
+          sire_naab: string | null
+        }
+        Insert: {
+          birth_date?: string | null
+          category?: string | null
+          cdcb_id?: string | null
+          farm_id?: string | null
+          farm_name?: string | null
+          fonte?: string | null
+          identifier?: string | null
+          imported_at?: string | null
+          metadata?: Json | null
+          mgs_naab?: string | null
+          name?: string | null
+          parity_order?: string | null
+          raw_id?: string | null
+          raw_row_number?: number | null
+          sire_naab?: string | null
+        }
+        Update: {
+          birth_date?: string | null
+          category?: string | null
+          cdcb_id?: string | null
+          farm_id?: string | null
+          farm_name?: string | null
+          fonte?: string | null
+          identifier?: string | null
+          imported_at?: string | null
+          metadata?: Json | null
+          mgs_naab?: string | null
+          name?: string | null
+          parity_order?: string | null
+          raw_id?: string | null
+          raw_row_number?: number | null
+          sire_naab?: string | null
+        }
+        Relationships: []
+      }
+      staging_profiles: {
+        Row: {
+          default_farm_name: string | null
+          email: string | null
+          full_name: string | null
+          imported_at: string | null
+          is_admin: string | null
+          metadata: Json | null
+          raw_id: string | null
+          raw_row_number: number | null
+        }
+        Insert: {
+          default_farm_name?: string | null
+          email?: string | null
+          full_name?: string | null
+          imported_at?: string | null
+          is_admin?: string | null
+          metadata?: Json | null
+          raw_id?: string | null
+          raw_row_number?: number | null
+        }
+        Update: {
+          default_farm_name?: string | null
+          email?: string | null
+          full_name?: string | null
+          imported_at?: string | null
+          is_admin?: string | null
+          metadata?: Json | null
+          raw_id?: string | null
+          raw_row_number?: number | null
         }
         Relationships: []
       }

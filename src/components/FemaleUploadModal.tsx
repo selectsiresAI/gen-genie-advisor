@@ -561,30 +561,27 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
         return record;
       });
 
-      // Validação mínima: nome obrigatório
-      const invalidRows = recordsToInsert.filter(r => !r.name || String(r.name).trim() === '');
-      if (invalidRows.length > 0) throw new Error(`${invalidRows.length} linha(s) sem nome válido encontrada(s)`);
-
-      // Increase batch size to 500 for better performance with large imports
-      const batchSize = 500;
-      let totalInserted = 0;
-
-      for (let i = 0; i < recordsToInsert.length; i += batchSize) {
-        const chunk = recordsToInsert.slice(i, i + batchSize);
-
-        // Insert with explicit headers to ensure all data is accepted
-        const { error } = await supabase.from(TARGET_TABLE).insert(chunk as any);
-        // Escolha 2 (se tiver índice único em farm_id,cdcb_id): use upsert
-        // const { error } = await supabase.from(TARGET_TABLE).upsert(chunk as Record<string, unknown>[], { onConflict: 'farm_id,cdcb_id' });
-
-        if (error) {
-          console.error('Supabase insertion error:', error);
-          const details = (error as { details?: string; hint?: string } | null | undefined)?.details
-            || (error as { details?: string; hint?: string } | null | undefined)?.hint;
-          const message = details ? `${(error as any).message} (${details})` : (error as any).message;
-          throw new Error(`Erro ao inserir dados: ${message}`);
+      // Use edge function for server-side validation and insertion
+      const { data, error } = await supabase.functions.invoke('upload-females', {
+        body: { 
+          records: recordsToInsert, 
+          farm_id: farmId 
         }
-        totalInserted += chunk.length;
+      });
+
+      if (error) {
+        console.error('Upload function error:', error);
+        throw new Error(`Erro ao processar upload: ${error.message}`);
+      }
+
+      if (!data.success) {
+        throw new Error(`Erro ao inserir dados: ${data.insert_errors} erro(s) de inserção`);
+      }
+
+      const totalInserted = data.inserted;
+      
+      if (data.validation_errors > 0) {
+        console.warn(`${data.validation_errors} registro(s) com erro de validação foram ignorados`);
       }
 
       toast({
