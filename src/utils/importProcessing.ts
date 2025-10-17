@@ -17,41 +17,103 @@ function chunkArray<T>(arr: T[], size = 100): T[][] {
   return out;
 }
 
+function normalizeNaab(s?: string | null): string | null {
+  if (!s) return null;
+  // trim, collapse whitespace, uppercase, remove non-printable
+  const cleaned = s
+    .toString()
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // remove control chars
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+  return cleaned === '' ? null : cleaned;
+}
+
 async function fetchBullsByNaabsMultiColumn(
   supabase: SupabaseClient,
   naabs: string[],
   lookupChunkSize = 200
 ): Promise<Map<string, any>> {
-  const cleaned = Array.from(new Set(naabs.filter(Boolean).map(s => s.toString().trim())));
+  const cleaned = Array.from(new Set(naabs.filter(Boolean).map(s => normalizeNaab(s)!)));
   const resultMap = new Map<string, any>();
-  if (cleaned.length === 0) return resultMap;
+  if (cleaned.length === 0) {
+    console.debug('[import] no naabs to fetch');
+    return resultMap;
+  }
+
+  console.debug(`[import] fetching bulls for ${cleaned.length} unique naabs (chunksize=${lookupChunkSize})`);
 
   const chunks = chunkArray(cleaned, lookupChunkSize);
   for (const chunk of chunks) {
-    // prepare three queries (one per column) and execute in parallel
-    const q1 = supabase.from('bulls').select('id, code, name, sire_naab, mgs_naab, mmgs_naab').in('sire_naab', chunk);
-    const q2 = supabase.from('bulls').select('id, code, name, sire_naab, mgs_naab, mmgs_naab').in('mgs_naab', chunk);
-    const q3 = supabase.from('bulls').select('id, code, name, sire_naab, mgs_naab, mmgs_naab').in('mmgs_naab', chunk);
+    try {
+      // try multi-column exact matches first
+      const qSire = supabase.from('bulls').select('id, code, name, sire_naab, mgs_naab, mmgs_naab, code_normalized').in('sire_naab', chunk);
+      const qMgs = supabase.from('bulls').select('id, code, name, sire_naab, mgs_naab, mmgs_naab, code_normalized').in('mgs_naab', chunk);
+      const qMmgs = supabase.from('bulls').select('id, code, name, sire_naab, mgs_naab, mmgs_naab, code_normalized').in('mmgs_naab', chunk);
 
-    const [r1, r2, r3] = await Promise.all([q1, q2, q3]);
+      const [rS, rM, rMM] = await Promise.all([qSire, qMgs, qMmgs]);
 
-    const responses = [r1, r2, r3];
-    for (const res of responses) {
-      if (res.error) {
-        console.error('fetchBullsByNaabsMultiColumn error', res.error);
-        throw res.error;
-      }
-      (res.data || []).forEach((row: any) => {
-        ['sire_naab', 'mgs_naab', 'mmgs_naab'].forEach((col) => {
-          const key = (row[col] || '').toString().trim();
-          if (key && !resultMap.has(key)) {
-            resultMap.set(key, row);
+      const responses = [rS, rM, rMM];
+      for (const res of responses) {
+        if (res.error) {
+          // surface auth/RLS errors clearly
+          console.error('[import] fetch error', res.error);
+          throw res.error;
+        }
+        (res.data || []).forEach((row: any) => {
+          ['sire_naab', 'mgs_naab', 'mmgs_naab'].forEach((col) => {
+            const rawVal = row[col];
+            const key = normalizeNaab(rawVal);
+            if (key && !resultMap.has(key)) {
+              resultMap.set(key, row);
+            }
+          });
+          // also map by code_normalized and code if present
+          if (row.code_normalized) {
+            const k = normalizeNaab(row.code_normalized);
+            if (k && !resultMap.has(k)) resultMap.set(k, row);
+          }
+          if (row.code) {
+            const k2 = normalizeNaab(row.code);
+            if (k2 && !resultMap.has(k2)) resultMap.set(k2, row);
           }
         });
-      });
+      }
+
+      // For any remaining naabs not matched, try lookup by code/code_normalized
+      const unmatched = chunk.filter(k => !resultMap.has(k));
+      if (unmatched.length > 0) {
+        // attempt lookup by code_normalized or code
+        const qCode = await supabase
+          .from('bulls')
+          .select('id, code, name, sire_naab, mgs_naab, mmgs_naab, code_normalized')
+          .in('code_normalized', unmatched)
+          .or(`code.in.(${unmatched.map(v => `"${v}"`).join(',')})`); // fallback to code
+        if (qCode.error) {
+          // if .or fails due to syntax or RLS, just log and continue
+          console.debug('[import] code fallback query error', qCode.error);
+        } else {
+          (qCode.data || []).forEach((row: any) => {
+            const candidates = [
+              normalizeNaab(row.code_normalized),
+              normalizeNaab(row.code),
+              normalizeNaab(row.sire_naab),
+              normalizeNaab(row.mgs_naab),
+              normalizeNaab(row.mmgs_naab),
+            ].filter(Boolean) as string[];
+            candidates.forEach((k) => {
+              if (!resultMap.has(k)) resultMap.set(k, row);
+            });
+          });
+        }
+      }
+    } catch (err) {
+      console.error('[import] fetchBullsByNaabsMultiColumn exception', err);
+      throw err;
     }
   }
 
+  console.debug(`[import] fetched map size=${resultMap.size}`);
   return resultMap;
 }
 
@@ -60,7 +122,10 @@ async function upsertStagingRowsSupabase(
   rows: any[],
   writeChunkSize = 100
 ) {
-  if (!rows || rows.length === 0) return;
+  if (!rows || rows.length === 0) {
+    console.debug('[import] no rows to upsert to staging');
+    return;
+  }
   const chunks = chunkArray(rows, writeChunkSize);
   for (const c of chunks) {
     const payload = c.map((r: any) => {
@@ -76,10 +141,16 @@ async function upsertStagingRowsSupabase(
       };
     });
 
-    const { error } = await supabase.from('bulls_import_staging').insert(payload);
-    if (error) {
-      console.error('upsertStagingRowsSupabase error', error);
-      throw error;
+    try {
+      const { data, error } = await supabase.from('bulls_import_staging').insert(payload).select('id, import_batch_id, row_number, is_valid');
+      if (error) {
+        console.error('[import] upsertStagingRowsSupabase error', error);
+        throw error;
+      }
+      console.debug('[import] inserted staging rows chunk', { inserted: data?.length ?? payload.length });
+    } catch (err) {
+      console.error('[import] upsertStagingRowsSupabase exception', err);
+      throw err;
     }
   }
 }
@@ -97,6 +168,8 @@ export async function processNormalizedRowsInBatchesMultiColumn(
   const writeBatchSize = options?.writeBatchSize ?? 100;
   const totalRows = normalizedRows.length;
 
+  console.info(`[import] starting processing ${totalRows} rows (batch=${writeBatchSize})`);
+
   const globalCache = new Map<string, any>();
   const rowChunks = chunkArray(normalizedRows, writeBatchSize);
   let processed = 0;
@@ -108,10 +181,10 @@ export async function processNormalizedRowsInBatchesMultiColumn(
     const naabsToFetch: string[] = [];
     for (const r of rowsChunk) {
       const candidates = [
-        r.sire_naab?.toString().trim(),
-        r.mgs_naab?.toString().trim(),
-        r.mmgs_naab?.toString().trim(),
-        r.naab?.toString().trim(),
+        normalizeNaab(r.sire_naab),
+        normalizeNaab(r.mgs_naab),
+        normalizeNaab(r.mmgs_naab),
+        normalizeNaab(r.naab),
       ].filter(Boolean) as string[];
 
       for (const naab of candidates) {
@@ -121,6 +194,8 @@ export async function processNormalizedRowsInBatchesMultiColumn(
         }
       }
     }
+
+    console.debug(`[import] chunk has ${rowsChunk.length} rows, need to fetch ${naabsToFetch.length} naabs`);
 
     if (naabsToFetch.length > 0) {
       const fetchedMap = await fetchBullsByNaabsMultiColumn(supabase, naabsToFetch, lookupChunkSize);
@@ -132,10 +207,10 @@ export async function processNormalizedRowsInBatchesMultiColumn(
 
     const mappedRows = rowsChunk.map((r) => {
       const candidates = [
-        { col: 'sire_naab', val: r.sire_naab?.toString().trim() },
-        { col: 'mgs_naab', val: r.mgs_naab?.toString().trim() },
-        { col: 'mmgs_naab', val: r.mmgs_naab?.toString().trim() },
-        { col: 'naab', val: r.naab?.toString().trim() },
+        { col: 'sire_naab', val: normalizeNaab(r.sire_naab) },
+        { col: 'mgs_naab', val: normalizeNaab(r.mgs_naab) },
+        { col: 'mmgs_naab', val: normalizeNaab(r.mmgs_naab) },
+        { col: 'naab', val: normalizeNaab(r.naab) },
       ].filter(x => x.val);
 
       let matchedBull: any = null;
@@ -159,6 +234,10 @@ export async function processNormalizedRowsInBatchesMultiColumn(
           }
         : null;
 
+      if (!mappedRow) {
+        console.debug('[import] row not matched', { row_number: r.row_number, candidates: candidates.map(c=>c.val) });
+      }
+
       return {
         import_batch_id: r.import_batch_id ?? null,
         uploader_user_id: r.uploader_user_id ?? null,
@@ -179,7 +258,11 @@ export async function processNormalizedRowsInBatchesMultiColumn(
 
     processed += rowsChunk.length;
     if (options?.progressCallback) options.progressCallback(processed, totalRows);
+
+    console.info(`[import] processed ${processed}/${totalRows} (valid=${validCount} invalid=${invalidCount})`);
   }
+
+  console.info('[import] finished processing', { processed, totalRows, validCount, invalidCount });
 
   return { processed, total: totalRows, valid: validCount, invalid: invalidCount };
 }
