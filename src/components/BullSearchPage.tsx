@@ -12,6 +12,8 @@ import { ANIMAL_METRIC_COLUMNS } from '@/constants/animalMetrics';
 import { useAnimalTableSort } from '@/hooks/useAnimalTableSort';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { processNormalizedRowsInBatchesMultiColumn } from '@/utils/importProcessing';
+import type { NormalizedRow } from '@/utils/importProcessing';
 interface Bull {
   id: string;
   code: string;
