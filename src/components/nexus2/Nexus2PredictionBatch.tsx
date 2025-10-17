@@ -311,6 +311,34 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
 
   const validRows = useMemo(() => rows.filter((row) => row.status === 'valid'), [rows]);
   const invalidRows = useMemo(() => rows.filter((row) => row.status === 'invalid'), [rows]);
+  const missingNaabCodes = useMemo(() => {
+    const sire = new Set<string>();
+    const mgs = new Set<string>();
+    const mmgs = new Set<string>();
+
+    for (const row of rows) {
+      if (row.naabPai && !row.bulls.sire) {
+        sire.add(row.naabPai);
+      }
+      if (row.naabAvoMaterno && !row.bulls.mgs) {
+        mgs.add(row.naabAvoMaterno);
+      }
+      if (row.naabBisavoMaterno && !row.bulls.mmgs) {
+        mmgs.add(row.naabBisavoMaterno);
+      }
+    }
+
+    const sireCodes = Array.from(sire).sort();
+    const mgsCodes = Array.from(mgs).sort();
+    const mmgsCodes = Array.from(mmgs).sort();
+
+    return {
+      sire: sireCodes,
+      mgs: mgsCodes,
+      mmgs: mmgsCodes,
+      total: sireCodes.length + mgsCodes.length + mmgsCodes.length
+    };
+  }, [rows]);
   const hasPredictions = useMemo(
     () => validRows.some((row) => row.prediction),
     [validRows]
@@ -550,6 +578,43 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
         event.target.value = '';
       }
     }
+  };
+
+  const exportMissingNaabs = () => {
+    if (missingNaabCodes.total === 0) {
+      toast({
+        title: t('nexus2.batch.toast.noMissingNaabs')
+      });
+      return;
+    }
+
+    const maxLength = Math.max(
+      missingNaabCodes.sire.length,
+      missingNaabCodes.mgs.length,
+      missingNaabCodes.mmgs.length
+    );
+
+    const exportRows = Array.from({ length: maxLength }, (_, index) => ({
+      naab_pai: missingNaabCodes.sire[index] ?? '',
+      naab_avo_materno: missingNaabCodes.mgs[index] ?? '',
+      naab_bisavo_materno: missingNaabCodes.mmgs[index] ?? ''
+    }));
+
+    const today = new Date().toISOString().split('T')[0];
+
+    saveSheet(
+      exportRows,
+      'NAABs Ausentes',
+      `naabs_ausentes_${today}.xlsx`,
+      'xlsx'
+    );
+
+    toast({
+      title: t('nexus2.batch.toast.exportMissingNaabsSuccess'),
+      description: t('nexus2.batch.toast.exportMissingNaabsDescription', {
+        count: missingNaabCodes.total
+      })
+    });
   };
 
   const handleProcess = () => {
@@ -840,6 +905,17 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
                 ) : (
                   t('nexus2.batch.actions.process')
                 )}
+              </Button>
+              <Button
+                type="button"
+                size="lg"
+                onClick={exportMissingNaabs}
+                disabled={missingNaabCodes.total === 0}
+              >
+                <span className="flex items-center gap-2">
+                  <FileSpreadsheet className="h-4 w-4" />
+                  {t('nexus2.batch.actions.exportMissingNaabs')}
+                </span>
               </Button>
               <Button
                 type="button"
