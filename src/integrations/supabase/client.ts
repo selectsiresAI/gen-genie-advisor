@@ -2,6 +2,47 @@ import { createClient } from "@supabase/supabase-js";
 
 const sanitizeUrl = (value?: string | null) => value?.replace(/\/$/, "");
 
+const decodeJwtPayload = (token?: string | null): Record<string, any> | undefined => {
+  if (!token) return undefined;
+  const segments = token.split(".");
+  if (segments.length < 2) return undefined;
+
+  try {
+    const base64 = segments[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padding = base64.length % 4 ? "=".repeat(4 - (base64.length % 4)) : "";
+    const normalized = `${base64}${padding}`;
+    const globalAtob =
+      typeof globalThis !== "undefined" && typeof (globalThis as { atob?: typeof atob }).atob === "function"
+        ? (globalThis as { atob: typeof atob }).atob
+        : undefined;
+
+    if (globalAtob) {
+      const decoded = globalAtob(normalized);
+      return JSON.parse(decoded);
+    }
+
+    const globalBuffer =
+      typeof globalThis !== "undefined" && typeof (globalThis as any).Buffer !== "undefined"
+        ? (globalThis as any).Buffer
+        : undefined;
+
+    if (globalBuffer) {
+      const decoded = globalBuffer.from(normalized, "base64").toString("utf-8");
+      return JSON.parse(decoded);
+    }
+  } catch (error) {
+    console.warn("Não foi possível decodificar o payload do token Supabase", error);
+  }
+
+  return undefined;
+};
+
+const getProjectRefFromAnonKey = (anonKey?: string | null) => {
+  const payload = decodeJwtPayload(anonKey);
+  const ref = payload?.ref || payload?.project_id;
+  return typeof ref === "string" ? ref : undefined;
+};
+
 const envSupabaseUrl = sanitizeUrl(import.meta.env.VITE_SUPABASE_URL as string | undefined);
 const envSupabaseAnonKey = ((import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY) as
   | string
@@ -13,46 +54,53 @@ export const supabaseAnonKey = envSupabaseAnonKey ??
 
 const IMPORT_BULLS_ENV_BASE = sanitizeUrl(import.meta.env.VITE_SUPABASE_IMPORT_BULLS_URL as string | undefined);
 
-const deriveFunctionsBase = () => {
+const deriveHostsFromSupabaseConfig = () => {
+  const hosts: string[] = [];
+
   try {
-    const { host } = new URL(supabaseUrl);
-    if (host.endsWith(".supabase.co")) {
-      return `https://${host.replace(".supabase.co", ".functions.supabase.co")}`;
+    if (supabaseUrl) {
+      const { host } = new URL(supabaseUrl);
+      hosts.push(host);
     }
   } catch (error) {
-    console.warn("Não foi possível derivar o domínio das edge functions a partir do supabaseUrl", error);
+    console.warn("Não foi possível interpretar o supabaseUrl fornecido", error);
   }
-  return undefined;
+
+  const projectRef = getProjectRefFromAnonKey(supabaseAnonKey);
+  if (projectRef) {
+    hosts.push(`${projectRef}.supabase.co`);
+  }
+
+  return Array.from(new Set(hosts.filter(Boolean)));
 };
 
-const FUNCTIONS_BASE_ORIGIN = IMPORT_BULLS_ENV_BASE
-  ? undefined
-  : deriveFunctionsBase();
+const deriveImportBullsBases = () => {
+  const hosts = deriveHostsFromSupabaseConfig();
 
-const DEFAULT_IMPORT_BULLS_BASE = FUNCTIONS_BASE_ORIGIN
-  ? `${FUNCTIONS_BASE_ORIGIN}/import-bulls`
-  : undefined;
+  const bases = hosts.flatMap((host) => {
+    if (!host.endsWith(".supabase.co")) return [];
 
-const REST_FUNCTIONS_BASE = supabaseUrl
-  ? `${supabaseUrl.replace(/\/$/, "")}/functions/v1/import-bulls`
-  : undefined;
+    const restBase = `https://${host}/functions/v1/import-bulls`;
+    const edgeBase = `https://${host.replace(".supabase.co", ".functions.supabase.co")}/import-bulls`;
+    return [edgeBase, restBase];
+  });
 
-const FALLBACK_IMPORT_BULLS_BASE = "https://gzvweejdtycxzxrjplpc.functions.supabase.co/import-bulls";
+  return Array.from(
+    new Set(
+      [sanitizeUrl(IMPORT_BULLS_ENV_BASE), ...bases.map((value) => sanitizeUrl(value))].filter(Boolean) as string[]
+    )
+  );
+};
 
-const importBullsBaseCandidates = Array.from(
-  new Set(
-    [
-      IMPORT_BULLS_ENV_BASE,
-      DEFAULT_IMPORT_BULLS_BASE,
-      sanitizeUrl(REST_FUNCTIONS_BASE),
-      FALLBACK_IMPORT_BULLS_BASE
-    ].filter(Boolean) as string[]
-  )
-);
+const importBullsBaseCandidates = deriveImportBullsBases();
 
 export const importBullsFunctionBaseUrl = importBullsBaseCandidates[0];
 
 export const getImportBullsFunctionUrl = (path = "") => {
+  if (!importBullsFunctionBaseUrl) {
+    throw new Error("URL base para importação de touros não configurada.");
+  }
+
   const suffix = path ? (path.startsWith("/") ? path : `/${path}`) : "";
   return `${importBullsFunctionBaseUrl}${suffix}`;
 };
