@@ -62,11 +62,15 @@ function parseCSV(text: string): { headers: string[]; rows: ParsedCSVRow[] } {
     throw new Error('CSV deve ter pelo menos cabeçalho e uma linha de dados');
   }
 
-  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+  // Detectar separador (vírgula ou ponto-e-vírgula)
+  const separator = lines[0].includes(';') ? ';' : ',';
+  console.log(`📋 Detected separator: "${separator}"`);
+
+  const headers = lines[0].split(separator).map(h => h.trim().toLowerCase());
   const rows: ParsedCSVRow[] = [];
 
   for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(',').map(v => v.trim());
+    const values = lines[i].split(separator).map(v => v.trim());
     const row: ParsedCSVRow = {};
     
     headers.forEach((header, index) => {
@@ -216,14 +220,16 @@ Deno.serve(async (req) => {
         const rawRow = row.raw_row as ParsedCSVRow;
         
         // Validar se tem código mínimo
-        if (!rawRow.code) {
+        const code = rawRow.code?.trim();
+        if (!code) {
           invalid++;
           continue;
         }
 
         // Preparar dados para bulls table
         const bullData: any = {
-          code: rawRow.code,
+          code: code,
+          code_normalized: code.toUpperCase().replace(/[-\s]/g, '').replace(/^0+/, ''),
           name: rawRow.name || '',
           registration: rawRow.registration || null,
           birth_date: rawRow.birth_date || null,
@@ -271,9 +277,10 @@ Deno.serve(async (req) => {
             .eq('id', existing.id);
 
           if (updateError) {
-            console.error('Update error:', updateError);
+            console.error(`❌ Update error for ${bullData.code}:`, updateError);
             skipped++;
           } else {
+            console.log(`✅ Updated bull: ${bullData.code}`);
             updated++;
           }
         } else {
@@ -283,9 +290,10 @@ Deno.serve(async (req) => {
             .insert(bullData);
 
           if (insertError) {
-            console.error('Insert error:', insertError);
+            console.error(`❌ Insert error for ${bullData.code}:`, insertError);
             skipped++;
           } else {
+            console.log(`✅ Inserted bull: ${bullData.code}`);
             inserted++;
           }
         }
