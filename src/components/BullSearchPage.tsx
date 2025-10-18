@@ -11,7 +11,7 @@ import SortableHeader from '@/components/animals/SortableHeader';
 import { ANIMAL_METRIC_COLUMNS } from '@/constants/animalMetrics';
 import { useAnimalTableSort } from '@/hooks/useAnimalTableSort';
 import { useToast } from '@/hooks/use-toast';
-import { supabase, supabaseAnonKey } from '@/integrations/supabase/client';
+import { supabase, supabaseAnonKey, getImportBullsFunctionUrl } from '@/integrations/supabase/client';
 interface Bull {
   id: string;
   code: string;
@@ -97,9 +97,9 @@ interface BullSearchPageProps {
   onGoToBotijao?: () => void;
 }
 
-const IMPORT_BULLS_FUNCTION_BASE_URL = 'https://gzvweejdtycxzxrjplpc.functions.supabase.co/import-bulls';
-const IMPORT_BULLS_UPLOAD_URL = `${IMPORT_BULLS_FUNCTION_BASE_URL}/upload`;
-const IMPORT_BULLS_COMMIT_URL = `${IMPORT_BULLS_FUNCTION_BASE_URL}/commit`;
+const IMPORT_BULLS_FUNCTION_BASE_URL = getImportBullsFunctionUrl();
+const IMPORT_BULLS_UPLOAD_URL = getImportBullsFunctionUrl('/upload');
+const IMPORT_BULLS_COMMIT_URL = getImportBullsFunctionUrl('/commit');
 const BullSearchPage: React.FC<BullSearchPageProps> = ({
   farm,
   onBack,
@@ -623,11 +623,18 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
         apikey: supabaseAnonKey,
       };
 
-      const uploadResponse = await fetch(IMPORT_BULLS_UPLOAD_URL, {
-        method: 'POST',
-        body: form,
-        headers: authHeaders,
-      });
+      let uploadResponse: Response;
+      try {
+        uploadResponse = await fetch(IMPORT_BULLS_UPLOAD_URL, {
+          method: 'POST',
+          body: form,
+          headers: authHeaders,
+        });
+      } catch (networkError) {
+        console.error('upload network error', networkError);
+        const details = networkError instanceof Error ? networkError.message : String(networkError);
+        throw new Error(`Não foi possível conectar à função de upload (${IMPORT_BULLS_UPLOAD_URL}). ${details}`);
+      }
 
       const uploadText = await uploadResponse.text();
       let uploadJson: any;
@@ -652,19 +659,26 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
         throw new Error('Upload não retornou import_batch_id.');
       }
 
-      const commitResponse = await fetch(IMPORT_BULLS_COMMIT_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders,
-        },
-        body: JSON.stringify({
-          import_batch_id: importBatchId,
-          uploader_user_id: userId,
-          profile_id: profileId,
-          farm_id: farm.farm_id
-        })
-      });
+      let commitResponse: Response;
+      try {
+        commitResponse = await fetch(IMPORT_BULLS_COMMIT_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders,
+          },
+          body: JSON.stringify({
+            import_batch_id: importBatchId,
+            uploader_user_id: userId,
+            profile_id: profileId,
+            farm_id: farm.farm_id
+          })
+        });
+      } catch (networkError) {
+        console.error('commit network error', networkError);
+        const details = networkError instanceof Error ? networkError.message : String(networkError);
+        throw new Error(`Não foi possível conectar à função de commit (${IMPORT_BULLS_COMMIT_URL}). ${details}`);
+      }
 
       const commitText = await commitResponse.text();
       let commitJson: any;
