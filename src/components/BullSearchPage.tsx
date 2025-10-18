@@ -11,7 +11,11 @@ import SortableHeader from '@/components/animals/SortableHeader';
 import { ANIMAL_METRIC_COLUMNS } from '@/constants/animalMetrics';
 import { useAnimalTableSort } from '@/hooks/useAnimalTableSort';
 import { useToast } from '@/hooks/use-toast';
-import { supabase, supabaseAnonKey, getImportBullsFunctionUrl } from '@/integrations/supabase/client';
+import {
+  supabase,
+  supabaseAnonKey,
+  getImportBullsFunctionUrlCandidates
+} from '@/integrations/supabase/client';
 interface Bull {
   id: string;
   code: string;
@@ -97,9 +101,44 @@ interface BullSearchPageProps {
   onGoToBotijao?: () => void;
 }
 
-const IMPORT_BULLS_FUNCTION_BASE_URL = getImportBullsFunctionUrl();
-const IMPORT_BULLS_UPLOAD_URL = getImportBullsFunctionUrl('/upload');
-const IMPORT_BULLS_COMMIT_URL = getImportBullsFunctionUrl('/commit');
+const IMPORT_BULLS_UPLOAD_URLS = getImportBullsFunctionUrlCandidates('/upload');
+const IMPORT_BULLS_COMMIT_URLS = getImportBullsFunctionUrlCandidates('/commit');
+const PRIMARY_IMPORT_BULLS_UPLOAD_URL = IMPORT_BULLS_UPLOAD_URLS[0];
+const PRIMARY_IMPORT_BULLS_COMMIT_URL = IMPORT_BULLS_COMMIT_URLS[0];
+
+type ImportBullsOperation = 'upload' | 'commit';
+
+const attemptImportBullsFetch = async (
+  urls: string[],
+  initFactory: () => RequestInit,
+  operation: ImportBullsOperation
+) => {
+  const networkErrors: string[] = [];
+  for (const url of urls) {
+    let init: RequestInit;
+    try {
+      init = initFactory();
+    } catch (error) {
+      console.error(`${operation} init error`, error);
+      throw error;
+    }
+
+    try {
+      const response = await fetch(url, init);
+      return { response, url };
+    } catch (networkError) {
+      const message = networkError instanceof Error ? networkError.message : String(networkError);
+      console.error(`${operation} network error`, url, networkError);
+      networkErrors.push(`${url} => ${message}`);
+    }
+  }
+
+  throw new Error(
+    networkErrors.length
+      ? `Não foi possível conectar às funções de importação (${operation}). ${networkErrors.join(' | ')}`
+      : `Nenhuma URL configurada para a função de importação (${operation}).`
+  );
+};
 const BullSearchPage: React.FC<BullSearchPageProps> = ({
   farm,
   onBack,
@@ -612,28 +651,30 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
 
       const profileId = profileData?.id ?? userId;
 
-      const form = new FormData();
-      form.append('file', file);
-      form.append('user_id', userId);
-      form.append('profile_id', profileId);
-      form.append('farm_id', farm.farm_id);
-
       const authHeaders: Record<string, string> = {
         Authorization: `Bearer ${accessToken}`,
         apikey: supabaseAnonKey,
       };
 
-      let uploadResponse: Response;
-      try {
-        uploadResponse = await fetch(IMPORT_BULLS_UPLOAD_URL, {
-          method: 'POST',
-          body: form,
-          headers: authHeaders,
-        });
-      } catch (networkError) {
-        console.error('upload network error', networkError);
-        const details = networkError instanceof Error ? networkError.message : String(networkError);
-        throw new Error(`Não foi possível conectar à função de upload (${IMPORT_BULLS_UPLOAD_URL}). ${details}`);
+      const { response: uploadResponse, url: uploadUrl } = await attemptImportBullsFetch(
+        IMPORT_BULLS_UPLOAD_URLS,
+        () => {
+          const uploadForm = new FormData();
+          uploadForm.append('file', file);
+          uploadForm.append('user_id', userId);
+          uploadForm.append('profile_id', profileId);
+          uploadForm.append('farm_id', farm.farm_id);
+          return {
+            method: 'POST',
+            body: uploadForm,
+            headers: { ...authHeaders },
+          };
+        },
+        'upload'
+      );
+
+      if (uploadUrl && uploadUrl !== PRIMARY_IMPORT_BULLS_UPLOAD_URL) {
+        console.warn('Fallback URL utilizada para upload de touros', uploadUrl);
       }
 
       const uploadText = await uploadResponse.text();
@@ -645,7 +686,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
         throw new Error(`Resposta inválida do upload (${uploadResponse.status}): ${uploadText}`);
       }
 
-      console.log('upload response status', uploadResponse.status);
+      console.log('upload response status', uploadResponse.status, 'via', uploadUrl);
       console.log('upload response body', uploadJson);
 
       if (!uploadResponse.ok) {
@@ -659,25 +700,28 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
         throw new Error('Upload não retornou import_batch_id.');
       }
 
-      let commitResponse: Response;
-      try {
-        commitResponse = await fetch(IMPORT_BULLS_COMMIT_URL, {
+      const commitPayload = {
+        import_batch_id: importBatchId,
+        uploader_user_id: userId,
+        profile_id: profileId,
+        farm_id: farm.farm_id
+      };
+
+      const { response: commitResponse, url: commitUrl } = await attemptImportBullsFetch(
+        IMPORT_BULLS_COMMIT_URLS,
+        () => ({
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             ...authHeaders,
           },
-          body: JSON.stringify({
-            import_batch_id: importBatchId,
-            uploader_user_id: userId,
-            profile_id: profileId,
-            farm_id: farm.farm_id
-          })
-        });
-      } catch (networkError) {
-        console.error('commit network error', networkError);
-        const details = networkError instanceof Error ? networkError.message : String(networkError);
-        throw new Error(`Não foi possível conectar à função de commit (${IMPORT_BULLS_COMMIT_URL}). ${details}`);
+          body: JSON.stringify(commitPayload)
+        }),
+        'commit'
+      );
+
+      if (commitUrl && commitUrl !== PRIMARY_IMPORT_BULLS_COMMIT_URL) {
+        console.warn('Fallback URL utilizada para commit de touros', commitUrl);
       }
 
       const commitText = await commitResponse.text();
@@ -689,7 +733,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
         throw new Error(`Resposta inválida do commit (${commitResponse.status}): ${commitText}`);
       }
 
-      console.log('commit response status', commitResponse.status);
+      console.log('commit response status', commitResponse.status, 'via', commitUrl);
       console.log('commit response body', commitJson);
 
       if (!commitResponse.ok) {
