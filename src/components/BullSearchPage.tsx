@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowLeft, Search, Upload, Download, Beaker } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
 import SortableHeader from '@/components/animals/SortableHeader';
 import { ANIMAL_METRIC_COLUMNS } from '@/constants/animalMetrics';
@@ -159,12 +160,156 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
     PTAM: 0.15,
     CFP: 0.1
   });
-  const {
-    toast
-  } = useToast();
+  
+  // Estados para importação
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importBatchId, setImportBatchId] = useState<string | null>(null);
+  const [importResult, setImportResult] = useState<any>(null);
+  
+  const { toast } = useToast();
   useEffect(() => {
     loadBulls();
   }, []);
+  const handleImportUpload = async () => {
+    if (!importFile) {
+      toast({
+        title: "Erro",
+        description: "Selecione um arquivo CSV",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setImporting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      const session = await supabase.auth.getSession();
+      const accessToken = session.data.session?.access_token;
+
+      const headers = {
+        authorization: `Bearer ${accessToken}`,
+        apikey: supabaseAnonKey,
+      };
+
+      const { response: uploadResponse, url: uploadUrl } = await attemptImportBullsFetch(
+        IMPORT_BULLS_UPLOAD_URLS,
+        () => {
+          const uploadForm = new FormData();
+          uploadForm.append('file', importFile);
+          uploadForm.append('user_id', user.id);
+          return {
+            method: 'POST',
+            headers,
+            body: uploadForm,
+          };
+        },
+        'upload'
+      );
+
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        throw new Error(`Upload falhou: ${uploadResponse.status} ${errorText}`);
+      }
+
+      const uploadData = await uploadResponse.json();
+      setImportBatchId(uploadData.import_batch_id);
+
+      toast({
+        title: "Upload concluído",
+        description: `${uploadData.total_rows} linhas enviadas. Clique em "Confirmar Importação" para finalizar.`
+      });
+
+    } catch (error) {
+      console.error('Import upload error:', error);
+      toast({
+        title: "Erro no upload",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
+        variant: "destructive"
+      });
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleImportCommit = async () => {
+    if (!importBatchId) {
+      toast({
+        title: "Erro",
+        description: "Faça o upload antes de confirmar",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setImporting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      const session = await supabase.auth.getSession();
+      const accessToken = session.data.session?.access_token;
+
+      const { response: commitResponse } = await attemptImportBullsFetch(
+        IMPORT_BULLS_COMMIT_URLS,
+        () => ({
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            authorization: `Bearer ${accessToken}`,
+            apikey: supabaseAnonKey,
+          },
+          body: JSON.stringify({
+            import_batch_id: importBatchId,
+            uploader_user_id: user.id,
+          }),
+        }),
+        'commit'
+      );
+
+      if (!commitResponse.ok) {
+        const errorText = await commitResponse.text();
+        throw new Error(`Commit falhou: ${commitResponse.status} ${errorText}`);
+      }
+
+      const commitData = await commitResponse.json();
+      setImportResult(commitData);
+
+      toast({
+        title: "Importação concluída!",
+        description: `${commitData.inserted} inseridos, ${commitData.updated} atualizados, ${commitData.skipped} ignorados`
+      });
+
+      // Recarregar lista de touros
+      await loadBulls();
+
+      // Limpar estado de importação
+      setTimeout(() => {
+        setShowImportDialog(false);
+        setImportFile(null);
+        setImportBatchId(null);
+        setImportResult(null);
+      }, 3000);
+
+    } catch (error) {
+      console.error('Import commit error:', error);
+      toast({
+        title: "Erro no commit",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
+        variant: "destructive"
+      });
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const downloadBullTemplate = () => {
     // Template completo com dados reais de touros para exemplo
     const templateBulls = [{
@@ -608,175 +753,6 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
       onGoToBotijao();
     }
   };
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      setLoading(true);
-      toast({
-        title: "Upload iniciado",
-        description: "Enviando arquivo de touros..."
-      });
-
-      const [{ data: authData, error: authError }, { data: sessionData, error: sessionError }] = await Promise.all([
-        supabase.auth.getUser(),
-        supabase.auth.getSession()
-      ]);
-      if (authError) {
-        throw authError;
-      }
-      if (sessionError) {
-        throw sessionError;
-      }
-
-      const userId = authData?.user?.id;
-      if (!userId) {
-        throw new Error("Usuário não autenticado.");
-      }
-
-      const accessToken = sessionData?.session?.access_token;
-      if (!accessToken) {
-        throw new Error('Token de acesso não disponível para autenticação.');
-      }
-
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', userId)
-        .maybeSingle();
-      if (profileError) {
-        throw profileError;
-      }
-
-      const profileId = profileData?.id ?? userId;
-
-      const authHeaders: Record<string, string> = {
-        Authorization: `Bearer ${accessToken}`,
-        apikey: supabaseAnonKey,
-      };
-
-      const { response: uploadResponse, url: uploadUrl } = await attemptImportBullsFetch(
-        IMPORT_BULLS_UPLOAD_URLS,
-        () => {
-          const uploadForm = new FormData();
-          uploadForm.append('file', file);
-          uploadForm.append('user_id', userId);
-          uploadForm.append('profile_id', profileId);
-          uploadForm.append('farm_id', farm.farm_id);
-          return {
-            method: 'POST',
-            body: uploadForm,
-            headers: { ...authHeaders },
-          };
-        },
-        'upload'
-      );
-
-      if (uploadUrl && uploadUrl !== PRIMARY_IMPORT_BULLS_UPLOAD_URL) {
-        console.warn('Fallback URL utilizada para upload de touros', uploadUrl);
-      }
-
-      const uploadText = await uploadResponse.text();
-      let uploadJson: any;
-      try {
-        uploadJson = uploadText ? JSON.parse(uploadText) : {};
-      } catch (parseError) {
-        console.error('upload failed', uploadResponse.status, uploadText);
-        throw new Error(`Resposta inválida do upload (${uploadResponse.status}): ${uploadText}`);
-      }
-
-      console.log('upload response status', uploadResponse.status, 'via', uploadUrl);
-      console.log('upload response body', uploadJson);
-
-      if (!uploadResponse.ok) {
-        console.error('upload failed', uploadResponse.status, uploadText);
-        const err = uploadJson?.error || uploadJson || `Upload falhou: ${uploadResponse.status}`;
-        throw new Error(typeof err === 'string' ? err : JSON.stringify(err));
-      }
-
-      const importBatchId = uploadJson?.import_batch_id as string | undefined;
-      if (!importBatchId) {
-        throw new Error('Upload não retornou import_batch_id.');
-      }
-
-      const commitPayload = {
-        import_batch_id: importBatchId,
-        uploader_user_id: userId,
-        profile_id: profileId,
-        farm_id: farm.farm_id
-      };
-
-      const { response: commitResponse, url: commitUrl } = await attemptImportBullsFetch(
-        IMPORT_BULLS_COMMIT_URLS,
-        () => ({
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...authHeaders,
-          },
-          body: JSON.stringify(commitPayload)
-        }),
-        'commit'
-      );
-
-      if (commitUrl && commitUrl !== PRIMARY_IMPORT_BULLS_COMMIT_URL) {
-        console.warn('Fallback URL utilizada para commit de touros', commitUrl);
-      }
-
-      const commitText = await commitResponse.text();
-      let commitJson: any;
-      try {
-        commitJson = commitText ? JSON.parse(commitText) : {};
-      } catch (parseError) {
-        console.error('commit failed', commitResponse.status, commitText);
-        throw new Error(`Resposta inválida do commit (${commitResponse.status}): ${commitText}`);
-      }
-
-      console.log('commit response status', commitResponse.status, 'via', commitUrl);
-      console.log('commit response body', commitJson);
-
-      if (!commitResponse.ok) {
-        console.error('commit failed', commitResponse.status, commitText);
-        const err = commitJson?.error || commitJson || `Commit falhou: ${commitResponse.status}`;
-        throw new Error(typeof err === 'string' ? err : JSON.stringify(err));
-      }
-
-      const {
-        inserted = 0,
-        updated = 0,
-        skipped = 0,
-        invalid = 0,
-        total_rows: totalRows = uploadJson?.total_rows
-      } = commitJson || {};
-
-      toast({
-        title: "Importação concluída",
-        description: `Processamos ${totalRows ?? inserted + updated + skipped} linha(s): ${inserted} inserida(s), ${updated} atualizada(s) e ${skipped} ignorada(s).`
-      });
-
-      if (invalid > 0) {
-        toast({
-          title: "Importação com pendências",
-          description: `${invalid} registro(s) marcado(s) como inválido(s). Verifique o log na tabela de staging.`,
-          variant: "destructive"
-        });
-      }
-
-      await loadBulls();
-    } catch (error) {
-      console.error('Upload error:', error);
-      const message = error instanceof Error ? error.message : 'Falha ao processar o arquivo CSV';
-      toast({
-        title: "Erro no upload",
-        description: message,
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-      e.target.value = '';
-    }
-  };
   const handleExport = () => {
     if (rankedBulls.length === 0) return;
     const csvData = rankedBulls.map(bull => ({
@@ -882,15 +858,95 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
             </Select>
 
             <div className="flex gap-2">
-              <label className="cursor-pointer">
-                <Button variant="outline" asChild>
-                  <span className="text-slate-950">
+              <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="text-slate-950">
                     <Upload size={16} className="mr-2" />
                     Importar CSV
-                  </span>
-                </Button>
-                <input type="file" accept=".csv" onChange={handleUpload} className="hidden" />
-              </label>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px]">
+                  <DialogHeader>
+                    <DialogTitle>Importar Touros via CSV</DialogTitle>
+                    <DialogDescription>
+                      Faça upload de um arquivo CSV com os dados dos touros. Use o template para garantir o formato correto.
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Arquivo CSV</label>
+                      <Input 
+                        type="file" 
+                        accept=".csv"
+                        onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                        disabled={importing}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Máximo: 10MB. Formato: UTF-8 com cabeçalho.
+                      </p>
+                    </div>
+
+                    {importBatchId && (
+                      <div className="rounded-lg bg-green-50 dark:bg-green-950 p-3 border border-green-200 dark:border-green-800">
+                        <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                          ✓ Upload realizado com sucesso
+                        </p>
+                        <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                          Clique em "Confirmar Importação" para finalizar
+                        </p>
+                      </div>
+                    )}
+
+                    {importResult && (
+                      <div className="rounded-lg bg-blue-50 dark:bg-blue-950 p-3 border border-blue-200 dark:border-blue-800">
+                        <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                          Importação Concluída
+                        </p>
+                        <div className="text-xs text-blue-700 dark:text-blue-300 mt-2 space-y-1">
+                          <p>✓ {importResult.inserted} inseridos</p>
+                          <p>↻ {importResult.updated} atualizados</p>
+                          <p>⊘ {importResult.skipped} ignorados</p>
+                          {importResult.invalid > 0 && (
+                            <p className="text-orange-600">⚠ {importResult.invalid} inválidos</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <DialogFooter className="gap-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setShowImportDialog(false);
+                        setImportFile(null);
+                        setImportBatchId(null);
+                        setImportResult(null);
+                      }}
+                      disabled={importing}
+                    >
+                      Cancelar
+                    </Button>
+                    
+                    {!importBatchId ? (
+                      <Button 
+                        onClick={handleImportUpload}
+                        disabled={!importFile || importing}
+                      >
+                        {importing ? 'Enviando...' : 'Fazer Upload'}
+                      </Button>
+                    ) : (
+                      <Button 
+                        onClick={handleImportCommit}
+                        disabled={importing || !!importResult}
+                      >
+                        {importing ? 'Processando...' : 'Confirmar Importação'}
+                      </Button>
+                    )}
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
 
               <Button variant="outline" onClick={downloadBullTemplate} title="Baixar template completo de touros para Supabase" className="bg-gray-200 hover:bg-gray-100">
                 <Download size={16} className="mr-2" />
