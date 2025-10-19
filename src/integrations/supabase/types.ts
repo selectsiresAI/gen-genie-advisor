@@ -535,6 +535,7 @@ export type Database = {
           metadata: Json | null
           name: string
           owner_name: string
+          staging_raw_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -544,6 +545,7 @@ export type Database = {
           metadata?: Json | null
           name: string
           owner_name: string
+          staging_raw_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -553,6 +555,7 @@ export type Database = {
           metadata?: Json | null
           name?: string
           owner_name?: string
+          staging_raw_id?: string | null
           updated_at?: string | null
         }
         Relationships: []
