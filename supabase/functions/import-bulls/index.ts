@@ -62,18 +62,36 @@ function parseCSV(text: string): { headers: string[]; rows: ParsedCSVRow[] } {
     throw new Error('CSV deve ter pelo menos cabeçalho e uma linha de dados');
   }
 
-  // Detectar separador (vírgula ou ponto-e-vírgula)
-  const separator = lines[0].includes(';') ? ';' : ',';
-  console.log(`📋 Detected separator: "${separator}"`);
+  // Detectar separador (vírgula, ponto-e-vírgula ou tab)
+  let separator = ',';
+  if (lines[0].includes(';')) {
+    separator = ';';
+  } else if (lines[0].includes('\t')) {
+    separator = '\t';
+  }
+  
+  console.log(`📋 Detected separator: "${separator === '\t' ? '\\t' : separator}"`);
+  console.log(`📋 First line sample: ${lines[0].substring(0, 200)}`);
 
+  // Parse header
   const headers = lines[0].split(separator).map(h => h.trim().toLowerCase());
+  console.log(`📋 Parsed ${headers.length} headers:`, headers.slice(0, 10));
+
   const rows: ParsedCSVRow[] = [];
 
   for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(separator).map(v => v.trim());
+    const values = lines[i].split(separator);
+    
+    // Verificar se número de valores bate com número de headers
+    if (values.length !== headers.length) {
+      console.warn(`⚠️ Row ${i} has ${values.length} values but ${headers.length} headers expected`);
+    }
+
     const row: ParsedCSVRow = {};
     
     headers.forEach((header, index) => {
+      const value = (values[index] || '').trim();
+      
       // Ignorar colunas excluídas
       if (EXCLUDED_COLUMNS.includes(header)) {
         return;
@@ -81,12 +99,13 @@ function parseCSV(text: string): { headers: string[]; rows: ParsedCSVRow[] } {
       
       // Mapear coluna para nome canônico ou usar original
       const mappedHeader = COLUMN_MAP[header] || header;
-      row[mappedHeader] = values[index] || '';
+      row[mappedHeader] = value;
     });
     
     rows.push(row);
   }
 
+  console.log(`📋 Parsed ${rows.length} rows. Sample first row:`, rows[0]);
   return { headers, rows };
 }
 

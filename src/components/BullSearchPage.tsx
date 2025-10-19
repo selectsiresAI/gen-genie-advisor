@@ -12,6 +12,7 @@ import SortableHeader from '@/components/animals/SortableHeader';
 import { ANIMAL_METRIC_COLUMNS } from '@/constants/animalMetrics';
 import { useAnimalTableSort } from '@/hooks/useAnimalTableSort';
 import { useToast } from '@/hooks/use-toast';
+import { StagingMigrationButton } from './StagingMigrationButton';
 import {
   supabase,
   supabaseAnonKey,
@@ -858,6 +859,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
             </Select>
 
             <div className="flex gap-2">
+              <StagingMigrationButton />
               <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="text-slate-950">
