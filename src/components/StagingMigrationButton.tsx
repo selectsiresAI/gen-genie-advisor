@@ -32,36 +32,63 @@ export function StagingMigrationButton() {
 
       const result = await response.json();
       
+      console.log('📊 Migration completed:', result);
+      
+      // Build summary message
+      const summary = [
+        `✅ Profiles: ${result.results.profiles.inserted} novos, ${result.results.profiles.updated} atualizados, ${result.results.profiles.errors} erros`,
+        `✅ Farms: ${result.results.farms.inserted} novas, ${result.results.farms.updated} atualizadas, ${result.results.farms.errors} erros`,
+        `✅ Females: ${result.results.females.inserted} novas, ${result.results.females.updated} atualizadas, ${result.results.females.errors} erros`,
+      ].join('\n');
+      
       // Display passwords if any were generated
       if (result.passwords && result.passwords.length > 0) {
         const passwordsList = result.passwords
           .map((p: { email: string; password: string }) => `${p.email}: ${p.password}`)
           .join('\n');
         
-        console.log('🔑 Generated passwords:\n', passwordsList);
+        console.log('🔑 Senhas geradas para novos usuários:\n', passwordsList);
         
         toast({
-          title: 'Migração concluída com senhas geradas',
-          description: `Profiles: ${result.results.profiles.inserted + result.results.profiles.updated}, Farms: ${result.results.farms.inserted + result.results.farms.updated}, Females: ${result.results.females.inserted + result.results.females.updated}. Senhas no console.`,
+          title: `Migração concluída! ${result.passwords.length} senhas geradas`,
+          description: `Log ID: ${result.log_id}. Verifique o console para as senhas.`,
+          duration: 15000,
+        });
+        
+        // Show alert with passwords for easy copying
+        alert(
+          `MIGRAÇÃO CONCLUÍDA COM SUCESSO!\n\n` +
+          `Log ID: ${result.log_id}\n\n` +
+          `${summary}\n\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+          `SENHAS GERADAS PARA NOVOS USUÁRIOS:\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+          `${passwordsList}\n\n` +
+          `⚠️ IMPORTANTE: Copie estas senhas e envie para os usuários via email.\n` +
+          `As senhas também estão disponíveis no console do navegador.`
+        );
+      } else {
+        toast({
+          title: 'Migração concluída com sucesso!',
+          description: `Log ID: ${result.log_id}. Nenhuma senha nova foi gerada.`,
           duration: 10000,
         });
         
-        // Also show an alert with passwords
-        alert(`Senhas geradas para novos usuários:\n\n${passwordsList}\n\nCopie e envie para os usuários via email.`);
-      } else {
-        toast({
-          title: 'Migração concluída',
-          description: `Profiles: ${result.results.profiles.inserted + result.results.profiles.updated}, Farms: ${result.results.farms.inserted + result.results.farms.updated}, Females: ${result.results.females.inserted + result.results.females.updated}`,
-        });
+        alert(
+          `MIGRAÇÃO CONCLUÍDA COM SUCESSO!\n\n` +
+          `Log ID: ${result.log_id}\n\n` +
+          `${summary}\n\n` +
+          `Nenhuma senha nova foi gerada (todos os usuários já existiam).`
+        );
       }
 
-      console.log('Migration results:', result);
     } catch (error) {
-      console.error('Migration error:', error);
+      console.error('❌ Migration error:', error);
       toast({
         title: 'Erro na migração',
         description: error instanceof Error ? error.message : 'Erro desconhecido',
         variant: 'destructive',
+        duration: 10000,
       });
     } finally {
       setIsMigrating(false);

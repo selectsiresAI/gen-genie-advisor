@@ -1184,6 +1184,93 @@ export type Database = {
         }
         Relationships: []
       }
+      import_staging_females: {
+        Row: {
+          birth_date: string | null
+          category: string | null
+          cdcb_id: string | null
+          cm_dollar: number | null
+          created_at: string | null
+          farm_id: string | null
+          farm_name: string | null
+          fm_dollar: number | null
+          fonte: string | null
+          gm_dollar: number | null
+          hhp_dollar: number | null
+          identifier: string | null
+          imported_at: string | null
+          metadata: Json | null
+          mgs_naab: string | null
+          mmgs_naab: string | null
+          name: string | null
+          nm_dollar: number | null
+          numero_registro: string | null
+          parity_order: string | null
+          ptas: Json | null
+          raw_id: string | null
+          raw_row_number: number | null
+          sire_naab: string | null
+          technician_email: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          birth_date?: string | null
+          category?: string | null
+          cdcb_id?: string | null
+          cm_dollar?: number | null
+          created_at?: string | null
+          farm_id?: string | null
+          farm_name?: string | null
+          fm_dollar?: number | null
+          fonte?: string | null
+          gm_dollar?: number | null
+          hhp_dollar?: number | null
+          identifier?: string | null
+          imported_at?: string | null
+          metadata?: Json | null
+          mgs_naab?: string | null
+          mmgs_naab?: string | null
+          name?: string | null
+          nm_dollar?: number | null
+          numero_registro?: string | null
+          parity_order?: string | null
+          ptas?: Json | null
+          raw_id?: string | null
+          raw_row_number?: number | null
+          sire_naab?: string | null
+          technician_email?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          birth_date?: string | null
+          category?: string | null
+          cdcb_id?: string | null
+          cm_dollar?: number | null
+          created_at?: string | null
+          farm_id?: string | null
+          farm_name?: string | null
+          fm_dollar?: number | null
+          fonte?: string | null
+          gm_dollar?: number | null
+          hhp_dollar?: number | null
+          identifier?: string | null
+          imported_at?: string | null
+          metadata?: Json | null
+          mgs_naab?: string | null
+          mmgs_naab?: string | null
+          name?: string | null
+          nm_dollar?: number | null
+          numero_registro?: string | null
+          parity_order?: string | null
+          ptas?: Json | null
+          raw_id?: string | null
+          raw_row_number?: number | null
+          sire_naab?: string | null
+          technician_email?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       matings: {
         Row: {
           bull_id: string
@@ -1278,6 +1365,7 @@ export type Database = {
         Row: {
           created_at: string | null
           default_farm_id: string | null
+          email: string | null
           full_name: string
           id: string
           is_admin: boolean | null
@@ -1286,6 +1374,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           default_farm_id?: string | null
+          email?: string | null
           full_name: string
           id: string
           is_admin?: boolean | null
@@ -1294,6 +1383,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           default_farm_id?: string | null
+          email?: string | null
           full_name?: string
           id?: string
           is_admin?: boolean | null
@@ -1640,88 +1730,376 @@ export type Database = {
       }
       staging_females: {
         Row: {
+          beta_casein: string | null
           birth_date: string | null
+          bwc: number | null
           category: string | null
+          ccr: number | null
           cdcb_id: string | null
+          cfp: number | null
+          cm_dollar: number | null
+          code_normalized: string | null
+          created_at: string | null
+          da: number | null
+          dce: number | null
+          dfm: number | null
+          dpr: number | null
+          dsb: number | null
           farm_id: string | null
           farm_name: string | null
+          fi: number | null
+          flc: number | null
+          fls: number | null
+          fm_dollar: number | null
           fonte: string | null
+          fsav: number | null
+          fta: number | null
+          ftl: number | null
+          ftp: number | null
+          fua: number | null
+          gfi: number | null
+          gl: number | null
+          gm_dollar: number | null
+          hcr: number | null
+          hhp_dollar: number | null
+          hliv: number | null
           identifier: string | null
           imported_at: string | null
+          kappa_casein: string | null
+          ket: number | null
+          liv: number | null
+          mast: number | null
+          met: number | null
           metadata: Json | null
+          mf: number | null
           mgs_naab: string | null
+          mmgs_naab: string | null
           name: string | null
+          nm_dollar: number | null
+          numero_registro: string | null
           parity_order: string | null
+          ptaf: number | null
+          ptaf_pct: number | null
+          ptam: number | null
+          ptap: number | null
+          ptap_pct: number | null
+          ptas: Json | null
+          ptat: number | null
           raw_id: string | null
           raw_row_number: number | null
+          rfi: number | null
+          rlr: number | null
+          rls: number | null
+          rp: number | null
+          rtp: number | null
+          rua: number | null
+          ruh: number | null
+          ruw: number | null
+          rw: number | null
+          sce: number | null
+          scs: number | null
           sire_naab: string | null
+          ssb: number | null
+          sta: number | null
+          str: number | null
+          technician_email: string | null
+          tpi: number | null
+          ucl: number | null
+          udc: number | null
+          udp: number | null
+          updated_at: string | null
+          vp: number | null
         }
         Insert: {
+          beta_casein?: string | null
           birth_date?: string | null
+          bwc?: number | null
           category?: string | null
+          ccr?: number | null
           cdcb_id?: string | null
+          cfp?: number | null
+          cm_dollar?: number | null
+          code_normalized?: string | null
+          created_at?: string | null
+          da?: number | null
+          dce?: number | null
+          dfm?: number | null
+          dpr?: number | null
+          dsb?: number | null
           farm_id?: string | null
           farm_name?: string | null
+          fi?: number | null
+          flc?: number | null
+          fls?: number | null
+          fm_dollar?: number | null
           fonte?: string | null
+          fsav?: number | null
+          fta?: number | null
+          ftl?: number | null
+          ftp?: number | null
+          fua?: number | null
+          gfi?: number | null
+          gl?: number | null
+          gm_dollar?: number | null
+          hcr?: number | null
+          hhp_dollar?: number | null
+          hliv?: number | null
           identifier?: string | null
           imported_at?: string | null
+          kappa_casein?: string | null
+          ket?: number | null
+          liv?: number | null
+          mast?: number | null
+          met?: number | null
           metadata?: Json | null
+          mf?: number | null
           mgs_naab?: string | null
+          mmgs_naab?: string | null
           name?: string | null
+          nm_dollar?: number | null
+          numero_registro?: string | null
           parity_order?: string | null
+          ptaf?: number | null
+          ptaf_pct?: number | null
+          ptam?: number | null
+          ptap?: number | null
+          ptap_pct?: number | null
+          ptas?: Json | null
+          ptat?: number | null
           raw_id?: string | null
           raw_row_number?: number | null
+          rfi?: number | null
+          rlr?: number | null
+          rls?: number | null
+          rp?: number | null
+          rtp?: number | null
+          rua?: number | null
+          ruh?: number | null
+          ruw?: number | null
+          rw?: number | null
+          sce?: number | null
+          scs?: number | null
           sire_naab?: string | null
+          ssb?: number | null
+          sta?: number | null
+          str?: number | null
+          technician_email?: string | null
+          tpi?: number | null
+          ucl?: number | null
+          udc?: number | null
+          udp?: number | null
+          updated_at?: string | null
+          vp?: number | null
         }
         Update: {
+          beta_casein?: string | null
           birth_date?: string | null
+          bwc?: number | null
           category?: string | null
+          ccr?: number | null
           cdcb_id?: string | null
+          cfp?: number | null
+          cm_dollar?: number | null
+          code_normalized?: string | null
+          created_at?: string | null
+          da?: number | null
+          dce?: number | null
+          dfm?: number | null
+          dpr?: number | null
+          dsb?: number | null
           farm_id?: string | null
           farm_name?: string | null
+          fi?: number | null
+          flc?: number | null
+          fls?: number | null
+          fm_dollar?: number | null
           fonte?: string | null
+          fsav?: number | null
+          fta?: number | null
+          ftl?: number | null
+          ftp?: number | null
+          fua?: number | null
+          gfi?: number | null
+          gl?: number | null
+          gm_dollar?: number | null
+          hcr?: number | null
+          hhp_dollar?: number | null
+          hliv?: number | null
           identifier?: string | null
           imported_at?: string | null
+          kappa_casein?: string | null
+          ket?: number | null
+          liv?: number | null
+          mast?: number | null
+          met?: number | null
           metadata?: Json | null
+          mf?: number | null
           mgs_naab?: string | null
+          mmgs_naab?: string | null
           name?: string | null
+          nm_dollar?: number | null
+          numero_registro?: string | null
           parity_order?: string | null
+          ptaf?: number | null
+          ptaf_pct?: number | null
+          ptam?: number | null
+          ptap?: number | null
+          ptap_pct?: number | null
+          ptas?: Json | null
+          ptat?: number | null
           raw_id?: string | null
           raw_row_number?: number | null
+          rfi?: number | null
+          rlr?: number | null
+          rls?: number | null
+          rp?: number | null
+          rtp?: number | null
+          rua?: number | null
+          ruh?: number | null
+          ruw?: number | null
+          rw?: number | null
+          sce?: number | null
+          scs?: number | null
           sire_naab?: string | null
+          ssb?: number | null
+          sta?: number | null
+          str?: number | null
+          technician_email?: string | null
+          tpi?: number | null
+          ucl?: number | null
+          udc?: number | null
+          udp?: number | null
+          updated_at?: string | null
+          vp?: number | null
+        }
+        Relationships: []
+      }
+      staging_import_log: {
+        Row: {
+          completed_at: string | null
+          error_details: Json | null
+          executed_by: string | null
+          farms_errors: number | null
+          farms_inserted: number | null
+          farms_updated: number | null
+          females_errors: number | null
+          females_inserted: number | null
+          females_updated: number | null
+          id: string
+          profiles_errors: number | null
+          profiles_inserted: number | null
+          profiles_updated: number | null
+          started_at: string | null
+          status: string | null
+          strategy_used: string | null
+          summary: Json | null
+        }
+        Insert: {
+          completed_at?: string | null
+          error_details?: Json | null
+          executed_by?: string | null
+          farms_errors?: number | null
+          farms_inserted?: number | null
+          farms_updated?: number | null
+          females_errors?: number | null
+          females_inserted?: number | null
+          females_updated?: number | null
+          id?: string
+          profiles_errors?: number | null
+          profiles_inserted?: number | null
+          profiles_updated?: number | null
+          started_at?: string | null
+          status?: string | null
+          strategy_used?: string | null
+          summary?: Json | null
+        }
+        Update: {
+          completed_at?: string | null
+          error_details?: Json | null
+          executed_by?: string | null
+          farms_errors?: number | null
+          farms_inserted?: number | null
+          farms_updated?: number | null
+          females_errors?: number | null
+          females_inserted?: number | null
+          females_updated?: number | null
+          id?: string
+          profiles_errors?: number | null
+          profiles_inserted?: number | null
+          profiles_updated?: number | null
+          started_at?: string | null
+          status?: string | null
+          strategy_used?: string | null
+          summary?: Json | null
+        }
+        Relationships: []
+      }
+      staging_matches: {
+        Row: {
+          created_at: string | null
+          id: string
+          match_method: string | null
+          match_score: number | null
+          source_row_raw_id: string | null
+          source_table: string
+          target_row_id: string | null
+          target_table: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          match_method?: string | null
+          match_score?: number | null
+          source_row_raw_id?: string | null
+          source_table: string
+          target_row_id?: string | null
+          target_table: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          match_method?: string | null
+          match_score?: number | null
+          source_row_raw_id?: string | null
+          source_table?: string
+          target_row_id?: string | null
+          target_table?: string
         }
         Relationships: []
       }
       staging_profiles: {
         Row: {
-          default_farm_name: string | null
+          created_at: string | null
           email: string | null
           full_name: string | null
+          id: string
           imported_at: string | null
-          is_admin: string | null
-          metadata: Json | null
+          raw_data: Json | null
           raw_id: string | null
-          raw_row_number: number | null
+          technician_email: string | null
+          updated_at: string | null
         }
         Insert: {
-          default_farm_name?: string | null
+          created_at?: string | null
           email?: string | null
           full_name?: string | null
+          id?: string
           imported_at?: string | null
-          is_admin?: string | null
-          metadata?: Json | null
+          raw_data?: Json | null
           raw_id?: string | null
-          raw_row_number?: number | null
+          technician_email?: string | null
+          updated_at?: string | null
         }
         Update: {
-          default_farm_name?: string | null
+          created_at?: string | null
           email?: string | null
           full_name?: string | null
+          id?: string
           imported_at?: string | null
-          is_admin?: string | null
-          metadata?: Json | null
+          raw_data?: Json | null
           raw_id?: string | null
-          raw_row_number?: number | null
+          technician_email?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -3321,6 +3699,10 @@ export type Database = {
         Args: { input_naab: string }
         Returns: string
       }
+      normalize_text: {
+        Args: { txt: string }
+        Returns: string
+      }
       nx3_bulls_by_ids: {
         Args: { p_ids: string[]; p_trait: string }
         Returns: {
@@ -3532,6 +3914,14 @@ export type Database = {
       text_soundex: {
         Args: { "": string }
         Returns: string
+      }
+      unaccent: {
+        Args: { "": string }
+        Returns: string
+      }
+      unaccent_init: {
+        Args: { "": unknown }
+        Returns: unknown
       }
       validate_naab: {
         Args: { naab: string }
