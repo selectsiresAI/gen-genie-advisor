@@ -32,10 +32,28 @@ export function StagingMigrationButton() {
 
       const result = await response.json();
       
-      toast({
-        title: 'Migração concluída',
-        description: `Profiles: ${result.results.profiles.inserted + result.results.profiles.updated}, Farms: ${result.results.farms.inserted + result.results.farms.updated}, Females: ${result.results.females.inserted + result.results.females.updated}`,
-      });
+      // Display passwords if any were generated
+      if (result.passwords && result.passwords.length > 0) {
+        const passwordsList = result.passwords
+          .map((p: { email: string; password: string }) => `${p.email}: ${p.password}`)
+          .join('\n');
+        
+        console.log('🔑 Generated passwords:\n', passwordsList);
+        
+        toast({
+          title: 'Migração concluída com senhas geradas',
+          description: `Profiles: ${result.results.profiles.inserted + result.results.profiles.updated}, Farms: ${result.results.farms.inserted + result.results.farms.updated}, Females: ${result.results.females.inserted + result.results.females.updated}. Senhas no console.`,
+          duration: 10000,
+        });
+        
+        // Also show an alert with passwords
+        alert(`Senhas geradas para novos usuários:\n\n${passwordsList}\n\nCopie e envie para os usuários via email.`);
+      } else {
+        toast({
+          title: 'Migração concluída',
+          description: `Profiles: ${result.results.profiles.inserted + result.results.profiles.updated}, Farms: ${result.results.farms.inserted + result.results.farms.updated}, Females: ${result.results.females.inserted + result.results.females.updated}`,
+        });
+      }
 
       console.log('Migration results:', result);
     } catch (error) {

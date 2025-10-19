@@ -21,9 +21,10 @@ Deno.serve(async (req) => {
       profiles: { inserted: 0, updated: 0, errors: 0 },
       farms: { inserted: 0, updated: 0, errors: 0 },
       females: { inserted: 0, updated: 0, errors: 0 },
+      passwords: [] as Array<{ email: string; password: string }>,
     };
 
-    // STEP 1: Migrate staging_profiles → profiles
+    // STEP 1: Migrate staging_profiles → profiles + auth.users
     console.log('📋 Step 1: Migrating profiles...');
     const { data: stagingProfiles, error: profilesError } = await supabase
       .from('staging_profiles')
@@ -39,54 +40,77 @@ Deno.serve(async (req) => {
 
     for (const sp of stagingProfiles || []) {
       try {
-        // Check if profile already exists by email
-        const { data: existingProfile } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('email', sp.email)
-          .maybeSingle();
+        // Generate random password
+        const password = crypto.randomUUID().substring(0, 12);
+        
+        // Check if user already exists in auth.users
+        const { data: existingAuthUser } = await supabase.auth.admin.listUsers();
+        const authUser = existingAuthUser?.users?.find(u => u.email === sp.email);
 
-        if (existingProfile) {
-          profileMapping.set(sp.email, existingProfile.id);
+        let userId: string;
+
+        if (authUser) {
+          userId = authUser.id;
+          console.log(`✅ User already exists in auth: ${sp.email}`);
           
-          // Update profile
+          // Update existing profile
           const { error: updateError } = await supabase
             .from('profiles')
             .update({
               full_name: sp.full_name || sp.email,
               updated_at: new Date().toISOString(),
             })
-            .eq('id', existingProfile.id);
+            .eq('id', userId);
 
           if (updateError) {
             console.error(`❌ Error updating profile ${sp.email}:`, updateError);
             results.profiles.errors++;
           } else {
-            console.log(`✅ Updated profile: ${sp.email}`);
             results.profiles.updated++;
           }
         } else {
-          // Create new auth user and profile
-          const newUserId = sp.id || crypto.randomUUID();
-          
-          // Insert into profiles (assuming profile already exists or will be created by auth trigger)
-          const { error: insertError } = await supabase
-            .from('profiles')
-            .insert({
-              id: newUserId,
-              email: sp.email,
+          // Create new auth user
+          const { data: newAuthUser, error: authError } = await supabase.auth.admin.createUser({
+            email: sp.email,
+            password: password,
+            email_confirm: true,
+            user_metadata: {
               full_name: sp.full_name || sp.email,
-            });
+            },
+          });
 
-          if (insertError) {
-            console.error(`❌ Error inserting profile ${sp.email}:`, insertError);
+          if (authError || !newAuthUser.user) {
+            console.error(`❌ Error creating auth user ${sp.email}:`, authError);
             results.profiles.errors++;
-          } else {
-            profileMapping.set(sp.email, newUserId);
-            console.log(`✅ Inserted profile: ${sp.email}`);
-            results.profiles.inserted++;
+            continue;
           }
+
+          userId = newAuthUser.user.id;
+          console.log(`✅ Created auth user: ${sp.email}`);
+          
+          // Profile should be auto-created by trigger, but verify
+          const { data: newProfile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', userId)
+            .maybeSingle();
+
+          if (!newProfile) {
+            // Manually create profile if trigger didn't fire
+            await supabase
+              .from('profiles')
+              .insert({
+                id: userId,
+                email: sp.email,
+                full_name: sp.full_name || sp.email,
+              });
+          }
+
+          results.profiles.inserted++;
+          results.passwords.push({ email: sp.email, password });
         }
+
+        profileMapping.set(sp.email, userId);
 
         // Mark as imported
         await supabase
@@ -384,6 +408,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         results,
+        passwords: results.passwords,
         message: 'Migration completed successfully',
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

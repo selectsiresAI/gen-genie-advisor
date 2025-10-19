@@ -57,34 +57,52 @@ const EXCLUDED_COLUMNS = [
 ];
 
 function parseCSV(text: string): { headers: string[]; rows: ParsedCSVRow[] } {
-  const lines = text.split(/\r?\n/).filter(line => line.trim());
+  const lines = text.trim().split(/\r?\n/).filter(line => line.trim());
   if (lines.length < 2) {
     throw new Error('CSV deve ter pelo menos cabeçalho e uma linha de dados');
   }
 
-  // Detectar separador (vírgula, ponto-e-vírgula ou tab)
-  let separator = ',';
-  if (lines[0].includes(';')) {
-    separator = ';';
-  } else if (lines[0].includes('\t')) {
+  // Detectar separador contando ocorrências na primeira linha
+  const firstLine = lines[0];
+  console.log('📋 First line sample:', firstLine.substring(0, 200));
+  
+  const semicolonCount = (firstLine.match(/;/g) || []).length;
+  const commaCount = (firstLine.match(/,/g) || []).length;
+  const tabCount = (firstLine.match(/\t/g) || []).length;
+  
+  let separator = ';'; // padrão
+  let maxCount = semicolonCount;
+  
+  if (commaCount > maxCount) {
+    separator = ',';
+    maxCount = commaCount;
+  }
+  if (tabCount > maxCount) {
     separator = '\t';
   }
   
-  console.log(`📋 Detected separator: "${separator === '\t' ? '\\t' : separator}"`);
-  console.log(`📋 First line sample: ${lines[0].substring(0, 200)}`);
+  console.log('📋 Detected separator:', JSON.stringify(separator), '(count:', maxCount, ')');
 
   // Parse header
   const headers = lines[0].split(separator).map(h => h.trim().toLowerCase());
   console.log(`📋 Parsed ${headers.length} headers:`, headers.slice(0, 10));
 
+  if (headers.length < 5) {
+    throw new Error(`Formato CSV inválido: apenas ${headers.length} colunas detectadas. Esperado pelo menos 5.`);
+  }
+
   const rows: ParsedCSVRow[] = [];
 
   for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(separator);
+    const line = lines[i].trim();
+    if (!line) continue;
     
-    // Verificar se número de valores bate com número de headers
+    const values = line.split(separator);
+    
+    // Pular linhas com número errado de colunas
     if (values.length !== headers.length) {
-      console.warn(`⚠️ Row ${i} has ${values.length} values but ${headers.length} headers expected`);
+      console.warn(`⚠️ Row ${i} has ${values.length} values but ${headers.length} headers, skipping`);
+      continue;
     }
 
     const row: ParsedCSVRow = {};
