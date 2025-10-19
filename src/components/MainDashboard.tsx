@@ -634,7 +634,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                 <p className="text-muted-foreground">{user.email}</p>
               </div>
             </div>
-            <StagingMigrationButton />
+            {userProfile?.is_admin && <StagingMigrationButton />}
             <Button variant="outline" size="sm" onClick={handleLogout} className="bg-slate-200 hover:bg-slate-100">
               <LogOut className="w-4 h-4 mr-2" />
               Sair
