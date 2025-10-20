@@ -2813,6 +2813,32 @@ export type Database = {
         }
         Relationships: []
       }
+      farm_technicians: {
+        Row: {
+          assigned_at: string | null
+          farm_id: string | null
+          farm_name: string | null
+          technician_email: string | null
+          technician_id: string | null
+          technician_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_farms_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farm_dashboard_kpis"
+            referencedColumns: ["farm_id"]
+          },
+          {
+            foreignKeyName: "user_farms_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       females_denorm: {
         Row: {
           beta_casein: string | null
@@ -3718,6 +3744,10 @@ export type Database = {
         Returns: boolean
       }
       is_farm_owner: {
+        Args: { farm_uuid: string }
+        Returns: boolean
+      }
+      is_farm_technician: {
         Args: { farm_uuid: string }
         Returns: boolean
       }
