@@ -227,6 +227,101 @@ Deno.serve(async (req) => {
         );
       }
 
+      // 🔄 REPROCESSAR REGISTROS ANTIGOS DO STAGING PRIMEIRO
+      console.log('🔄 Checking for old staging records to reprocess...');
+      const { data: oldStagingData, error: oldStagingError } = await supabase
+        .from('bulls_import_staging')
+        .select('*')
+        .eq('uploader_user_id', userId)
+        .eq('is_valid', false);
+
+      if (oldStagingData && oldStagingData.length > 0) {
+        console.log(`📋 Found ${oldStagingData.length} old records to reprocess`);
+        
+        let reprocessInserted = 0;
+        let reprocessUpdated = 0;
+        let reprocessSkipped = 0;
+        let reprocessInvalid = 0;
+
+        for (const row of oldStagingData) {
+          const rawRow = row.raw_row as ParsedCSVRow;
+          const code = rawRow.code?.trim();
+          
+          if (!code) {
+            reprocessInvalid++;
+            continue;
+          }
+
+          const bullData: any = {
+            code: code,
+            code_normalized: code.toUpperCase().replace(/[-\s]/g, '').replace(/^0+/, ''),
+            name: rawRow.name || '',
+            registration: rawRow.registration || null,
+            birth_date: rawRow.birth_date || null,
+            company: rawRow.company || null,
+            sire_naab: rawRow.sire_naab || null,
+            mgs_naab: rawRow.mgs_naab || null,
+            mmgs_naab: rawRow.mmgs_naab || null,
+            beta_casein: rawRow.beta_casein || null,
+            kappa_casein: rawRow.kappa_casein || null,
+            pedigree: rawRow.pedigree || null,
+          };
+
+          const ptaFields = [
+            'nm_dollar', 'tpi', 'hhp_dollar', 'ptam', 'ptaf', 'ptap',
+            'cm_dollar', 'fm_dollar', 'gm_dollar', 'f_sav', 'cfp',
+            'ptaf_pct', 'ptap_pct', 'pl', 'dpr', 'liv', 'scs',
+            'mast', 'met', 'rp', 'da', 'ket', 'mf', 'ptat', 'udc',
+            'flc', 'sce', 'dce', 'ssb', 'dsb', 'h_liv', 'ccr', 'hcr',
+            'fi', 'bwc', 'sta', 'str', 'dfm', 'rua', 'rls', 'rtp',
+            'ftl', 'rw', 'rlr', 'fta', 'fls', 'fua', 'ruh', 'ruw',
+            'ucl', 'udp', 'ftp', 'rfi', 'gfi'
+          ];
+
+          ptaFields.forEach(field => {
+            if (rawRow[field]) {
+              const value = parseFloat(rawRow[field]);
+              if (!isNaN(value)) {
+                bullData[field] = value;
+              }
+            }
+          });
+
+          const { data: existing } = await supabase
+            .from('bulls')
+            .select('id')
+            .eq('code', bullData.code)
+            .single();
+
+          if (existing) {
+            const { error: updateError } = await supabase
+              .from('bulls')
+              .update(bullData)
+              .eq('id', existing.id);
+
+            if (updateError) {
+              console.error(`❌ Reprocess update error for ${bullData.code}:`, updateError);
+              reprocessSkipped++;
+            } else {
+              reprocessUpdated++;
+            }
+          } else {
+            const { error: insertError } = await supabase
+              .from('bulls')
+              .insert(bullData);
+
+            if (insertError) {
+              console.error(`❌ Reprocess insert error for ${bullData.code}:`, insertError);
+              reprocessSkipped++;
+            } else {
+              reprocessInserted++;
+            }
+          }
+        }
+
+        console.log(`✅ Reprocessed old staging: ${reprocessInserted} inserted, ${reprocessUpdated} updated, ${reprocessSkipped} skipped, ${reprocessInvalid} invalid`);
+      }
+
       // Validar tamanho do arquivo (10MB)
       if (file.size > 10 * 1024 * 1024) {
         return new Response(
@@ -554,165 +649,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ENDPOINT: /reprocess - Reprocessa todos os registros do staging para bulls
-    if (path.endsWith('/reprocess')) {
-      console.log('🔄 Starting reprocess of all staging records...');
-      
-      const { uploader_user_id } = await req.json();
-
-      if (!uploader_user_id) {
-        return new Response(
-          JSON.stringify({ error: 'uploader_user_id é obrigatório' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // Buscar TODOS os registros do staging deste usuário
-      const { data: stagingData, error: stagingError } = await supabase
-        .from('bulls_import_staging')
-        .select('*')
-        .eq('uploader_user_id', uploader_user_id);
-
-      if (stagingError) {
-        throw new Error(`Erro ao buscar staging: ${stagingError.message}`);
-      }
-
-      if (!stagingData || stagingData.length === 0) {
-        return new Response(
-          JSON.stringify({ error: 'Nenhum dado encontrado no staging para este usuário' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      console.log(`📋 Reprocessing ${stagingData.length} rows from staging`);
-
-      let inserted = 0;
-      let updated = 0;
-      let skipped = 0;
-      let invalid = 0;
-
-      // Processar cada linha
-      for (const row of stagingData) {
-        const rawRow = row.raw_row as ParsedCSVRow;
-        
-        // Validar se tem código mínimo
-        const code = rawRow.code?.trim();
-        if (!code) {
-          invalid++;
-          continue;
-        }
-
-        // Preparar dados para bulls table
-        const bullData: any = {
-          code: code,
-          code_normalized: code.toUpperCase().replace(/[-\s]/g, '').replace(/^0+/, ''),
-          name: rawRow.name || '',
-          registration: rawRow.registration || null,
-          birth_date: rawRow.birth_date || null,
-          company: rawRow.company || null,
-          sire_naab: rawRow.sire_naab || null,
-          mgs_naab: rawRow.mgs_naab || null,
-          mmgs_naab: rawRow.mmgs_naab || null,
-          beta_casein: rawRow.beta_casein || null,
-          kappa_casein: rawRow.kappa_casein || null,
-          pedigree: rawRow.pedigree || null,
-        };
-
-        // Adicionar PTAs se existirem
-        const ptaFields = [
-          'nm_dollar', 'tpi', 'hhp_dollar', 'ptam', 'ptaf', 'ptap',
-          'cm_dollar', 'fm_dollar', 'gm_dollar', 'f_sav', 'cfp',
-          'ptaf_pct', 'ptap_pct', 'pl', 'dpr', 'liv', 'scs',
-          'mast', 'met', 'rp', 'da', 'ket', 'mf', 'ptat', 'udc',
-          'flc', 'sce', 'dce', 'ssb', 'dsb', 'h_liv', 'ccr', 'hcr',
-          'fi', 'bwc', 'sta', 'str', 'dfm', 'rua', 'rls', 'rtp',
-          'ftl', 'rw', 'rlr', 'fta', 'fls', 'fua', 'ruh', 'ruw',
-          'ucl', 'udp', 'ftp', 'rfi', 'gfi'
-        ];
-
-        ptaFields.forEach(field => {
-          if (rawRow[field]) {
-            const value = parseFloat(rawRow[field]);
-            if (!isNaN(value)) {
-              bullData[field] = value;
-            }
-          }
-        });
-
-        // Tentar inserir ou atualizar
-        const { data: existing } = await supabase
-          .from('bulls')
-          .select('id')
-          .eq('code', bullData.code)
-          .single();
-
-        if (existing) {
-          // Atualizar
-          const { error: updateError } = await supabase
-            .from('bulls')
-            .update(bullData)
-            .eq('id', existing.id);
-
-          if (updateError) {
-            console.error(`❌ Update error for ${bullData.code}:`, updateError);
-            skipped++;
-          } else {
-            console.log(`✅ Updated bull: ${bullData.code}`);
-            updated++;
-          }
-        } else {
-          // Inserir
-          const { error: insertError } = await supabase
-            .from('bulls')
-            .insert(bullData);
-
-          if (insertError) {
-            console.error(`❌ Insert error for ${bullData.code}:`, insertError);
-            skipped++;
-          } else {
-            console.log(`✅ Inserted bull: ${bullData.code}`);
-            inserted++;
-          }
-        }
-      }
-
-      // Registrar log
-      const { error: logError } = await supabase
-        .from('bulls_import_log')
-        .insert({
-          import_batch_id: crypto.randomUUID(),
-          uploader_user_id: uploader_user_id,
-          total_rows: stagingData.length,
-          valid_rows: inserted + updated,
-          invalid_rows: invalid,
-          inserted,
-          updated,
-          skipped,
-          committed_at: new Date().toISOString(),
-        });
-
-      if (logError) {
-        console.error('Log insert error:', logError);
-      }
-
-      console.log(`✅ Reprocess complete: ${inserted} inserted, ${updated} updated, ${skipped} skipped, ${invalid} invalid`);
-
-      return new Response(
-        JSON.stringify({
-          total_rows: stagingData.length,
-          inserted,
-          updated,
-          skipped,
-          invalid,
-          message: 'Reprocessamento concluído com sucesso'
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     // Endpoint não encontrado
     return new Response(
-      JSON.stringify({ error: 'Endpoint não encontrado. Use /upload, /commit ou /reprocess' }),
+      JSON.stringify({ error: 'Endpoint não encontrado. Use /upload ou /commit' }),
       { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

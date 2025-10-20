@@ -247,68 +247,6 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
     }
   };
 
-  // Reprocessar registros existentes no staging
-  const handleReprocessBulls = async () => {
-    setImporting(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      const session = await supabase.auth.getSession();
-      const accessToken = session.data.session?.access_token;
-
-      const REPROCESS_URLS = getImportBullsFunctionUrlCandidates('/reprocess');
-
-      const { response: reprocessResponse } = await attemptImportBullsFetch(
-        REPROCESS_URLS,
-        () => ({
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            authorization: `Bearer ${accessToken}`,
-            apikey: supabaseAnonKey,
-          },
-          body: JSON.stringify({
-            uploader_user_id: user.id
-          })
-        }),
-        'upload' // Reusing the upload operation type
-      );
-
-      if (!reprocessResponse.ok) {
-        const errorText = await reprocessResponse.text();
-        throw new Error(`Reprocessamento falhou: ${reprocessResponse.status} ${errorText}`);
-      }
-
-      const reprocessData = await reprocessResponse.json();
-      
-      setImportResult(reprocessData);
-
-      toast({
-        title: "✅ Reprocessamento concluído!",
-        description: `${reprocessData.inserted || 0} inseridos, ${reprocessData.updated || 0} atualizados, ${reprocessData.skipped || 0} ignorados de ${reprocessData.total_rows} registros`
-      });
-
-      // Recarregar lista de touros
-      await loadBulls();
-
-      // Limpar resultado após 5 segundos
-      setTimeout(() => {
-        setImportResult(null);
-      }, 5000);
-
-    } catch (error) {
-      console.error('Reprocess error:', error);
-      toast({
-        title: "Erro no reprocessamento",
-        description: error instanceof Error ? error.message : "Erro desconhecido",
-        variant: "destructive"
-      });
-    } finally {
-      setImporting(false);
-    }
-  };
-
   const downloadBullTemplate = () => {
     // Template completo com dados reais de touros para exemplo
     const templateBulls = [{
@@ -858,18 +796,6 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
 
             <div className="flex gap-2">
           <StagingMigrationButton />
-          
-              {/* Botão para reprocessar registros do staging */}
-              <Button 
-                variant="outline" 
-                className="text-slate-950"
-                onClick={handleReprocessBulls}
-                disabled={importing}
-              >
-                <Beaker size={16} className="mr-2" />
-                Reprocessar Staging
-              </Button>
-
               <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="text-slate-950">
