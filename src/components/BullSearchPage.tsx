@@ -860,8 +860,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
             </Select>
 
             <div className="flex gap-2">
-              <StagingMigrationButton />
-              <SyncPasswordsButton />
+          <StagingMigrationButton />
               <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="text-slate-950">

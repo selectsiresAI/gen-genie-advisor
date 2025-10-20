@@ -10,7 +10,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.sync-temp-passwords]
-verify_jwt = true
+verify_jwt = false
 
 [auth.password]
 # Enforce strong passwords and reject those found in public breach corpora
