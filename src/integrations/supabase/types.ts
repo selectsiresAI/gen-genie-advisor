@@ -1364,6 +1364,33 @@ export type Database = {
           },
         ]
       }
+      password_reset_log: {
+        Row: {
+          email: string
+          id: string
+          notes: string | null
+          reset_at: string | null
+          reset_by: string | null
+          user_id: string | null
+        }
+        Insert: {
+          email: string
+          id?: string
+          notes?: string | null
+          reset_at?: string | null
+          reset_by?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          email?: string
+          id?: string
+          notes?: string | null
+          reset_at?: string | null
+          reset_by?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -2297,6 +2324,16 @@ export type Database = {
       }
     }
     Views: {
+      admin_temp_passwords: {
+        Row: {
+          auth_email: string | null
+          email: string | null
+          full_name: string | null
+          id: string | null
+          temporary_password: string | null
+        }
+        Relationships: []
+      }
       ag_pta_media_anual: {
         Row: {
           ano: number | null
