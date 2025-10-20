@@ -106,21 +106,29 @@ interface BatchRow {
   prediction: PredictionResult | null;
 }
 
-const buildErrorExportRows = (rows: BatchRow[]) =>
+const buildErrorExportRows = (rows: BatchRow[]) => {
+  // Coletar apenas códigos NAAB não encontrados
+  const missingNaabs = new Set<string>();
+
   rows
     .filter((row) => row.status === 'invalid')
-    .map((row) => ({
-      linha: row.lineNumber.toString(),
-      id_fazenda: row.idFazenda,
-      nome: row.nome,
-      data_de_nascimento: row.dataNascimento,
-      naab_pai: row.naabPai,
-      naab_avo_materno: row.naabAvoMaterno,
-      naab_bisavo_materno: row.naabBisavoMaterno,
-      erros: [...row.errors, row.fieldErrors.sire, row.fieldErrors.mgs, row.fieldErrors.mmgs]
-        .filter(Boolean)
-        .join(' | ')
-    }));
+    .forEach((row) => {
+      if (row.naabPai && row.fieldErrors.sire) {
+        missingNaabs.add(row.naabPai);
+      }
+      if (row.naabAvoMaterno && row.fieldErrors.mgs) {
+        missingNaabs.add(row.naabAvoMaterno);
+      }
+      if (row.naabBisavoMaterno && row.fieldErrors.mmgs) {
+        missingNaabs.add(row.naabBisavoMaterno);
+      }
+    });
+
+  // Retornar apenas os códigos únicos não encontrados
+  return Array.from(missingNaabs)
+    .sort()
+    .map((naab) => ({ codigo_naab_nao_encontrado: naab }));
+};
 
 const normalizeBirthDate = (dateStr: string): string | null => {
   if (!dateStr) return null;
@@ -458,71 +466,85 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
       };
     });
 
+    // Otimização: Coletar todos os NAABs únicos primeiro
+    const uniqueNaabs = new Set<string>();
+    for (const row of normalizedRows) {
+      if (row.naabPai && !row.fieldErrors.sire) uniqueNaabs.add(row.naabPai);
+      if (row.naabAvoMaterno && !row.fieldErrors.mgs) uniqueNaabs.add(row.naabAvoMaterno);
+      if (row.naabBisavoMaterno && !row.fieldErrors.mmgs) uniqueNaabs.add(row.naabBisavoMaterno);
+    }
+
+    // Cache para armazenar touros já buscados
     const bullCache = new Map<string, BullSummary | null>();
 
-    const resolveBull = async (naab: string): Promise<BullSummary | null> => {
-      if (!naab) {
-        return null;
-      }
-
-      if (bullCache.has(naab)) {
-        return bullCache.get(naab) ?? null;
-      }
-
-      try {
-        // Primeiro tenta busca exata
-        let record = await getBullByNaab(naab);
+    // Função otimizada para buscar touros em paralelo
+    const resolveBulls = async (naabs: string[]): Promise<void> => {
+      const BATCH_SIZE = 50; // Processar 50 NAABs por vez
+      
+      for (let i = 0; i < naabs.length; i += BATCH_SIZE) {
+        const batch = naabs.slice(i, i + BATCH_SIZE);
         
-        // Se não encontrar, tenta variações com H/HO
-        if (!record) {
-          const normalized = normalizeNaab(naab);
-          let variant: string | null = null;
-          
-          // Se tem H seguido de dígitos (como 7H18299), substitui por HO (7HO18299)
-          if (/H\d/.test(normalized) && !/HO\d/.test(normalized)) {
-            variant = normalized.replace(/H(\d)/g, 'HO$1');
-          }
-          // Se tem HO seguido de dígitos (como 7HO18299), substitui por H (7H18299)
-          else if (/HO\d/.test(normalized)) {
-            variant = normalized.replace(/HO(\d)/g, 'H$1');
-          }
-          
-          if (variant) {
-            record = await getBullByNaab(variant);
-          }
-        }
-        
-        // Se ainda não encontrar, tenta buscar por prefixo (código parcial como 7HO, 007HO)
-        if (!record) {
-          const { data } = await supabase
-            .rpc('search_bulls', { q: naab, limit_count: 10 });
-          
-          if (data && data.length > 0) {
-            // Busca o primeiro touro cujo código começa com o NAAB fornecido
-            const match = data.find((bull: any) => {
-              const bullCode = normalizeNaab(bull.code);
-              return bullCode.startsWith(naab);
-            });
-            
-            if (match) {
-              record = { id: match.bull_id, ...match };
+        // Buscar todos do batch em paralelo
+        await Promise.all(
+          batch.map(async (naab) => {
+            if (bullCache.has(naab)) return;
+
+            try {
+              // Primeiro tenta busca exata
+              let record = await getBullByNaab(naab);
+              
+              // Se não encontrar, tenta variações com H/HO
+              if (!record) {
+                const normalized = normalizeNaab(naab);
+                let variant: string | null = null;
+                
+                if (/H\d/.test(normalized) && !/HO\d/.test(normalized)) {
+                  variant = normalized.replace(/H(\d)/g, 'HO$1');
+                } else if (/HO\d/.test(normalized)) {
+                  variant = normalized.replace(/HO(\d)/g, 'H$1');
+                }
+                
+                if (variant) {
+                  record = await getBullByNaab(variant);
+                }
+              }
+              
+              // Se ainda não encontrar, tenta buscar por prefixo
+              if (!record) {
+                const { data } = await supabase
+                  .rpc('search_bulls', { q: naab, limit_count: 10 });
+                
+                if (data && data.length > 0) {
+                  const match = data.find((bull: any) => {
+                    const bullCode = normalizeNaab(bull.code);
+                    return bullCode.startsWith(naab);
+                  });
+                  
+                  if (match) {
+                    record = { id: match.bull_id, ...match };
+                  }
+                }
+              }
+              
+              const bull = mapBullRecord(record);
+              bullCache.set(naab, bull);
+            } catch (error) {
+              console.error(`Erro ao buscar touro ${naab}:`, error);
+              bullCache.set(naab, null);
             }
-          }
-        }
-        
-        const bull = mapBullRecord(record);
-        bullCache.set(naab, bull);
-        return bull;
-      } catch (error) {
-        console.error('Erro ao buscar touro em lote:', error);
-        return null;
+          })
+        );
       }
     };
 
+    // Buscar todos os touros únicos em paralelo
+    await resolveBulls(Array.from(uniqueNaabs));
+
+    // Agora processar as linhas usando o cache
     for (const row of normalizedRows) {
-      const sire = row.fieldErrors.sire ? null : await resolveBull(row.naabPai);
-      const mgs = row.fieldErrors.mgs ? null : await resolveBull(row.naabAvoMaterno);
-      const mmgs = row.fieldErrors.mmgs ? null : await resolveBull(row.naabBisavoMaterno);
+      const sire = row.fieldErrors.sire ? null : (bullCache.get(row.naabPai) ?? null);
+      const mgs = row.fieldErrors.mgs ? null : (bullCache.get(row.naabAvoMaterno) ?? null);
+      const mmgs = row.fieldErrors.mmgs ? null : (bullCache.get(row.naabBisavoMaterno) ?? null);
 
       row.bulls = { sire, mgs, mmgs };
 
