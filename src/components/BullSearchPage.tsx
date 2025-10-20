@@ -104,11 +104,9 @@ interface BullSearchPageProps {
 }
 
 const IMPORT_BULLS_UPLOAD_URLS = getImportBullsFunctionUrlCandidates('/upload');
-const IMPORT_BULLS_COMMIT_URLS = getImportBullsFunctionUrlCandidates('/commit');
 const PRIMARY_IMPORT_BULLS_UPLOAD_URL = IMPORT_BULLS_UPLOAD_URLS[0];
-const PRIMARY_IMPORT_BULLS_COMMIT_URL = IMPORT_BULLS_COMMIT_URLS[0];
 
-type ImportBullsOperation = 'upload' | 'commit';
+type ImportBullsOperation = 'upload';
 
 const attemptImportBullsFetch = async (
   urls: string[],
@@ -166,7 +164,6 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
-  const [importBatchId, setImportBatchId] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<any>(null);
   
   const { toast } = useToast();
@@ -219,90 +216,29 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
       }
 
       const uploadData = await uploadResponse.json();
-      setImportBatchId(uploadData.import_batch_id);
+      
+      // Resultado já inclui o commit automático
+      setImportResult(uploadData);
 
       toast({
-        title: "Upload concluído",
-        description: `${uploadData.total_rows} linhas enviadas. Clique em "Confirmar Importação" para finalizar.`
-      });
-
-    } catch (error) {
-      console.error('Import upload error:', error);
-      toast({
-        title: "Erro no upload",
-        description: error instanceof Error ? error.message : "Erro desconhecido",
-        variant: "destructive"
-      });
-    } finally {
-      setImporting(false);
-    }
-  };
-
-  const handleImportCommit = async () => {
-    if (!importBatchId) {
-      toast({
-        title: "Erro",
-        description: "Faça o upload antes de confirmar",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setImporting(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error('Usuário não autenticado');
-      }
-
-      const session = await supabase.auth.getSession();
-      const accessToken = session.data.session?.access_token;
-
-      const { response: commitResponse } = await attemptImportBullsFetch(
-        IMPORT_BULLS_COMMIT_URLS,
-        () => ({
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            authorization: `Bearer ${accessToken}`,
-            apikey: supabaseAnonKey,
-          },
-          body: JSON.stringify({
-            import_batch_id: importBatchId,
-            uploader_user_id: user.id,
-          }),
-        }),
-        'commit'
-      );
-
-      if (!commitResponse.ok) {
-        const errorText = await commitResponse.text();
-        throw new Error(`Commit falhou: ${commitResponse.status} ${errorText}`);
-      }
-
-      const commitData = await commitResponse.json();
-      setImportResult(commitData);
-
-      toast({
-        title: "Importação concluída!",
-        description: `${commitData.inserted} inseridos, ${commitData.updated} atualizados, ${commitData.skipped} ignorados`
+        title: "✅ Importação concluída!",
+        description: `${uploadData.inserted || 0} inseridos, ${uploadData.updated || 0} atualizados, ${uploadData.skipped || 0} ignorados`
       });
 
       // Recarregar lista de touros
       await loadBulls();
 
-      // Limpar estado de importação
+      // Limpar estado de importação após 3 segundos
       setTimeout(() => {
         setShowImportDialog(false);
         setImportFile(null);
-        setImportBatchId(null);
         setImportResult(null);
       }, 3000);
 
     } catch (error) {
-      console.error('Import commit error:', error);
+      console.error('Import error:', error);
       toast({
-        title: "Erro no commit",
+        title: "Erro na importação",
         description: error instanceof Error ? error.message : "Erro desconhecido",
         variant: "destructive"
       });
@@ -871,7 +807,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
                   <DialogHeader>
                     <DialogTitle>Importar Touros via CSV</DialogTitle>
                     <DialogDescription>
-                      Faça upload de um arquivo CSV com os dados dos touros. Use o template para garantir o formato correto.
+                      ✅ Importação automática: os touros são processados e salvos automaticamente em bulls e bulls_denorm.
                     </DialogDescription>
                   </DialogHeader>
                   
@@ -889,26 +825,15 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
                       </p>
                     </div>
 
-                    {importBatchId && (
+                    {importResult && (
                       <div className="rounded-lg bg-green-50 dark:bg-green-950 p-3 border border-green-200 dark:border-green-800">
                         <p className="text-sm font-medium text-green-900 dark:text-green-100">
-                          ✓ Upload realizado com sucesso
+                          ✅ Importação Concluída
                         </p>
-                        <p className="text-xs text-green-700 dark:text-green-300 mt-1">
-                          Clique em "Confirmar Importação" para finalizar
-                        </p>
-                      </div>
-                    )}
-
-                    {importResult && (
-                      <div className="rounded-lg bg-blue-50 dark:bg-blue-950 p-3 border border-blue-200 dark:border-blue-800">
-                        <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                          Importação Concluída
-                        </p>
-                        <div className="text-xs text-blue-700 dark:text-blue-300 mt-2 space-y-1">
-                          <p>✓ {importResult.inserted} inseridos</p>
-                          <p>↻ {importResult.updated} atualizados</p>
-                          <p>⊘ {importResult.skipped} ignorados</p>
+                        <div className="text-xs text-green-700 dark:text-green-300 mt-2 space-y-1">
+                          <p>✓ {importResult.inserted || 0} inseridos</p>
+                          <p>↻ {importResult.updated || 0} atualizados</p>
+                          <p>⊘ {importResult.skipped || 0} ignorados</p>
                           {importResult.invalid > 0 && (
                             <p className="text-orange-600">⚠ {importResult.invalid} inválidos</p>
                           )}
@@ -923,27 +848,19 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
                       onClick={() => {
                         setShowImportDialog(false);
                         setImportFile(null);
-                        setImportBatchId(null);
                         setImportResult(null);
                       }}
                       disabled={importing}
                     >
-                      Cancelar
+                      {importResult ? 'Fechar' : 'Cancelar'}
                     </Button>
                     
-                    {!importBatchId ? (
+                    {!importResult && (
                       <Button 
                         onClick={handleImportUpload}
                         disabled={!importFile || importing}
                       >
-                        {importing ? 'Enviando...' : 'Fazer Upload'}
-                      </Button>
-                    ) : (
-                      <Button 
-                        onClick={handleImportCommit}
-                        disabled={importing || !!importResult}
-                      >
-                        {importing ? 'Processando...' : 'Confirmar Importação'}
+                        {importing ? 'Processando...' : 'Importar Touros'}
                       </Button>
                     )}
                   </DialogFooter>

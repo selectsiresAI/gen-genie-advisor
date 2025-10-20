@@ -203,18 +203,137 @@ Deno.serve(async (req) => {
 
       console.log(`✅ Uploaded ${rows.length} rows to staging`);
 
+      // 🔄 COMMIT AUTOMÁTICO: processar staging → bulls imediatamente
+      console.log('🚀 Starting automatic commit...');
+      
+      let inserted = 0;
+      let updated = 0;
+      let skipped = 0;
+      let invalid = 0;
+
+      // Processar cada linha do staging
+      for (const stagingRow of stagingRows) {
+        const rawRow = stagingRow.raw_row as ParsedCSVRow;
+        
+        // Validar se tem código mínimo
+        const code = rawRow.code?.trim();
+        if (!code) {
+          invalid++;
+          continue;
+        }
+
+        // Preparar dados para bulls table
+        const bullData: any = {
+          code: code,
+          code_normalized: code.toUpperCase().replace(/[-\s]/g, '').replace(/^0+/, ''),
+          name: rawRow.name || '',
+          registration: rawRow.registration || null,
+          birth_date: rawRow.birth_date || null,
+          company: rawRow.company || null,
+          sire_naab: rawRow.sire_naab || null,
+          mgs_naab: rawRow.mgs_naab || null,
+          mmgs_naab: rawRow.mmgs_naab || null,
+          beta_casein: rawRow.beta_casein || null,
+          kappa_casein: rawRow.kappa_casein || null,
+        };
+
+        // Adicionar PTAs se existirem
+        const ptaFields = [
+          'nm_dollar', 'tpi', 'hhp_dollar', 'ptam', 'ptaf', 'ptap',
+          'cm_dollar', 'fm_dollar', 'gm_dollar', 'f_sav', 'cfp',
+          'ptaf_pct', 'ptap_pct', 'pl', 'dpr', 'liv', 'scs',
+          'mast', 'met', 'rp', 'da', 'ket', 'mf', 'ptat', 'udc',
+          'flc', 'sce', 'dce', 'ssb', 'dsb', 'h_liv', 'ccr', 'hcr',
+          'fi', 'bwc', 'sta', 'str', 'dfm', 'rua', 'rls', 'rtp',
+          'ftl', 'rw', 'rlr', 'fta', 'fls', 'fua', 'ruh', 'ruw',
+          'ucl', 'udp', 'ftp', 'rfi', 'gfi'
+        ];
+
+        ptaFields.forEach(field => {
+          if (rawRow[field]) {
+            const value = parseFloat(rawRow[field]);
+            if (!isNaN(value)) {
+              bullData[field] = value;
+            }
+          }
+        });
+
+        // Tentar inserir ou atualizar em public.bulls
+        const { data: existing } = await supabase
+          .from('bulls')
+          .select('id')
+          .eq('code', bullData.code)
+          .single();
+
+        if (existing) {
+          // Atualizar
+          const { error: updateError } = await supabase
+            .from('bulls')
+            .update(bullData)
+            .eq('id', existing.id);
+
+          if (updateError) {
+            console.error(`❌ Update error for ${bullData.code}:`, updateError);
+            skipped++;
+          } else {
+            console.log(`✅ Updated bull: ${bullData.code}`);
+            updated++;
+          }
+        } else {
+          // Inserir
+          const { error: insertError } = await supabase
+            .from('bulls')
+            .insert(bullData);
+
+          if (insertError) {
+            console.error(`❌ Insert error for ${bullData.code}:`, insertError);
+            skipped++;
+          } else {
+            console.log(`✅ Inserted bull: ${bullData.code}`);
+            inserted++;
+          }
+        }
+      }
+
+      // Registrar log
+      const { error: logError } = await supabase
+        .from('bulls_import_log')
+        .insert({
+          import_batch_id: importBatchId,
+          uploader_user_id: userId,
+          total_rows: rows.length,
+          valid_rows: inserted + updated,
+          invalid_rows: invalid,
+          inserted,
+          updated,
+          skipped,
+          committed_at: new Date().toISOString(),
+        });
+
+      if (logError) {
+        console.error('⚠️ Log insert error:', logError);
+      }
+
+      console.log(`✅ Auto-commit complete: ${inserted} inserted, ${updated} updated, ${skipped} skipped, ${invalid} invalid`);
+
       return new Response(
         JSON.stringify({
           import_batch_id: importBatchId,
           headers,
           total_rows: rows.length,
-          message: 'Upload concluído. Use /commit para finalizar.'
+          inserted,
+          updated,
+          skipped,
+          invalid,
+          message: '✅ Importação concluída automaticamente! Touros já disponíveis em bulls e bulls_denorm.'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // ENDPOINT: /commit - Valida staging e move para tabela bulls
+    // ⚠️ DEPRECADO: O commit agora é automático no /upload
+    // Este endpoint é mantido para compatibilidade com código legado
     if (path.endsWith('/commit')) {
       console.log('✅ Starting commit...');
       
