@@ -788,20 +788,44 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Marcar registros válidos como processados
+      // Marcar registros válidos como processados e depois removê-los
       if (validRowIds.length > 0) {
         await supabase
           .from('bulls_import_staging')
           .update({ is_valid: true })
           .in('id', validRowIds);
+        
+        // Remover registros processados do staging
+        const { error: deleteValidError } = await supabase
+          .from('bulls_import_staging')
+          .delete()
+          .in('id', validRowIds);
+        
+        if (deleteValidError) {
+          console.error('⚠️ Erro ao limpar registros válidos:', deleteValidError);
+        } else {
+          console.log(`🧹 ${validRowIds.length} registros válidos removidos do staging`);
+        }
       }
 
-      // Marcar registros inválidos
+      // Marcar registros inválidos e removê-los também
       if (invalidRowIds.length > 0) {
         await supabase
           .from('bulls_import_staging')
           .update({ is_valid: true, errors: ['missing_code'] })
           .in('id', invalidRowIds);
+        
+        // Remover registros inválidos do staging
+        const { error: deleteInvalidError } = await supabase
+          .from('bulls_import_staging')
+          .delete()
+          .in('id', invalidRowIds);
+        
+        if (deleteInvalidError) {
+          console.error('⚠️ Erro ao limpar registros inválidos:', deleteInvalidError);
+        } else {
+          console.log(`🧹 ${invalidRowIds.length} registros inválidos removidos do staging`);
+        }
       }
 
       // Contar quantos ainda faltam
