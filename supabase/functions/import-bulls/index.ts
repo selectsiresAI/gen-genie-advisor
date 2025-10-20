@@ -9,11 +9,11 @@ interface ParsedCSVRow {
   [key: string]: string;
 }
 
-// Map de colunas do CSV para campos da tabela bulls_import_staging
+// Map completo de colunas do CSV para campos da tabela bulls
 const COLUMN_MAP: Record<string, string> = {
-  // Códigos e identificação (Select Sires format)
-  'code': 'code',
+  // === IDENTIFICAÇÃO ===
   'naab': 'code',
+  'code': 'code',
   'codigo': 'code',
   'name': 'name',
   'nome': 'name',
@@ -21,7 +21,7 @@ const COLUMN_MAP: Record<string, string> = {
   'registration': 'registration',
   'registro': 'registration',
   
-  // Pedigree
+  // === PEDIGREE ===
   'sire stack': 'pedigree',
   'sire_naab': 'sire_naab',
   'pai': 'sire_naab',
@@ -30,82 +30,373 @@ const COLUMN_MAP: Record<string, string> = {
   'mmgs_naab': 'mmgs_naab',
   'bisavo_materno': 'mmgs_naab',
   
-  // PTAs principais (Select Sires format)
-  'nm_dollar': 'nm_dollar',
-  'nm$': 'nm_dollar',
+  // === ÍNDICES ECONÔMICOS ===
   'tpi': 'tpi',
-  'hhp_dollar': 'hhp_dollar',
-  'hhp$®': 'hhp_dollar',
-  'hhp$': 'hhp_dollar',
+  'tpi®': 'tpi',
+  
+  // NM$ (Net Merit)
+  'nm$': 'nm_dollar',
+  'nm$®': 'nm_dollar',
+  'nm': 'nm_dollar',
+  'mn': 'nm_dollar',
+  'mn$': 'nm_dollar',
+  'net_merit': 'nm_dollar',
+  'mérito liquido': 'nm_dollar',
+  'net merit': 'nm_dollar',
+  
+  // CM$ (Cheese Merit)
   'cm$': 'cm_dollar',
+  'cm$®': 'cm_dollar',
+  'cm': 'cm_dollar',
+  'mq': 'cm_dollar',
+  'mq$': 'cm_dollar',
+  'mérito queijo': 'cm_dollar',
+  'cheese merit': 'cm_dollar',
+  
+  // FM$ (Fluid Merit)
   'fm$': 'fm_dollar',
+  'fm$®': 'fm_dollar',
+  'fm': 'fm_dollar',
+  'mf': 'fm_dollar',
+  'mf$': 'fm_dollar',
+  'mérito volume': 'fm_dollar',
+  'mérito fluído': 'fm_dollar',
+  'fluid merit': 'fm_dollar',
+  
+  // GM$ (Grazing Merit)
   'gm$': 'gm_dollar',
+  'gm$®': 'gm_dollar',
+  'gm': 'gm_dollar',
+  'mg': 'gm_dollar',
+  'mg$': 'gm_dollar',
+  'mérito pasto': 'gm_dollar',
+  'grazing merit': 'gm_dollar',
+  
+  // HHP$ (Health & Wellness Profit)
+  'hhp$': 'hhp_dollar',
+  'hhp$®': 'hhp_dollar',
+  'hhp': 'hhp_dollar',
+  
+  // === PRODUÇÃO ===
+  // Leite
   'ptam': 'ptam',
   'milk': 'ptam',
+  'leite (lbs)': 'ptam',
+  'gpta milk': 'ptam',
+  'leite': 'ptam',
+  'milk_production': 'ptam',
+  'produção de leite': 'ptam',
+  'milk production': 'ptam',
+  
+  // Gordura
   'ptaf': 'ptaf',
   'fat': 'ptaf',
+  'f (lbs)': 'ptaf',
+  'ptag': 'ptaf',
+  'g (lbs)': 'ptaf',
+  'gordura (lbs)': 'ptaf',
+  'gord': 'ptaf',
+  'gord (lbs)': 'ptaf',
+  'fat (lbs)': 'ptaf',
+  'fat.(lbs)': 'ptaf',
+  'gord. (lbs.)': 'ptaf',
+  'gordura': 'ptaf',
+  'quantidade de gordura no leite': 'ptaf',
+  
   'ptaf%': 'ptaf_pct',
+  'f %': 'ptaf_pct',
+  'gordura %': 'ptaf_pct',
+  'g%': 'ptaf_pct',
+  'pta fat': 'ptaf_pct',
+  'fat.(%)': 'ptaf_pct',
+  '% gordura': 'ptaf_pct',
+  '%_fat': 'ptaf_pct',
+  
+  // Proteína
   'ptap': 'ptap',
   'protein': 'ptap',
+  'p (lbs)': 'ptap',
+  'proteína (lbs)': 'ptap',
+  'prot': 'ptap',
+  'prot lbs': 'ptap',
+  'pta pro': 'ptap',
+  'prot.(lbs)': 'ptap',
+  'prot. (lbs.)': 'ptap',
+  'quantidade de proteína no leite': 'ptap',
+  'proteína': 'ptap',
+  
   'ptap%': 'ptap_pct',
+  'p %': 'ptap_pct',
+  'proteína %': 'ptap_pct',
+  'prot.(%)': 'ptap_pct',
+  '% prot': 'ptap_pct',
+  '% proteína': 'ptap_pct',
+  
+  // CFP (Combined Fat & Protein)
   'cfp': 'cfp',
+  'cgp': 'cfp',
+  
+  // Feed Saved
   'f sav': 'f_sav',
+  'fs': 'f_sav',
+  'feed saved': 'f_sav',
   
-  // Type & conformation
-  'ptat': 'ptat',
-  'udc': 'udc',
-  'flc': 'flc',
-  'sta': 'sta',
-  'str': 'str',
-  'dfm': 'dfm',
-  'rua': 'rua',
-  'rls': 'rls',
-  'rtp': 'rtp',
-  'ftl': 'ftl',
-  'rw': 'rw',
-  'rlr': 'rlr',
-  'fta': 'fta',
-  'fls': 'fls',
-  'fua': 'fua',
-  'ruh': 'ruh',
-  'ruw': 'ruw',
-  'ucl': 'ucl',
-  'udp': 'udp',
-  'ftp': 'ftp',
-  
-  // Health & fertility
+  // === LONGEVIDADE E FERTILIDADE ===
+  // Productive Life
   'pl': 'pl',
+  'vp': 'pl',
+  'vida produtiva': 'pl',
+  'productive life': 'pl',
+  
+  // Daughter Pregnancy Rate
   'dpr': 'dpr',
+  'pta dpr': 'dpr',
+  'tpf': 'dpr',
+  'taxa de prenhez das filhas': 'dpr',
+  'daughter pregnancy rate': 'dpr',
+  
+  // Livability
   'liv': 'liv',
-  'scs': 'scs',
-  'mast': 'mast',
-  'met': 'met',
-  'rp': 'rp',
-  'da': 'da',
-  'ket': 'ket',
-  'mf': 'mf',
+  'ptaliv': 'liv',
+  'sobrevivência': 'liv',
+  'sobrevivênvia de vaca': 'liv',
+  'cow livability': 'liv',
+  'livability': 'liv',
+  
+  // Heifer Livability
   'h liv': 'h_liv',
+  'hliv': 'h_liv',
+  'h livability': 'h_liv',
+  'pta hliv': 'h_liv',
+  'sobrevivênvia de novilha': 'h_liv',
+  'heifer livability': 'h_liv',
   
-  // Calving
-  'sce': 'sce',
-  'dce': 'dce',
-  'ssb': 'ssb',
-  'dsb': 'dsb',
-  'bwc': 'bwc',
-  
-  // Daughter calving
-  'ccr': 'ccr',
-  'hcr': 'hcr',
-  
-  // Feed efficiency
+  // Fertility Index
   'fi': 'fi',
+  'fert. index': 'fi',
+  'fertil index': 'fi',
+  'índice de fertilidade': 'fi',
+  
+  // Cow Conception Rate
+  'ccr': 'ccr',
+  'tcv': 'ccr',
+  'cow conception rate': 'ccr',
+  'taxa de concepção de vacas': 'ccr',
+  
+  // Heifer Conception Rate
+  'hcr': 'hcr',
+  'tcn': 'hcr',
+  'heifer conception rate': 'hcr',
+  'taxa de concepção de novilhas': 'hcr',
+  
+  // === SAÚDE ===
+  // Somatic Cell Score
+  'scs': 'scs',
+  'ccs': 'scs',
+  'somatic cells': 'scs',
+  'células somáticas': 'scs',
+  
+  // Mastitis
+  'mast': 'mast',
+  'cdcb_mast': 'mast',
+  'mastitis': 'mast',
+  'mastite': 'mast',
+  
+  // Metritis
+  'met': 'met',
+  'cdcb_met': 'met',
+  'metritis': 'met',
+  'metrite': 'met',
+  
+  // Retained Placenta
+  'rp': 'rp',
+  'cdcb_rp': 'rp',
+  'retained placenta': 'rp',
+  
+  // Displaced Abomasum
+  'da': 'da',
+  'dab': 'da',
+  'cdcb_da': 'da',
+  'desl.abom.': 'da',
+  'deslocamento de abomaso': 'da',
+  'displaced abomasum': 'da',
+  
+  // Ketosis
+  'ket': 'ket',
+  'cdcb_cet': 'ket',
+  'cetose': 'ket',
+  'ketosis': 'ket',
+  
+  // Milk Fever
+  'mf': 'mf',
+  'mfv': 'mf',
+  'hipoc': 'mf',
+  'hipocalcemia': 'mf',
+  'febre do leite': 'mf',
+  'milk fever': 'mf',
+  
+  // === TIPO E CONFORMAÇÃO ===
+  // PTAT (Type)
+  'ptat': 'ptat',
+  'ptatype': 'ptat',
+  'pta tipo': 'ptat',
+  'type': 'ptat',
+  'tipo': 'ptat',
+  'classificação final para tipo': 'ptat',
+  
+  // Udder Composite
+  'udc': 'udc',
+  'cu': 'udc',
+  'udder composite': 'udc',
+  'composto do úbere': 'udc',
+  
+  // Feet and Leg Composite
+  'flc': 'flc',
+  'cpp': 'flc',
+  'feet and leg composite': 'flc',
+  'composto de pernas e pés': 'flc',
+  
+  // Body Composite
+  'bwc': 'bwc',
+  'bc': 'bwc',
+  'body composite': 'bwc',
+  'composto corporal': 'bwc',
+  
+  // === FACILIDADE DE PARTO ===
+  // Sire Calving Ease
+  'sce': 'sce',
+  'fpt': 'sce',
+  'sire calving ease': 'sce',
+  'calving ease (sire)': 'sce',
+  'facilidade de parto (touro)': 'sce',
+  
+  // Daughter Calving Ease
+  'dce': 'dce',
+  'fpf': 'dce',
+  'daughter calving ease': 'dce',
+  'calving ease (daughter)': 'dce',
+  'calving ease (female)': 'dce',
+  'facilidade de parto (fêmea)': 'dce',
+  
+  // Sire Stillbirth
+  'ssb': 'ssb',
+  'int': 'ssb',
+  'sire stillbirth rate': 'ssb',
+  'stillbirth rate (sire)': 'ssb',
+  'índice de natimorto (touro)': 'ssb',
+  
+  // Daughter Stillbirth
+  'dsb': 'dsb',
+  'inf': 'dsb',
+  'daughter stillbirth rate': 'dsb',
+  'female stillbirth rate': 'dsb',
+  'stillbirth rate (female)': 'dsb',
+  'índice de natimorto (fêmea)': 'dsb',
+  
+  // === CARACTERÍSTICAS LINEARES ===
+  // Stature
+  'sta': 'sta',
+  'est': 'sta',
+  'stature': 'sta',
+  'estatura': 'sta',
+  
+  // Strength
+  'str': 'str',
+  'strength': 'str',
+  'força': 'str',
+  
+  // Dairy Form
+  'dfm': 'dfm',
+  'df': 'dfm',
+  'forma leiteira': 'dfm',
+  'dairy form': 'dfm',
+  
+  // Rump Angle
+  'rua': 'rua',
+  'ra': 'rua',
+  'rump angle': 'rua',
+  'ângulo da garupa': 'rua',
+  
+  // Thurl Width
+  'rw': 'rw',
+  'rtw': 'rw',
+  'tw': 'rw',
+  'thurl width': 'rw',
+  'largura da garupa': 'rw',
+  
+  // Rear Legs Side View
+  'rls': 'rls',
+  'rear legs side': 'rls',
+  'pernas vista lateral': 'rls',
+  
+  // Rear Legs Rear View
+  'rlr': 'rlr',
+  'rear legs rear': 'rlr',
+  'pernas vista posterior': 'rlr',
+  
+  // Foot Angle
+  'fta': 'fta',
+  'fa': 'fta',
+  'ângulo dos cascos': 'fta',
+  'foot angle': 'fta',
+  
+  // Feet & Legs Score
+  'fls': 'fls',
+  
+  // Fore Udder Attachment
+  'fua': 'fua',
+  'fore udder attachment': 'fua',
+  'inserção anterior do úbere': 'fua',
+  
+  // Rear Udder Height
+  'ruh': 'ruh',
+  'rear udder height': 'ruh',
+  'altura do úbere posterior': 'ruh',
+  
+  // Rear Udder Width
+  'ruw': 'ruw',
+  'rear udder width': 'ruw',
+  'largura do úbere': 'ruw',
+  
+  // Udder Cleft
+  'ucl': 'ucl',
+  'uc': 'ucl',
+  'udder cleft': 'ucl',
+  'ligamento médio': 'ucl',
+  
+  // Udder Depth
+  'udp': 'udp',
+  'ud': 'udp',
+  'udder depth': 'udp',
+  'profundidade do úbere': 'udp',
+  
+  // Front Teat Placement
+  'ftp': 'ftp',
+  'front teat placement': 'ftp',
+  'colocação dos tetos anterior': 'ftp',
+  
+  // Rear Teat Placement
+  'rtp': 'rtp',
+  'rear teat placement': 'rtp',
+  'colocação dos tetos posterior': 'rtp',
+  
+  // Teat Length
+  'ftl': 'ftl',
+  'tl': 'ftl',
+  'teat length': 'ftl',
+  'comprimento dos tetos': 'ftl',
+  
+  // === EFICIÊNCIA ALIMENTAR ===
   'rfi': 'rfi',
   'gfi': 'gfi',
+  'gl': 'gl',
   
-  // Outros campos comuns
+  // === OUTROS ===
   'birthdate': 'birth_date',
   'birth_date': 'birth_date',
-  'data_nascimento': 'birth_date',
+  'data de nascimento': 'birth_date',
+  'data': 'birth_date',
+  'date': 'birth_date',
   'company': 'company',
   'empresa': 'company',
   'beta-casein': 'beta_casein',
@@ -114,8 +405,40 @@ const COLUMN_MAP: Record<string, string> = {
   'kappa_casein': 'kappa_casein',
 };
 
-// Colunas que devem ser removidas (EXCLUDE)
+// Colunas que NÃO fazem parte da tabela bulls e devem ser EXCLUÍDAS
 const EXCLUDED_COLUMNS = [
+  // Reliability scores
+  'nm$ rel', 'fi rel', 'dpr rel', 'ccr rel', 'hcr rel', 'liv rel', 'h liv rel',
+  'sce rel', 'dce rel', 'scs rel', 'pl rel', 'ptat rel', 'dsb rel', 'ssb rel',
+  'mast rel', 'met rel', 'ket rel', 'rfi rel', 'scr rel', 'gl rel', 'efc rel',
+  'f sav rel', 'ms rel', 'ret. placenta rel', 'pta da rel', 'mf rel', 'rel',
+  
+  // Daughters/Herds counts
+  'f sav dtrs', 'f sav herds', 'ptap dtrs', 'ptat dtrs', 'liv dtrs', 'liv herds',
+  'h liv dtrs', 'h liv herds', 'mast dtrs', 'mast herds', 'met dtrs', 'met herds',
+  'rp dtrs', 'rp herds', 'pta da num dtrs', 'pta da num herds', 'ket dtrs', 'ket herds',
+  'mf dtrs', 'mf herds', 'rfi dtr', 'rfi hrd', 'gl dtrs', 'efc dtrs',
+  
+  // Z-scores (não utilizados)
+  'z mast', 'z mast dtrs', 'z mast rel', 'z lame', 'z lame dtrs', 'z lame rel',
+  'z met', 'z met dtrs', 'z met rel', 'z rp', 'z rp dtr', 'z rp rel',
+  'z disp. abomasum', 'z da dtr', 'z da rel', 'z ket', 'z ket dtr', 'z ket rel',
+  'z crd', 'z crd dtrs', 'z crd rel', 'z cs', 'z cs dtrs', 'z cs rel',
+  'z cliv', 'z mf', 'z cliv dtrs', 'z mf dtrs', 'z cliv rel', 'z mf rel',
+  'z cow rd', 'z cow rd dtrs', 'z cow rd rel', 'z abrt', 'z abrt dtr', 'z abrt rel',
+  'z twin', 'z twin dtr', 'z twin rel', 'z cyst', 'z cyst dtr', 'z cyst rel',
+  
+  // Outros índices não utilizados
+  'dwp$', 'dwp$®', 'wt$', 'wt$®', 'cw$', 'cw$™', 'gp$', 'gp$™',
+  'ms', 'mt', 'efi', 'dms', 'aaa', 'sire stack',
+  
+  // Observation counts
+  'sce obs', 'dce obs', 'dsb obs', 'ssb obs',
+  
+  // Outros campos
+  'd', 'scr', 'bod', 'lineups/designations',
+  
+  // Campos genéricos de observação
   'extra1', 'extra2', 'extra3', 'observacao', 'obs', 
   'notes', 'comentario', 'status_interno'
 ];
