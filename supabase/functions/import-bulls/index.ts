@@ -457,22 +457,23 @@ function parseCSV(text: string): { headers: string[]; rows: ParsedCSVRow[] } {
   const commaCount = (firstLine.match(/,/g) || []).length;
   const tabCount = (firstLine.match(/\t/g) || []).length;
   
-  let separator = ';'; // padrão
-  let maxCount = semicolonCount;
+  let separator = '\t'; // Tab como padrão (formato Select Sires)
+  let maxCount = tabCount;
   
+  if (semicolonCount > maxCount) {
+    separator = ';';
+    maxCount = semicolonCount;
+  }
   if (commaCount > maxCount) {
     separator = ',';
     maxCount = commaCount;
   }
-  if (tabCount > maxCount) {
-    separator = '\t';
-  }
   
-  console.log('📋 Detected separator:', JSON.stringify(separator), '(count:', maxCount, ')');
+  console.log('📋 Detected separator:', separator === '\t' ? 'TAB' : JSON.stringify(separator), '(count:', maxCount, ')');
 
   // Parse header
   const headers = lines[0].split(separator).map(h => h.trim().toLowerCase());
-  console.log(`📋 Parsed ${headers.length} headers:`, headers.slice(0, 10));
+  console.log(`📋 Parsed ${headers.length} headers. First 15:`, headers.slice(0, 15));
 
   if (headers.length < 5) {
     throw new Error(`Formato CSV inválido: apenas ${headers.length} colunas detectadas. Esperado pelo menos 5.`);
@@ -486,8 +487,8 @@ function parseCSV(text: string): { headers: string[]; rows: ParsedCSVRow[] } {
     
     const values = line.split(separator);
     
-    // Pular linhas com número errado de colunas
-    if (values.length !== headers.length) {
+    // Pular linhas com número errado de colunas (tolerância de ±5 colunas)
+    if (Math.abs(values.length - headers.length) > 5) {
       console.warn(`⚠️ Row ${i} has ${values.length} values but ${headers.length} headers, skipping`);
       continue;
     }
@@ -495,22 +496,34 @@ function parseCSV(text: string): { headers: string[]; rows: ParsedCSVRow[] } {
     const row: ParsedCSVRow = {};
     
     headers.forEach((header, index) => {
+      if (index >= values.length) return; // Ignorar se não houver valor
+      
       const value = (values[index] || '').trim();
       
       // Ignorar colunas excluídas
-      if (EXCLUDED_COLUMNS.includes(header)) {
+      const lowerHeader = header.toLowerCase();
+      if (EXCLUDED_COLUMNS.includes(lowerHeader)) {
         return;
       }
       
       // Mapear coluna para nome canônico ou usar original
-      const mappedHeader = COLUMN_MAP[header] || header;
-      row[mappedHeader] = value;
+      const mappedHeader = COLUMN_MAP[lowerHeader] || lowerHeader;
+      if (value) { // Só adicionar se tiver valor
+        row[mappedHeader] = value;
+      }
     });
     
-    rows.push(row);
+    // Só adicionar row se tiver pelo menos code ou name
+    if (row.code || row.name) {
+      rows.push(row);
+    }
   }
 
-  console.log(`📋 Parsed ${rows.length} rows. Sample first row:`, rows[0]);
+  console.log(`📋 Parsed ${rows.length} valid rows`);
+  if (rows.length > 0) {
+    console.log('📋 Sample first row keys:', Object.keys(rows[0]).slice(0, 20));
+    console.log('📋 Sample first row values:', JSON.stringify(rows[0]).substring(0, 300));
+  }
   return { headers, rows };
 }
 
@@ -669,8 +682,15 @@ Deno.serve(async (req) => {
       for (const row of allStagingData) {
         const rawRow = row.raw_row as ParsedCSVRow;
         
+        // Log primeiro registro para debug
+        if (bullsToUpsert.length === 0) {
+          console.log('🔍 First rawRow keys:', Object.keys(rawRow).slice(0, 20));
+          console.log('🔍 First rawRow sample:', JSON.stringify(rawRow).substring(0, 400));
+        }
+        
         const code = rawRow.code?.trim();
         if (!code) {
+          console.log('❌ Skipping row without code:', Object.keys(rawRow).slice(0, 10));
           invalid++;
           invalidRowIds.push(row.id);
           continue;
@@ -699,17 +719,29 @@ Deno.serve(async (req) => {
           'flc', 'sce', 'dce', 'ssb', 'dsb', 'h_liv', 'ccr', 'hcr',
           'fi', 'bwc', 'sta', 'str', 'dfm', 'rua', 'rls', 'rtp',
           'ftl', 'rw', 'rlr', 'fta', 'fls', 'fua', 'ruh', 'ruw',
-          'ucl', 'udp', 'ftp', 'rfi', 'gfi'
+          'ucl', 'udp', 'ftp', 'rfi', 'gfi', 'gl'
         ];
 
+        let ptaCount = 0;
         ptaFields.forEach(field => {
           if (rawRow[field]) {
             const value = parseFloat(rawRow[field]);
             if (!isNaN(value)) {
               bullData[field] = value;
+              ptaCount++;
             }
           }
         });
+
+        // Log primeiro touro válido para debug
+        if (bullsToUpsert.length === 0 && ptaCount > 0) {
+          console.log(`✅ First valid bull: ${bullData.code} - ${bullData.name} with ${ptaCount} PTAs`);
+          console.log('Sample PTAs:', { 
+            tpi: bullData.tpi, 
+            nm_dollar: bullData.nm_dollar, 
+            ptam: bullData.ptam 
+          });
+        }
 
         bullsToUpsert.push(bullData);
         validRowIds.push(row.id);
@@ -717,9 +749,20 @@ Deno.serve(async (req) => {
 
       // UPSERT em lote (muito mais rápido!)
       if (bullsToUpsert.length > 0) {
+        console.log(`📤 Attempting to upsert ${bullsToUpsert.length} bulls...`);
+        
+        // Remover duplicatas no batch baseado no code
+        const uniqueBulls = Array.from(
+          new Map(bullsToUpsert.map(b => [b.code, b])).values()
+        );
+        
+        if (uniqueBulls.length < bullsToUpsert.length) {
+          console.log(`⚠️ Removed ${bullsToUpsert.length - uniqueBulls.length} duplicate codes in batch`);
+        }
+        
         const { data: upsertData, error: upsertError } = await supabase
           .from('bulls')
-          .upsert(bullsToUpsert, { 
+          .upsert(uniqueBulls, { 
             onConflict: 'code',
             ignoreDuplicates: false 
           })
@@ -727,17 +770,21 @@ Deno.serve(async (req) => {
 
         if (upsertError) {
           console.error('❌ Batch upsert error:', upsertError);
-          skipped = bullsToUpsert.length;
+          console.error('First bull in failed batch:', JSON.stringify(uniqueBulls[0]));
+          skipped = uniqueBulls.length;
         } else {
-          // Verificar quais eram novos vs atualizados
-          const { count: existingCount } = await supabase
+          // Contar quantos já existiam antes
+          const codes = uniqueBulls.map(b => b.code);
+          const { data: existingBulls } = await supabase
             .from('bulls')
-            .select('id', { count: 'exact', head: true })
-            .in('code', bullsToUpsert.map(b => b.code));
+            .select('code')
+            .in('code', codes);
 
-          inserted = bullsToUpsert.length - (existingCount || 0);
-          updated = existingCount || 0;
-          console.log(`✅ Batch upsert: ${inserted} inserted, ${updated} updated`);
+          const existingCodes = new Set(existingBulls?.map(b => b.code) || []);
+          updated = codes.filter(c => existingCodes.has(c)).length;
+          inserted = codes.length - updated;
+          
+          console.log(`✅ Batch upsert successful: ${inserted} new, ${updated} updated`);
         }
       }
 
