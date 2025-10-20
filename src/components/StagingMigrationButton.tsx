@@ -16,10 +16,14 @@ export function StagingMigrationButton() {
       
       let totalInserted = 0;
       let totalUpdated = 0;
+      let totalInvalid = 0;
       let remaining = 1;
+      let iterations = 0;
+      const MAX_ITERATIONS = 200; // Limite de segurança
 
       // Processar em batches até acabar
-      while (remaining > 0) {
+      while (remaining > 0 && iterations < MAX_ITERATIONS) {
+        iterations++;
         const response = await fetch(
           `https://gzvweejdtycxzxrjplpc.supabase.co/functions/v1/import-bulls/auto-commit`,
           {
@@ -40,7 +44,20 @@ export function StagingMigrationButton() {
         
         totalInserted += data.inserted || 0;
         totalUpdated += data.updated || 0;
+        totalInvalid += data.invalid || 0;
         remaining = data.remaining || 0;
+
+        // Se batch teve 100% de inválidos, parar para evitar loop infinito
+        if (data.invalid > 0 && data.inserted === 0 && data.updated === 0) {
+          console.warn('⚠️ Batch completamente inválido, interrompendo...');
+          toast({
+            title: 'Problema detectado',
+            description: `${totalInvalid} registros inválidos. Verifique o formato do CSV.`,
+            variant: 'destructive',
+            duration: 8000
+          });
+          break;
+        }
 
         // Atualizar progresso
         toast({
@@ -51,6 +68,16 @@ export function StagingMigrationButton() {
 
         // Se ainda tem registros, continua no próximo loop
         if (remaining === 0) break;
+      }
+
+      // Verificar se atingiu limite
+      if (iterations >= MAX_ITERATIONS) {
+        toast({
+          title: 'Limite atingido',
+          description: 'Processo interrompido por segurança. Execute novamente se necessário.',
+          variant: 'destructive',
+          duration: 5000
+        });
       }
 
       toast({

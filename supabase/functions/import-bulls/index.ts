@@ -494,9 +494,9 @@ Deno.serve(async (req) => {
     if (path.endsWith('/auto-commit')) {
       console.log('🚀 Starting auto-commit batch processing...');
       
-      const BATCH_SIZE = 50; // Processar 50 de cada vez para evitar timeout
+      const BATCH_SIZE = 50;
       
-      // Buscar primeiro batch de registros não válidos
+      // Buscar primeiro batch
       const { data: allStagingData, error: allStagingError } = await supabase
         .from('bulls_import_staging')
         .select('*')
@@ -510,7 +510,7 @@ Deno.serve(async (req) => {
       if (!allStagingData || allStagingData.length === 0) {
         return new Response(
           JSON.stringify({ 
-            message: 'Nenhum registro pendente encontrado no staging',
+            message: 'Nenhum registro pendente',
             inserted: 0,
             updated: 0,
             skipped: 0,
@@ -519,6 +519,11 @@ Deno.serve(async (req) => {
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+      }
+
+      // LOG DETALHADO: Ver estrutura do primeiro registro
+      if (allStagingData.length > 0) {
+        console.log('📋 Sample raw_row structure:', JSON.stringify(allStagingData[0].raw_row).substring(0, 300));
       }
 
       console.log(`📋 Processing batch of ${allStagingData.length} records`);
@@ -532,9 +537,19 @@ Deno.serve(async (req) => {
       for (const row of allStagingData) {
         const rawRow = row.raw_row as ParsedCSVRow;
         
+        // DEBUG: Log campo code
+        if (!rawRow.code) {
+          console.log('❌ Missing code in row:', Object.keys(rawRow).slice(0, 10));
+        }
+        
         const code = rawRow.code?.trim();
         if (!code) {
           invalid++;
+          // Marcar como inválido permanentemente para não reprocessar
+          await supabase
+            .from('bulls_import_staging')
+            .update({ is_valid: true, errors: ['missing_code'] })
+            .eq('id', row.id);
           continue;
         }
 
