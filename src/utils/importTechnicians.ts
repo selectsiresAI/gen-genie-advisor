@@ -25,13 +25,13 @@ if (typeof window !== 'undefined') {
       const csvText = await response.text();
       
       // Check if already imported
-      const { data: existingLinks } = await supabase
+      const { count } = await supabase
         .from('user_farms')
         .select('id', { count: 'exact', head: true })
         .eq('role', 'technician');
 
       // Only import if no technician links exist yet
-      if (!existingLinks || (existingLinks as any).count === 0) {
+      if (!count || count === 0) {
         console.log("No technician links found. Starting import...");
         const result = await importTechniciansFromCSV(csvText);
         console.log(`Import completed: ${result.successful} successful, ${result.skipped} skipped, ${result.errors.length} errors`);

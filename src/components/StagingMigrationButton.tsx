@@ -11,8 +11,12 @@ export function StagingMigrationButton() {
   const handleMigrateBulls = async () => {
     setIsMigrating(true);
     try {
-      const { data: session } = await supabase.auth.getSession();
-      const token = session?.session?.access_token;
+      // Obter token atualizado
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData?.session) {
+        throw new Error('Sessão expirada. Faça login novamente.');
+      }
+      const token = sessionData.session.access_token;
       
       let totalInserted = 0;
       let totalUpdated = 0;
@@ -36,7 +40,9 @@ export function StagingMigrationButton() {
         );
         
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+          const errorText = await response.text();
+          console.error('Migration error:', response.status, errorText);
+          throw new Error(`Erro na migração: ${response.status}`);
         }
 
         const data = await response.json();
