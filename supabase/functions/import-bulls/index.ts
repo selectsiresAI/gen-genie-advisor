@@ -490,16 +490,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ENDPOINT: /auto-commit - Processa TODOS os registros pendentes do staging
-    // Este endpoint pode ser chamado para migrar registros existentes
+    // ENDPOINT: /auto-commit - Processa registros pendentes em BATCHES
     if (path.endsWith('/auto-commit')) {
-      console.log('🚀 Starting auto-commit for all pending staging records...');
+      console.log('🚀 Starting auto-commit batch processing...');
       
-      // Buscar TODOS os registros não válidos do staging
+      const BATCH_SIZE = 50; // Processar 50 de cada vez para evitar timeout
+      
+      // Buscar primeiro batch de registros não válidos
       const { data: allStagingData, error: allStagingError } = await supabase
         .from('bulls_import_staging')
         .select('*')
-        .eq('is_valid', false);
+        .eq('is_valid', false)
+        .limit(BATCH_SIZE);
 
       if (allStagingError) {
         throw new Error(`Erro ao buscar staging: ${allStagingError.message}`);
@@ -512,13 +514,14 @@ Deno.serve(async (req) => {
             inserted: 0,
             updated: 0,
             skipped: 0,
-            invalid: 0
+            invalid: 0,
+            remaining: 0
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      console.log(`📋 Processing ${allStagingData.length} pending records from staging`);
+      console.log(`📋 Processing batch of ${allStagingData.length} records`);
 
       let inserted = 0;
       let updated = 0;
@@ -604,16 +607,36 @@ Deno.serve(async (req) => {
         }
       }
 
-      console.log(`✅ Auto-commit complete: ${inserted} inserted, ${updated} updated, ${skipped} skipped, ${invalid} invalid`);
+      // Marcar registros processados como válidos
+      for (const row of allStagingData) {
+        if (row.raw_row && row.raw_row.code) {
+          await supabase
+            .from('bulls_import_staging')
+            .update({ is_valid: true })
+            .eq('id', row.id);
+        }
+      }
+
+      // Contar quantos ainda faltam
+      const { count: remainingCount } = await supabase
+        .from('bulls_import_staging')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_valid', false);
+
+      console.log(`✅ Batch complete: ${inserted} inserted, ${updated} updated, ${skipped} skipped, ${invalid} invalid`);
+      console.log(`📊 Remaining records: ${remainingCount || 0}`);
 
       return new Response(
         JSON.stringify({
-          total_processed: allStagingData.length,
+          batch_size: allStagingData.length,
           inserted,
           updated,
           skipped,
           invalid,
-          message: '✅ Migração automática concluída! Touros disponíveis em bulls e bulls_denorm.'
+          remaining: remainingCount || 0,
+          message: remainingCount && remainingCount > 0
+            ? `✅ Batch processado! ${remainingCount} registros restantes. Chame novamente para continuar.`
+            : '✅ Migração completa! Todos os touros foram processados.'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
