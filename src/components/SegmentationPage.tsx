@@ -1569,7 +1569,7 @@ export default function SegmentationPage({
                 <table className="w-full text-sm border-collapse">
                   <thead className="sticky top-0 z-20">
                     <tr className="border-b border-border bg-muted text-foreground">
-                      <SortableHeader column="farm_id" label="ID Fazenda" sortConfig={animalSortConfig} onSort={handleSortAnimals} className="border border-border px-2 py-1 text-left text-xs font-medium" />
+                      <SortableHeader column="farm_id" label="Fazenda" sortConfig={animalSortConfig} onSort={handleSortAnimals} className="border border-border px-2 py-1 text-left text-xs font-medium" />
                       <SortableHeader column="name" label="Nome" sortConfig={animalSortConfig} onSort={handleSortAnimals} className="border border-border px-2 py-1 text-left text-xs font-medium" />
                       <SortableHeader column="cdcb_id" label="ID CDCB" sortConfig={animalSortConfig} onSort={handleSortAnimals} className="border border-border px-2 py-1 text-left text-xs font-medium bg-secondary" />
                       <SortableHeader column="sire_naab" label="Pai" sortConfig={animalSortConfig} onSort={handleSortAnimals} className="border border-border px-2 py-1 text-left text-xs font-medium bg-secondary" />
@@ -1595,7 +1595,7 @@ export default function SegmentationPage({
                     const fonteInfo = getFonteDisplay((a as any).fonte);
                     return (
                       <tr key={a.__idKey ? (a as any)[a.__idKey] : a.id ?? idx} className={`border-b border-secondary text-foreground hover:opacity-90 ${segmentationEnabled && a.Classification ? classificationBg : ""}`}>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).farm_id || '-'}</td>
+                        <td className="border border-border px-2 py-1 text-xs">{farm.name || '-'}</td>
                         <td className="border border-border px-2 py-1 text-xs font-medium">{a.__nameKey ? (a as any)[a.__nameKey] : (a as any).name ?? ''}</td>
                         <td className="border border-border px-2 py-1 text-xs">{(a as any).cdcb_id || (a as any).identifier || '-'}</td>
                         <td className="border border-border px-2 py-1 text-xs">{renderPedigreeCell((a as any).sire_naab, (a as any).sire_name)}</td>
