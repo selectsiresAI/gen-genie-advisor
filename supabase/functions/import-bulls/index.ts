@@ -244,6 +244,19 @@ Deno.serve(async (req) => {
       // Gerar batch ID
       const importBatchId = crypto.randomUUID();
 
+      // LIMPAR STAGING ANTIGO do mesmo usuário para evitar acúmulo
+      console.log(`🧹 Limpando registros antigos do staging para user ${userId}...`);
+      const { error: deleteError } = await supabase
+        .from('bulls_import_staging')
+        .delete()
+        .eq('uploader_user_id', userId);
+
+      if (deleteError) {
+        console.error('⚠️ Erro ao limpar staging:', deleteError);
+      } else {
+        console.log('✅ Staging limpo');
+      }
+
       // Preparar linhas para staging com row_number
       const stagingRows = rows.map((row, index) => ({
         import_batch_id: importBatchId,
@@ -286,7 +299,7 @@ Deno.serve(async (req) => {
     if (path.endsWith('/auto-commit')) {
       console.log('🚀 Starting auto-commit batch processing...');
       
-      const BATCH_SIZE = 50;
+      const BATCH_SIZE = 200; // Aumentado para processar mais rápido
       
       // Buscar primeiro batch
       const { data: allStagingData, error: allStagingError } = await supabase
@@ -325,23 +338,18 @@ Deno.serve(async (req) => {
       let skipped = 0;
       let invalid = 0;
 
-      // Processar cada linha do staging
+      // Preparar dados em lote para UPSERT
+      const bullsToUpsert: any[] = [];
+      const validRowIds: string[] = [];
+      const invalidRowIds: string[] = [];
+
       for (const row of allStagingData) {
         const rawRow = row.raw_row as ParsedCSVRow;
-        
-        // DEBUG: Log campo code
-        if (!rawRow.code) {
-          console.log('❌ Missing code in row:', Object.keys(rawRow).slice(0, 10));
-        }
         
         const code = rawRow.code?.trim();
         if (!code) {
           invalid++;
-          // Marcar como inválido permanentemente para não reprocessar
-          await supabase
-            .from('bulls_import_staging')
-            .update({ is_valid: true, errors: ['missing_code'] })
-            .eq('id', row.id);
+          invalidRowIds.push(row.id);
           continue;
         }
 
@@ -380,48 +388,50 @@ Deno.serve(async (req) => {
           }
         });
 
-        const { data: existing } = await supabase
+        bullsToUpsert.push(bullData);
+        validRowIds.push(row.id);
+      }
+
+      // UPSERT em lote (muito mais rápido!)
+      if (bullsToUpsert.length > 0) {
+        const { data: upsertData, error: upsertError } = await supabase
           .from('bulls')
-          .select('id')
-          .eq('code', bullData.code)
-          .single();
+          .upsert(bullsToUpsert, { 
+            onConflict: 'code',
+            ignoreDuplicates: false 
+          })
+          .select('id');
 
-        if (existing) {
-          const { error: updateError } = await supabase
-            .from('bulls')
-            .update(bullData)
-            .eq('id', existing.id);
-
-          if (updateError) {
-            console.error(`❌ Update error for ${bullData.code}:`, updateError);
-            skipped++;
-          } else {
-            console.log(`✅ Updated bull: ${bullData.code}`);
-            updated++;
-          }
+        if (upsertError) {
+          console.error('❌ Batch upsert error:', upsertError);
+          skipped = bullsToUpsert.length;
         } else {
-          const { error: insertError } = await supabase
+          // Verificar quais eram novos vs atualizados
+          const { count: existingCount } = await supabase
             .from('bulls')
-            .insert(bullData);
+            .select('id', { count: 'exact', head: true })
+            .in('code', bullsToUpsert.map(b => b.code));
 
-          if (insertError) {
-            console.error(`❌ Insert error for ${bullData.code}:`, insertError);
-            skipped++;
-          } else {
-            console.log(`✅ Inserted bull: ${bullData.code}`);
-            inserted++;
-          }
+          inserted = bullsToUpsert.length - (existingCount || 0);
+          updated = existingCount || 0;
+          console.log(`✅ Batch upsert: ${inserted} inserted, ${updated} updated`);
         }
       }
 
-      // Marcar registros processados como válidos
-      for (const row of allStagingData) {
-        if (row.raw_row && row.raw_row.code) {
-          await supabase
-            .from('bulls_import_staging')
-            .update({ is_valid: true })
-            .eq('id', row.id);
-        }
+      // Marcar registros válidos como processados
+      if (validRowIds.length > 0) {
+        await supabase
+          .from('bulls_import_staging')
+          .update({ is_valid: true })
+          .in('id', validRowIds);
+      }
+
+      // Marcar registros inválidos
+      if (invalidRowIds.length > 0) {
+        await supabase
+          .from('bulls_import_staging')
+          .update({ is_valid: true, errors: ['missing_code'] })
+          .in('id', invalidRowIds);
       }
 
       // Contar quantos ainda faltam

@@ -12,22 +12,32 @@ export function StagingMigrationButton() {
     setIsMigrating(true);
     try {
       // Obter token atualizado
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      let { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !sessionData?.session) {
         throw new Error('Sessão expirada. Faça login novamente.');
       }
-      const token = sessionData.session.access_token;
+      let token = sessionData.session.access_token;
       
       let totalInserted = 0;
       let totalUpdated = 0;
       let totalInvalid = 0;
       let remaining = 1;
       let iterations = 0;
-      const MAX_ITERATIONS = 200; // Limite de segurança
+      const MAX_ITERATIONS = 100; // Reduzido porque BATCH_SIZE aumentou
 
       // Processar em batches até acabar
       while (remaining > 0 && iterations < MAX_ITERATIONS) {
         iterations++;
+        
+        // Renovar token a cada 5 batches para evitar expiração
+        if (iterations % 5 === 0) {
+          const refreshResult = await supabase.auth.getSession();
+          if (refreshResult.data?.session) {
+            token = refreshResult.data.session.access_token;
+            console.log('🔄 Token renovado');
+          }
+        }
+        
         const response = await fetch(
           `https://gzvweejdtycxzxrjplpc.supabase.co/functions/v1/import-bulls/auto-commit`,
           {
@@ -65,10 +75,14 @@ export function StagingMigrationButton() {
           break;
         }
 
-        // Atualizar progresso
+        // Atualizar progresso com % concluído
+        const progressPercent = remaining > 0 
+          ? Math.round(((totalInserted + totalUpdated) / (totalInserted + totalUpdated + remaining)) * 100)
+          : 100;
+        
         toast({
-          title: 'Processando...',
-          description: `${totalInserted} inseridos, ${totalUpdated} atualizados. ${remaining} restantes.`,
+          title: `Processando... ${progressPercent}%`,
+          description: `${totalInserted + totalUpdated} processados. ${remaining} restantes.`,
           duration: 2000
         });
 
