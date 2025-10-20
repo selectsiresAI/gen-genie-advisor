@@ -67,5 +67,19 @@ export function StagingMigrationButton() {
       setIsMigrating(false);
     }
   };
-  return;
+  return (
+    <Button onClick={handleMigrate} disabled={isMigrating} variant="outline">
+      {isMigrating ? (
+        <>
+          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          Migrando...
+        </>
+      ) : (
+        <>
+          <Database className="h-4 w-4 mr-2" />
+          Migrar Staging
+        </>
+      )}
+    </Button>
+  );
 }
