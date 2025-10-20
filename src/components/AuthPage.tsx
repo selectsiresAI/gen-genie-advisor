@@ -18,9 +18,9 @@ const AuthPage: React.FC<AuthPageProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('login');
   const [error, setError] = useState('');
-  const {
-    toast
-  } = useToast();
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const { toast } = useToast();
 
   // Estados para login
   const [loginEmail, setLoginEmail] = useState('');
@@ -143,6 +143,41 @@ const AuthPage: React.FC<AuthPageProps> = ({
       setIsLoading(false);
     }
   };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const redirectUrl = `${window.location.origin}/`;
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: redirectUrl,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "E-mail enviado!",
+        description: "Verifique sua caixa de entrada para redefinir sua senha."
+      });
+
+      setIsForgotPassword(false);
+      setResetEmail('');
+    } catch (error: any) {
+      console.error('Erro ao enviar e-mail:', error);
+      setError(error.message || 'Erro ao enviar e-mail de recuperação');
+      toast({
+        title: "Erro ao enviar e-mail",
+        description: error.message || 'Tente novamente',
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
   return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/20 via-background to-secondary/20 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
@@ -164,37 +199,99 @@ const AuthPage: React.FC<AuthPageProps> = ({
             </TabsList>
 
             <TabsContent value="login" className="space-y-4 mt-6">
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">E-mail</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                    <Input id="login-email" type="email" placeholder="seu@email.com" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} className="pl-10" required disabled={isLoading} />
+              {!isForgotPassword ? (
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="login-email">E-mail</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                      <Input id="login-email" type="email" placeholder="seu@email.com" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} className="pl-10" required disabled={isLoading} />
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Senha</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                    <Input id="login-password" type="password" placeholder="Sua senha" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} className="pl-10" required disabled={isLoading} minLength={6} />
+                  <div className="space-y-2">
+                    <Label htmlFor="login-password">Senha</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                      <Input id="login-password" type="password" placeholder="Sua senha" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} className="pl-10" required disabled={isLoading} minLength={6} />
+                    </div>
                   </div>
-                </div>
 
-                {error && <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>}
+                  {error && <Alert variant="destructive">
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>}
 
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Entrando...
-                    </> : <>
-                      <LogIn className="mr-2 h-4 w-4" />
-                      Entrar
-                    </>}
-                </Button>
-              </form>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Entrando...
+                      </> : <>
+                        <LogIn className="mr-2 h-4 w-4" />
+                        Entrar
+                      </>}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="w-full text-sm"
+                    onClick={() => {
+                      setIsForgotPassword(true);
+                      setError('');
+                    }}
+                    disabled={isLoading}
+                  >
+                    Esqueci minha senha
+                  </Button>
+                </form>
+              ) : (
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="reset-email">E-mail</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                      <Input 
+                        id="reset-email" 
+                        type="email" 
+                        placeholder="seu@email.com" 
+                        value={resetEmail} 
+                        onChange={e => setResetEmail(e.target.value)} 
+                        className="pl-10" 
+                        required 
+                        disabled={isLoading} 
+                      />
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Digite seu e-mail para receber um link de redefinição de senha
+                    </p>
+                  </div>
+
+                  {error && <Alert variant="destructive">
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>}
+
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Enviando...
+                      </> : 'Enviar e-mail de recuperação'}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="w-full text-sm"
+                    onClick={() => {
+                      setIsForgotPassword(false);
+                      setError('');
+                      setResetEmail('');
+                    }}
+                    disabled={isLoading}
+                  >
+                    Voltar para o login
+                  </Button>
+                </form>
+              )}
             </TabsContent>
 
             <TabsContent value="signup" className="space-y-4 mt-6">

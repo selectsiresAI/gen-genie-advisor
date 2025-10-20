@@ -1372,6 +1372,7 @@ export type Database = {
           full_name: string
           id: string
           is_admin: boolean | null
+          temporary_password: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1381,6 +1382,7 @@ export type Database = {
           full_name: string
           id: string
           is_admin?: boolean | null
+          temporary_password?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1390,6 +1392,7 @@ export type Database = {
           full_name?: string
           id?: string
           is_admin?: boolean | null
+          temporary_password?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -3264,6 +3267,10 @@ export type Database = {
         Returns: {
           like: unknown
         }[]
+      }
+      generate_temp_password: {
+        Args: { profile_index: number }
+        Returns: string
       }
       get_bull_by_naab: {
         Args: { naab: string }

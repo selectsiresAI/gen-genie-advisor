@@ -9,9 +9,6 @@ verify_jwt = false
 [functions.migrate-staging]
 verify_jwt = false
 
-[functions.generate-passwords]
-verify_jwt = false
-
 [auth.password]
 # Enforce strong passwords and reject those found in public breach corpora
 min_length = 10
