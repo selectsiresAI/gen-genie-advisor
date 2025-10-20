@@ -3746,6 +3746,10 @@ export type Database = {
         Args: { p_trait: string }
         Returns: string
       }
+      parse_flexible_date: {
+        Args: { date_str: string }
+        Returns: string
+      }
       parse_staging_date: {
         Args: { date_str: string }
         Returns: string
