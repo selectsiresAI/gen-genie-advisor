@@ -50,33 +50,64 @@ serve(async (req) => {
       const [ownerName, , farmName, technicianName] = parts;
 
       try {
-        // Find technician by name (case-insensitive)
+        // Find technician by EXACT name match (normalize spaces and case)
+        const normalizedTechName = technicianName.trim().toLowerCase();
         const { data: technicians, error: techError } = await supabase
           .from('profiles')
-          .select('id, full_name')
-          .ilike('full_name', `%${technicianName.trim()}%`)
-          .limit(1);
+          .select('id, full_name');
 
-        if (techError || !technicians || technicians.length === 0) {
+        if (techError || !technicians) {
           results.errors.push({
             line: i + 1,
-            error: 'Technician not found',
+            error: 'Error fetching technician',
             technician: technicianName,
-            farm: farmName
+            details: techError?.message
           });
           continue;
         }
 
-        const technicianId = technicians[0].id;
+        // Find exact match (case insensitive, whitespace normalized)
+        const matchedTech = technicians.find(t => 
+          t.full_name.trim().toLowerCase() === normalizedTechName
+        );
 
-        // Find farm by name or owner_name (case-insensitive)
+        if (!matchedTech) {
+          results.errors.push({
+            line: i + 1,
+            error: 'Technician not found',
+            technician: technicianName,
+            searched: normalizedTechName
+          });
+          continue;
+        }
+
+        const technicianId = matchedTech.id;
+
+        // Find farm by EXACT name or owner match
+        const normalizedFarmName = farmName.trim().toLowerCase();
+        const normalizedOwnerName = ownerName.trim().toLowerCase();
+        
         const { data: farms, error: farmError } = await supabase
           .from('farms')
-          .select('id, name, owner_name')
-          .or(`name.ilike.%${farmName.trim()}%,owner_name.ilike.%${ownerName.trim()}%`)
-          .limit(1);
+          .select('id, name, owner_name');
 
-        if (farmError || !farms || farms.length === 0) {
+        if (farmError || !farms) {
+          results.errors.push({
+            line: i + 1,
+            error: 'Error fetching farm',
+            farm: farmName,
+            details: farmError?.message
+          });
+          continue;
+        }
+
+        // Find exact match by farm name OR owner name
+        const matchedFarm = farms.find(f => 
+          f.name.trim().toLowerCase() === normalizedFarmName ||
+          f.owner_name.trim().toLowerCase() === normalizedOwnerName
+        );
+
+        if (!matchedFarm) {
           results.errors.push({
             line: i + 1,
             error: 'Farm not found',
@@ -87,7 +118,7 @@ serve(async (req) => {
           continue;
         }
 
-        const farmId = farms[0].id;
+        const farmId = matchedFarm.id;
 
         // Check if link already exists
         const { data: existing } = await supabase
