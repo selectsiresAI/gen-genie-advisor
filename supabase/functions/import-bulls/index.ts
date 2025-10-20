@@ -430,7 +430,7 @@ const EXCLUDED_COLUMNS = [
   
   // Outros índices não utilizados
   'dwp$', 'dwp$®', 'wt$', 'wt$®', 'cw$', 'cw$™', 'gp$', 'gp$™',
-  'ms', 'mt', 'efi', 'dms', 'aaa', 'sire stack',
+  'ms', 'mt', 'efi', 'dms', 'aaa',
   
   // Observation counts
   'sce obs', 'dce obs', 'dsb obs', 'ssb obs',
