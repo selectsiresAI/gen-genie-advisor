@@ -3989,7 +3989,7 @@ export type Database = {
       }
     }
     Enums: {
-      farm_role: "owner" | "editor" | "viewer"
+      farm_role: "owner" | "editor" | "viewer" | "technician"
       movement_type: "entrada" | "saida"
       prediction_method: "genomic" | "pedigree" | "blup"
       segmentation_class: "donor" | "inter" | "recipient"
@@ -4121,7 +4121,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      farm_role: ["owner", "editor", "viewer"],
+      farm_role: ["owner", "editor", "viewer", "technician"],
       movement_type: ["entrada", "saida"],
       prediction_method: ["genomic", "pedigree", "blup"],
       segmentation_class: ["donor", "inter", "recipient"],
