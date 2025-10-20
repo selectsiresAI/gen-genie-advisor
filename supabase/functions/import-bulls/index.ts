@@ -11,16 +11,18 @@ interface ParsedCSVRow {
 
 // Map de colunas do CSV para campos da tabela bulls_import_staging
 const COLUMN_MAP: Record<string, string> = {
-  // Códigos e identificação
+  // Códigos e identificação (Select Sires format)
   'code': 'code',
   'naab': 'code',
   'codigo': 'code',
   'name': 'name',
   'nome': 'name',
+  'registration name': 'registration',
   'registration': 'registration',
   'registro': 'registration',
   
   // Pedigree
+  'sire stack': 'pedigree',
   'sire_naab': 'sire_naab',
   'pai': 'sire_naab',
   'mgs_naab': 'mgs_naab',
@@ -28,25 +30,87 @@ const COLUMN_MAP: Record<string, string> = {
   'mmgs_naab': 'mmgs_naab',
   'bisavo_materno': 'mmgs_naab',
   
-  // PTAs principais
+  // PTAs principais (Select Sires format)
   'nm_dollar': 'nm_dollar',
   'nm$': 'nm_dollar',
   'tpi': 'tpi',
   'hhp_dollar': 'hhp_dollar',
+  'hhp$®': 'hhp_dollar',
   'hhp$': 'hhp_dollar',
+  'cm$': 'cm_dollar',
+  'fm$': 'fm_dollar',
+  'gm$': 'gm_dollar',
   'ptam': 'ptam',
   'milk': 'ptam',
   'ptaf': 'ptaf',
   'fat': 'ptaf',
+  'ptaf%': 'ptaf_pct',
   'ptap': 'ptap',
   'protein': 'ptap',
+  'ptap%': 'ptap_pct',
+  'cfp': 'cfp',
+  'f sav': 'f_sav',
+  
+  // Type & conformation
+  'ptat': 'ptat',
+  'udc': 'udc',
+  'flc': 'flc',
+  'sta': 'sta',
+  'str': 'str',
+  'dfm': 'dfm',
+  'rua': 'rua',
+  'rls': 'rls',
+  'rtp': 'rtp',
+  'ftl': 'ftl',
+  'rw': 'rw',
+  'rlr': 'rlr',
+  'fta': 'fta',
+  'fls': 'fls',
+  'fua': 'fua',
+  'ruh': 'ruh',
+  'ruw': 'ruw',
+  'ucl': 'ucl',
+  'udp': 'udp',
+  'ftp': 'ftp',
+  
+  // Health & fertility
+  'pl': 'pl',
+  'dpr': 'dpr',
+  'liv': 'liv',
+  'scs': 'scs',
+  'mast': 'mast',
+  'met': 'met',
+  'rp': 'rp',
+  'da': 'da',
+  'ket': 'ket',
+  'mf': 'mf',
+  'h liv': 'h_liv',
+  
+  // Calving
+  'sce': 'sce',
+  'dce': 'dce',
+  'ssb': 'ssb',
+  'dsb': 'dsb',
+  'bwc': 'bwc',
+  
+  // Daughter calving
+  'ccr': 'ccr',
+  'hcr': 'hcr',
+  
+  // Feed efficiency
+  'fi': 'fi',
+  'rfi': 'rfi',
+  'gfi': 'gfi',
   
   // Outros campos comuns
+  'birthdate': 'birth_date',
   'birth_date': 'birth_date',
   'data_nascimento': 'birth_date',
   'company': 'company',
   'empresa': 'company',
+  'beta-casein': 'beta_casein',
   'beta_casein': 'beta_casein',
+  'kappa-casein': 'kappa_casein',
   'kappa_casein': 'kappa_casein',
 };
 
@@ -490,9 +554,165 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ENDPOINT: /reprocess - Reprocessa todos os registros do staging para bulls
+    if (path.endsWith('/reprocess')) {
+      console.log('🔄 Starting reprocess of all staging records...');
+      
+      const { uploader_user_id } = await req.json();
+
+      if (!uploader_user_id) {
+        return new Response(
+          JSON.stringify({ error: 'uploader_user_id é obrigatório' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Buscar TODOS os registros do staging deste usuário
+      const { data: stagingData, error: stagingError } = await supabase
+        .from('bulls_import_staging')
+        .select('*')
+        .eq('uploader_user_id', uploader_user_id);
+
+      if (stagingError) {
+        throw new Error(`Erro ao buscar staging: ${stagingError.message}`);
+      }
+
+      if (!stagingData || stagingData.length === 0) {
+        return new Response(
+          JSON.stringify({ error: 'Nenhum dado encontrado no staging para este usuário' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log(`📋 Reprocessing ${stagingData.length} rows from staging`);
+
+      let inserted = 0;
+      let updated = 0;
+      let skipped = 0;
+      let invalid = 0;
+
+      // Processar cada linha
+      for (const row of stagingData) {
+        const rawRow = row.raw_row as ParsedCSVRow;
+        
+        // Validar se tem código mínimo
+        const code = rawRow.code?.trim();
+        if (!code) {
+          invalid++;
+          continue;
+        }
+
+        // Preparar dados para bulls table
+        const bullData: any = {
+          code: code,
+          code_normalized: code.toUpperCase().replace(/[-\s]/g, '').replace(/^0+/, ''),
+          name: rawRow.name || '',
+          registration: rawRow.registration || null,
+          birth_date: rawRow.birth_date || null,
+          company: rawRow.company || null,
+          sire_naab: rawRow.sire_naab || null,
+          mgs_naab: rawRow.mgs_naab || null,
+          mmgs_naab: rawRow.mmgs_naab || null,
+          beta_casein: rawRow.beta_casein || null,
+          kappa_casein: rawRow.kappa_casein || null,
+          pedigree: rawRow.pedigree || null,
+        };
+
+        // Adicionar PTAs se existirem
+        const ptaFields = [
+          'nm_dollar', 'tpi', 'hhp_dollar', 'ptam', 'ptaf', 'ptap',
+          'cm_dollar', 'fm_dollar', 'gm_dollar', 'f_sav', 'cfp',
+          'ptaf_pct', 'ptap_pct', 'pl', 'dpr', 'liv', 'scs',
+          'mast', 'met', 'rp', 'da', 'ket', 'mf', 'ptat', 'udc',
+          'flc', 'sce', 'dce', 'ssb', 'dsb', 'h_liv', 'ccr', 'hcr',
+          'fi', 'bwc', 'sta', 'str', 'dfm', 'rua', 'rls', 'rtp',
+          'ftl', 'rw', 'rlr', 'fta', 'fls', 'fua', 'ruh', 'ruw',
+          'ucl', 'udp', 'ftp', 'rfi', 'gfi'
+        ];
+
+        ptaFields.forEach(field => {
+          if (rawRow[field]) {
+            const value = parseFloat(rawRow[field]);
+            if (!isNaN(value)) {
+              bullData[field] = value;
+            }
+          }
+        });
+
+        // Tentar inserir ou atualizar
+        const { data: existing } = await supabase
+          .from('bulls')
+          .select('id')
+          .eq('code', bullData.code)
+          .single();
+
+        if (existing) {
+          // Atualizar
+          const { error: updateError } = await supabase
+            .from('bulls')
+            .update(bullData)
+            .eq('id', existing.id);
+
+          if (updateError) {
+            console.error(`❌ Update error for ${bullData.code}:`, updateError);
+            skipped++;
+          } else {
+            console.log(`✅ Updated bull: ${bullData.code}`);
+            updated++;
+          }
+        } else {
+          // Inserir
+          const { error: insertError } = await supabase
+            .from('bulls')
+            .insert(bullData);
+
+          if (insertError) {
+            console.error(`❌ Insert error for ${bullData.code}:`, insertError);
+            skipped++;
+          } else {
+            console.log(`✅ Inserted bull: ${bullData.code}`);
+            inserted++;
+          }
+        }
+      }
+
+      // Registrar log
+      const { error: logError } = await supabase
+        .from('bulls_import_log')
+        .insert({
+          import_batch_id: crypto.randomUUID(),
+          uploader_user_id: uploader_user_id,
+          total_rows: stagingData.length,
+          valid_rows: inserted + updated,
+          invalid_rows: invalid,
+          inserted,
+          updated,
+          skipped,
+          committed_at: new Date().toISOString(),
+        });
+
+      if (logError) {
+        console.error('Log insert error:', logError);
+      }
+
+      console.log(`✅ Reprocess complete: ${inserted} inserted, ${updated} updated, ${skipped} skipped, ${invalid} invalid`);
+
+      return new Response(
+        JSON.stringify({
+          total_rows: stagingData.length,
+          inserted,
+          updated,
+          skipped,
+          invalid,
+          message: 'Reprocessamento concluído com sucesso'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Endpoint não encontrado
     return new Response(
-      JSON.stringify({ error: 'Endpoint não encontrado. Use /upload ou /commit' }),
+      JSON.stringify({ error: 'Endpoint não encontrado. Use /upload, /commit ou /reprocess' }),
       { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
