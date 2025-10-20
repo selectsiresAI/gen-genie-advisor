@@ -217,13 +217,22 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
 
       const uploadData = await uploadResponse.json();
       
-      // Resultado já inclui o commit automático
+      // Resultado é apenas staging, não processamento completo
       setImportResult(uploadData);
 
-      toast({
-        title: "✅ Importação concluída!",
-        description: `${uploadData.inserted || 0} inseridos, ${uploadData.updated || 0} atualizados, ${uploadData.skipped || 0} ignorados`
-      });
+      if (uploadData.total_rows > 0) {
+        toast({
+          title: "✅ CSV carregado no staging!",
+          description: `${uploadData.total_rows} registros prontos. Clique em "Migrar Touros" para processar.`,
+          duration: 5000
+        });
+      } else {
+        toast({
+          title: "⚠ Arquivo vazio",
+          description: "O CSV não contém registros válidos.",
+          variant: "destructive"
+        });
+      }
 
       // Recarregar lista de touros
       await loadBulls();
@@ -807,7 +816,8 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
                   <DialogHeader>
                     <DialogTitle>Importar Touros via CSV</DialogTitle>
                     <DialogDescription>
-                      ✅ Importação automática: os touros são processados e salvos automaticamente em bulls e bulls_denorm.
+                      📥 Carregue seu CSV de touros. Os registros serão inseridos no staging.
+                      Use o botão "Migrar Touros" para processar para a tabela bulls.
                     </DialogDescription>
                   </DialogHeader>
                   
@@ -828,15 +838,13 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
                     {importResult && (
                       <div className="rounded-lg bg-green-50 dark:bg-green-950 p-3 border border-green-200 dark:border-green-800">
                         <p className="text-sm font-medium text-green-900 dark:text-green-100">
-                          ✅ Importação Concluída
+                          ✅ CSV Carregado no Staging
                         </p>
                         <div className="text-xs text-green-700 dark:text-green-300 mt-2 space-y-1">
-                          <p>✓ {importResult.inserted || 0} inseridos</p>
-                          <p>↻ {importResult.updated || 0} atualizados</p>
-                          <p>⊘ {importResult.skipped || 0} ignorados</p>
-                          {importResult.invalid > 0 && (
-                            <p className="text-orange-600">⚠ {importResult.invalid} inválidos</p>
-                          )}
+                          <p>📋 {importResult.total_rows || 0} registros carregados</p>
+                          <p className="text-blue-600 dark:text-blue-400 font-medium mt-3">
+                            👉 Use o botão "Migrar Touros" para processar
+                          </p>
                         </div>
                       </div>
                     )}

@@ -272,7 +272,11 @@ Deno.serve(async (req) => {
           import_batch_id: importBatchId,
           headers,
           total_rows: rows.length,
-          message: '✅ CSV carregado no staging. Use o botão "Migrar Touros" para processar.'
+          inserted: 0,
+          updated: 0,
+          skipped: 0,
+          invalid: 0,
+          message: '✅ CSV carregado. Use "Migrar Touros" para processar os registros.'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
