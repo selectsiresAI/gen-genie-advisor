@@ -393,12 +393,48 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
     };
 
     const indexMap = {
-      idFazenda: findHeaderIndex(['id_fazenda', 'idfazenda']),
-      nome: findHeaderIndex(['nome', 'name']),
-      dataNascimento: findHeaderIndex(['data_de_nascimento', 'data_nascimento', 'datanascimento']),
-      naabPai: findHeaderIndex(['naab_pai', 'naabpai']),
-      naabAvoMaterno: findHeaderIndex(['naab_avo_materno', 'naabavomaterno']),
-      naabBisavoMaterno: findHeaderIndex(['naab_bisavo_materno', 'naabbisavomaterno'])
+      idFazenda: findHeaderIndex([
+        'id_fazenda', 'idfazenda', 'id fazenda', 'ID_FAZENDA', 'ID FAZENDA', 
+        'id_farm', 'idfarm', 'farm_id', 'farmid'
+      ]),
+      nome: findHeaderIndex([
+        'nome', 'name', 'NOME', 'NAME', 
+        'animal_name', 'animalname', 'nome_animal', 'nomeanimal'
+      ]),
+      dataNascimento: findHeaderIndex([
+        'data_de_nascimento', 'data_nascimento', 'datanascimento',
+        'DATA_DE_NASCIMENTO', 'DATA_NASCIMENTO', 'DATANASCIMENTO',
+        'data de nascimento', 'DATA DE NASCIMENTO',
+        'birth_date', 'birthdate', 'BIRTH_DATE', 'BIRTHDATE',
+        'birth date', 'BIRTH DATE',
+        'data_nasc', 'datanasc', 'dt_nasc', 'dtnasc'
+      ]),
+      naabPai: findHeaderIndex([
+        'naab_pai', 'naabpai', 'NAAB_PAI', 'NAABPAI',
+        'naab pai', 'NAAB PAI', 'Naab_Pai', 'Naab Pai',
+        'sire_naab', 'sirenaab', 'SIRE_NAAB', 'SIRENAAB',
+        'sire naab', 'SIRE NAAB',
+        'pai_naab', 'painaab', 'PAI_NAAB', 'PAINAAB',
+        'codigo_pai', 'codigopai', 'cod_pai', 'codpai'
+      ]),
+      naabAvoMaterno: findHeaderIndex([
+        'naab_avo_materno', 'naabavomaterno', 'NAAB_AVO_MATERNO', 'NAABAVOMATERNO',
+        'naab avo materno', 'NAAB AVO MATERNO', 'Naab_Avo_Materno', 'Naab Avo Materno',
+        'mgs_naab', 'mgsnaab', 'MGS_NAAB', 'MGSNAAB',
+        'mgs naab', 'MGS NAAB',
+        'avo_materno_naab', 'avomaternónaab', 'AVO_MATERNO_NAAB',
+        'avo materno', 'AVO MATERNO', 'AvôMaterno',
+        'codigo_avo_materno', 'codigoavomaterno', 'cod_avo_mat', 'codavomat'
+      ]),
+      naabBisavoMaterno: findHeaderIndex([
+        'naab_bisavo_materno', 'naabbisavomaterno', 'NAAB_BISAVO_MATERNO', 'NAABBISAVOMATERNO',
+        'naab bisavo materno', 'NAAB BISAVO MATERNO', 'Naab_Bisavo_Materno', 'Naab Bisavo Materno',
+        'mmgs_naab', 'mmgsnaab', 'MMGS_NAAB', 'MMGSNAAB',
+        'mmgs naab', 'MMGS NAAB',
+        'bisavo_materno_naab', 'bisavomaternónaab', 'BISAVO_MATERNO_NAAB',
+        'bisavo materno', 'BISAVO MATERNO', 'BisavôMaterno',
+        'codigo_bisavo_materno', 'codigobisavomaterno', 'cod_bisavo_mat', 'codbisavomat'
+      ])
     };
 
     const dataRows = headerRows.slice(1);
