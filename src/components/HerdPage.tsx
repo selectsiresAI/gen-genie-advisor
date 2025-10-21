@@ -12,6 +12,8 @@ import { useHerdStore } from '@/hooks/useHerdStore';
 import { fetchFemalesDenormByFarm, isCompleteFemaleRow, type CompleteFemaleDenormRow } from '@/supabase/queries/females';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { t } from '@/lib/i18n';
+import { HelpButton } from '@/components/help/HelpButton';
+import { HelpHint } from '@/components/help/HelpHint';
 
 import SortableHeader from '@/components/animals/SortableHeader';
 import { ANIMAL_METRIC_COLUMNS } from '@/constants/animalMetrics';
@@ -405,6 +407,8 @@ const HerdPage: React.FC<HerdPageProps> = ({
     });
   };
   return <div className="min-h-screen bg-background">
+      <HelpButton context="herd" />
+      
       <div className="border-b">
         <div className="flex h-16 items-center px-4 gap-4">
           <div className="flex items-center gap-2">
@@ -413,6 +417,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
               Dashboard
             </Button>
             <h1 className="text-xl font-semibold">{farm.farm_name} - Rebanho</h1>
+            <HelpHint content="Gerencie todas as fêmeas da fazenda: visualize, importe, exporte e filtre dados" />
           </div>
           <div className="ml-auto flex items-center gap-3">
             {typeof onNavigateToCharts === 'function' ? null : onNavigateToCharts}
@@ -496,14 +501,21 @@ const HerdPage: React.FC<HerdPageProps> = ({
               </SelectContent>
             </Select>
             
-            <Button variant="outline" onClick={() => setShowUploadModal(true)}>
-              <Upload className="w-4 h-4 mr-2" />
-              Importar
-            </Button>
-            <Button variant="outline" onClick={handleExport}>
-              <Download className="w-4 h-4 mr-2" />
-              Exportar
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button variant="outline" onClick={() => setShowUploadModal(true)}>
+                <Upload className="w-4 h-4 mr-2" />
+                Importar
+              </Button>
+              <HelpHint content="Importe dados de fêmeas via CSV ou Excel com validação automática" side="bottom" />
+            </div>
+            
+            <div className="flex items-center gap-1">
+              <Button variant="outline" onClick={handleExport}>
+                <Download className="w-4 h-4 mr-2" />
+                Exportar
+              </Button>
+              <HelpHint content="Exporte todos os dados do rebanho incluindo PTAs e pedigree" side="bottom" />
+            </div>
           </div>
 
           {/* Table */}

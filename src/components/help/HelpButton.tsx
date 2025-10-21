@@ -3,7 +3,11 @@ import { HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HelpCenter } from "./HelpCenter";
 
-export function HelpButton() {
+interface HelpButtonProps {
+  context?: string; // Contexto da página para ajuda contextual
+}
+
+export function HelpButton({ context = 'dashboard' }: HelpButtonProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -17,7 +21,7 @@ export function HelpButton() {
       >
         <HelpCircle className="h-6 w-6" />
       </Button>
-      <HelpCenter open={open} onOpenChange={setOpen} />
+      <HelpCenter open={open} onOpenChange={setOpen} context={context} />
     </>
   );
 }

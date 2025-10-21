@@ -20,9 +20,8 @@ import HerdPage from './HerdPage';
 import BullSearchPage from './BullSearchPage';
 import FemaleUploadModal from './FemaleUploadModal';
 import SegmentationPage from './SegmentationPage';
-
-import { HelpHint } from "@/components/help/HelpHint";
-import { HelpButton } from "@/components/help/HelpButton";
+import { HelpButton } from '@/components/help/HelpButton';
+import { HelpHint } from '@/components/help/HelpHint';
 import HomeHintDialog from '@/features/welcome/HomeHintDialog';
 import HomeTourAnchors from "@/features/tutorial/anchors/HomeTourAnchors";
 import { usePlanStore } from '@/hooks/usePlanStore';
@@ -601,6 +600,8 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   return <div className="min-h-screen bg-background">
       <HomeTourAnchors />
       <HomeHintDialog userId={user.id} />
+      <HelpButton context="dashboard" />
+      
       {/* Header */}
       <div className="border-b">
         <div className="flex h-16 items-center px-4 gap-4" data-tour="dashboard:header">

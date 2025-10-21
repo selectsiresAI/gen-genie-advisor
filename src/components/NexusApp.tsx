@@ -3,6 +3,7 @@ import NexusEntryPage from './NexusEntryPage';
 import Nexus1GenomicPrediction from './Nexus1GenomicPrediction';
 import Nexus2PedigreePrediction from './Nexus2PedigreePrediction';
 import Nexus3Groups from "./nexus/Nexus3Groups";
+import { HelpButton } from '@/components/help/HelpButton';
 
 type SelectedMethod = 'entry' | 'nexus1' | 'nexus2' | 'nexus3';
 
@@ -22,16 +23,20 @@ const NexusApp: React.FC<NexusAppProps> = ({ selectedFarmId, defaultFarmId }) =>
     setCurrentView('entry');
   };
 
-  switch (currentView) {
-    case 'nexus1':
-      return <Nexus1GenomicPrediction onBack={handleBack} />;
-    case 'nexus2':
-      return <Nexus2PedigreePrediction onBack={handleBack} selectedFarmId={selectedFarmId} />;
-    case 'nexus3':
-      return <Nexus3Groups />;
-    default:
-      return <NexusEntryPage onSelectMethod={handleMethodSelection} />;
-  }
+  return (
+    <>
+      <HelpButton context="nexus" />
+      {currentView === 'nexus1' ? (
+        <Nexus1GenomicPrediction onBack={handleBack} />
+      ) : currentView === 'nexus2' ? (
+        <Nexus2PedigreePrediction onBack={handleBack} selectedFarmId={selectedFarmId} />
+      ) : currentView === 'nexus3' ? (
+        <Nexus3Groups />
+      ) : (
+        <NexusEntryPage onSelectMethod={handleMethodSelection} />
+      )}
+    </>
+  );
 };
 
 export default NexusApp;

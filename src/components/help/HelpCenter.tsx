@@ -1,77 +1,32 @@
 import { useState } from "react";
-import { HelpCircle, Search, Book, Video, MessageCircle, X } from "lucide-react";
+import { HelpCircle, Search, Book, Video, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getHelpContent } from "./helpContent";
 
 interface HelpCenterProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  context?: string; // Contexto da página (dashboard, herd, nexus, etc.)
 }
 
-const FAQ_ITEMS = [
-  {
-    question: "Como importar dados de animais?",
-    answer: "Para importar dados, clique em 'Importar' no menu lateral, selecione o arquivo CSV ou Excel com os dados dos animais e siga as instruções na tela. O sistema aceitará arquivos com informações de touros e fêmeas."
-  },
-  {
-    question: "O que é o Nexus e como usar?",
-    answer: "O Nexus é nossa ferramenta de predição genética. Você pode usar três métodos: Nexus 1 (predição genômica), Nexus 2 (predição por pedigree) e Nexus 3 (análise por grupos). Acesse através do menu 'Nexus' na barra lateral."
-  },
-  {
-    question: "Como criar um plano genético?",
-    answer: "Vá para a seção 'Plano Genético' no menu. Defina seus objetivos, selecione os touros disponíveis, configure as metas de produção e o sistema calculará automaticamente a melhor estratégia de acasalamento."
-  },
-  {
-    question: "Como visualizar relatórios e gráficos?",
-    answer: "Acesse a seção 'Gráficos' no menu lateral para visualizar tendências, distribuições e análises estatísticas do seu rebanho. Você pode exportar os gráficos em PDF."
-  },
-  {
-    question: "Onde encontro a Auditoria Genética?",
-    answer: "A Auditoria Genética está disponível no menu lateral. Ela fornece uma análise completa do seu rebanho, incluindo parentesco, top parents, progressão genética e benchmark com outros rebanhos."
-  }
-];
-
-const RESOURCES = [
-  {
-    title: "Guia de Início Rápido",
-    description: "Aprenda a usar as funcionalidades básicas da plataforma",
-    icon: Book,
-    type: "Guia"
-  },
-  {
-    title: "Vídeo: Importação de Dados",
-    description: "Tutorial em vídeo sobre como importar dados de animais",
-    icon: Video,
-    type: "Vídeo"
-  },
-  {
-    title: "Vídeo: Nexus Pedigree",
-    description: "Como usar o Nexus 2 para predição por pedigree",
-    icon: Video,
-    type: "Vídeo"
-  },
-  {
-    title: "Guia: Plano Genético",
-    description: "Documentação completa sobre criação de planos genéticos",
-    icon: Book,
-    type: "Guia"
-  }
-];
-
-export function HelpCenter({ open, onOpenChange }: HelpCenterProps) {
+export function HelpCenter({ open, onOpenChange, context = 'dashboard' }: HelpCenterProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Obter conteúdo contextual baseado na página atual
+  const helpContent = getHelpContent(context);
 
-  const filteredFAQ = FAQ_ITEMS.filter(
+  const filteredFAQ = helpContent.faq.filter(
     item =>
       item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.answer.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredResources = RESOURCES.filter(
+  const filteredResources = helpContent.resources.filter(
     resource =>
       resource.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       resource.description.toLowerCase().includes(searchQuery.toLowerCase())
@@ -135,7 +90,7 @@ export function HelpCenter({ open, onOpenChange }: HelpCenterProps) {
               ) : (
                 <div className="space-y-3">
                   {filteredResources.map((resource, idx) => {
-                    const Icon = resource.icon;
+                    const Icon = resource.type === "Vídeo" ? Video : Book;
                     return (
                       <Card key={idx} className="cursor-pointer hover:bg-accent transition-colors">
                         <CardHeader className="pb-3">

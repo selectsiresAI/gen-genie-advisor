@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import ProjecaoGenetica from "./ProjecaoGenetica";
 import CalculadoraReposicao from "./CalculadoraReposicao";
+import { HelpButton } from "@/components/help/HelpButton";
+import { HelpHint } from "@/components/help/HelpHint";
 
 export default function PlanoApp({
   onBack
@@ -10,8 +12,10 @@ export default function PlanoApp({
   onBack: () => void;
 }) {
   const [activeSubmenu, setActiveSubmenu] = useState<"projecao" | "calculadora" | null>(null);
+  
   if (activeSubmenu === "projecao") {
     return <div className="min-h-screen">
+        <HelpButton context="plano" />
         <div className="p-4 border-b bg-background">
           <div className="flex items-center justify-between gap-4">
             <Button variant="outline" onClick={() => setActiveSubmenu(null)} className="bg-gray-200 hover:bg-gray-100">
@@ -25,6 +29,7 @@ export default function PlanoApp({
   }
   if (activeSubmenu === "calculadora") {
     return <div className="min-h-screen">
+        <HelpButton context="plano" />
         <div className="p-4 border-b bg-background">
           <div className="flex items-center justify-between gap-4">
             <Button variant="outline" onClick={() => setActiveSubmenu(null)} className="bg-gray-200 hover:bg-gray-100">
@@ -37,12 +42,16 @@ export default function PlanoApp({
       </div>;
   }
   return <div className="min-h-screen bg-gray-50 p-6">
+      <HelpButton context="plano" />
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between gap-4">
             <div className="flex-1 text-center sm:text-left">
-              <h1 className="text-3xl font-bold mb-2">Plano</h1>
+              <div className="flex items-center gap-2 justify-center sm:justify-start">
+                <h1 className="text-3xl font-bold mb-2">Plano</h1>
+                <HelpHint content="Escolha entre Projeção Genética ou Calculadora de Reposição para planejamento estratégico" />
+              </div>
               <p className="text-muted-foreground">
                 Escolha uma das funcionalidades abaixo para começar
               </p>

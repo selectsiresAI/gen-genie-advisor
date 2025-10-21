@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Settings, Download, RefreshCw, Users, TrendingUp, BarChart3, PieChart as PieChartIcon, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { HelpButton } from "@/components/help/HelpButton";
+import { HelpHint } from "@/components/help/HelpHint";
 
 import {
   fetchFemalesDenormByFarm,
@@ -349,6 +351,8 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
 
   return (
     <div className="min-h-screen bg-background">
+      <HelpButton context="charts" />
+      
       {/* Header */}
       <div className="border-b">
         <div className="flex h-16 items-center px-4 gap-4">
@@ -356,8 +360,9 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
             <ArrowLeft className="w-4 h-4 mr-2" />
             Voltar
           </Button>
-          <div className="flex-1">
+          <div className="flex-1 flex items-center gap-2">
             <h1 className="text-xl font-semibold">Gráficos e Análises Genéticas</h1>
+            <HelpHint content="Visualize tendências, distribuições e análises estatísticas do seu rebanho" />
             {farm && (
               <p className="text-sm text-muted-foreground">{farm.farm_name}</p>
             )}
@@ -372,14 +377,20 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
                 Ver Rebanho
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={loadFemalesData} disabled={loading}>
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Atualizar
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleExport}>
-              <Download className="w-4 h-4 mr-2" />
-              Exportar
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="sm" onClick={loadFemalesData} disabled={loading}>
+                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                Atualizar
+              </Button>
+              <HelpHint content="Recarrega os dados mais recentes do rebanho" side="bottom" />
+            </div>
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="sm" onClick={handleExport}>
+                <Download className="w-4 h-4 mr-2" />
+                Exportar
+              </Button>
+              <HelpHint content="Exporta dados dos gráficos em formato CSV" side="bottom" />
+            </div>
           </div>
         </div>
       </div>
