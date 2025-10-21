@@ -1085,6 +1085,7 @@ export default function SegmentationPage({
   // UI
   // ────────────────────────────────────────────────────────────────────
   return <div className="min-h-screen bg-background">
+      <HelpButton context="segmentation" />
       <TooltipProvider>
         {/* Header */}
         <div className="border-b">
@@ -1100,7 +1101,10 @@ export default function SegmentationPage({
                 <p>Voltar ao painel principal da fazenda</p>
               </TooltipContent>
             </Tooltip>
-            <h1 className="text-xl font-semibold">{farm.name} - Segmentação</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-semibold">{farm.name} - Segmentação</h1>
+              <HelpHint content="Classifique o rebanho por índices customizados, gates e percentuais estratégicos" />
+            </div>
           </div>
         </div>
 
@@ -1108,7 +1112,10 @@ export default function SegmentationPage({
         {/* Header / Index selector */}
         <div className="rounded-2xl shadow p-4 bg-card">
           <div className="flex items-center justify-between gap-4 flex-wrap">
-            <h2 className="text-xl font-semibold text-foreground">Segmentação — Índice</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-semibold text-foreground">Segmentação — Índice</h2>
+              <HelpHint content="Escolha um índice padrão ou monte um personalizado com os traços mais relevantes" />
+            </div>
             <div className="flex items-center gap-2">
               {(["HHP$", "TPI", "NM$", "Custom"] as const).map(opt => <Tooltip key={opt}>
                   <TooltipTrigger asChild>
@@ -1152,7 +1159,10 @@ export default function SegmentationPage({
             {/* Quadro A – Escolha PTAs */}
             <div className="rounded-2xl bg-card p-4 shadow">
               <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-foreground">Quadro A — Selecione as PTAs</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-foreground">Quadro A — Selecione as PTAs</h3>
+                  <HelpHint content="Escolha os traços que comporão o índice customizado" />
+                </div>
                 <input className="w-64 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" placeholder="Buscar PTA…" value={ptaSearch} onChange={e => setPtaSearch(e.target.value)} />
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-64 overflow-auto pr-2">
@@ -1170,7 +1180,10 @@ export default function SegmentationPage({
             {/* Quadro B – Pesos */}
             <div className="rounded-2xl bg-card p-4 shadow">
               <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-foreground">Quadro B — Pesos por PTA</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-foreground">Quadro B — Pesos por PTA</h3>
+                  <HelpHint content="Defina a importância relativa (soma 100%) para cada PTA selecionada" />
+                </div>
                 <div className="flex items-center gap-2">
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -1208,7 +1221,8 @@ export default function SegmentationPage({
                         <p>Salvar configuração atual para reutilização</p>
                       </TooltipContent>
                     </Tooltip>
-                    
+                    <HelpHint content="Salve seus pesos favoritos para reutilizar em outras análises" side="bottom" />
+
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <select className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" onChange={e => e.target.value && loadPreset(e.target.value)} defaultValue="">
@@ -1236,6 +1250,7 @@ export default function SegmentationPage({
                   <input type="checkbox" className="accent-foreground" checked={standardize} onChange={e => setStandardize(e.target.checked)} />
                   Padronizar variáveis (Z-score intra-rebanho)
                 </label>
+                <HelpHint content="Use padronização para comparar PTAs com escalas diferentes" side="bottom" />
                 <div>
                   Soma dos pesos: <span className={cn("font-semibold", Math.abs(weightSum - 1) < 1e-6 ? "text-accent" : "text-destructive")}>{weightSum.toFixed(3)}</span>
                   {Math.abs(weightSum - 1) >= 1e-6 && <span className="ml-2 text-xs text-foreground">(clique em Normalizar)</span>}
@@ -1246,7 +1261,10 @@ export default function SegmentationPage({
             {/* Quadro C – Gates */}
             <div className="rounded-2xl bg-card p-4 shadow">
               <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-foreground">Quadro C — Gates de Corte / Restrição</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-foreground">Quadro C — Gates de Corte / Restrição</h3>
+                  <HelpHint content="Crie filtros mínimos/máximos para excluir animais fora dos critérios" />
+                </div>
                 <div className="flex items-center gap-3 text-sm text-foreground">
                   <span className="flex items-center gap-2">
                     <input type="radio" className="accent-foreground" name="phase" checked={gatesPhase === "pre"} onChange={() => setGatesPhase("pre")} /> Pré-cálculo
@@ -1264,6 +1282,7 @@ export default function SegmentationPage({
                   <button onClick={addEmptyGate} className="flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted">
                     <Filter size={16} /> Adicionar gate
                   </button>
+                  <HelpHint content="Adicione regras de corte por PTA antes ou depois do cálculo do índice" side="bottom" />
                 </div>
               </div>
 
@@ -1320,19 +1339,24 @@ export default function SegmentationPage({
         {/* Segmentação */}
         <div className="rounded-2xl bg-card p-4 shadow">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-              <TrendingUp size={20} />
-              Segmentação Automática
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+                <TrendingUp size={20} />
+                Segmentação Automática
+              </h3>
+              <HelpHint content="Defina percentuais para classificar o rebanho em Superior, Intermediário e Inferior" />
+            </div>
             <div className="flex items-center gap-2">
               <label className="flex items-center gap-2 text-foreground">
                 <input type="checkbox" className="accent-foreground" checked={segmentationEnabled} onChange={e => setSegmentationEnabled(e.target.checked)} />
                 Ativar Segmentação
               </label>
+              <HelpHint content="Ative a segmentação para aplicar o índice e dividir os animais em grupos" side="bottom" />
               <Button variant="outline" size="sm" onClick={() => setShowChart(!showChart)} className="flex items-center gap-2">
                 <BarChart3 size={16} />
                 {showChart ? "Ocultar" : "Mostrar"} Gráfico
               </Button>
+              <HelpHint content="Visualize ou oculte os gráficos de distribuição por grupo" side="bottom" />
             </div>
           </div>
 
@@ -1340,7 +1364,10 @@ export default function SegmentationPage({
               {/* Controles de Distribuição */}
               <div className="mb-6 grid gap-6 md:grid-cols-2">
                 <div>
-                  <h4 className="mb-3 text-md font-medium text-foreground">Distribuição dos Grupos</h4>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-md font-medium text-foreground">Distribuição dos Grupos</h4>
+                    <HelpHint content="Ajuste o percentual de animais em cada grupo para refletir sua estratégia" />
+                  </div>
 
                   {/* Superior */}
                   <div className="mb-4 rounded-lg border border-red-500 p-3 bg-stone-200">
@@ -1512,6 +1539,7 @@ export default function SegmentationPage({
                 <p>Salvar relatório completo na Pasta de Arquivos</p>
               </TooltipContent>
             </Tooltip>
+            <HelpHint content="Gere um PDF com tabelas e gráficos da segmentação para compartilhar" side="bottom" />
             
             {/* Filtros simplificados */}
             <div className="flex items-center gap-4">

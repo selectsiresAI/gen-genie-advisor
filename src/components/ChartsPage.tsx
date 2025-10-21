@@ -409,7 +409,10 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Seleção de PTAs */}
                 <div className="space-y-2">
-                  <Label>PTAs para Análise</Label>
+                  <div className="flex items-center justify-between gap-2">
+                    <Label>PTAs para Análise</Label>
+                    <HelpHint content="Escolha até 5 PTAs para visualizar simultaneamente nos gráficos" side="bottom" />
+                  </div>
                   <div className="flex flex-wrap gap-1">
                     {availablePTAs.slice(0, 8).map(pta => (
                       <Badge
@@ -432,7 +435,10 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
 
                 {/* Tipo de Gráfico */}
                 <div className="space-y-2">
-                  <Label>Tipo de Gráfico</Label>
+                  <div className="flex items-center justify-between gap-2">
+                    <Label>Tipo de Gráfico</Label>
+                    <HelpHint content="Alterne entre linha, barras ou área para destacar tendências ou volumes" side="bottom" />
+                  </div>
                   <Select value={chartType} onValueChange={(value: any) => setChartType(value)}>
                     <SelectTrigger>
                       <SelectValue />
@@ -447,7 +453,10 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
 
                 {/* Agrupamento */}
                 <div className="space-y-2">
-                  <Label>Agrupar Por</Label>
+                  <div className="flex items-center justify-between gap-2">
+                    <Label>Agrupar Por</Label>
+                    <HelpHint content="Agrupe por ano, categoria ou paridade para comparar cortes diferentes" side="bottom" />
+                  </div>
                   <Select value={groupBy} onValueChange={(value: any) => setGroupBy(value)}>
                     <SelectTrigger>
                       <SelectValue />
@@ -553,9 +562,12 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
             <TabsContent value="distribution" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>
-                    Distribuição de Valores - {availablePTAs.find(p => p.key === selectedPTAs[0])?.label || selectedPTAs[0]}
-                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <CardTitle>
+                      Distribuição de Valores - {availablePTAs.find(p => p.key === selectedPTAs[0])?.label || selectedPTAs[0]}
+                    </CardTitle>
+                    <HelpHint content="Entenda como os animais se distribuem nas faixas de PTA escolhida" />
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {distributionData.length > 0 ? (
@@ -606,7 +618,10 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
               {groupBy !== 'category' && (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Distribuição por Categoria</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <CardTitle>Distribuição por Categoria</CardTitle>
+                      <HelpHint content="Visualize a participação de cada categoria de animais no PTA selecionado" />
+                    </div>
                   </CardHeader>
                   <CardContent>
                     {(() => {
@@ -948,25 +963,31 @@ const PanoramaRebanhoView: React.FC<{
       <div className="bg-white rounded-2xl shadow p-4">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-xl font-semibold">Gráficos — Panorama do Rebanho</h2>
-          <div className="ml-auto flex items-center gap-2">
-            <label className="text-sm flex items-center gap-2">
-              <input
-                type="checkbox"
-                className="accent-black"
-                checked={showFarmAverage}
-                onChange={(e) => setShowFarmAverage(e.target.checked)}
-              />
-              Mostrar média da fazenda
-            </label>
-            <label className="text-sm flex items-center gap-2">
-              <input
-                type="checkbox"
-                className="accent-black"
-                checked={showTrendLine}
-                onChange={(e) => setShowTrendLine(e.target.checked)}
-              />
-              Mostrar tendência genética
-            </label>
+          <div className="ml-auto flex items-center gap-3">
+            <div className="flex items-center gap-2 text-sm">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="accent-black"
+                  checked={showFarmAverage}
+                  onChange={(e) => setShowFarmAverage(e.target.checked)}
+                />
+                Mostrar média da fazenda
+              </label>
+              <HelpHint content="Exiba a média geral do rebanho para comparar com tendências externas" side="bottom" />
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="accent-black"
+                  checked={showTrendLine}
+                  onChange={(e) => setShowTrendLine(e.target.checked)}
+                />
+                Mostrar tendência genética
+              </label>
+              <HelpHint content="Adicione uma linha de tendência linear para evidenciar evolução ao longo do tempo" side="bottom" />
+            </div>
             <button
               onClick={reset}
               className="px-3 py-2 rounded-xl border text-sm hover:bg-gray-50"
@@ -982,8 +1003,9 @@ const PanoramaRebanhoView: React.FC<{
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <button 
-            onClick={selectAll} 
+          <HelpHint content="Digite parte do nome para localizar rapidamente um PTA específico" side="bottom" />
+          <button
+            onClick={selectAll}
             className="px-3 py-2 rounded-xl border text-sm hover:bg-gray-50"
           >
             Selecionar todas
