@@ -313,6 +313,7 @@ export type Database = {
           import_batch_id: string
           is_valid: boolean | null
           mapped_row: Json | null
+          processed_at: string | null
           raw_row: Json
           row_number: number
           uploader_user_id: string
@@ -324,6 +325,7 @@ export type Database = {
           import_batch_id: string
           is_valid?: boolean | null
           mapped_row?: Json | null
+          processed_at?: string | null
           raw_row: Json
           row_number: number
           uploader_user_id: string
@@ -335,6 +337,7 @@ export type Database = {
           import_batch_id?: string
           is_valid?: boolean | null
           mapped_row?: Json | null
+          processed_at?: string | null
           raw_row?: Json
           row_number?: number
           uploader_user_id?: string
@@ -2157,6 +2160,30 @@ export type Database = {
         }
         Relationships: []
       }
+      tutorial_defs: {
+        Row: {
+          created_at: string | null
+          is_enabled: boolean | null
+          slug: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          is_enabled?: boolean | null
+          slug: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          is_enabled?: boolean | null
+          slug?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       tutorial_defs_backup_20251013_154446: {
         Row: {
           created_at: string | null
@@ -2180,6 +2207,53 @@ export type Database = {
           title?: string | null
         }
         Relationships: []
+      }
+      tutorial_steps: {
+        Row: {
+          anchor: string
+          body: string
+          created_at: string | null
+          done_label: string | null
+          headline: string
+          id: string
+          next_label: string | null
+          prev_label: string | null
+          step_order: number
+          tutorial_slug: string
+        }
+        Insert: {
+          anchor: string
+          body: string
+          created_at?: string | null
+          done_label?: string | null
+          headline: string
+          id?: string
+          next_label?: string | null
+          prev_label?: string | null
+          step_order: number
+          tutorial_slug: string
+        }
+        Update: {
+          anchor?: string
+          body?: string
+          created_at?: string | null
+          done_label?: string | null
+          headline?: string
+          id?: string
+          next_label?: string | null
+          prev_label?: string | null
+          step_order?: number
+          tutorial_slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tutorial_steps_tutorial_slug_fkey"
+            columns: ["tutorial_slug"]
+            isOneToOne: false
+            referencedRelation: "tutorial_defs"
+            referencedColumns: ["slug"]
+          },
+        ]
       }
       tutorial_steps_backup_20251013_154446: {
         Row: {
@@ -2225,6 +2299,47 @@ export type Database = {
           tutorial_slug?: string | null
         }
         Relationships: []
+      }
+      tutorial_user_progress: {
+        Row: {
+          created_at: string | null
+          current_step: number | null
+          id: string
+          is_completed: boolean | null
+          tenant_id: string
+          tutorial_slug: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          current_step?: number | null
+          id?: string
+          is_completed?: boolean | null
+          tenant_id: string
+          tutorial_slug: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          current_step?: number | null
+          id?: string
+          is_completed?: boolean | null
+          tenant_id?: string
+          tutorial_slug?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tutorial_user_progress_tutorial_slug_fkey"
+            columns: ["tutorial_slug"]
+            isOneToOne: false
+            referencedRelation: "tutorial_defs"
+            referencedColumns: ["slug"]
+          },
+        ]
       }
       tutorial_user_progress_backup_20251013_154446: {
         Row: {

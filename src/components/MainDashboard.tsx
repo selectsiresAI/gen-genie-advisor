@@ -638,7 +638,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
               <LogOut className="w-4 h-4 mr-2" />
               Sair
             </Button>
-            <TutorialButtons slug="dashboard" />
+            <TutorialButtons slug="home-tour" />
           </div>
         </div>
       </div>
@@ -656,10 +656,10 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
           </div>
 
           {/* Farms Section */}
-          <div className="space-y-6" data-tour="dashboard:cards">
+          <div className="space-y-6" data-tour="home:fazendas">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-semibold">Suas Fazendas</h3>
-              <Button onClick={handleCreateFarm}>
+              <Button onClick={handleCreateFarm} data-tour="home:criar">
                 <Plus className="w-4 h-4 mr-2" />
                 Criar Fazenda
               </Button>
@@ -715,7 +715,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
           </div>
 
           {/* Account Totals */}
-          <div className="space-y-6" data-tour="dashboard:grafico">
+          <div className="space-y-6" data-tour="home:resumo">
             <h3 className="text-xl font-semibold">Resumo da Conta</h3>
 
             <div className="grid gap-4 md:grid-cols-2">
