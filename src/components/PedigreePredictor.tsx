@@ -322,7 +322,7 @@ const PedigreePredictor: React.FC = () => {
     
     toast({
       title: "Predição Gerada!",
-      description: "As PTAs da filha foram calculadas baseadas no pedigrê.",
+      description: "As PTAs da filha foram calculadas baseadas no pedigree.",
     });
   };
 
@@ -525,10 +525,10 @@ const PedigreePredictor: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Calculator className="w-8 h-8" />
-            Nexus 2: Predição por Pedigrê
+            Nexus 2: Predição por Pedigree
           </h1>
           <p className="text-muted-foreground mt-2">
-            Baseado no pedigrê - Pai (57%) + Avô Materno (28%) + Bisavô Materno (15%)
+            Baseado no pedigree - Pai (57%) + Avô Materno (28%) + Bisavô Materno (15%)
           </p>
         </div>
         <Button 
@@ -549,7 +549,7 @@ const PedigreePredictor: React.FC = () => {
         <TabsContent value="individual" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Dados do Pedigrê</CardTitle>
+              <CardTitle>Dados do Pedigree</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

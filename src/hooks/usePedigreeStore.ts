@@ -32,7 +32,7 @@ export interface Bull {
   ptas: Record<string, number | null>;
 }
 
-// Interface para entrada de pedigrê
+// Interface para entrada de pedigree
 export interface PedigreeInput {
   sireNaab: string;
   mgsNaab: string;

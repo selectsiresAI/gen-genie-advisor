@@ -60,7 +60,7 @@ const NexusEntryPage: React.FC<NexusEntryPageProps> = ({
           </CardContent>
         </Card>
 
-        {/* Nexus 2 - Predição por Pedigrê */}
+        {/* Nexus 2 - Predição por Pedigree */}
         <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary/50">
           <CardHeader className="text-center pb-4">
             <div className="mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-red-50">
@@ -130,7 +130,7 @@ const NexusEntryPage: React.FC<NexusEntryPageProps> = ({
               <strong>Nexus 1</strong> é mais preciso quando você possui dados genômicos completos das fêmeas do seu rebanho.
             </p>
             <p>
-              <strong>Nexus 2</strong> é uma excelente alternativa quando você tem apenas as informações de pedigrê (NAABs dos ancestrais).
+              <strong>Nexus 2</strong> é uma excelente alternativa quando você tem apenas as informações de pedigree (NAABs dos ancestrais).
             </p>
           </div>
         </div>

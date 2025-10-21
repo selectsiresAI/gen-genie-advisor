@@ -25,7 +25,7 @@ const NexusPredictor: React.FC = () => {
           </TabsTrigger>
           <TabsTrigger value="pedigree" className="flex items-center gap-2">
             <Calculator className="w-4 h-4" />
-            Nexus 2: Predição por Pedigrê
+            Nexus 2: Predição por Pedigree
           </TabsTrigger>
         </TabsList>
         
