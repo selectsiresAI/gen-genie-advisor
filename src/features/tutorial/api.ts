@@ -73,11 +73,7 @@ export async function updateProgress(params: {
   if (error) throw error;
 }
 
-export async function tutorialsEnabled(tenantId: string) {
-  const { data } = await supabase
-    .from("tenant_feature_flags")
-    .select("tutorials_enabled")
-    .eq("tenant_id", tenantId)
-    .maybeSingle();
-  return data?.tutorials_enabled ?? true;
+// Simplified: tutorials are always enabled
+export async function tutorialsEnabled() {
+  return true;
 }

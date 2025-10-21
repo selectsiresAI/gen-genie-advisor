@@ -21,6 +21,8 @@ import BullSearchPage from './BullSearchPage';
 import FemaleUploadModal from './FemaleUploadModal';
 import SegmentationPage from './SegmentationPage';
 import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
+import { HelpHint } from "@/components/help/HelpHint";
+import { HelpButton } from "@/components/help/HelpButton";
 import HomeHintDialog from '@/features/welcome/HomeHintDialog';
 import HomeTourAnchors from "@/features/tutorial/anchors/HomeTourAnchors";
 import { usePlanStore } from '@/hooks/usePlanStore';
@@ -658,7 +660,13 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
           {/* Farms Section */}
           <div className="space-y-6" data-tour="home:fazendas">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-semibold">Suas Fazendas</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-xl font-semibold">Suas Fazendas</h3>
+                <HelpHint 
+                  content="Lista de todas as suas fazendas cadastradas. Clique em uma fazenda para visualizar detalhes ou criar uma nova."
+                  side="right"
+                />
+              </div>
               <Button onClick={handleCreateFarm} data-tour="home:criar">
                 <Plus className="w-4 h-4 mr-2" />
                 Criar Fazenda
@@ -716,7 +724,13 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
 
           {/* Account Totals */}
           <div className="space-y-6" data-tour="home:resumo">
-            <h3 className="text-xl font-semibold">Resumo da Conta</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-xl font-semibold">Resumo da Conta</h3>
+              <HelpHint 
+                content="Visão geral da sua conta, incluindo número total de fazendas e animais cadastrados."
+                side="right"
+              />
+            </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <Card>
@@ -770,6 +784,8 @@ Select Sires do Brasil</p>
 
       {/* Upload Modal */}
       {selectedFarm && <FemaleUploadModal isOpen={showUploadModal} onClose={() => setShowUploadModal(false)} farmId={selectedFarm.farm_id} farmName={selectedFarm.farm_name} />}
+      
+      <HelpButton />
     </div>;
 };
 export default MainDashboard;

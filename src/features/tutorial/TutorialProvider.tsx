@@ -8,14 +8,10 @@ import { useSupabaseSession } from "@/hooks/useSupabaseSession";
 const __DEV__ = process.env.NODE_ENV !== "production";
 
 /** TODO: troque por seu hook real (ex.: useAGFilters().farmId) */
-function useTenantId(): string | null {
-  try {
-    // const { farmId } = useAGFilters();
-    // return farmId ?? null;
-    return null;
-  } catch {
-    return null;
-  }
+function useTenantId() {
+  // Simplified: use userId as tenantId for single-tenant setup
+  const session = useSupabaseSession();
+  return session?.user?.id ?? null;
 }
 
 type Ctx = {
@@ -47,18 +43,16 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
 
   const start = useCallback(async (s: string) => {
     try {
-      console.log("[tutorial] start called", { slug: s, userId, tenantId, effectiveTenantId });
+      console.log("[tutorial] start called", { slug: s, userId, effectiveTenantId });
 
       if (!userId || !effectiveTenantId) {
-        console.log("[tutorial] ❌ abort: missing ids", { userId, tenantId, effectiveTenantId, slug: s });
+        console.error("[tutorial] ❌ Não foi possível iniciar: usuário não autenticado");
         return;
       }
 
-      console.log("[tutorial] ✓ IDs present, checking if enabled...");
-      const enabled = await tutorialsEnabled(effectiveTenantId);
-      console.log("[tutorial] tutorialsEnabled result:", { effectiveTenantId, enabled });
+      const enabled = await tutorialsEnabled();
       if (!enabled) {
-        console.log("[tutorial] ❌ tutorials not enabled");
+        console.log("[tutorial] tutorials disabled");
         return;
       }
 
