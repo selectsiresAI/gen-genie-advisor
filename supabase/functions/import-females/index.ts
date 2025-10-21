@@ -17,6 +17,166 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
   });
 }
 
+// Validation schema for female records
+interface FemaleRecord {
+  farm_id: string;
+  name: string;
+  identifier?: string;
+  cdcb_id?: string;
+  birth_date?: string;
+  parity_order?: number;
+  category?: string;
+  sire_naab?: string;
+  mgs_naab?: string;
+  mmgs_naab?: string;
+  beta_casein?: string;
+  kappa_casein?: string;
+  fonte?: string;
+  [key: string]: string | number | undefined;
+}
+
+function sanitizeString(value: unknown): string {
+  if (typeof value !== 'string') return '';
+  return value.trim().replace(/[<>]/g, '');
+}
+
+function validateNumber(value: unknown, min?: number, max?: number): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const num = typeof value === 'number' ? value : parseFloat(String(value));
+  if (isNaN(num)) return null;
+  if (min !== undefined && num < min) return null;
+  if (max !== undefined && num > max) return null;
+  return num;
+}
+
+function validateDate(value: unknown): string | null {
+  if (!value) return null;
+  const dateStr = String(value);
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return null;
+  return date.toISOString().split('T')[0];
+}
+
+function validateRecord(record: any, farmId: string): FemaleRecord | null {
+  // Try to get name from 'name' or 'identifier' field
+  let name = sanitizeString(record.name);
+  if (!name && record.identifier) {
+    name = sanitizeString(record.identifier);
+  }
+  
+  if (!name || name.length === 0 || name.length > 200) {
+    return null;
+  }
+
+  const validated: FemaleRecord = {
+    farm_id: farmId,
+    name,
+    identifier: sanitizeString(record.identifier)?.substring(0, 100) || undefined,
+    cdcb_id: sanitizeString(record.cdcb_id)?.substring(0, 50) || undefined,
+    birth_date: validateDate(record.birth_date) || undefined,
+    parity_order: validateNumber(record.parity_order, 0, 20) || undefined,
+    category: sanitizeString(record.category)?.substring(0, 50) || undefined,
+    sire_naab: sanitizeString(record.sire_naab)?.substring(0, 50) || undefined,
+    mgs_naab: sanitizeString(record.mgs_naab)?.substring(0, 50) || undefined,
+    mmgs_naab: sanitizeString(record.mmgs_naab)?.substring(0, 50) || undefined,
+    beta_casein: sanitizeString(record.beta_casein)?.substring(0, 10) || undefined,
+    kappa_casein: sanitizeString(record.kappa_casein)?.substring(0, 10) || undefined,
+    fonte: sanitizeString(record.fonte)?.substring(0, 100) || undefined,
+  };
+
+  // PTA numeric fields
+  const ptaFields = [
+    'hhp_dollar', 'tpi', 'nm_dollar', 'cm_dollar', 'fm_dollar', 'gm_dollar',
+    'f_sav', 'ptam', 'cfp', 'ptaf', 'ptaf_pct', 'ptap', 'ptap_pct',
+    'pl', 'dpr', 'liv', 'scs', 'mast', 'met', 'rp', 'da', 'ket', 'mf',
+    'ptat', 'udc', 'flc', 'sce', 'dce', 'ssb', 'dsb', 'h_liv', 'ccr', 'hcr',
+    'fi', 'gl', 'efc', 'bwc', 'sta', 'str', 'dfm', 'rua', 'rls', 'rtp',
+    'ftl', 'rw', 'rlr', 'fta', 'fls', 'fua', 'ruh', 'ruw', 'ucl', 'udp',
+    'ftp', 'rfi', 'gfi'
+  ];
+
+  ptaFields.forEach(field => {
+    const value = validateNumber(record[field], -10000, 10000);
+    if (value !== null) {
+      validated[field] = value;
+    }
+  });
+
+  return validated;
+}
+
+function parseCSV(csvContent: string): any[] {
+  const lines = csvContent.trim().split('\n');
+  if (lines.length < 2) return [];
+
+  // Parse header row
+  const headerLine = lines[0];
+  const headers: string[] = [];
+  let currentField = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < headerLine.length; i++) {
+    const char = headerLine[i];
+    
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      headers.push(currentField.trim().toLowerCase());
+      currentField = '';
+    } else {
+      currentField += char;
+    }
+  }
+  if (currentField) {
+    headers.push(currentField.trim().toLowerCase());
+  }
+
+  // Parse data rows
+  const records: any[] = [];
+
+  for (let lineIndex = 1; lineIndex < lines.length; lineIndex++) {
+    const line = lines[lineIndex].trim();
+    if (!line) continue;
+
+    const values: string[] = [];
+    currentField = '';
+    inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        values.push(currentField.trim());
+        currentField = '';
+      } else {
+        currentField += char;
+      }
+    }
+    if (currentField || values.length < headers.length) {
+      values.push(currentField.trim());
+    }
+
+    const record: any = {};
+    let hasData = false;
+
+    headers.forEach((header, index) => {
+      const value = values[index]?.trim().replace(/^"|"$/g, '');
+      if (value && value !== '') {
+        record[header] = value;
+        hasData = true;
+      }
+    });
+
+    if (hasData) {
+      records.push(record);
+    }
+  }
+
+  return records;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
@@ -63,29 +223,106 @@ Deno.serve(async (req) => {
     try {
       const formData = await req.formData();
       const file = formData.get("file");
+      const farmIdParam = formData.get("farm_id");
 
       if (!file || !(file instanceof File)) {
         return jsonResponse({ error: "Arquivo inválido" }, 400);
       }
 
+      if (!farmIdParam) {
+        return jsonResponse({ error: "farm_id é obrigatório" }, 400);
+      }
+
+      const farmId = String(farmIdParam);
+
+      // Check farm access
+      const { data: farmAccess } = await supabase
+        .from('user_farms')
+        .select('role')
+        .eq('farm_id', farmId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (!farmAccess || !['owner', 'editor'].includes(farmAccess.role)) {
+        return jsonResponse({ error: 'Permissão negada: acesso insuficiente à fazenda' }, 403);
+      }
+
+      // Read and parse CSV
+      const csvContent = await file.text();
+      const parsedRecords = parseCSV(csvContent);
+
+      if (parsedRecords.length === 0) {
+        return jsonResponse({ error: "Arquivo CSV vazio ou inválido" }, 400);
+      }
+
+      if (parsedRecords.length > 5000) {
+        return jsonResponse({ error: "Muitos registros. Máximo 5000 por upload." }, 413);
+      }
+
+      console.log(`Processing ${parsedRecords.length} records for farm ${farmId}`);
+
+      // Validate and sanitize records
+      const validatedRecords: FemaleRecord[] = [];
+      const errors: { row: number; error: string }[] = [];
+
+      parsedRecords.forEach((record, index) => {
+        const validated = validateRecord(record, farmId);
+        if (validated) {
+          validatedRecords.push(validated);
+        } else {
+          errors.push({ row: index + 1, error: 'Campos obrigatórios inválidos ou ausentes' });
+        }
+      });
+
+      // Insert validated records in batches
+      const batchSize = 500;
+      let inserted = 0;
+      const insertErrors: any[] = [];
+
+      for (let i = 0; i < validatedRecords.length; i += batchSize) {
+        const batch = validatedRecords.slice(i, i + batchSize);
+        
+        const { error: insertError } = await supabase
+          .from('females')
+          .insert(batch);
+
+        if (insertError) {
+          console.error('Insert error:', insertError);
+          insertErrors.push(insertError);
+        } else {
+          inserted += batch.length;
+        }
+      }
+
+      console.log(`Upload concluído: ${inserted} registros inseridos, ${errors.length} erros de validação, ${insertErrors.length} erros de inserção`);
+
       const importBatchId = crypto.randomUUID();
 
-      return jsonResponse({ import_batch_id: importBatchId, received_bytes: file.size });
+      return jsonResponse({
+        import_batch_id: importBatchId,
+        success: true,
+        inserted,
+        validation_errors: errors.length,
+        insert_errors: insertErrors.length,
+        errors: errors.slice(0, 100),
+      });
     } catch (error) {
       console.error("Upload handler error", error);
-      return jsonResponse({ error: "Erro ao processar upload" }, 500);
+      return jsonResponse({ error: "Erro ao processar upload", message: String(error) }, 500);
     }
   }
 
   if (action === "commit") {
     try {
-      const { import_batch_id: importBatchId } = await req.json();
+      const { import_batch_id: importBatchId, farm_id: farmId } = await req.json();
 
       if (!importBatchId) {
         return jsonResponse({ error: "import_batch_id é obrigatório" }, 400);
       }
 
-      return jsonResponse({ status: "queued", import_batch_id: importBatchId });
+      console.log(`Commit confirmado para batch ${importBatchId}`);
+
+      return jsonResponse({ status: "completed", import_batch_id: importBatchId });
     } catch (error) {
       console.error("Commit handler error", error);
       return jsonResponse({ error: "Erro ao processar commit" }, 500);

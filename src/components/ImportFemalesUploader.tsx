@@ -134,8 +134,17 @@ export default function ImportFemalesUploader({ farmId, onSuccess }: Props) {
       }
 
       const batchId = payload?.import_batch_id;
-      toastSuccess(`Upload recebido${batchId ? ` (lote ${batchId})` : ''}. Processando...`);
+      const inserted = payload?.inserted || 0;
+      const validationErrors = payload?.validation_errors || 0;
+      const insertErrors = payload?.insert_errors || 0;
 
+      if (insertErrors > 0 || validationErrors > 0) {
+        toastError(`Processamento concluído com avisos: ${inserted} inseridos, ${validationErrors} erros de validação, ${insertErrors} erros de inserção.`);
+      } else {
+        toastSuccess(`Upload concluído! ${inserted} fêmeas importadas com sucesso.`);
+      }
+
+      // Commit the batch
       if (batchId) {
         const commitUrl = getEdgeUrl('import-females/commit');
         const commitResponse = await fetch(commitUrl, {
@@ -156,8 +165,6 @@ export default function ImportFemalesUploader({ farmId, onSuccess }: Props) {
       if (typeof onSuccess === 'function') {
         onSuccess(batchId);
       }
-
-      toastInfo('Você será avisado quando concluir o processamento.');
     } catch (error: any) {
       if (error?.name === 'NotReadableError' || String(error).includes('NotReadableError')) {
         toastError('Não foi possível ler o arquivo (NotReadableError). Selecione novamente e mantenha o modal aberto durante o upload.');
