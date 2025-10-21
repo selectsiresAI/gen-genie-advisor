@@ -195,18 +195,67 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
         apikey: supabaseAnonKey,
       };
 
-      // Se for XLSX, converter para CSV primeiro
+      // Se for XLSX, converter para CSV e aplicar mapeamento de legendas
       let fileToUpload = importFile;
       const isXlsx = importFile.name.toLowerCase().endsWith('.xlsx') || importFile.name.toLowerCase().endsWith('.xls');
       
       if (isXlsx) {
         const XLSX = await import('xlsx');
+        const { normalizeKey } = await import('@/pages/tools/conversao/utils');
+        const { defaultLegendBank } = await import('@/pages/tools/conversao/defaultLegendBank');
+        
+        // Converter XLSX para objeto de dados
         const buffer = await importFile.arrayBuffer();
         const workbook = XLSX.read(buffer, { type: 'array' });
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const csvContent = XLSX.utils.sheet_to_csv(firstSheet, { FS: ',', RS: '\n' });
-        const csvBlob = new Blob([csvContent], { type: 'text/csv' });
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+        
+        if (jsonData.length === 0) {
+          toast({
+            title: "Erro",
+            description: "Arquivo XLSX vazio",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        // Primeira linha são os headers
+        const originalHeaders = (jsonData[0] as any[]).map(h => String(h || '').trim());
+        const rows = jsonData.slice(1) as any[][];
+        
+        // Criar mapa de legendas: header normalizado → canonical
+        const legendMap = new Map<string, string>();
+        defaultLegendBank.forEach(entry => {
+          const normalizedAlias = normalizeKey(entry.alias);
+          legendMap.set(normalizedAlias, entry.canonical);
+        });
+        
+        // Mapear headers originais para canonizados
+        const mappedHeaders = originalHeaders.map(header => {
+          const normalized = normalizeKey(header);
+          return legendMap.get(normalized) || header;
+        });
+        
+        // Recriar CSV com headers mapeados
+        const csvLines = [
+          mappedHeaders.join(','),
+          ...rows.map(row => 
+            row.map(cell => {
+              const value = String(cell ?? '').trim();
+              // Escapar valores com vírgulas ou aspas
+              if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+                return `"${value.replace(/"/g, '""')}"`;
+              }
+              return value;
+            }).join(',')
+          )
+        ];
+        
+        const csvContent = csvLines.join('\n');
+        const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         fileToUpload = new File([csvBlob], importFile.name.replace(/\.xlsx?$/i, '.csv'), { type: 'text/csv' });
+        
+        console.log('📊 Headers mapeados:', { originalHeaders, mappedHeaders });
       }
 
       const { response: uploadResponse, url: uploadUrl } = await attemptImportBullsFetch(
