@@ -174,7 +174,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
     if (!importFile) {
       toast({
         title: "Erro",
-        description: "Selecione um arquivo CSV",
+        description: "Selecione um arquivo CSV ou XLSX",
         variant: "destructive"
       });
       return;
@@ -195,11 +195,25 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
         apikey: supabaseAnonKey,
       };
 
+      // Se for XLSX, converter para CSV primeiro
+      let fileToUpload = importFile;
+      const isXlsx = importFile.name.toLowerCase().endsWith('.xlsx') || importFile.name.toLowerCase().endsWith('.xls');
+      
+      if (isXlsx) {
+        const XLSX = await import('xlsx');
+        const buffer = await importFile.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const csvContent = XLSX.utils.sheet_to_csv(firstSheet, { FS: ',', RS: '\n' });
+        const csvBlob = new Blob([csvContent], { type: 'text/csv' });
+        fileToUpload = new File([csvBlob], importFile.name.replace(/\.xlsx?$/i, '.csv'), { type: 'text/csv' });
+      }
+
       const { response: uploadResponse, url: uploadUrl } = await attemptImportBullsFetch(
         IMPORT_BULLS_UPLOAD_URLS,
         () => {
           const uploadForm = new FormData();
-          uploadForm.append('file', importFile);
+          uploadForm.append('file', fileToUpload);
           uploadForm.append('user_id', user.id);
           return {
             method: 'POST',
@@ -809,24 +823,24 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
                 <DialogTrigger asChild>
                   <Button variant="outline" className="text-slate-950">
                     <Upload size={16} className="mr-2" />
-                    Importar CSV
+                    Importar Touros
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[500px]">
                   <DialogHeader>
-                    <DialogTitle>Importar Touros via CSV</DialogTitle>
+                    <DialogTitle>Importar Touros</DialogTitle>
                     <DialogDescription>
-                      📥 Carregue seu CSV de touros. Os registros serão inseridos no staging.
+                      📥 Carregue seu arquivo CSV ou XLSX de touros. Os registros serão inseridos no staging.
                       Use o botão "Migrar Touros" para processar para a tabela bulls.
                     </DialogDescription>
                   </DialogHeader>
                   
                   <div className="space-y-4 py-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Arquivo CSV</label>
+                      <label className="text-sm font-medium">Arquivo CSV ou XLSX</label>
                       <Input 
                         type="file" 
-                        accept=".csv"
+                        accept=".csv,.xlsx,.xls"
                         onChange={(e) => setImportFile(e.target.files?.[0] || null)}
                         disabled={importing}
                       />
