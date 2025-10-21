@@ -486,21 +486,27 @@ const HerdPage: React.FC<HerdPageProps> = ({
           </div>
 
           {/* Search and Actions */}
-          <div className="flex gap-4 items-center" data-tour="rebanho:header.filtro">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-              <Input placeholder="Buscar por nome ou identificação..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
+          <div className="flex flex-wrap gap-4 items-center" data-tour="rebanho:header.filtro">
+            <div className="flex items-center gap-2 flex-1 min-w-[260px]">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input placeholder="Buscar por nome ou identificação..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
+              </div>
+              <HelpHint content="Busque por nome, número CDCB ou qualquer identificador do animal" side="bottom" />
             </div>
-            <Select value={selectedYear} onValueChange={setSelectedYear}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Ano nascimento" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all-years">Todos os anos</SelectItem>
-                {availableYears.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            
+            <div className="flex items-center gap-2">
+              <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Ano nascimento" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all-years">Todos os anos</SelectItem>
+                  {availableYears.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <HelpHint content="Filtre o rebanho por ano de nascimento para comparar safras" side="bottom" />
+            </div>
+
             <div className="flex items-center gap-1">
               <Button variant="outline" onClick={() => setShowUploadModal(true)}>
                 <Upload className="w-4 h-4 mr-2" />
@@ -522,7 +528,10 @@ const HerdPage: React.FC<HerdPageProps> = ({
           <div data-tour="rebanho:tabela.femeas">
             <Card>
             <CardHeader>
-              <CardTitle>Lista do Rebanho</CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle>Lista do Rebanho</CardTitle>
+                <HelpHint content="Clique nos cabeçalhos para ordenar por PTA, pedigree ou informações de produção" />
+              </div>
             </CardHeader>
             <CardContent>
               {loading ? <div className="text-center py-8">
@@ -542,11 +551,14 @@ const HerdPage: React.FC<HerdPageProps> = ({
                     </Button>}
                 </div> : <div ref={tableRegionRef} tabIndex={-1} role="region" aria-label="Tabela do rebanho" className="focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary rounded-md">
                   {selectedFemales.length > 0 && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-muted/70 px-4 py-3">
-                      <span className="text-sm font-medium">
-                        {t('herd.selected.count', {
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">
+                          {t('herd.selected.count', {
                       count: selectedFemales.length
                     })}
-                      </span>
+                        </span>
+                        <HelpHint content="Selecione múltiplas fêmeas para aplicar ações em lote" side="bottom" />
+                      </div>
                       <AlertDialog open={isDeleteDialogOpen} onOpenChange={open => {
                     if (!isDeleting) {
                       setIsDeleteDialogOpen(open);
@@ -558,6 +570,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
                             {t('actions.delete')}
                           </Button>
                         </AlertDialogTrigger>
+                        <HelpHint content="Exclui definitivamente as fêmeas selecionadas. Use com cuidado" side="bottom" />
                         <AlertDialogContent>
                           <AlertDialogHeader>
                             <AlertDialogTitle>{t('herd.delete.confirm.title')}</AlertDialogTitle>
@@ -583,11 +596,12 @@ const HerdPage: React.FC<HerdPageProps> = ({
                         <thead className="sticky top-0 z-40 bg-foreground text-background shadow-sm [&>tr>th]:sticky [&>tr>th]:top-0 [&>tr>th]:z-40 [&>tr>th]:whitespace-nowrap [&>tr>th]:min-w-max [&>tr>th]:align-middle [&>tr>th]:px-3 [&>tr>th]:py-2 [&>tr>th]:text-left [&>tr>th]:text-xs [&>tr>th]:font-semibold [&>tr>th]:tracking-tight [&>tr>th]:bg-foreground [&>tr>th]:text-background">
                           <tr>
                             <th className="sticky top-0 z-[60] bg-foreground text-background shadow-[6px_0_12px_-6px_rgba(15,23,42,0.45)]" style={stickyColumnStyles.select}>
-                              <div className="flex items-center gap-2">
-                                <input type="checkbox" ref={selectAllCheckboxRef} checked={allVisibleSelected} onChange={handleSelectAll} className="h-4 w-4" aria-label="Selecionar todas as fêmeas visíveis" />
-                                Selecionar
-                              </div>
-                            </th>
+                          <div className="flex items-center gap-2">
+                            <input type="checkbox" ref={selectAllCheckboxRef} checked={allVisibleSelected} onChange={handleSelectAll} className="h-4 w-4" aria-label="Selecionar todas as fêmeas visíveis" />
+                            Selecionar
+                            <HelpHint content="Marque para selecionar todas as fêmeas exibidas na página" side="bottom" />
+                          </div>
+                        </th>
                             <SortableHeader
                               column="farm_id"
                               label="Fazenda"

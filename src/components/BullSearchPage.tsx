@@ -801,13 +801,17 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
     });
   };
   return <div className="min-h-screen bg-background">
+      <HelpButton context="bulls" />
       <div className="border-b">
         <div className="flex h-16 items-center px-4 gap-4">
           <Button variant="ghost" onClick={onBack} className="mr-4 bg-slate-200 hover:bg-slate-100">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Voltar
           </Button>
-          <h1 className="text-xl font-semibold">{farm.farm_name} - Busca de Touros</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold">{farm.farm_name} - Busca de Touros</h1>
+            <HelpHint content="Importe touros, ajuste pesos e selecione candidatos ideais para o rebanho" />
+          </div>
           <div className="ml-auto flex items-center gap-3">
             <Badge variant="outline">{rankedBulls.length} touros disponíveis</Badge>
           </div>
@@ -819,7 +823,10 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
           {/* Weight Configuration */}
           <Card>
             <CardHeader>
-              <CardTitle>Configuração de Pesos - Índice Personalizado</CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle>Configuração de Pesos - Índice Personalizado</CardTitle>
+                <HelpHint content="Ajuste a importância de cada PTA para montar um score customizado" />
+              </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
@@ -837,38 +844,53 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
               <div className="text-sm text-muted-foreground">
                 O score usa z-score por traço para evitar escalas diferentes e aplica penalização para SCS (menor é melhor).
               </div>
+              <div className="mt-2">
+                <HelpHint content="Cada slider representa o peso do PTA na nota final. Garanta que a soma fique próxima de 100%" />
+              </div>
             </CardContent>
           </Card>
 
           {/* Search and Controls */}
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1">
-              <Input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Buscar touros por NAAB, nome ou parentesco" className="pl-10" />
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2 flex-1 min-w-[260px]">
+              <div className="relative flex-1">
+                <Input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Buscar touros por NAAB, nome ou parentesco" className="pl-10" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+              </div>
+              <HelpHint content="Busque por NAAB, nome, registro ou pedigree dos touros" side="bottom" />
             </div>
-            
-            <Select value={selectedEmpresa} onValueChange={setSelectedEmpresa}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Filtrar por empresa" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todas">Todas as empresas</SelectItem>
-                {empresas.slice(1).map(empresa => <SelectItem key={empresa} value={empresa}>{empresa}</SelectItem>)}
-              </SelectContent>
-            </Select>
 
-            <Select value={selectedYear} onValueChange={setSelectedYear}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Ano nascimento" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all-years">Todos os anos</SelectItem>
-                {availableYears.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              <Select value={selectedEmpresa} onValueChange={setSelectedEmpresa}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Filtrar por empresa" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas as empresas</SelectItem>
+                  {empresas.slice(1).map(empresa => <SelectItem key={empresa} value={empresa}>{empresa}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <HelpHint content="Filtre por central genética para comparar catálogos específicos" side="bottom" />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Ano nascimento" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all-years">Todos os anos</SelectItem>
+                  {availableYears.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <HelpHint content="Limite os touros por ano de nascimento para focar em gerações específicas" side="bottom" />
+            </div>
 
             <div className="flex gap-2">
-          <StagingMigrationButton />
+              <div className="flex items-center gap-2">
+                <StagingMigrationButton />
+                <HelpHint content="Processa o staging e move os touros importados para a base oficial" side="bottom" />
+              </div>
               <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="text-slate-950">
@@ -928,7 +950,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
                     </Button>
                     
                     {!importResult && (
-                      <Button 
+                      <Button
                         onClick={handleImportUpload}
                         disabled={!importFile || importing}
                       >
@@ -938,26 +960,33 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+              <HelpHint content="Importe planilhas CSV/XLSX com touros. Utilize o template para evitar erros" side="bottom" />
 
               <Button variant="outline" onClick={downloadBullTemplate} title="Baixar template completo de touros para Supabase" className="bg-gray-200 hover:bg-gray-100">
                 <Download size={16} className="mr-2" />
                 Template Touros
               </Button>
-              
+              <HelpHint content="Baixe o modelo com cabeçalhos obrigatórios e exemplos preenchidos" side="bottom" />
+
               <Button onClick={handleExport}>
                 <Download size={16} className="mr-2" />
                 Exportar
               </Button>
+              <HelpHint content="Exporte a lista atual com scores e PTAs em CSV" side="bottom" />
             </div>
-            
-            <Badge variant="secondary">
-              Selecionados: {selectedBulls.length}
-            </Badge>
-            
+
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">
+                Selecionados: {selectedBulls.length}
+              </Badge>
+              <HelpHint content="Marque touros para enviar ao Botijão ou gerar relatórios customizados" side="bottom" />
+            </div>
+
             {selectedBulls.length > 0 && <Button onClick={handleAddToBotijao} className="bg-primary hover:bg-primary/90">
                 <Beaker size={16} className="mr-2" />
                 Enviar para Botijão Virtual
               </Button>}
+            {selectedBulls.length > 0 && <HelpHint content="Envie os touros selecionados para planejar doses no Botijão Virtual" side="bottom" />}
           </div>
 
           {/* Bulls Table */}
@@ -982,7 +1011,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
                       ))}
                     </tr>
                   </thead>
-                   <tbody>
+                  <tbody>
                       {rankedBulls.map((bull, index) => (
                         <tr key={bull.code} className={index % 2 === 0 ? "bg-muted/50" : ""}>
                           <td className="px-2 py-1 text-center">
@@ -1008,6 +1037,9 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
                 </table>
               </div>
             </ScrollArea>
+            <div className="px-4 py-3 border-t bg-muted/40 flex items-center gap-2">
+              <HelpHint content="Ordene qualquer coluna para priorizar touros conforme seu critério" />
+            </div>
           </Card>
 
           {rankedBulls.length === 0 && <Card>

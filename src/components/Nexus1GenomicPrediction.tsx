@@ -13,6 +13,8 @@ import { Upload, Download, Calculator, ArrowLeft, Users, Target, Database, FileU
 import { read, utils, writeFileXLSX } from 'xlsx';
 import { supabase } from '@/integrations/supabase/client';
 import { useHerdStore } from '@/hooks/useHerdStore';
+import { HelpButton } from '@/components/help/HelpButton';
+import { HelpHint } from '@/components/help/HelpHint';
 
 import { searchBulls } from '@/supabase/queries/bulls';
 import type { BullsDenormSelection } from '@/supabase/queries/bulls';
@@ -731,6 +733,7 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
     return groups;
   }, [predictions]);
   return <div className="space-y-6">
+      <HelpButton context="nexus1-genomic" />
       {/* Header */}
       <div className="flex flex-wrap items-center gap-4">
         <Button variant="outline" onClick={onBack}>
@@ -741,6 +744,7 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
           <h2 className="text-2xl font-bold flex items-center gap-2">
             <Target className="w-6 h-6" />
             Nexus 1: Predição Genômica
+            <HelpHint content="Importe dados genômicos, valide e gere PTAs projetadas com alta confiabilidade" />
           </h2>
           <p className="text-muted-foreground">
             Baseado em dados genômicos completos - Fórmula: ((PTA Fêmea + PTA Touro) / 2) × 0,93
@@ -761,7 +765,7 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Seletor de Fonte de Dados */}
-            <div className="flex gap-4">
+            <div className="flex gap-4 items-center">
               <Button variant={dataSource === 'upload' ? 'default' : 'outline'} onClick={() => setDataSource('upload')} className="flex-1">
                 <FileUp className="w-4 h-4 mr-2" />
                 Upload de Arquivo
@@ -770,17 +774,19 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
                 <Database className="w-4 h-4 mr-2" />
                 Fêmeas Segmentadas
               </Button>
+              <HelpHint content="Escolha entre subir um lote de genótipos ou usar listas segmentadas já salvas" side="bottom" />
             </div>
 
             {dataSource === 'upload' ? <div className="space-y-4">
-                <div>
-                  <Label htmlFor="female-upload">Carregar arquivo (.xlsx, .csv)</Label>
-                  <Input id="female-upload" type="file" accept=".xlsx,.csv" onChange={handleFemaleUpload} className="mt-1" />
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Arquivo deve conter as colunas: ID Fazenda, Nome e todos os PTAs necessários
-                </p>
-              </div> : <div className="space-y-4">
+              <div>
+                <Label htmlFor="female-upload">Carregar arquivo (.xlsx, .csv)</Label>
+                <Input id="female-upload" type="file" accept=".xlsx,.csv" onChange={handleFemaleUpload} className="mt-1" />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Arquivo deve conter as colunas: ID Fazenda, Nome e todos os PTAs necessários
+              </p>
+              <HelpHint content="Utilize o template Nexus 1 e valide colunas obrigatórias antes de importar" side="bottom" />
+            </div> : <div className="space-y-4">
                 <div>
                   {currentFarmId ? <Badge variant="outline">Rebanho ativo: {currentFarmId}</Badge> : <p className="text-sm text-muted-foreground">
                       Selecione um rebanho no dashboard para habilitar a listagem de fêmeas segmentadas.
@@ -814,6 +820,7 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
                         </Label>
                       </div>)}
                   </div>
+                  <HelpHint content="Combine categorias estratégicas (doadoras, receptoras) para direcionar o cálculo" side="bottom" />
                 </div>
 
                 <div>
