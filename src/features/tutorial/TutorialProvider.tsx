@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useMemo, useState, useCallback } from "react";
 import TourSpotlight from "./TourSpotlight";
 import { fetchTutorial, getOrInitProgress, updateProgress, tutorialsEnabled } from "./api";
 import type { TutorialStep } from "./types";
@@ -45,7 +45,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   const [steps, setSteps] = useState<TutorialStep[]>([]);
   const [idx, setIdx] = useState(0);
 
-  async function start(s: string) {
+  const start = useCallback(async (s: string) => {
     try {
       console.log("[tutorial] start called", { slug: s, userId, tenantId, effectiveTenantId });
 
@@ -84,13 +84,13 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("[tutorial] ❌ Error starting tutorial:", error);
     }
-  }
+  }, [userId, effectiveTenantId]);
 
-  async function reset(s: string) {
+  const reset = useCallback(async (s: string) => {
     if (!userId || !effectiveTenantId) return;
     await updateProgress({ userId, tenantId: effectiveTenantId, slug: s, currentStep: 0, isCompleted: false });
     localStorage.removeItem(`toolss:tutorial:auto:${s}:${userId}:${effectiveTenantId}`);
-  }
+  }, [userId, effectiveTenantId]);
 
   // Helpers globais para debug em DEV
   if (__DEV__) {
@@ -100,7 +100,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     (window as any).toolssResetTutorial = (slug: string) => reset(slug);
   }
 
-  const ctx = useMemo<Ctx>(() => ({ start, reset, isActive: active, step: idx }), [active, idx]);
+  const ctx = useMemo<Ctx>(() => ({ start, reset, isActive: active, step: idx }), [start, reset, active, idx]);
   const step = steps[idx];
 
   console.log("[TutorialProvider] Current state:", { active, hasStep: !!step, slug, stepIndex: idx, stepsCount: steps.length });
