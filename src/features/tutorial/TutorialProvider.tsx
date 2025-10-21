@@ -5,7 +5,7 @@ import { fetchTutorial, getOrInitProgress, updateProgress, tutorialsEnabled } fr
 import type { TutorialStep } from "./types";
 import { useSupabaseSession } from "@/hooks/useSupabaseSession";
 
-const __DEV__ = process.env.NODE_ENV !== "production";
+const __DEV__ = import.meta.env.MODE !== "production";
 
 /** TODO: troque por seu hook real (ex.: useAGFilters().farmId) */
 function useTenantId() {

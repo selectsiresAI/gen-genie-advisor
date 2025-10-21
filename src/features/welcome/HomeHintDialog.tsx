@@ -7,7 +7,7 @@ function useTenantId(): string | null {
   const filters = useAGFilters();
   const farmId = filters?.farmId;
 
-  if (process.env.NODE_ENV !== "production") {
+  if (import.meta.env.MODE !== "production") {
     console.debug("HomeHint tenantId", farmId);
   }
 
