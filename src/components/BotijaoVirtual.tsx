@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { BullSelector } from '@/components/BullSelector';
-import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
+
 
 // Types - Updated to match Supabase structure
 type Bull = {
@@ -697,7 +697,6 @@ function BotijaoVirtualPage({ client, farm, bulls: propBulls, selectedBulls = []
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <TutorialButtons slug="botijao" />
           <Button variant="outline" onClick={onBack}>
             Voltar
           </Button>

@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowLeft, Search, Upload, Download, Beaker } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
+
 import SortableHeader from '@/components/animals/SortableHeader';
 import { ANIMAL_METRIC_COLUMNS } from '@/constants/animalMetrics';
 import { useAnimalTableSort } from '@/hooks/useAnimalTableSort';
@@ -808,7 +808,6 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
           <h1 className="text-xl font-semibold">{farm.farm_name} - Busca de Touros</h1>
           <div className="ml-auto flex items-center gap-3">
             <Badge variant="outline">{rankedBulls.length} touros disponíveis</Badge>
-            <TutorialButtons slug="touros" />
           </div>
         </div>
       </div>

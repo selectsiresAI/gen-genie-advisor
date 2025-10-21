@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Settings, Download, RefreshCw, Users, TrendingUp, BarChart3, PieChart as PieChartIcon, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
+
 import {
   fetchFemalesDenormByFarm,
   isCompleteFemaleRow,
@@ -363,7 +363,6 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
             )}
           </div>
           <div className="flex items-center gap-3">
-            <TutorialButtons slug="graficos" />
             <Badge variant="outline" className="text-xs">
               {females.length} animais
             </Badge>

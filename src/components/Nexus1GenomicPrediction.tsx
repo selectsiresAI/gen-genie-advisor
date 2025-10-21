@@ -13,7 +13,7 @@ import { Upload, Download, Calculator, ArrowLeft, Users, Target, Database, FileU
 import { read, utils, writeFileXLSX } from 'xlsx';
 import { supabase } from '@/integrations/supabase/client';
 import { useHerdStore } from '@/hooks/useHerdStore';
-import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
+
 import { searchBulls } from '@/supabase/queries/bulls';
 import type { BullsDenormSelection } from '@/supabase/queries/bulls';
 
@@ -745,9 +745,6 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
           <p className="text-muted-foreground">
             Baseado em dados genômicos completos - Fórmula: ((PTA Fêmea + PTA Touro) / 2) × 0,93
           </p>
-        </div>
-        <div className="ml-auto">
-          <TutorialButtons slug="nexus" />
         </div>
       </div>
 

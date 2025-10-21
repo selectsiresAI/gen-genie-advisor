@@ -20,7 +20,7 @@ import HerdPage from './HerdPage';
 import BullSearchPage from './BullSearchPage';
 import FemaleUploadModal from './FemaleUploadModal';
 import SegmentationPage from './SegmentationPage';
-import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
+
 import { HelpHint } from "@/components/help/HelpHint";
 import { HelpButton } from "@/components/help/HelpButton";
 import HomeHintDialog from '@/features/welcome/HomeHintDialog';
@@ -371,9 +371,6 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                 Dashboard
               </Button>
               <h1 className="text-xl font-semibold">Conversão de planilhas (preview)</h1>
-              <div className="ml-auto">
-                <TutorialButtons slug="conversao" />
-              </div>
             </div>
           </div>
           <div className="container mx-auto px-4 py-8">
@@ -390,9 +387,6 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                 Dashboard
               </Button>
               <h1 className="text-xl font-semibold">Nexus - Sistema de Predição Genética</h1>
-              <div className="ml-auto">
-                <TutorialButtons slug="nexus" />
-              </div>
             </div>
           </div>
           <div className="container mx-auto px-4 py-8">
@@ -412,9 +406,6 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                 Dashboard
               </Button>
               <h1 className="text-xl font-semibold">Plano Genético</h1>
-              <div className="ml-auto">
-                <TutorialButtons slug="plano" />
-              </div>
             </div>
           </div>
           <div className="container mx-auto px-4 py-8">
@@ -529,9 +520,6 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                   Dashboard
                 </Button>
                 <h1 className="text-xl font-semibold">{selectedFarm?.farm_name} - Metas</h1>
-                <div className="ml-auto">
-                  <TutorialButtons slug="metas" />
-                </div>
               </div>
             </div>
             <div className="container mx-auto px-4 py-8">
@@ -571,9 +559,6 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                   Dashboard
                 </Button>
                 <h1 className="text-xl font-semibold">{selectedFarm?.farm_name} - Pasta de Arquivos</h1>
-                <div className="ml-auto">
-                  <TutorialButtons slug="arquivos" />
-                </div>
               </div>
             </div>
             <div className="container mx-auto px-4 py-8">
@@ -640,7 +625,6 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
               <LogOut className="w-4 h-4 mr-2" />
               Sair
             </Button>
-            <TutorialButtons slug="home-tour" />
           </div>
         </div>
       </div>

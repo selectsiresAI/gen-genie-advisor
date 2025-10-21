@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import ProjecaoGenetica from "./ProjecaoGenetica";
 import CalculadoraReposicao from "./CalculadoraReposicao";
-import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
+
 export default function PlanoApp({
   onBack
 }: {
@@ -18,7 +18,6 @@ export default function PlanoApp({
               <ArrowLeft className="w-4 h-4 mr-2" />
               Voltar ao Menu Plano
             </Button>
-            <TutorialButtons slug="plano" />
           </div>
         </div>
         <ProjecaoGenetica />
@@ -32,7 +31,6 @@ export default function PlanoApp({
               <ArrowLeft className="w-4 h-4 mr-2" />
               Voltar ao Menu Plano
             </Button>
-            <TutorialButtons slug="plano" />
           </div>
         </div>
         <CalculadoraReposicao />
@@ -49,7 +47,6 @@ export default function PlanoApp({
                 Escolha uma das funcionalidades abaixo para começar
               </p>
             </div>
-            <TutorialButtons slug="plano" />
           </div>
         </div>
 

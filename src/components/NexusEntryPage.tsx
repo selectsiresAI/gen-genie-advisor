@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dna, Calendar, ArrowRight, TrendingUp, FileSpreadsheet, Users } from 'lucide-react';
-import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
+
 interface NexusEntryPageProps {
   onSelectMethod: (method: 'nexus1' | 'nexus2' | 'nexus3') => void;
 }
@@ -21,9 +21,6 @@ const NexusEntryPage: React.FC<NexusEntryPageProps> = ({
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto md:mx-0 md:max-w-xl">
               Escolha o método de predição genética baseado nos dados disponíveis para seu rebanho
             </p>
-          </div>
-          <div className="flex justify-center md:justify-end">
-            <TutorialButtons slug="nexus" />
           </div>
         </div>
       </div>

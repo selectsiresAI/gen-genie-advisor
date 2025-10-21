@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
+
 import SortableHeader from '@/components/animals/SortableHeader';
 import { ANIMAL_METRIC_COLUMNS } from '@/constants/animalMetrics';
 import { useAnimalTableSort } from '@/hooks/useAnimalTableSort';
@@ -1099,9 +1099,6 @@ export default function SegmentationPage({
               </TooltipContent>
             </Tooltip>
             <h1 className="text-xl font-semibold">{farm.name} - Segmentação</h1>
-            <div className="ml-auto">
-              <TutorialButtons slug="segmentacao" />
-            </div>
           </div>
         </div>
 

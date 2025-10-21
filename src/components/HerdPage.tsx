@@ -12,7 +12,7 @@ import { useHerdStore } from '@/hooks/useHerdStore';
 import { fetchFemalesDenormByFarm, isCompleteFemaleRow, type CompleteFemaleDenormRow } from '@/supabase/queries/females';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { t } from '@/lib/i18n';
-import { TutorialButtons } from "@/features/tutorial/TutorialButtons";
+
 import SortableHeader from '@/components/animals/SortableHeader';
 import { ANIMAL_METRIC_COLUMNS } from '@/constants/animalMetrics';
 import { useAnimalTableSort } from '@/hooks/useAnimalTableSort';
@@ -416,7 +416,6 @@ const HerdPage: React.FC<HerdPageProps> = ({
           </div>
           <div className="ml-auto flex items-center gap-3">
             {typeof onNavigateToCharts === 'function' ? null : onNavigateToCharts}
-            <TutorialButtons slug="rebanho" />
           </div>
         </div>
       </div>
