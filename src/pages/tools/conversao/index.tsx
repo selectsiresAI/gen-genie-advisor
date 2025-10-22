@@ -83,6 +83,9 @@ const regexHeuristics: Array<{ pattern: RegExp; target: string; mode: "normalize
   { pattern: /^pta(_)?milk$/, target: "PTAM", mode: "normalized" },
   { pattern: /^ptaf?$/, target: "PTAF", mode: "normalized" },
   { pattern: /^pta(_)?fat$/, target: "PTAF", mode: "normalized" },
+  { pattern: /beta.*casein/i, target: "Beta-Casein", mode: "normalized" },
+  { pattern: /kappa.*casein/i, target: "Kappa-Casein", mode: "normalized" },
+  { pattern: /a2.*casein/i, target: "Beta-Casein", mode: "normalized" },
   { pattern: /^ptap?$/, target: "PTAP", mode: "normalized" },
   { pattern: /^pta(_)?protein$/, target: "PTAP", mode: "normalized" },
   { pattern: /^dpr$/, target: "DPR", mode: "normalized" },
@@ -151,14 +154,16 @@ const ConversaoPage: React.FC = () => {
     let bestScore = 0;
     let bestHeader: string | undefined;
     canonicalLookup.forEach((canonical, key) => {
-      const score = jaroWinkler(normalizedHeader, key);
+      const normalizedCanonical = normalizeKey(canonical, true);
+      const normalizedInput = normalizeKey(normalizedHeader, true);
+      const score = jaroWinkler(normalizedInput, normalizedCanonical);
       if (score > bestScore) {
         bestScore = score;
         bestHeader = canonical;
       }
     });
 
-    if (bestHeader && bestScore >= 0.88) {
+    if (bestHeader && bestScore >= 0.75) {
       return {
         value: bestHeader,
         method: "fuzzy",

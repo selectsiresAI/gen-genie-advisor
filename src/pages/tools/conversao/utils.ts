@@ -1,13 +1,22 @@
-export const normalizeKey = (value: string): string => {
+export const normalizeKey = (value: string, fuzzyMode = false): string => {
   if (!value) {
     return "";
   }
 
-  return value
+  let normalized = value
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
+    .toLowerCase();
+  
+  if (fuzzyMode) {
+    // Remove hífens e espaços para fuzzy matching
+    normalized = normalized.replace(/[-\s]+/g, "");
+  } else {
+    // Mantém comportamento original
+    normalized = normalized.replace(/[^a-z0-9]+/g, "_");
+  }
+  
+  return normalized
     .replace(/^_+|_+$/g, "")
     .replace(/_+/g, "_");
 };

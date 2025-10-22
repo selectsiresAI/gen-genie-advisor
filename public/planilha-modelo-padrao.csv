@@ -1,4 +1,4 @@
-id,farm_id,category,ptas,created_at,updated_at,sire_naab,mgs_naab,mmgs_naab,Fonte,parity_order,identifier,name,cdcb_id,birth_date,HHP$,TPI,NM$,CM$,FM$,GM$,PTAM,PTAF,PTAF%,PTAP,PTAP%,CFP,SCS,PL,DPR,H LIV,GL,MF,DA,Ket,Mast,Met,RP,CCR,HCR,FI,RFI,F SAV,PTAT,UDC,FLC,BWC,STA,STR,BD,DFM,RUA,TW,RLS,RLR,FTA,FLS,FTA,RUH,RW,UCL,UD,FTP,RTP,FTL,SCE,DCE,SSB,DSB,GFI
+id,farm_id,category,ptas,created_at,updated_at,sire_naab,mgs_naab,mmgs_naab,Fonte,parity_order,identifier,name,cdcb_id,birth_date,HHP$,TPI,NM$,CM$,FM$,GM$,PTAM,PTAF,PTAF%,PTAP,PTAP%,CFP,SCS,PL,DPR,LIV,H LIV,GL,MF,DA,KET,MAST,MET,RP,CCR,HCR,FI,RFI,F SAV,PTAT,UDC,FLC,BWC,STA,STR,BD,DFM,RUA,TW,RLS,RLR,FTA,FLS,FUA,RUH,RW,RUW,UCL,UDP,FTP,RTP,FTL,SCE,DCE,SSB,DSB,GFI,EFC,Beta-Casein,Kappa-Casein
 ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
