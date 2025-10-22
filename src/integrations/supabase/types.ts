@@ -2244,6 +2244,33 @@ export type Database = {
         }
         Relationships: []
       }
+      survey_dismissals: {
+        Row: {
+          created_at: string
+          dismissal_count: number
+          dismissed_at: string
+          id: string
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dismissal_count?: number
+          dismissed_at?: string
+          id?: string
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dismissal_count?: number
+          dismissed_at?: string
+          id?: string
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       tenant_feature_flags: {
         Row: {
           tenant_id: string
@@ -2500,6 +2527,42 @@ export type Database = {
           name?: string | null
           object_id?: string | null
           owner_id?: string | null
+        }
+        Relationships: []
+      }
+      user_activity_tracking: {
+        Row: {
+          created_at: string
+          features_used: string[] | null
+          id: string
+          pages_visited: string[] | null
+          session_end: string | null
+          session_start: string
+          total_session_time_seconds: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          features_used?: string[] | null
+          id?: string
+          pages_visited?: string[] | null
+          session_end?: string | null
+          session_start?: string
+          total_session_time_seconds?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          features_used?: string[] | null
+          id?: string
+          pages_visited?: string[] | null
+          session_end?: string | null
+          session_start?: string
+          total_session_time_seconds?: number | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }

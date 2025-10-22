@@ -31,6 +31,7 @@ import ConversaoPage from '@/pages/tools/conversao';
 import AuditoriaGeneticaPage from '@/pages/AuditoriaGeneticaPage';
 import { StagingMigrationButton } from './StagingMigrationButton';
 import { SatisfactionSurvey } from '@/components/feedback/SatisfactionSurvey';
+import { useActivityTracker } from '@/hooks/useActivityTracker';
 interface MainDashboardProps {
   user: User;
   onLogout: () => void;
@@ -71,6 +72,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
     setSelectedHerdId,
     refreshFromSupabase
   } = useHerdStore();
+  const { trackFeature } = useActivityTracker(user);
   useEffect(() => {
     loadUserData();
   }, []);
@@ -136,6 +138,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
     setShowCreateModal(true);
   };
   const handleCreateFarmSuccess = () => {
+    trackFeature('criar_fazenda');
     loadUserData();
   };
   const handleDeleteFarm = async (farmId: string, farmName: string, e: React.MouseEvent) => {
@@ -183,6 +186,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
     }
   };
   const handleFarmSelect = async (farm: Farm) => {
+    trackFeature('selecionar_fazenda');
     setSelectedFarm(farm);
     setCurrentView('farm');
 
@@ -260,6 +264,26 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
     }]
   }];
   const handleFarmModuleClick = (view: ModuleView) => {
+    // Rastrear uso da funcionalidade
+    const featureNames: Record<ModuleView, string> = {
+      herd: 'rebanho',
+      bulls: 'busca_touros',
+      botijao: 'botijao_virtual',
+      segmentation: 'segmentacao',
+      auditoria: 'auditoria_genetica',
+      nexus: 'nexus_prediction',
+      metas: 'metas',
+      plano: 'plano_genetico',
+      arquivos: 'pasta_arquivos',
+      conversao: 'conversao',
+      charts: 'graficos',
+      sms: 'sms',
+    };
+    
+    if (featureNames[view]) {
+      trackFeature(featureNames[view]);
+    }
+    
     setCurrentView(view);
   };
   const getUserInitials = (name: string) => {

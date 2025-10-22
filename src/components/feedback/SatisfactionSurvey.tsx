@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Star, X, Sparkles } from "lucide-react";
 import { z } from "zod";
+import { calculateEngagementScore } from "@/utils/engagementScore";
 
 const surveySchema = z.object({
   overall_rating: z.number().min(1).max(5),
@@ -17,12 +18,14 @@ const surveySchema = z.object({
 });
 
 const SURVEY_DELAY = 5 * 60 * 1000; // 5 minutos após login
-const SURVEY_COOLDOWN_KEY = "satisfaction_survey_last_shown";
+const DISMISSAL_COUNT_KEY = "survey_dismissal_count";
+const LAST_SHOWN_KEY = "satisfaction_survey_last_shown";
 
 export function SatisfactionSurvey() {
   const [visible, setVisible] = useState(false);
-  const [step, setStep] = useState<"rating" | "details">("rating");
+  const [step, setStep] = useState<"qualification" | "rating" | "details">("qualification");
   const { toast } = useToast();
+  const [user, setUser] = useState<any>(null);
   
   const [ratings, setRatings] = useState({
     overall_rating: 0,
@@ -31,23 +34,90 @@ export function SatisfactionSurvey() {
     clarity_rating: 0,
   });
   const [feedback, setFeedback] = useState("");
+  const [engagementScore, setEngagementScore] = useState<number | null>(null);
+  const [dismissalCount, setDismissalCount] = useState(0);
 
   useEffect(() => {
-    const lastShown = localStorage.getItem(SURVEY_COOLDOWN_KEY);
+    // Carregar usuário atual
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) {
+        setUser(data.user);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const dismissals = parseInt(localStorage.getItem(DISMISSAL_COUNT_KEY) || '0');
+    setDismissalCount(dismissals);
+
+    // Calcular engagement score se já teve 2+ dispensas
+    if (dismissals >= 2) {
+      calculateEngagementScore(user.id).then(setEngagementScore);
+    }
+
+    const lastShown = localStorage.getItem(LAST_SHOWN_KEY);
     const now = Date.now();
     
-    // Mostrar se: nunca mostrou OU já passou 7 dias desde a última vez
-    if (!lastShown || now - parseInt(lastShown) > 7 * 24 * 60 * 60 * 1000) {
-      const timer = setTimeout(() => {
-        setVisible(true);
-      }, SURVEY_DELAY);
-      
-      return () => clearTimeout(timer);
+    let showDelay: number;
+
+    // Lógica de timing baseada no número de dispensas
+    if (!lastShown) {
+      // 1ª vez: após 5 minutos
+      showDelay = SURVEY_DELAY;
+    } else if (dismissals === 1) {
+      // 2ª vez: após 3 dias
+      const threeDays = 3 * 24 * 60 * 60 * 1000;
+      if (now - parseInt(lastShown) < threeDays) return;
+      showDelay = SURVEY_DELAY;
+    } else {
+      // 3ª+ vez: após 7 dias
+      const sevenDays = 7 * 24 * 60 * 60 * 1000;
+      if (now - parseInt(lastShown) < sevenDays) return;
+      showDelay = SURVEY_DELAY;
     }
-  }, []);
+
+    const timer = setTimeout(() => {
+      setVisible(true);
+    }, showDelay);
+    
+    return () => clearTimeout(timer);
+  }, [user]);
 
   const handleRatingClick = (category: keyof typeof ratings, value: number) => {
     setRatings({ ...ratings, [category]: value });
+  };
+
+  const handleAcceptQualification = async () => {
+    // Verificar se tem engajamento suficiente (mínimo 30%)
+    if (dismissalCount >= 2 && engagementScore !== null && engagementScore < 30) {
+      toast({
+        variant: "destructive",
+        title: "Experiência insuficiente",
+        description: "Por favor, use mais a plataforma antes de avaliar. Seu uso atual: " + engagementScore + "%",
+      });
+      handleDismissQualification("not_ready");
+      return;
+    }
+    setStep("rating");
+  };
+
+  const handleDismissQualification = async (reason: string = "not_interested") => {
+    const newCount = dismissalCount + 1;
+    localStorage.setItem(DISMISSAL_COUNT_KEY, newCount.toString());
+    localStorage.setItem(LAST_SHOWN_KEY, Date.now().toString());
+
+    // Registrar dispensa no banco
+    if (user) {
+      await supabase.from("survey_dismissals").insert({
+        user_id: user.id,
+        dismissal_count: newCount,
+        reason: reason,
+      });
+    }
+
+    setVisible(false);
   };
 
   const handleNext = () => {
@@ -83,7 +153,17 @@ export function SatisfactionSurvey() {
         description: "Suas opiniões nos ajudam a melhorar continuamente.",
       });
 
-      localStorage.setItem(SURVEY_COOLDOWN_KEY, Date.now().toString());
+      // Registrar como completado
+      if (user) {
+        await supabase.from("survey_dismissals").insert({
+          user_id: user.id,
+          dismissal_count: dismissalCount + 1,
+          reason: "completed",
+        });
+      }
+
+      localStorage.setItem(LAST_SHOWN_KEY, Date.now().toString());
+      localStorage.setItem(DISMISSAL_COUNT_KEY, (dismissalCount + 1).toString());
       setVisible(false);
     } catch (err) {
       toast({
@@ -95,8 +175,7 @@ export function SatisfactionSurvey() {
   };
 
   const handleDismiss = () => {
-    localStorage.setItem(SURVEY_COOLDOWN_KEY, Date.now().toString());
-    setVisible(false);
+    handleDismissQualification("dismissed");
   };
 
   if (!visible) return null;
@@ -127,6 +206,58 @@ export function SatisfactionSurvey() {
             </Button>
           </div>
 
+          {step === "qualification" && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <h4 className="font-medium">Você gostaria de avaliar a plataforma?</h4>
+                <p className="text-sm text-muted-foreground">
+                  Para dar uma avaliação útil, você precisa ter usado a plataforma o suficiente.
+                </p>
+              </div>
+
+              {dismissalCount >= 2 && engagementScore !== null && (
+                <div className="bg-primary/10 border border-primary/20 p-4 rounded-lg space-y-3">
+                  <p className="text-sm font-medium">Seu nível de uso da plataforma:</p>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-3 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-yellow-400 via-orange-500 to-green-500 transition-all duration-500"
+                        style={{ width: `${engagementScore}%` }}
+                      />
+                    </div>
+                    <span className="text-2xl font-bold tabular-nums min-w-[60px] text-right">
+                      {engagementScore}%
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Baseado em: tempo de uso, páginas visitadas e funcionalidades utilizadas
+                  </p>
+                  {engagementScore < 30 && (
+                    <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">
+                      ⚠️ Recomendamos usar mais a plataforma antes de avaliar (mínimo 30%)
+                    </p>
+                  )}
+                </div>
+              )}
+              
+              <div className="flex gap-3 pt-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => handleDismissQualification("not_ready")}
+                  className="flex-1"
+                >
+                  Ainda não
+                </Button>
+                <Button 
+                  onClick={handleAcceptQualification}
+                  className="flex-1"
+                >
+                  Sim, quero avaliar
+                </Button>
+              </div>
+            </div>
+          )}
+
           {step === "rating" && (
             <div className="space-y-6">
               <div className="space-y-2">
@@ -154,10 +285,10 @@ export function SatisfactionSurvey() {
               <div className="flex gap-3">
                 <Button
                   variant="outline"
-                  onClick={handleDismiss}
+                  onClick={() => setStep("qualification")}
                   className="flex-1"
                 >
-                  Agora Não
+                  Voltar
                 </Button>
                 <Button
                   onClick={handleNext}
