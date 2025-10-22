@@ -407,11 +407,26 @@ const ConversaoPage: React.FC = () => {
           accept=".xlsx,.xls,.csv"
           fileName={modelFileName}
           helper={
-            modelHeaders.length > 0 ? (
-              <p className="text-xs text-muted-foreground">{modelHeaders.length} chaves detectadas.</p>
-            ) : (
-              <p className="text-xs text-muted-foreground">Utilize o arquivo "Planilha modelo padrão" como referência.</p>
-            )
+            <div className="space-y-2">
+              {modelHeaders.length > 0 ? (
+                <p className="text-xs text-muted-foreground">{modelHeaders.length} chaves detectadas.</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Utilize o arquivo "Planilha modelo padrão" como referência.</p>
+              )}
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={async () => {
+                  const response = await fetch('/Planilha_modelo_padrão.csv');
+                  const blob = await response.blob();
+                  const file = new File([blob], 'Planilha_modelo_padrão.csv', { type: 'text/csv' });
+                  handleModelUpload(file);
+                }}
+                className="w-full"
+              >
+                Usar nosso modelo padrão
+              </Button>
+            </div>
           }
           badge={modelHeaders.length > 0 ? <Badge>{modelHeaders.length} chaves</Badge> : undefined}
         />
@@ -423,13 +438,28 @@ const ConversaoPage: React.FC = () => {
           accept=".xlsx,.xls,.csv"
           fileName={legendFileName}
           helper={
-            legendEntries.length > 0 ? (
-              <p className="text-xs text-muted-foreground">Aliases do usuário têm prioridade sobre o seed padrão.</p>
-            ) : (
-              <p className="text-xs text-muted-foreground">Opcional: sem upload usaremos apenas o seed existente.</p>
-            )
+            <div className="space-y-2">
+              {legendEntries.length > 0 ? (
+                <p className="text-xs text-muted-foreground">Aliases do usuário têm prioridade sobre o seed padrão.</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Opcional: sem upload usaremos apenas o seed existente.</p>
+              )}
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={async () => {
+                  const response = await fetch('/Legendas_27092025.csv');
+                  const blob = await response.blob();
+                  const file = new File([blob], 'Legendas_27092025.csv', { type: 'text/csv' });
+                  handleLegendUpload(file);
+                }}
+                className="w-full"
+              >
+                Usar nossas legendas padrão
+              </Button>
+            </div>
           }
-          badge={<Badge variant="outline">Prioridade usuário</Badge>}
+          badge={legendEntries.length > 0 ? <Badge variant="secondary">{legendEntries.length} entradas</Badge> : <Badge variant="outline">Prioridade usuário</Badge>}
         />
 
         <FileUploadCard

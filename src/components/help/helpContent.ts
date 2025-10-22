@@ -14,6 +14,61 @@ export interface HelpContent {
 }
 
 export const helpContentMap: Record<string, HelpContent> = {
+  // Conversão de Planilhas
+  conversao: {
+    faq: [
+      {
+        question: "O que é a ferramenta de Conversão?",
+        answer: "Padroniza planilhas com nomenclaturas diferentes, mapeando automaticamente colunas para um formato padrão usando banco de aliases, regex e fuzzy matching. Ideal para consolidar dados de diferentes fontes."
+      },
+      {
+        question: "Devo usar o modelo padrão ou criar o meu próprio?",
+        answer: "Use o botão 'Usar nosso modelo padrão' para ter acesso a todas as colunas genéticas mais utilizadas (PTAs, índices econômicos, saúde, fertilidade, tipo). Crie seu próprio apenas se precisar de colunas específicas diferentes."
+      },
+      {
+        question: "Preciso sempre enviar o banco de legendas?",
+        answer: "Não é obrigatório. O sistema já tem um banco padrão interno. Mas se clicar em 'Usar nossas legendas padrão', você terá centenas de mapeamentos adicionais que melhoram muito a detecção automática de correspondências."
+      },
+      {
+        question: "O que são sugestões 'seguras'?",
+        answer: "São mapeamentos com alta confiança (score ≥ 0.8) vindos do banco de legendas ou padrões regex. Você pode aprová-las todas de uma vez com o botão 'Aprovar Seguras' para economizar tempo."
+      },
+      {
+        question: "Posso ajustar os mapeamentos sugeridos?",
+        answer: "Sim! Para cada linha na tabela, você pode aceitar a sugestão automática, escolher manualmente outra coluna do modelo, ou deixar sem mapear. O controle é totalmente seu."
+      },
+      {
+        question: "Como funciona a detecção automática?",
+        answer: "O sistema usa 3 métodos em ordem de prioridade: 1) Banco de legendas (customizado + padrão), 2) Padrões regex para formatos conhecidos, 3) Correspondência fuzzy para similaridade de texto. Cada sugestão mostra sua origem e pontuação."
+      }
+    ],
+    resources: [
+      {
+        title: "Guia: Conversão de Planilhas",
+        description: "Passo a passo completo para padronizar seus dados",
+        type: "Guia"
+      },
+      {
+        title: "Vídeo: Usando Modelos e Legendas Padrão",
+        description: "Como acelerar o processo com arquivos pré-configurados",
+        type: "Vídeo"
+      },
+      {
+        title: "Banco de Nomenclaturas",
+        description: "Entenda como criar e usar bancos de aliases personalizados",
+        type: "Guia"
+      }
+    ],
+    hints: {
+      modelUpload: "Upload do modelo padrão ou clique para usar nosso modelo com todas as colunas genéticas",
+      legendUpload: "Opcional: use nossas legendas padrão para melhorar a detecção automática",
+      dataUpload: "Envie a planilha que deseja padronizar - formato Excel ou CSV",
+      suggestions: "Revise as sugestões automáticas e aprove ou ajuste conforme necessário",
+      safeSuggestions: "Aprove todas as sugestões 'seguras' de uma vez para economizar tempo",
+      download: "Baixe a planilha padronizada após aprovar todos os mapeamentos"
+    }
+  },
+
   // Dashboard / Home
   dashboard: {
     faq: [
@@ -1645,64 +1700,6 @@ export const helpContentMap: Record<string, HelpContent> = {
       reset: "Use 'Reinicializar' apenas se quiser começar do zero",
       tabs: "Navegue entre as 4 abas para gerenciar diferentes tipos de metas",
       notes: "Use a aba de anotações para registrar estratégias e observações"
-    }
-  },
-
-  // Conversão de Arquivos
-  conversao: {
-    faq: [
-      {
-        question: "Para que serve a conversão de arquivos?",
-        answer: "Padronize planilhas com nomenclaturas diferentes (de centrais, laboratórios, consultorias) para o formato padrão da ToolSS. O sistema detecta automaticamente mapeamentos e sugere correções."
-      },
-      {
-        question: "Como funciona o processo de conversão?",
-        answer: "1) Faça upload do modelo padrão (chaves canônicas), 2) Opcionalmente adicione banco de nomenclaturas personalizadas, 3) Envie o arquivo de dados. O sistema sugere mapeamentos automaticamente."
-      },
-      {
-        question: "O que é o banco de nomenclaturas?",
-        answer: "É um arquivo que mapeia aliases personalizados para chaves canônicas. Exemplo: 'Merito_Liquido' → 'NM$'. Aliases do usuário têm prioridade sobre o banco padrão (seed)."
-      },
-      {
-        question: "Como funcionam as sugestões automáticas?",
-        answer: "O sistema usa 3 métodos em ordem de prioridade: 1) Banco de nomenclaturas (legend), 2) Regex (padrões conhecidos), 3) Fuzzy matching (similaridade). Cada sugestão tem um score de confiança."
-      },
-      {
-        question: "Preciso aprovar todas as sugestões?",
-        answer: "Sim. Revise e aprove cada mapeamento antes de exportar. Use 'Aprovar sugestões seguras' para aprovar automaticamente apenas mapeamentos com alta confiança (≥88% ou via legend)."
-      },
-      {
-        question: "O que acontece com colunas não mapeadas?",
-        answer: "Colunas não mapeadas do arquivo original são mantidas no arquivo final. Nada é perdido - apenas as colunas reconhecidas são padronizadas."
-      }
-    ],
-    resources: [
-      {
-        title: "Guia: Conversão de Planilhas",
-        description: "Passo a passo completo do processo de padronização",
-        type: "Guia"
-      },
-      {
-        title: "Vídeo: Banco de Nomenclaturas",
-        description: "Como criar e usar aliases personalizados",
-        type: "Vídeo"
-      },
-      {
-        title: "Métodos de Detecção",
-        description: "Entenda legend, regex e fuzzy matching",
-        type: "Guia"
-      }
-    ],
-    hints: {
-      modelFile: "Arquivo com as chaves canônicas (cabeçalhos corretos) da ToolSS",
-      legendFile: "Arquivo opcional com mapeamentos personalizados de aliases",
-      dataFile: "Arquivo CSV ou Excel com dados a serem padronizados",
-      priority: "Prioridade: banco usuário > seed padrão > regex > fuzzy",
-      confidence: "Scores ≥88% ou método 'legend' são considerados seguros",
-      approval: "Aprove sugestões seguras em lote ou revise individualmente",
-      manual: "Ajuste manualmente mapeamentos com baixa confiança",
-      export: "Arquivo final preserva todas as colunas originais + padronizadas",
-      validation: "Sistema valida que não haja conflitos nos mapeamentos"
     }
   }
 };
