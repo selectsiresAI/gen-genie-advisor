@@ -11,14 +11,21 @@ interface AGLayoutProps {
   children: ReactNode;
   onBack?: () => void;
   farmName?: string;
+  activeStep?: number; // Step atual (0-6 correspondendo aos 7 steps)
 }
 export default function AGLayout({
   children,
   onBack,
-  farmName
+  farmName,
+  activeStep = 0
 }: AGLayoutProps) {
+  // Mapear step atual para contexto de ajuda específico
+  const helpContext = activeStep >= 0 && activeStep <= 6 
+    ? `auditoria-step${activeStep + 1}` 
+    : "auditoria";
+  
   return <div className="min-h-screen bg-background">
-      <HelpButton context="auditoria" />
+      <HelpButton context={helpContext} />
       
       <div className="border-b">
         <div className="flex h-16 items-center px-4 gap-3">

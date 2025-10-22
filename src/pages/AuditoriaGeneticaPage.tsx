@@ -56,7 +56,11 @@ export default function AuditoriaGeneticaPage({ farm, onBack }: AuditoriaGenetic
   const hasFarm = Boolean(farm?.farm_id);
 
   return (
-    <AGLayout onBack={onBack} farmName={farm?.farm_name ?? undefined}>
+    <AGLayout 
+      onBack={onBack} 
+      farmName={farm?.farm_name ?? undefined}
+      activeStep={active}
+    >
       <div className="flex items-center gap-3" data-tour="auditoria:stepper">
         {/* Se o seu AGStepper exigir props extras, descomente uma das linhas abaixo */}
         <AGStepper
