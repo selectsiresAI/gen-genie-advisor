@@ -423,7 +423,13 @@ const ConversaoPage: React.FC = () => {
                 size="sm"
                 onClick={async () => {
                   try {
-                    const response = await fetch(`/planilha-modelo-padrao.csv?v=${Date.now()}`);
+                    const response = await fetch(`/planilha-modelo-padrao.csv?v=${Date.now()}`, {
+                      cache: 'no-store',
+                      headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache'
+                      }
+                    });
                     if (!response.ok) throw new Error('Não foi possível carregar o modelo padrão');
                     const blob = await response.blob();
                     const file = new File([blob], 'Planilha_modelo_padrão.csv', { type: 'text/csv' });
