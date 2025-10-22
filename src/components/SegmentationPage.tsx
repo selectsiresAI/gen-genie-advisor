@@ -496,6 +496,31 @@ export default function SegmentationPage({
         CustomScore: score
       };
     });
+
+    // Normalizar CustomScore para escala centesimal (0-100) quando índice customizado
+    if (indexSelection === "Custom" && rows.length > 0) {
+      const scores = rows.map(r => r.CustomScore).filter(s => Number.isFinite(s));
+      if (scores.length > 0) {
+        const minScore = Math.min(...scores);
+        const maxScore = Math.max(...scores);
+        const range = maxScore - minScore;
+        
+        // Se há variação, normaliza para 0-100; senão mantém 50
+        if (range > 0) {
+          rows.forEach(r => {
+            if (Number.isFinite(r.CustomScore)) {
+              r.CustomScore = ((r.CustomScore - minScore) / range) * 100;
+            }
+          });
+        } else {
+          rows.forEach(r => {
+            if (Number.isFinite(r.CustomScore)) {
+              r.CustomScore = 50; // Valor médio quando todos são iguais
+            }
+          });
+        }
+      }
+    }
     if (indexSelection === "Custom" && gatesPhase === "post") {
       let approved = 0,
         rejected = 0;
