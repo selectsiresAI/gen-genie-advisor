@@ -423,16 +423,18 @@ const ConversaoPage: React.FC = () => {
                 size="sm"
                 onClick={async () => {
                   try {
-                    const response = await fetch(`/Planilha_modelo_padrão.csv?v=${Date.now()}`);
+                    const fileName = 'Planilha_modelo_padrão.csv';
+                    const encodedFileName = encodeURIComponent(fileName);
+                    const response = await fetch(`/${encodedFileName}?v=${Date.now()}`);
                     if (!response.ok) throw new Error('Não foi possível carregar o modelo padrão');
                     const blob = await response.blob();
-                    const file = new File([blob], 'Planilha_modelo_padrão.csv', { type: 'text/csv' });
+                    const file = new File([blob], fileName, { type: 'text/csv' });
                     await handleModelUpload(file);
                   } catch (error: any) {
-                    toast({ 
-                      title: "Erro ao carregar modelo", 
-                      description: error.message ?? String(error), 
-                      variant: "destructive" 
+                    toast({
+                      title: "Erro ao carregar modelo",
+                      description: error.message ?? String(error),
+                      variant: "destructive"
                     });
                   }
                 }}
@@ -463,16 +465,18 @@ const ConversaoPage: React.FC = () => {
                 size="sm"
                 onClick={async () => {
                   try {
-                    const response = await fetch(`/Legendas_27092025.csv?v=${Date.now()}`);
+                    const fileName = 'Legendas_27092025.csv';
+                    const encodedFileName = encodeURIComponent(fileName);
+                    const response = await fetch(`/${encodedFileName}?v=${Date.now()}`);
                     if (!response.ok) throw new Error('Não foi possível carregar as legendas padrão');
                     const blob = await response.blob();
-                    const file = new File([blob], 'Legendas_27092025.csv', { type: 'text/csv' });
+                    const file = new File([blob], fileName, { type: 'text/csv' });
                     await handleLegendUpload(file);
                   } catch (error: any) {
-                    toast({ 
-                      title: "Erro ao carregar legendas", 
-                      description: error.message ?? String(error), 
-                      variant: "destructive" 
+                    toast({
+                      title: "Erro ao carregar legendas",
+                      description: error.message ?? String(error),
+                      variant: "destructive"
                     });
                   }
                 }}
