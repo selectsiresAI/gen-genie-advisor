@@ -390,6 +390,150 @@ export const helpContentMap: Record<string, HelpContent> = {
     }
   },
 
+  // Auditoria Step 1: Parentesco
+  "auditoria-step1": {
+    faq: [
+      {
+        question: "O que significa 'Parentesco Completo'?",
+        answer: "Animal possui informações de Pai (Sire), Avô Materno (MGS) e Bisavô Materno (MMGS). Essencial para predições precisas no Nexus 2 (pedigree). Quanto mais completo, maior a confiabilidade genética."
+      },
+      {
+        question: "Por que o sistema divide em 3 categorias (Completo, Incompleto, Desconhecido)?",
+        answer: "'Completo' = possui os 3 ancestrais. 'Incompleto' = possui 1 ou 2 ancestrais. 'Desconhecido' = nenhum ancestral cadastrado. A divisão facilita identificar prioridades: complete os 'Incompletos' primeiro (já têm base parcial)."
+      },
+      {
+        question: "Qual a importância de cada ancestral (Sire vs MGS vs MMGS)?",
+        answer: "Sire (Pai) contribui 50% da genética, MGS (Avô Materno) 25%, MMGS (Bisavô) 12.5%. Foco prioritário: completar Sire (maior impacto), depois MGS, por fim MMGS. Sem o Pai cadastrado, a predição genética fica comprometida."
+      },
+      {
+        question: "O que significa quando mais de 50% do rebanho está em 'Desconhecido' para Sire?",
+        answer: "Alerta crítico! Metade dos animais não tem pai cadastrado, prejudicando predições genéticas. Causas comuns: dados de IA não importados, cadastro manual incompleto, touros sem código NAAB. AÇÃO: revisar histórico de IA e completar códigos."
+      },
+      {
+        question: "Por que o percentual de 'Completo' varia entre Sire, MGS e MMGS?",
+        answer: "É esperado. Registros mais antigos (MMGS) tendem a ter menos dados. Foco: atingir 80%+ de Sire completo, 60%+ de MGS, 40%+ de MMGS. Priorize animais jovens e classificados como 'Superiores' na Segmentação."
+      },
+      {
+        question: "Como priorizar quais pedigrees completar?",
+        answer: "Foque em: 1) Animais classificados como 'Doadora' ou 'Superior' na Segmentação (maior impacto genético futuro), 2) Novilhas e Primíparas (gerações recentes), 3) Animais com status 'Incompleto' (já têm base parcial, mais fácil completar)."
+      },
+      {
+        question: "Posso corrigir pedigrees direto na Step 1?",
+        answer: "Não. A Step 1 é somente leitura (exibe estatísticas). Para corrigir, vá ao módulo 'Rebanho', encontre o animal, edite os códigos NAAB de Sire/MGS/MMGS. Retorne à Auditoria e os dados serão atualizados automaticamente."
+      },
+      {
+        question: "Como exportar lista de animais com pedigree incompleto?",
+        answer: "A Step 1 não exporta lista individual. Vá ao módulo 'Rebanho', filtre animais onde Sire/MGS/MMGS estão vazios, exporte em CSV. Use essa lista para criar plano de ação de completude de dados."
+      },
+      {
+        question: "O que é 'consanguinidade crítica'?",
+        answer: "Quando mais de 25% do rebanho tem o mesmo touro como pai. Aumenta risco de problemas genéticos (baixa fertilidade, doenças hereditárias). A Step 1 não detecta automaticamente, mas a Step 2 (Top Parents) mostra esse alerta."
+      },
+      {
+        question: "Por que o total de animais varia entre Sire, MGS e MMGS?",
+        answer: "Pode variar devido a filtros aplicados ou dados incompletos. O ideal é que o total seja igual (todos os animais do rebanho). Se houver divergência grande (>5%), investigue possível problema de importação de dados."
+      },
+      {
+        question: "Como usar essa análise no Nexus 2?",
+        answer: "Complete pedigrees pendentes (especialmente Sire e MGS) e reprocesse no Nexus 2 para obter predições mais confiáveis. O sistema priorizará animais com pedigree completo nos cálculos (REL% mais alto)."
+      },
+      {
+        question: "Como comparar completude de pedigree entre fazendas?",
+        answer: "Não diretamente na Step 1. Exporte os dados de cada fazenda em CSV (via Rebanho), compare percentuais de 'Completo' externamente. Ou solicite ao desenvolvedor criar relatório comparativo multi-fazendas."
+      }
+    ],
+    resources: [
+      {
+        title: "Guia: Completude de Pedigree",
+        description: "Como priorizar completude de dados",
+        type: "Guia"
+      }
+    ],
+    hints: {
+      completeness: "Foque em completar Sire (50% impacto) antes de MGS/MMGS",
+      priority: "Priorize animais 'Superiores' e 'Doadoras' da Segmentação",
+      validation: "Verifique Step 2 para detectar consanguinidade crítica"
+    }
+  },
+
+  // Auditoria Step 2: Top Parents
+  "auditoria-step2": {
+    faq: [
+      {
+        question: "Como são definidos os 'Top Parents'?",
+        answer: "São os touros (Sire/Pai) e avós maternos (MGS) mais influentes do rebanho, ranqueados por número de filhas no rebanho (não por qualidade genética, mas por frequência). Útil para identificar dependência genética e risco de consanguinidade."
+      },
+      {
+        question: "Qual a diferença entre a aba 'Sire' e 'MGS'?",
+        answer: "'Sire' = ranking dos touros usados como pais diretos (50% da genética). 'MGS' = ranking dos touros que são avôs maternos (25% da genética, através da mãe). Use ambas para ver estrutura familiar completa do rebanho."
+      },
+      {
+        question: "Por que o ranking é por 'Nº de Filhas' e não por qualidade genética?",
+        answer: "Este step avalia frequência de uso (quantas vezes cada touro foi utilizado), não qualidade (PTAs). Touros com muitas filhas indicam dependência genética. Para avaliar qualidade genética, use Step 3 (Quartis) ou Step 6 (Índices)."
+      },
+      {
+        question: "Como identificar touros sobre-utilizados?",
+        answer: "Observe a coluna '%'. Se um touro representa >20% do rebanho, há risco de consanguinidade futura (acasalamentos entre parentes). Considere diversificar genética: reduza uso desse touro, introduza novos touros com perfil similar."
+      },
+      {
+        question: "O que significa 'trait: N/A' na linha do touro?",
+        answer: "O touro não possui valor cadastrado para a característica (trait) selecionada no filtro (ex: hhp_dollar). Causas: touro nacional sem avaliação genética, código NAAB incorreto, ou característica não disponível na base de dados."
+      },
+      {
+        question: "Por que o 'Total de filhas' varia entre as abas Sire e MGS?",
+        answer: "É esperado. Um touro pode ser pai direto de 50 animais (aparece em Sire) mas avô materno de 20 (aparece em MGS). São contagens independentes. Some ambas para ver influência genética total."
+      },
+      {
+        question: "Como os filtros de 'Ano inicial' e 'Ano final' afetam o ranking?",
+        answer: "Filtram apenas as filhas nascidas nesse período. Exemplo: Ano 2020-2025 mostra apenas touros que tiveram filhas nascidas nesses anos. Use para analisar: touros recentes (últimos 2 anos) vs histórico completo (últimos 10 anos)."
+      },
+      {
+        question: "O que é o filtro 'Segmento' (Bezerra, Novilha, Primípara)?",
+        answer: "Filtra as filhas por categoria etária. Exemplo: Segmento 'Novilha' mostra quais touros têm mais filhas novilhas. Útil para avaliar: quais touros geraram mais animais de reposição (Novilhas/Primíparas) vs multíparas em produção."
+      },
+      {
+        question: "Como funciona o campo 'Índice p/ RPC'?",
+        answer: "Define qual característica (ex: hhp_dollar, tpi) será exibida na coluna 'trait' da tabela. É apenas informativo (não afeta o ranking, que sempre é por nº de filhas). Use para ver média da característica das filhas de cada touro."
+      },
+      {
+        question: "Como usar esse ranking para selecionar próximos touros?",
+        answer: "Identifique quais touros geraram as melhores filhas (cruzar com Step 3 ou Segmentação). Busque touros similares (mesma linhagem genética ou PTAs parecidos) para manter consistência. Evite touros que já dominam >15% do rebanho (risco consanguinidade)."
+      },
+      {
+        question: "Como comparar performance entre touros nacionais e importados?",
+        answer: "Use a coluna 'trait' (média das filhas). Compare touros com >20 filhas (amostra robusta). Se touros importados têm média 100+ pontos superior, o ROI de sêmen importado é justificado. Se diferença <50 pontos, considere nacionais (custo-benefício)."
+      },
+      {
+        question: "O sistema sugere ações baseado nos top parents?",
+        answer: "Sim (alertas automáticos em desenvolvimento). Exemplos: 1) Touro >25% do rebanho → 'Risco de consanguinidade, diversifique'. 2) Top 3 touros >60% do total → 'Dependência genética crítica'. 3) Touro com muitas filhas mas 'trait' baixo → 'Considere substituição'."
+      },
+      {
+        question: "Por que alguns touros aparecem sem nome (só código NAAB)?",
+        answer: "Nome do touro não está cadastrado na base de dados. O sistema exibe apenas o código NAAB. Para corrigir: importe dados completos do touro (nome, PTAs) via módulo 'Touros' ou atualize banco de touros."
+      },
+      {
+        question: "Como exportar o ranking de top parents?",
+        answer: "Clique em 'Exportar Top Parents' (botão no canto superior direito do card). Gera CSV com ranking completo, frequências e média de 'trait'. Útil para apresentações técnicas ou compartilhar com equipe."
+      },
+      {
+        question: "Posso ver quais são as filhas específicas de cada touro?",
+        answer: "Não diretamente na Step 2. Vá ao módulo 'Rebanho', filtre por Sire (código do touro), exporte lista. Ou clique no nome do touro (se houver link implementado) para ver detalhamento das filhas."
+      }
+    ],
+    resources: [
+      {
+        title: "Guia: Top Parents Analysis",
+        description: "Identificar touros-chave e diversificar",
+        type: "Guia"
+      }
+    ],
+    hints: {
+      frequency: "Observe touros >20% do rebanho (risco consanguinidade)",
+      diversity: "Top 3 touros não devem ultrapassar 50% do rebanho",
+      quality: "Cruze com Step 3 para ver qualidade genética das filhas"
+    }
+  },
+
   // Nexus 1 - Predição Genômica
   "nexus1-genomic": {
     faq: [
