@@ -374,6 +374,36 @@ export type Database = {
         }
         Relationships: []
       }
+      error_reports: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          status: string
+          url: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          status?: string
+          url?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          status?: string
+          url?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       farm_bull_picks: {
         Row: {
           added_by: string
@@ -1430,6 +1460,39 @@ export type Database = {
         }
         Relationships: []
       }
+      satisfaction_surveys: {
+        Row: {
+          appearance_rating: number
+          charts_rating: number
+          clarity_rating: number
+          created_at: string
+          feedback: string | null
+          id: string
+          overall_rating: number
+          user_id: string | null
+        }
+        Insert: {
+          appearance_rating: number
+          charts_rating: number
+          clarity_rating: number
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          overall_rating: number
+          user_id?: string | null
+        }
+        Update: {
+          appearance_rating?: number
+          charts_rating?: number
+          clarity_rating?: number
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          overall_rating?: number
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       semen_movements: {
         Row: {
           batch_number: string | null
@@ -2139,6 +2202,45 @@ export type Database = {
           raw_id?: string | null
           technician_email?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      support_tickets: {
+        Row: {
+          category: string
+          created_at: string
+          email: string
+          id: string
+          message: string
+          name: string
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          email: string
+          id?: string
+          message: string
+          name: string
+          status?: string
+          subject: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          email?: string
+          id?: string
+          message?: string
+          name?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -3219,13 +3321,10 @@ export type Database = {
           success: boolean
         }[]
       }
-      ag_age_group: {
-        Args:
-          | { p_birth_date: string; p_parity: number }
-          | { p_birth_ts: string; p_parity: number }
-          | { p_birth_tstz: string; p_parity: number }
-        Returns: string
-      }
+      ag_age_group:
+        | { Args: { p_birth_ts: string; p_parity: number }; Returns: string }
+        | { Args: { p_birth_date: string; p_parity: number }; Returns: string }
+        | { Args: { p_birth_tstz: string; p_parity: number }; Returns: string }
       ag_boxplot_stats: {
         Args: { p_farm: string; p_trait: string }
         Returns: {
@@ -3238,10 +3337,7 @@ export type Database = {
           trait_key: string
         }[]
       }
-      ag_col_exists: {
-        Args: { p_col: string }
-        Returns: boolean
-      }
+      ag_col_exists: { Args: { p_col: string }; Returns: boolean }
       ag_farm_trait_coverage: {
         Args: { p_farm: string; p_traits: string[] }
         Returns: {
@@ -3288,10 +3384,7 @@ export type Database = {
           slope: number
         }[]
       }
-      ag_is_numeric: {
-        Args: { p: string }
-        Returns: boolean
-      }
+      ag_is_numeric: { Args: { p: string }; Returns: boolean }
       ag_linear_means: {
         Args: {
           p_farm: string
@@ -3347,10 +3440,7 @@ export type Database = {
         Args: { p: number; p_farm: string; p_index: string; p_scope: string }
         Returns: number
       }
-      ag_pick_col: {
-        Args: { p_candidates: string[] }
-        Returns: string
-      }
+      ag_pick_col: { Args: { p_candidates: string[] }; Returns: string }
       ag_progress_compare: {
         Args: { p_farm: string; p_grouping: string; p_traits: string[] }
         Returns: {
@@ -3408,14 +3498,8 @@ export type Database = {
           bin_to: number
         }[]
       }
-      can_access_farm: {
-        Args: { farm_uuid: string }
-        Returns: boolean
-      }
-      can_edit_farm: {
-        Args: { farm_uuid: string }
-        Returns: boolean
-      }
+      can_access_farm: { Args: { farm_uuid: string }; Returns: boolean }
+      can_edit_farm: { Args: { farm_uuid: string }; Returns: boolean }
       create_farm_basic: {
         Args: { farm_metadata?: Json; farm_name: string; owner_name: string }
         Returns: {
@@ -3424,10 +3508,7 @@ export type Database = {
           success: boolean
         }[]
       }
-      daitch_mokotoff: {
-        Args: { "": string }
-        Returns: string[]
-      }
+      daitch_mokotoff: { Args: { "": string }; Returns: string[] }
       delete_farm: {
         Args: { farm_uuid: string }
         Returns: {
@@ -3435,19 +3516,19 @@ export type Database = {
           success: boolean
         }[]
       }
-      dmetaphone: {
-        Args: { "": string }
-        Returns: string
-      }
-      dmetaphone_alt: {
-        Args: { "": string }
-        Returns: string
-      }
+      dmetaphone: { Args: { "": string }; Returns: string }
+      dmetaphone_alt: { Args: { "": string }; Returns: string }
       females_public_by_farm: {
         Args: { farm_uuid: string }
         Returns: {
-          like: unknown
+          like: Database["public"]["Views"]["females_denorm"]["Row"]
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "females_denorm"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       generate_temp_password: {
         Args: { profile_index: number }
@@ -3530,7 +3611,7 @@ export type Database = {
         }[]
       }
       get_bulls_denorm: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           beta_casein: string | null
           birth_date: string | null
@@ -3602,6 +3683,12 @@ export type Database = {
           udp: number | null
           updated_at: string | null
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "bulls_denorm"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_farm_dashboard: {
         Args: { farm_uuid: string }
@@ -3652,6 +3739,12 @@ export type Database = {
           total_predictions: number | null
           total_semen_doses: number | null
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "farm_dashboard_kpis"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_females_denorm: {
         Args: { p_limit?: number; p_offset?: number; target_farm_id: string }
@@ -3739,6 +3832,12 @@ export type Database = {
           udp: number | null
           updated_at: string | null
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "females_denorm"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_females_denorm_debug: {
         Args: {
@@ -3831,6 +3930,12 @@ export type Database = {
           udp: number | null
           updated_at: string | null
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "females_denorm"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_semen_inventory: {
         Args: { target_farm_id?: string }
@@ -3844,41 +3949,25 @@ export type Database = {
           semen_type: Database["public"]["Enums"]["semen_type"] | null
           total_movements: number | null
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "semen_inventory"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
-      has_farm_membership: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_farm_editor: {
-        Args: { farm_uuid: string }
-        Returns: boolean
-      }
-      is_farm_member: {
-        Args: { farm_uuid: string } | { p_farm: string; p_user: string }
-        Returns: boolean
-      }
-      is_farm_owner: {
-        Args: { farm_uuid: string }
-        Returns: boolean
-      }
-      is_farm_technician: {
-        Args: { farm_uuid: string }
-        Returns: boolean
-      }
-      is_jsonb: {
-        Args: { "": string }
-        Returns: boolean
-      }
-      is_member_of_farm: {
-        Args: { _farm_id: string }
-        Returns: boolean
-      }
+      has_farm_membership: { Args: never; Returns: boolean }
+      is_admin: { Args: never; Returns: boolean }
+      is_farm_editor: { Args: { farm_uuid: string }; Returns: boolean }
+      is_farm_member:
+        | { Args: { p_farm: string; p_user: string }; Returns: boolean }
+        | { Args: { farm_uuid: string }; Returns: boolean }
+      is_farm_owner: { Args: { farm_uuid: string }; Returns: boolean }
+      is_farm_technician: { Args: { farm_uuid: string }; Returns: boolean }
+      is_jsonb: { Args: { "": string }; Returns: boolean }
+      is_member_of_farm: { Args: { _farm_id: string }; Returns: boolean }
       my_farms: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           created_at: string
           farm_id: string
@@ -3890,14 +3979,8 @@ export type Database = {
           total_females: number
         }[]
       }
-      normalize_naab: {
-        Args: { input_naab: string }
-        Returns: string
-      }
-      normalize_text: {
-        Args: { txt: string }
-        Returns: string
-      }
+      normalize_naab: { Args: { input_naab: string }; Returns: string }
+      normalize_text: { Args: { txt: string }; Returns: string }
       nx3_bulls_by_ids: {
         Args: { p_ids: string[]; p_trait: string }
         Returns: {
@@ -3922,7 +4005,7 @@ export type Database = {
         }[]
       }
       nx3_list_pta_traits: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           trait: string
         }[]
@@ -3934,18 +4017,9 @@ export type Database = {
           birth_year: number
         }[]
       }
-      nx3_normalize_trait: {
-        Args: { p_trait: string }
-        Returns: string
-      }
-      parse_flexible_date: {
-        Args: { date_str: string }
-        Returns: string
-      }
-      parse_staging_date: {
-        Args: { date_str: string }
-        Returns: string
-      }
+      nx3_normalize_trait: { Args: { p_trait: string }; Returns: string }
+      parse_flexible_date: { Args: { date_str: string }; Returns: string }
+      parse_staging_date: { Args: { date_str: string }; Returns: string }
       remove_bull_from_farm: {
         Args: { bull_uuid: string; farm_uuid: string }
         Returns: {
@@ -4106,26 +4180,13 @@ export type Database = {
           success: boolean
         }[]
       }
-      soundex: {
-        Args: { "": string }
-        Returns: string
-      }
+      soundex: { Args: { "": string }; Returns: string }
       storage_can_insert_object: {
         Args: { p_bucket_id: string; p_metadata: Json; p_owner_id: string }
         Returns: boolean
       }
-      text_soundex: {
-        Args: { "": string }
-        Returns: string
-      }
-      unaccent: {
-        Args: { "": string }
-        Returns: string
-      }
-      unaccent_init: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
+      text_soundex: { Args: { "": string }; Returns: string }
+      unaccent: { Args: { "": string }; Returns: string }
       validate_naab: {
         Args: { naab: string }
         Returns: {
