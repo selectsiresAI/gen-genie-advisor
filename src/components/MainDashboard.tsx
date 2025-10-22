@@ -3,6 +3,7 @@ import toolssLogo from '@/assets/toolss-logo.jpg';
 import { User } from '@supabase/supabase-js';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -57,6 +58,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
   const [currentView, setCurrentView] = useState<DashboardView>('dashboard');
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -287,6 +289,13 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
         return role;
     }
   };
+  const filteredFarms = farms.filter(farm => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) {
+      return true;
+    }
+    return farm.farm_name.toLowerCase().includes(term) || farm.owner_name.toLowerCase().includes(term);
+  });
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -642,17 +651,25 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
 
           {/* Farms Section */}
           <div className="space-y-6" data-tour="home:fazendas">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-2">
                 <h3 className="text-xl font-semibold">Suas Fazendas</h3>
                 <HelpHint content="Lista de todas as suas fazendas cadastradas. Clique em uma fazenda para visualizar detalhes ou criar uma nova." side="right" />
               </div>
-              <Button onClick={handleCreateFarm} data-tour="home:criar">
-                <Plus className="w-4 h-4 mr-2" />
-                Criar Fazenda
-              </Button>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2 md:gap-3 w-full md:w-auto">
+                <Input
+                  value={searchTerm}
+                  onChange={event => setSearchTerm(event.target.value)}
+                  placeholder="Buscar fazendas..."
+                  className="w-full sm:w-64 bg-white"
+                />
+                <Button onClick={handleCreateFarm} data-tour="home:criar" className="sm:w-auto">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Criar Fazenda
+                </Button>
+              </div>
             </div>
-            
+
             {farms.length === 0 ? <Card>
                 <CardContent className="flex flex-col items-center justify-center py-8">
                   <Building2 className="w-12 h-12 text-muted-foreground mb-4" />
@@ -665,8 +682,14 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                     Criar Primeira Fazenda
                   </Button>
                 </CardContent>
+              </Card> : filteredFarms.length === 0 ? <Card>
+                <CardContent className="py-10 text-center space-y-2">
+                  <Building2 className="w-10 h-10 mx-auto text-muted-foreground" />
+                  <h3 className="text-lg font-semibold">Nenhum resultado encontrado</h3>
+                  <p className="text-sm text-muted-foreground">Ajuste sua busca para encontrar uma fazenda específica.</p>
+                </CardContent>
               </Card> : <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {farms.map(farm => <Card key={farm.farm_id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleFarmSelect(farm)}>
+                {filteredFarms.map(farm => <Card key={farm.farm_id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleFarmSelect(farm)}>
                      <CardHeader>
                        <div className="flex justify-between items-start">
                          <div className="space-y-1">
