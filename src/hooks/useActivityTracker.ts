@@ -11,7 +11,13 @@ interface ActivitySession {
 }
 
 export const useActivityTracker = (user: User | null) => {
-  const location = useLocation();
+  // Safely handle location - may not be available if not in Router context
+  let location;
+  try {
+    location = useLocation();
+  } catch {
+    location = null;
+  }
   const sessionRef = useRef<ActivitySession>({
     sessionId: null,
     startTime: Date.now(),
@@ -43,7 +49,7 @@ export const useActivityTracker = (user: User | null) => {
 
   // Rastrear mudanças de página
   useEffect(() => {
-    if (!user || !sessionRef.current.sessionId) return;
+    if (!user || !sessionRef.current.sessionId || !location) return;
 
     const currentPath = location.pathname;
     sessionRef.current.pagesVisited.add(currentPath);
@@ -60,7 +66,7 @@ export const useActivityTracker = (user: User | null) => {
     };
 
     updateSession();
-  }, [location.pathname, user]);
+  }, [location?.pathname, user]);
 
   // Finalizar sessão ao sair
   useEffect(() => {
