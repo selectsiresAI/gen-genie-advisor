@@ -155,7 +155,7 @@ const buildResultExportRows = (rows: BatchRow[]) =>
       return {
         id: '',
         farm_id: '',
-        name: row.nome,
+        name: row.idFazenda,
         identifier: row.nome,
         cdcb_id: '',
         sire_naab: row.naabPai,
@@ -252,8 +252,8 @@ const buildResultInsertRows = (rows: BatchRow[], farmId: string): FemaleInsert[]
   return rows
     .filter((row) => row.status === 'valid' && row.prediction)
     .map((row) => {
-      const name = row.nome?.trim() || `Predição ${row.lineNumber}`;
-      const identifier = row.idFazenda?.trim() || row.nome?.trim() || `predicao-${row.lineNumber}`;
+      const name = row.idFazenda?.trim() || `Predição ${row.lineNumber}`;
+      const identifier = row.nome?.trim() || row.idFazenda?.trim() || `predicao-${row.lineNumber}`;
 
       const insertRecord: FemaleInsert = {
         farm_id: farmId,

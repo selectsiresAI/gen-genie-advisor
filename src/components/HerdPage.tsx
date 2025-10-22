@@ -244,8 +244,10 @@ const HerdPage: React.FC<HerdPageProps> = ({
         return farm.farm_id;
       case 'name':
         return female.name;
+      case 'identifier':
+        return female.identifier || '';
       case 'cdcb_identifier':
-        return female.cdcb_id || female.identifier || '';
+        return female.cdcb_id || '';
       case 'sire_naab':
         return female.sire_naab || '';
       case 'mgs_naab':
@@ -376,8 +378,8 @@ const HerdPage: React.FC<HerdPageProps> = ({
     }
 
     // Create CSV with all columns from females_denorm
-    const headers = ['Fazenda', 'Nome', 'ID CDCB', 'Identificador', 'Data Nascimento', 'Ordem de Parto', 'Categoria', 'Fonte', 'Pai NAAB', 'Avô Materno NAAB', 'BisAvô Materno NAAB', 'HHP$', 'TPI', 'NM$', 'CM$', 'FM$', 'GM$', 'F SAV', 'PTAM', 'CFP', 'PTAF', 'PTAF%', 'PTAP', 'PTAP%', 'PL', 'DPR', 'LIV', 'SCS', 'MAST', 'MET', 'RP', 'DA', 'KET', 'MF', 'PTAT', 'UDC', 'FLC', 'SCE', 'DCE', 'SSB', 'DSB', 'H LIV', 'CCR', 'HCR', 'FI', 'GL', 'EFC', 'BWC', 'STA', 'STR', 'DFM', 'RUA', 'RLS', 'RTP', 'FTL', 'RW', 'RLR', 'FTA', 'FLS', 'FUA', 'RUH', 'RUW', 'UCL', 'UDP', 'FTP', 'RFI', 'Beta-Casein', 'Kappa-Casein', 'GFI', 'Criado Em', 'Atualizado Em'];
-    const csvData = sortedFemales.map(female => [farm.farm_name, female.name, female.cdcb_id || '', female.identifier || '', female.birth_date ? formatDate(female.birth_date) : '', female.parity_order || '', getAutomaticCategory(female.birth_date, female.parity_order), female.fonte || '', female.sire_naab || '', female.mgs_naab || '', female.mmgs_naab || '', female.hhp_dollar || '', female.tpi || '', female.nm_dollar || '', female.cm_dollar || '', female.fm_dollar || '', female.gm_dollar || '', female.f_sav || '', female.ptam || '', female.cfp || '', female.ptaf || '', female.ptaf_pct || '', female.ptap || '', female.ptap_pct || '', female.pl || '', female.dpr || '', female.liv || '', female.scs || '', female.mast || '', female.met || '', female.rp || '', female.da || '', female.ket || '', female.mf || '', female.ptat || '', female.udc || '', female.flc || '', female.sce || '', female.dce || '', female.ssb || '', female.dsb || '', female.h_liv || '', female.ccr || '', female.hcr || '', female.fi || '', female.gl || '', female.efc || '', female.bwc || '', female.sta || '', female.str || '', female.dfm || '', female.rua || '', female.rls || '', female.rtp || '', female.ftl || '', female.rw || '', female.rlr || '', female.fta || '', female.fls || '', female.fua || '', female.ruh || '', female.ruw || '', female.ucl || '', female.udp || '', female.ftp || '', female.rfi || '', female.beta_casein || '', female.kappa_casein || '', female.gfi || '', formatDate(female.created_at), female.updated_at ? formatDate(female.updated_at) : '']);
+    const headers = ['Fazenda', 'Nome', 'Identificador', 'ID CDCB', 'Data Nascimento', 'Ordem de Parto', 'Categoria', 'Fonte', 'Pai NAAB', 'Avô Materno NAAB', 'BisAvô Materno NAAB', 'HHP$', 'TPI', 'NM$', 'CM$', 'FM$', 'GM$', 'F SAV', 'PTAM', 'CFP', 'PTAF', 'PTAF%', 'PTAP', 'PTAP%', 'PL', 'DPR', 'LIV', 'SCS', 'MAST', 'MET', 'RP', 'DA', 'KET', 'MF', 'PTAT', 'UDC', 'FLC', 'SCE', 'DCE', 'SSB', 'DSB', 'H LIV', 'CCR', 'HCR', 'FI', 'GL', 'EFC', 'BWC', 'STA', 'STR', 'DFM', 'RUA', 'RLS', 'RTP', 'FTL', 'RW', 'RLR', 'FTA', 'FLS', 'FUA', 'RUH', 'RUW', 'UCL', 'UDP', 'FTP', 'RFI', 'Beta-Casein', 'Kappa-Casein', 'GFI', 'Criado Em', 'Atualizado Em'];
+    const csvData = sortedFemales.map(female => [farm.farm_name, female.name, female.identifier || '', female.fonte === 'Predição' ? '' : (female.cdcb_id || ''), female.birth_date ? formatDate(female.birth_date) : '', female.parity_order || '', getAutomaticCategory(female.birth_date, female.parity_order), female.fonte || '', female.sire_naab || '', female.mgs_naab || '', female.mmgs_naab || '', female.hhp_dollar || '', female.tpi || '', female.nm_dollar || '', female.cm_dollar || '', female.fm_dollar || '', female.gm_dollar || '', female.f_sav || '', female.ptam || '', female.cfp || '', female.ptaf || '', female.ptaf_pct || '', female.ptap || '', female.ptap_pct || '', female.pl || '', female.dpr || '', female.liv || '', female.scs || '', female.mast || '', female.met || '', female.rp || '', female.da || '', female.ket || '', female.mf || '', female.ptat || '', female.udc || '', female.flc || '', female.sce || '', female.dce || '', female.ssb || '', female.dsb || '', female.h_liv || '', female.ccr || '', female.hcr || '', female.fi || '', female.gl || '', female.efc || '', female.bwc || '', female.sta || '', female.str || '', female.dfm || '', female.rua || '', female.rls || '', female.rtp || '', female.ftl || '', female.rw || '', female.rlr || '', female.fta || '', female.fls || '', female.fua || '', female.ruh || '', female.ruw || '', female.ucl || '', female.udp || '', female.ftp || '', female.rfi || '', female.beta_casein || '', female.kappa_casein || '', female.gfi || '', formatDate(female.created_at), female.updated_at ? formatDate(female.updated_at) : '']);
 
     // Convert to CSV format
     const csvContent = [headers.join(','), ...csvData.map(row => row.map(cell => {
@@ -619,8 +621,15 @@ const HerdPage: React.FC<HerdPageProps> = ({
                               style={stickyColumnStyles.name}
                             />
                             <SortableHeader
+                              column="identifier"
+                              label="Identificador"
+                              sortConfig={femaleSortConfig}
+                              onSort={handleSortFemales}
+                              className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap"
+                            />
+                            <SortableHeader
                               column="cdcb_identifier"
-                              label="ID CDCB / Identificador"
+                              label="ID CDCB"
                               sortConfig={femaleSortConfig}
                               onSort={handleSortFemales}
                               className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap"
@@ -695,7 +704,8 @@ const HerdPage: React.FC<HerdPageProps> = ({
                             </td>
                             <td className="sticky z-20 border bg-background px-3 py-2 text-xs whitespace-nowrap shadow-[6px_0_12px_-6px_rgba(15,23,42,0.3)]" style={stickyColumnStyles.farmId}>{farm.farm_name}</td>
                             <td className="sticky z-10 border bg-background px-3 py-2 text-xs font-medium whitespace-nowrap shadow-[6px_0_12px_-6px_rgba(15,23,42,0.3)]" style={stickyColumnStyles.name}>{female.name}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.cdcb_id || female.identifier || '-'}</td>
+                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.identifier || '-'}</td>
+                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.fonte === 'Predição' ? '-' : (female.cdcb_id || '-')}</td>
                             <td className="border px-3 py-2 text-xs whitespace-nowrap">{renderPedigreeCell(female.sire_naab)}</td>
                             <td className="border px-3 py-2 text-xs whitespace-nowrap">{renderPedigreeCell(female.mgs_naab)}</td>
                             <td className="border px-3 py-2 text-xs whitespace-nowrap">{renderPedigreeCell(female.mmgs_naab)}</td>

@@ -652,8 +652,10 @@ export default function SegmentationPage({
         return record.farm_id ?? '';
       case 'name':
         return animal.__nameKey ? (animal as Record<string, unknown>)[animal.__nameKey] ?? '' : record.name ?? '';
+      case 'identifier':
+        return record.identifier ?? '';
       case 'cdcb_id':
-        return record.cdcb_id ?? record.identifier ?? '';
+        return record.cdcb_id ?? '';
       case 'sire_naab':
         return record.sire_naab ?? record.sire_name ?? '';
       case 'mgs_naab':
@@ -771,6 +773,8 @@ export default function SegmentationPage({
       return {
         id: a.__idKey ? (a as any)[a.__idKey] : a.id ?? "",
         nome: a.__nameKey ? (a as any)[a.__nameKey] : a.name ?? "",
+        identificador: (a as any).identifier ?? "",
+        id_cdcb: (a as any).fonte === 'Predição' ? '' : ((a as any).cdcb_id ?? ""),
         Fonte: fonteInfo.label === '—' ? '' : fonteInfo.label,
         CustomScore: customScore,
         Classificacao: a.Classification ?? "",
@@ -791,6 +795,8 @@ export default function SegmentationPage({
     const headers = [
       "id",
       "nome",
+      "identificador",
+      "id_cdcb",
       "Fonte",
       "CustomScore",
       ...(shouldIncludeNormalized ? ["CustomScore_Normalizado"] : []),
@@ -808,6 +814,8 @@ export default function SegmentationPage({
       return [
         row.id,
         row.nome,
+        row.identificador,
+        row.id_cdcb,
         row.Fonte,
         row.CustomScore,
         ...(shouldIncludeNormalized ? [normalizedScore] : []),
@@ -1598,6 +1606,7 @@ export default function SegmentationPage({
                     <tr className="border-b border-border bg-muted text-foreground">
                       <SortableHeader column="farm_id" label="Fazenda" sortConfig={animalSortConfig} onSort={handleSortAnimals} className="border border-border px-2 py-1 text-left text-xs font-medium" />
                       <SortableHeader column="name" label="Nome" sortConfig={animalSortConfig} onSort={handleSortAnimals} className="border border-border px-2 py-1 text-left text-xs font-medium" />
+                      <SortableHeader column="identifier" label="Identificador" sortConfig={animalSortConfig} onSort={handleSortAnimals} className="border border-border px-2 py-1 text-left text-xs font-medium bg-secondary" />
                       <SortableHeader column="cdcb_id" label="ID CDCB" sortConfig={animalSortConfig} onSort={handleSortAnimals} className="border border-border px-2 py-1 text-left text-xs font-medium bg-secondary" />
                       <SortableHeader column="sire_naab" label="Pai" sortConfig={animalSortConfig} onSort={handleSortAnimals} className="border border-border px-2 py-1 text-left text-xs font-medium bg-secondary" />
                       <SortableHeader column="mgs_naab" label="Avô Materno" sortConfig={animalSortConfig} onSort={handleSortAnimals} className="border border-border px-2 py-1 text-left text-xs font-medium bg-secondary" />
@@ -1624,7 +1633,8 @@ export default function SegmentationPage({
                       <tr key={a.__idKey ? (a as any)[a.__idKey] : a.id ?? idx} className={`border-b border-secondary text-foreground hover:opacity-90 ${segmentationEnabled && a.Classification ? classificationBg : ""}`}>
                         <td className="border border-border px-2 py-1 text-xs">{farm.name || '-'}</td>
                         <td className="border border-border px-2 py-1 text-xs font-medium">{a.__nameKey ? (a as any)[a.__nameKey] : (a as any).name ?? ''}</td>
-                        <td className="border border-border px-2 py-1 text-xs">{(a as any).cdcb_id || (a as any).identifier || '-'}</td>
+                        <td className="border border-border px-2 py-1 text-xs">{(a as any).identifier || '-'}</td>
+                        <td className="border border-border px-2 py-1 text-xs">{(a as any).fonte === 'Predição' ? '-' : ((a as any).cdcb_id || '-')}</td>
                         <td className="border border-border px-2 py-1 text-xs">{renderPedigreeCell((a as any).sire_naab, (a as any).sire_name)}</td>
                         <td className="border border-border px-2 py-1 text-xs">{renderPedigreeCell((a as any).mgs_naab, (a as any).mgs_name)}</td>
                         <td className="border border-border px-2 py-1 text-xs">{renderPedigreeCell((a as any).mmgs_naab, (a as any).mmgs_name)}</td>
