@@ -17,7 +17,8 @@ const surveySchema = z.object({
   feedback: z.string().trim().max(500).optional(),
 });
 
-const SURVEY_DELAY = 5 * 60 * 1000; // 5 minutos após login
+// Para DEV: 10 segundos | Para PROD: 5 minutos
+const SURVEY_DELAY = import.meta.env.DEV ? 10 * 1000 : 5 * 60 * 1000;
 const DISMISSAL_COUNT_KEY = "survey_dismissal_count";
 const LAST_SHOWN_KEY = "satisfaction_survey_last_shown";
 
@@ -52,9 +53,14 @@ export function SatisfactionSurvey() {
     const dismissals = parseInt(localStorage.getItem(DISMISSAL_COUNT_KEY) || '0');
     setDismissalCount(dismissals);
 
-    // Calcular engagement score se já teve 2+ dispensas
+    // Calcular engagement score se já teve 2+ dispensas (COM FALLBACK)
     if (dismissals >= 2) {
-      calculateEngagementScore(user.id).then(setEngagementScore);
+      calculateEngagementScore(user.id)
+        .then(setEngagementScore)
+        .catch((error) => {
+          console.debug('Failed to calculate engagement score, using 0%', error);
+          setEngagementScore(0); // Permite avaliar mesmo sem tracking
+        });
     }
 
     const lastShown = localStorage.getItem(LAST_SHOWN_KEY);
@@ -64,21 +70,42 @@ export function SatisfactionSurvey() {
 
     // Lógica de timing baseada no número de dispensas
     if (!lastShown) {
-      // 1ª vez: após 5 minutos
+      // 1ª vez: após delay configurado
       showDelay = SURVEY_DELAY;
     } else if (dismissals === 1) {
       // 2ª vez: após 3 dias
       const threeDays = 3 * 24 * 60 * 60 * 1000;
-      if (now - parseInt(lastShown) < threeDays) return;
+      const timeSinceLastShown = now - parseInt(lastShown);
+      if (timeSinceLastShown < threeDays) {
+        console.log('[SatisfactionSurvey] Too soon for 2nd attempt:', {
+          timeRemaining: `${Math.ceil((threeDays - timeSinceLastShown) / 1000 / 60 / 60)} horas`
+        });
+        return;
+      }
       showDelay = SURVEY_DELAY;
     } else {
       // 3ª+ vez: após 7 dias
       const sevenDays = 7 * 24 * 60 * 60 * 1000;
-      if (now - parseInt(lastShown) < sevenDays) return;
+      const timeSinceLastShown = now - parseInt(lastShown);
+      if (timeSinceLastShown < sevenDays) {
+        console.log('[SatisfactionSurvey] Too soon for next attempt:', {
+          timeRemaining: `${Math.ceil((sevenDays - timeSinceLastShown) / 1000 / 60 / 60)} horas`
+        });
+        return;
+      }
       showDelay = SURVEY_DELAY;
     }
 
+    // Debug log
+    console.log('[SatisfactionSurvey] Scheduled to show in:', {
+      dismissals,
+      lastShown: lastShown ? new Date(parseInt(lastShown)).toLocaleString() : 'nunca',
+      showDelay: `${showDelay / 1000} segundos`,
+      isDev: import.meta.env.DEV
+    });
+
     const timer = setTimeout(() => {
+      console.log('[SatisfactionSurvey] Showing banner now');
       setVisible(true);
     }, showDelay);
     
@@ -178,7 +205,25 @@ export function SatisfactionSurvey() {
     handleDismissQualification("dismissed");
   };
 
-  if (!visible) return null;
+  if (!visible) {
+    // Botão de teste (apenas em DEV)
+    if (import.meta.env.DEV) {
+      return (
+        <Button
+          onClick={() => {
+            console.log('[SatisfactionSurvey] Force showing via test button');
+            setVisible(true);
+            setStep('qualification');
+          }}
+          className="fixed bottom-4 right-4 z-50 shadow-lg"
+          size="sm"
+        >
+          🧪 Testar Survey
+        </Button>
+      );
+    }
+    return null;
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4 animate-in fade-in duration-300">
