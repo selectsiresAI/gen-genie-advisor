@@ -505,17 +505,17 @@ export default function SegmentationPage({
         const maxScore = Math.max(...scores);
         const range = maxScore - minScore;
         
-        // Se há variação, normaliza para 0-100; senão mantém 50
+        // Se há variação, normaliza para -100 a +100; senão mantém 0
         if (range > 0) {
           rows.forEach(r => {
             if (Number.isFinite(r.CustomScore)) {
-              r.CustomScore = ((r.CustomScore - minScore) / range) * 100;
+              r.CustomScore = ((r.CustomScore - minScore) / range) * 200 - 100;
             }
           });
         } else {
           rows.forEach(r => {
             if (Number.isFinite(r.CustomScore)) {
-              r.CustomScore = 50; // Valor médio quando todos são iguais
+              r.CustomScore = 0; // Valor médio quando todos são iguais
             }
           });
         }
