@@ -73,7 +73,7 @@ export function ErrorReportButton() {
           <Button
             variant="outline"
             size="icon"
-            className="fixed bottom-24 right-6 h-14 w-14 rounded-full shadow-lg z-40 hover:scale-110 transition-all bg-orange-500 hover:bg-orange-400 text-white border-orange-600 animate-bounce"
+            className="fixed bottom-24 right-6 h-14 w-14 rounded-full shadow-lg z-50 hover:scale-110 transition-all bg-orange-500 hover:bg-orange-400 text-white border-orange-600"
             title="Reportar erro ou problema"
           >
             <Bug className="h-5 w-5" />

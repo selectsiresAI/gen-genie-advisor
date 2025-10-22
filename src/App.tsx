@@ -8,6 +8,7 @@ import AuthPage from "@/components/AuthPage";
 import MainDashboard from "@/components/MainDashboard";
 import QueryProvider from "@/providers/query-client";
 import { TutorialProvider } from "@/features/tutorial/TutorialProvider";
+import { ErrorReportButton } from "@/components/feedback/ErrorReportButton";
 
 const App = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -62,6 +63,7 @@ const App = () => {
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <ErrorReportButton />
           {user ? (
             <MainDashboard user={user} onLogout={handleLogout} />
           ) : (
