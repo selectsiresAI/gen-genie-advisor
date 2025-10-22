@@ -1,73 +1,229 @@
-﻿suggested_canonical_key;alias_original;;;;;;;;;;;;
-id;id;;;;;;;;;;;;
-farm_id;ID Fazenda;;;;;;;;;;;;
-category;Categoria;;;;;;;;;;;;
-ptas;;;;;;;;;;;;;
-created_at;;;;;;;;;;;;;
-updated_at;;;;;;;;;;;;;
-sire_naab;Naab Pai;;;;;;;;;;;;
-mgs_naab;Naab Avo Materno;;;;;;;;;;;;
-mmgs_naab;Naab Bisavo Materno;;;;;;;;;;;;
-parity_order;Ordem de parto;;;;;;;;;;;;
-identifier;Brinco;Animal ID;;;;;;;;;;;
-name;Nome;;;;;;;;;;;;
-cdcb_id;CDCB;International code;;;;;;;;;;;
-birth_date;data de nascimento;Data;Date;;;;;;;;;;
-HHP$®;HHP;HHP$;;;;;;;;;;;
-TPI;TPI®;;;;;;;;;;;;
-NM$;NM$®;NM;MN;MN$;Net_Merit;Mérito Liquido;Net Merit;;;;;;
-CM$;CM$®;CM;MQ;MQ$;Mérito Queijo;Cheese Merit;;;;;;;
-FM$;FM$®;FM;MF;MF$;Mérito Volume;Mérito Fluído;Fluid Merit;;;;;;
-GM$;GM$®;GM;MG;MG$;;Mérito Pasto;Grazing Merit;;;;;;
-F SAV;FS;Feed Saved;;;;;;;;;;;
-PTAM;Milk;Leite (lbs);GPTA Milk;Leite;Milk_production;Produção de Leite;Milk Production;;;;;;
-CFP;CGP;;;;;;;;;;;;
-PTAF;F (lbs);PTAG;G (lbs);Gordura (lbs); Gord ;Gord (lbs);Fat (lbs);%_Fat;Fat.(lbs);Gord. (lbs.);Fat;Gordura;Quantidade de Gordura no Leite
-PTAF%;F %;Gordura %;G%;PTA Fat;Fat.(%);% Gordura;;;;;;;
-PTAP;P (lbs);P (lbs);Proteína (lbs);Prot;Prot lbs;PTA Pro;Prot.(lbs);Prot. (lbs.);Quantidade de Proteína no Leite;Protein;Proteína;;
-PTAP%;P %;Proteína %;Prot.(%);% Prot;% Proteína;;;;;;;;
-PL;VP;Vida produtiva;Productive Life;;;;;;;;;;
-DPR;PTA DPR;TPF;Taxa de prenhez das filhas;Daughter Pregnancy Rate;;;;;;;;;
-LIV;PtaLiv;Sobrevivência;Sobrevivênvia de vaca;Cow Livability;Livability;;;;;;;;
-SCS;CCS;Somatic Cells;Células Somáticas;;;;;;;;;;
-MAST;CDCB_MAST;Mastitis;Mastite;;;;;;;;;;
-MET;CDCB_MET;Metritis;Metrite;;;;;;;;;;
-RP;CDCB_RP;Retained Placenta;;;;;;;;;;;
-DA;DAB;CDCB_DA;Desl.Abom.;Deslocamento de abomaso;Displaced Abomasum;;;;;;;;
-KET;CDCB_CET;Cetose;Ketosis;;;;;;;;;;
-MF;MFV;HIPOC;Hipocalcemia;Febre do Leite;Milk Fever;;;;;;;;
-PTAT;PTAType;PTA Tipo;Type;Tipo;Classificação Final para Tipo;;;;;;;;
-UDC;CU;Udder Composite;Composto do Úbere;;;;;;;;;;
-FLC;CPP;Feet and Leg Composite;Composto de Pernas e Pés;;;;;;;;;;
-SCE;FPT;Sire Calving Ease;Calving Ease (Sire);Facilidade de Parto (touro);;;;;;;;;
-DCE;FPF;Daughter Calving Ease;Calving Ease (Daughter);Calving Ease (Female);Facilidade de Parto (fêmea);;;;;;;;
-SSB;INT;Sire Stillbirth Rate;Stillbirth Rate (Sire);Índice de Natimorto (touro);;;;;;;;;
-DSB;INF;Daughter Stillbirth Rate;Female Stillbirth Rate;Stillbirth Rate (Female);Índice de Natimorto (fêmea);;;;;;;;
-H LIV;HLiv;H Livability;PTA Hliv;Sobrevivênvia de novilha;Heifer Livability;;;;;;;;
-CCR;TCV;Cow Conception Rate;Taxa de Concepção de Vacas;;;;;;;;;;
-HCR;TCN;Heifer Conception Rate;Taxa de Concepção de Novilhas;;;;;;;;;;
-FI;Fert. Index;Fertil Index;Índice de Fertilidade;;;;;;;;;;
-GL;PTA GL;GEST. Lenght;G.lenght;;;;;;;;;;
-EFC;;;;;;;;;;;;;
-BWC;BC;Body Composite;Composto Corporal;;;;;;;;;;
-STA;EST;Stature;Estatura;;;;;;;;;;
-STR;;Strength;Força;;;;;;;;;;
-DFM;DF;Forma Leiteira;Dairy Form;;;;;;;;;;
-RUA;RA;Rump Angle;Ângulo da Garupa;;;;;;;;;;
-RLS;;Rear Legs Side;Pernas Vista Lateral;;;;;;;;;;
-RTP;;Rear Teat Placement;Colocação dos Tetos Posterior;;;;;;;;;;
-FTL;TL;Teat Length;Comprimento dos Tetos;;;;;;;;;;
-RW;RTW;TW;Thurl Width;Largura da  Garupa;;;;;;;;;
-RLR;Rear Legs Rear;Pernas Vista Posterior;;;;;;;;;;;
-FTA;FA;Ângulo dos Cascos;Foot Angle;;;;;;;;;;
-FLS;;;;;;;;;;;;;
-FUA;Fore Udder Attachment;Inserção Anterior do Úbere;;;;;;;;;;;
-RUH;Rear Udder Height;Altura do Úbere Posterior;;;;;;;;;;;
-RUW;Rear Udder Width;Largura do Úbere;;;;;;;;;;;
-UCL;UC;Udder Cleft;Ligamento Médio;;;;;;;;;;
-UDP;UD;Udder Depth;Profundidade do Úbere;;;;;;;;;;
-FTP;Front Teat Placement;Colocação dos Tetos Anterior;;;;;;;;;;;
-RFI;;;;;;;;;;;;;
-Beta-Casein;;;;;;;;;;;;;
-Kappa-Casein;; ;;;;;;;;;;;
-GFI;;;;;;;;;;;;;
+suggested_canonical_key,alias_original
+id,id
+farm_id,ID Fazenda
+category,Categoria
+ptas,
+created_at,
+updated_at,
+sire_naab,Naab Pai
+mgs_naab,Naab Avo Materno
+mmgs_naab,Naab Bisavo Materno
+parity_order,Ordem de parto
+identifier,Brinco
+identifier,Animal ID
+name,Nome
+cdcb_id,CDCB
+cdcb_id,International code
+birth_date,data de nascimento
+birth_date,Data
+birth_date,Date
+HHP$,HHP
+HHP$,HHP$
+TPI,TPI
+TPI,TPI®
+NM$,NM$
+NM$,NM$®
+NM$,NM
+NM$,MN
+NM$,MN$
+NM$,Net_Merit
+NM$,Mérito Liquido
+NM$,Net Merit
+CM$,CM$
+CM$,CM$®
+CM$,CM
+CM$,MQ
+CM$,MQ$
+CM$,Mérito Queijo
+CM$,Cheese Merit
+FM$,FM$
+FM$,FM$®
+FM$,FM
+FM$,MF
+FM$,MF$
+FM$,Mérito Volume
+FM$,Mérito Fluído
+FM$,Fluid Merit
+GM$,GM$
+GM$,GM$®
+GM$,GM
+GM$,MG
+GM$,MG$
+GM$,Mérito Pasto
+GM$,Grazing Merit
+F SAV,FS
+F SAV,Feed Saved
+PTAM,Milk
+PTAM,Leite (lbs)
+PTAM,GPTA Milk
+PTAM,Leite
+PTAM,Milk_production
+PTAM,Produção de Leite
+PTAM,Milk Production
+CFP,CGP
+PTAF,F (lbs)
+PTAF,PTAG
+PTAF,G (lbs)
+PTAF,Gordura (lbs)
+PTAF,Gord
+PTAF,Gord (lbs)
+PTAF,Fat (lbs)
+PTAF,%_Fat
+PTAF,Fat.(lbs)
+PTAF,Gord. (lbs.)
+PTAF,Fat
+PTAF,Gordura
+PTAF,Quantidade de Gordura no Leite
+PTAF%,F %
+PTAF%,Gordura %
+PTAF%,G%
+PTAF%,PTA Fat
+PTAF%,Fat.(%)
+PTAF%,% Gordura
+PTAP,P (lbs)
+PTAP,Proteína (lbs)
+PTAP,Prot
+PTAP,Prot lbs
+PTAP,PTA Pro
+PTAP,Prot.(lbs)
+PTAP,Prot. (lbs.)
+PTAP,Quantidade de Proteína no Leite
+PTAP,Protein
+PTAP,Proteína
+PTAP%,P %
+PTAP%,Proteína %
+PTAP%,Prot.(%)
+PTAP%,% Prot
+PTAP%,% Proteína
+PL,VP
+PL,Vida produtiva
+PL,Productive Life
+DPR,PTA DPR
+DPR,TPF
+DPR,Taxa de prenhez das filhas
+DPR,Daughter Pregnancy Rate
+LIV,PtaLiv
+LIV,Sobrevivência
+LIV,Sobrevivênvia de vaca
+LIV,Cow Livability
+LIV,Livability
+SCS,CCS
+SCS,Somatic Cells
+SCS,Células Somáticas
+MAST,CDCB_MAST
+MAST,Mastitis
+MAST,Mastite
+MET,CDCB_MET
+MET,Metritis
+MET,Metrite
+RP,CDCB_RP
+RP,Retained Placenta
+DA,DAB
+DA,CDCB_DA
+DA,Desl.Abom.
+DA,Deslocamento de abomaso
+DA,Displaced Abomasum
+KET,CDCB_CET
+KET,Cetose
+KET,Ketosis
+MF,MFV
+MF,HIPOC
+MF,Hipocalcemia
+MF,Febre do Leite
+MF,Milk Fever
+PTAT,PTAType
+PTAT,PTA Tipo
+PTAT,Type
+PTAT,Tipo
+PTAT,Classificação Final para Tipo
+UDC,CU
+UDC,Udder Composite
+UDC,Composto do Úbere
+FLC,CPP
+FLC,Feet and Leg Composite
+FLC,Composto de Pernas e Pés
+SCE,FPT
+SCE,Sire Calving Ease
+SCE,Calving Ease (Sire)
+SCE,Facilidade de Parto (touro)
+DCE,FPF
+DCE,Daughter Calving Ease
+DCE,Calving Ease (Daughter)
+DCE,Calving Ease (Female)
+DCE,Facilidade de Parto (fêmea)
+SSB,INT
+SSB,Sire Stillbirth Rate
+SSB,Stillbirth Rate (Sire)
+SSB,Índice de Natimorto (touro)
+DSB,INF
+DSB,Daughter Stillbirth Rate
+DSB,Female Stillbirth Rate
+DSB,Stillbirth Rate (Female)
+DSB,Índice de Natimorto (fêmea)
+H LIV,HLiv
+H LIV,H Livability
+H LIV,PTA Hliv
+H LIV,Sobrevivênvia de novilha
+H LIV,Heifer Livability
+CCR,TCV
+CCR,Cow Conception Rate
+CCR,Taxa de Concepção de Vacas
+HCR,TCN
+HCR,Heifer Conception Rate
+HCR,Taxa de Concepção de Novilhas
+FI,Fert. Index
+FI,Fertil Index
+FI,Índice de Fertilidade
+GL,PTA GL
+GL,GEST. Lenght
+GL,G.lenght
+EFC,
+BWC,BC
+BWC,Body Composite
+BWC,Composto Corporal
+STA,EST
+STA,Stature
+STA,Estatura
+STR,Strength
+STR,Força
+DFM,DF
+DFM,Forma Leiteira
+DFM,Dairy Form
+RUA,RA
+RUA,Rump Angle
+RUA,Ângulo da Garupa
+RLS,Rear Legs Side
+RLS,Pernas Vista Lateral
+RTP,Rear Teat Placement
+RTP,Colocação dos Tetos Posterior
+FTL,TL
+FTL,Teat Length
+FTL,Comprimento dos Tetos
+RW,RTW
+RW,TW
+RW,Thurl Width
+RW,Largura da  Garupa
+RLR,Rear Legs Rear
+RLR,Pernas Vista Posterior
+FTA,FA
+FTA,Ângulo dos Cascos
+FTA,Foot Angle
+FLS,
+FUA,Fore Udder Attachment
+FUA,Inserção Anterior do Úbere
+RUH,Rear Udder Height
+RUH,Altura do Úbere Posterior
+RUW,Rear Udder Width
+RUW,Largura do Úbere
+UCL,UC
+UCL,Udder Cleft
+UCL,Ligamento Médio
+UDP,UD
+UDP,Udder Depth
+UDP,Profundidade do Úbere
+FTP,Front Teat Placement
+FTP,Colocação dos Tetos Anterior
+RFI,
+Beta-Casein,
+Kappa-Casein,
+GFI,
