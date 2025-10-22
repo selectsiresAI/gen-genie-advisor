@@ -27,7 +27,12 @@ type Suggestion = {
 
 const readWorkbook = async (file: File): Promise<XLSX.WorkBook> => {
   const buffer = await file.arrayBuffer();
-  return XLSX.read(buffer, { type: "array", cellDates: true });
+  const isCSV = file.name.toLowerCase().endsWith('.csv');
+  return XLSX.read(buffer, { 
+    type: "array", 
+    cellDates: true,
+    ...(isCSV && { FS: "," }) // Force comma delimiter for CSV files
+  });
 };
 
 const extractHeadersAndRows = (sheet: XLSX.WorkSheet): ParsedWorkbook => {
