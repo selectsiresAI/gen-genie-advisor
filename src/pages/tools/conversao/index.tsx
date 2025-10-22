@@ -417,10 +417,19 @@ const ConversaoPage: React.FC = () => {
                 variant="secondary"
                 size="sm"
                 onClick={async () => {
-                  const response = await fetch('/Planilha_modelo_padrão.csv');
-                  const blob = await response.blob();
-                  const file = new File([blob], 'Planilha_modelo_padrão.csv', { type: 'text/csv' });
-                  handleModelUpload(file);
+                  try {
+                    const response = await fetch('/Planilha_modelo_padrão.csv');
+                    if (!response.ok) throw new Error('Não foi possível carregar o modelo padrão');
+                    const blob = await response.blob();
+                    const file = new File([blob], 'Planilha_modelo_padrão.csv', { type: 'text/csv' });
+                    await handleModelUpload(file);
+                  } catch (error: any) {
+                    toast({ 
+                      title: "Erro ao carregar modelo", 
+                      description: error.message ?? String(error), 
+                      variant: "destructive" 
+                    });
+                  }
                 }}
                 className="w-full"
               >
@@ -448,10 +457,19 @@ const ConversaoPage: React.FC = () => {
                 variant="secondary"
                 size="sm"
                 onClick={async () => {
-                  const response = await fetch('/Legendas_27092025.csv');
-                  const blob = await response.blob();
-                  const file = new File([blob], 'Legendas_27092025.csv', { type: 'text/csv' });
-                  handleLegendUpload(file);
+                  try {
+                    const response = await fetch('/Legendas_27092025.csv');
+                    if (!response.ok) throw new Error('Não foi possível carregar as legendas padrão');
+                    const blob = await response.blob();
+                    const file = new File([blob], 'Legendas_27092025.csv', { type: 'text/csv' });
+                    await handleLegendUpload(file);
+                  } catch (error: any) {
+                    toast({ 
+                      title: "Erro ao carregar legendas", 
+                      description: error.message ?? String(error), 
+                      variant: "destructive" 
+                    });
+                  }
                 }}
                 className="w-full"
               >
