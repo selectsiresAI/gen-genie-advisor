@@ -418,7 +418,7 @@ const ConversaoPage: React.FC = () => {
                 size="sm"
                 onClick={async () => {
                   try {
-                    const response = await fetch('/Planilha_modelo_padrão.csv');
+                    const response = await fetch(`/Planilha_modelo_padrão.csv?v=${Date.now()}`);
                     if (!response.ok) throw new Error('Não foi possível carregar o modelo padrão');
                     const blob = await response.blob();
                     const file = new File([blob], 'Planilha_modelo_padrão.csv', { type: 'text/csv' });
@@ -458,7 +458,7 @@ const ConversaoPage: React.FC = () => {
                 size="sm"
                 onClick={async () => {
                   try {
-                    const response = await fetch('/Legendas_27092025.csv');
+                    const response = await fetch(`/Legendas_27092025.csv?v=${Date.now()}`);
                     if (!response.ok) throw new Error('Não foi possível carregar as legendas padrão');
                     const blob = await response.blob();
                     const file = new File([blob], 'Legendas_27092025.csv', { type: 'text/csv' });
