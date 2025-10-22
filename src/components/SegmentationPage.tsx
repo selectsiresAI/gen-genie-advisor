@@ -900,6 +900,11 @@ export default function SegmentationPage({
       ...metricColumns.map(column => ({ wch: column.numeric ? 10 : 12 }))
     ];
 
+    // Aplicar formatação de datas
+    import('@/lib/excel-date-formatter').then(({ autoFormatDateColumns }) => {
+      autoFormatDateColumns(worksheet, headers, ['nascimento', 'data']);
+    });
+
     const workbook = XLSXUtils.book_new();
     XLSXUtils.book_append_sheet(workbook, worksheet, "Segmentacao");
     writeXLSXFile(workbook, "segmentacao_custom_index.xlsx");

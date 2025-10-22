@@ -377,35 +377,103 @@ const HerdPage: React.FC<HerdPageProps> = ({
       return;
     }
 
-    // Create CSV with all columns from females_denorm
-    const headers = ['Fazenda', 'Nome', 'Identificador', 'ID CDCB', 'Data Nascimento', 'Ordem de Parto', 'Categoria', 'Fonte', 'Pai NAAB', 'Avô Materno NAAB', 'BisAvô Materno NAAB', 'HHP$', 'TPI', 'NM$', 'CM$', 'FM$', 'GM$', 'F SAV', 'PTAM', 'CFP', 'PTAF', 'PTAF%', 'PTAP', 'PTAP%', 'PL', 'DPR', 'LIV', 'SCS', 'MAST', 'MET', 'RP', 'DA', 'KET', 'MF', 'PTAT', 'UDC', 'FLC', 'SCE', 'DCE', 'SSB', 'DSB', 'H LIV', 'CCR', 'HCR', 'FI', 'GL', 'EFC', 'BWC', 'STA', 'STR', 'DFM', 'RUA', 'RLS', 'RTP', 'FTL', 'RW', 'RLR', 'FTA', 'FLS', 'FUA', 'RUH', 'RUW', 'UCL', 'UDP', 'FTP', 'RFI', 'Beta-Casein', 'Kappa-Casein', 'GFI', 'Criado Em', 'Atualizado Em'];
-    const csvData = sortedFemales.map(female => [farm.farm_name, female.name, female.identifier || '', female.fonte === 'Predição' ? '' : (female.cdcb_id || ''), female.birth_date ? formatDate(female.birth_date) : '', female.parity_order || '', getAutomaticCategory(female.birth_date, female.parity_order), female.fonte || '', female.sire_naab || '', female.mgs_naab || '', female.mmgs_naab || '', female.hhp_dollar || '', female.tpi || '', female.nm_dollar || '', female.cm_dollar || '', female.fm_dollar || '', female.gm_dollar || '', female.f_sav || '', female.ptam || '', female.cfp || '', female.ptaf || '', female.ptaf_pct || '', female.ptap || '', female.ptap_pct || '', female.pl || '', female.dpr || '', female.liv || '', female.scs || '', female.mast || '', female.met || '', female.rp || '', female.da || '', female.ket || '', female.mf || '', female.ptat || '', female.udc || '', female.flc || '', female.sce || '', female.dce || '', female.ssb || '', female.dsb || '', female.h_liv || '', female.ccr || '', female.hcr || '', female.fi || '', female.gl || '', female.efc || '', female.bwc || '', female.sta || '', female.str || '', female.dfm || '', female.rua || '', female.rls || '', female.rtp || '', female.ftl || '', female.rw || '', female.rlr || '', female.fta || '', female.fls || '', female.fua || '', female.ruh || '', female.ruw || '', female.ucl || '', female.udp || '', female.ftp || '', female.rfi || '', female.beta_casein || '', female.kappa_casein || '', female.gfi || '', formatDate(female.created_at), female.updated_at ? formatDate(female.updated_at) : '']);
+    // Importar XLSX para exportação
+    import('xlsx').then(({ utils, writeFile }) => {
+      import('@/lib/excel-date-formatter').then(({ autoFormatDateColumns }) => {
+        const headers = ['Fazenda', 'Nome', 'Identificador', 'ID CDCB', 'Data Nascimento', 'Ordem de Parto', 'Categoria', 'Fonte', 'Pai NAAB', 'Avô Materno NAAB', 'BisAvô Materno NAAB', 'HHP$', 'TPI', 'NM$', 'CM$', 'FM$', 'GM$', 'F SAV', 'PTAM', 'CFP', 'PTAF', 'PTAF%', 'PTAP', 'PTAP%', 'PL', 'DPR', 'LIV', 'SCS', 'MAST', 'MET', 'RP', 'DA', 'KET', 'MF', 'PTAT', 'UDC', 'FLC', 'SCE', 'DCE', 'SSB', 'DSB', 'H LIV', 'CCR', 'HCR', 'FI', 'GL', 'EFC', 'BWC', 'STA', 'STR', 'DFM', 'RUA', 'RLS', 'RTP', 'FTL', 'RW', 'RLR', 'FTA', 'FLS', 'FUA', 'RUH', 'RUW', 'UCL', 'UDP', 'FTP', 'RFI', 'Beta-Casein', 'Kappa-Casein', 'GFI', 'Criado Em', 'Atualizado Em'];
+        
+        const dataRows = sortedFemales.map(female => [
+          farm.farm_name, 
+          female.name, 
+          female.identifier || '', 
+          female.fonte === 'Predição' ? '' : (female.cdcb_id || ''), 
+          female.birth_date || '', // Manter como string ISO, será convertido depois
+          female.parity_order || '', 
+          getAutomaticCategory(female.birth_date, female.parity_order), 
+          female.fonte || '', 
+          female.sire_naab || '', 
+          female.mgs_naab || '', 
+          female.mmgs_naab || '', 
+          female.hhp_dollar || '', 
+          female.tpi || '', 
+          female.nm_dollar || '', 
+          female.cm_dollar || '', 
+          female.fm_dollar || '', 
+          female.gm_dollar || '', 
+          female.f_sav || '', 
+          female.ptam || '', 
+          female.cfp || '', 
+          female.ptaf || '', 
+          female.ptaf_pct || '', 
+          female.ptap || '', 
+          female.ptap_pct || '', 
+          female.pl || '', 
+          female.dpr || '', 
+          female.liv || '', 
+          female.scs || '', 
+          female.mast || '', 
+          female.met || '', 
+          female.rp || '', 
+          female.da || '', 
+          female.ket || '', 
+          female.mf || '', 
+          female.ptat || '', 
+          female.udc || '', 
+          female.flc || '', 
+          female.sce || '', 
+          female.dce || '', 
+          female.ssb || '', 
+          female.dsb || '', 
+          female.h_liv || '', 
+          female.ccr || '', 
+          female.hcr || '', 
+          female.fi || '', 
+          female.gl || '', 
+          female.efc || '', 
+          female.bwc || '', 
+          female.sta || '', 
+          female.str || '', 
+          female.dfm || '', 
+          female.rua || '', 
+          female.rls || '', 
+          female.rtp || '', 
+          female.ftl || '', 
+          female.rw || '', 
+          female.rlr || '', 
+          female.fta || '', 
+          female.fls || '', 
+          female.fua || '', 
+          female.ruh || '', 
+          female.ruw || '', 
+          female.ucl || '', 
+          female.udp || '', 
+          female.ftp || '', 
+          female.rfi || '', 
+          female.beta_casein || '', 
+          female.kappa_casein || '', 
+          female.gfi || '', 
+          female.created_at || '', 
+          female.updated_at || ''
+        ]);
 
-    // Convert to CSV format
-    const csvContent = [headers.join(','), ...csvData.map(row => row.map(cell => {
-      // Escape commas and quotes in cell content
-      const cellStr = String(cell);
-      if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
-        return `"${cellStr.replace(/"/g, '""')}"`;
-      }
-      return cellStr;
-    }).join(','))].join('\n');
-
-    // Create and download file
-    const blob = new Blob([csvContent], {
-      type: 'text/csv;charset=utf-8;'
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `rebanho_${farm.farm_name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast({
-      title: "Exportação concluída",
-      description: `${sortedFemales.length} fêmeas exportadas com sucesso!`
+        // Criar worksheet
+        const worksheet = utils.aoa_to_sheet([headers, ...dataRows]);
+        
+        // Aplicar formatação automática de datas
+        autoFormatDateColumns(worksheet, headers);
+        
+        // Criar workbook e exportar
+        const workbook = utils.book_new();
+        utils.book_append_sheet(workbook, worksheet, 'Fêmeas');
+        
+        const fileName = `rebanho_${farm.farm_name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+        writeFile(workbook, fileName);
+        
+        toast({
+          title: "Exportação concluída",
+          description: `${sortedFemales.length} fêmeas exportadas com sucesso!`
+        });
+      });
     });
   };
   return <div className="min-h-screen bg-background">

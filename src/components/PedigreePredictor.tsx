@@ -494,6 +494,12 @@ const PedigreePredictor: React.FC = () => {
       headers,
       ...rows
     ]);
+    
+    // Aplicar formatação de datas
+    import('@/lib/excel-date-formatter').then(({ autoFormatDateColumns }) => {
+      autoFormatDateColumns(worksheet, headers);
+    });
+    
     const workbook = utils.book_new();
     utils.book_append_sheet(workbook, worksheet, 'Predições');
 

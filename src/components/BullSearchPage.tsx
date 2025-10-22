@@ -766,38 +766,46 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
   };
   const handleExport = () => {
     if (rankedBulls.length === 0) return;
-    const csvData = rankedBulls.map(bull => ({
-      NAAB: bull.code,
-      Nome: bull.name,
-      'Data Nascimento': bull.birth_date || '',
-      'HHP$': bull.hhp_dollar || 0,
-      TPI: bull.tpi || 0,
-      'NM$': bull.nm_dollar || 0,
-      'CM$': bull.cm_dollar || 0,
-      'FM$': bull.fm_dollar || 0,
-      'GM$': bull.gm_dollar || 0,
-      Score: bull.score?.toFixed(0) || 0
-    }));
+    
+    // Importar XLSX para exportação
+    import('xlsx').then(({ utils, writeFile }) => {
+      import('@/lib/excel-date-formatter').then(({ autoFormatDateColumns }) => {
+        const headers = ['NAAB', 'Nome', 'Registro', 'Empresa', 'Data Nasc.', 'Pai NAAB', 'Avô Materno', 'Score', 'HHP$', 'TPI', 'NM$', 'PTAM', 'CFP'];
+        
+        const dataRows = rankedBulls.map(bull => [
+          bull.code,
+          bull.name,
+          bull.registration || '-',
+          bull.company || '-',
+          bull.birth_date || '', // Manter como string ISO, será convertido depois
+          bull.sire_naab || '-',
+          bull.mgs_naab || '-',
+          bull.score?.toFixed(2) || '-',
+          bull.hhp_dollar || '-',
+          bull.tpi || '-',
+          bull.nm_dollar || '-',
+          bull.ptam || '-',
+          bull.cfp || '-'
+        ]);
 
-    // Create CSV content
-    const headers = Object.keys(csvData[0]);
-    const csvContent = [headers.join(','), ...csvData.map(row => Object.values(row).join(','))].join('\n');
-
-    // Download file
-    const blob = new Blob([csvContent], {
-      type: 'text/csv'
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `banco-touros-${farm.farm_name}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast({
-      title: "Exportação concluída",
-      description: "Arquivo CSV foi baixado com sucesso!"
+        // Criar worksheet
+        const worksheet = utils.aoa_to_sheet([headers, ...dataRows]);
+        
+        // Aplicar formatação automática de datas
+        autoFormatDateColumns(worksheet, headers);
+        
+        // Criar workbook e exportar
+        const workbook = utils.book_new();
+        utils.book_append_sheet(workbook, worksheet, 'Touros');
+        
+        const fileName = `touros_${new Date().toISOString().split('T')[0]}.xlsx`;
+        writeFile(workbook, fileName);
+        
+        toast({
+          title: "Exportação concluída",
+          description: "Arquivo XLSX foi baixado com sucesso!"
+        });
+      });
     });
   };
   return <div className="min-h-screen bg-background">

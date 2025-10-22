@@ -383,6 +383,12 @@ const ConversaoPage: React.FC = () => {
     const workbook = XLSX.utils.book_new();
     const aoa = [finalHeaders, ...convertedRows.map((row) => finalHeaders.map((header) => row[header]))];
     const sheet = XLSX.utils.aoa_to_sheet(aoa);
+    
+    // Aplicar formatação de datas
+    import('@/lib/excel-date-formatter').then(({ autoFormatDateColumns }) => {
+      autoFormatDateColumns(sheet, finalHeaders);
+    });
+    
     XLSX.utils.book_append_sheet(workbook, sheet, "Padronizado");
 
     const baseName = dataFileName ? dataFileName.replace(/\.(xlsx|csv)$/i, "") : "dados";

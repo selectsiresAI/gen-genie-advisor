@@ -297,6 +297,13 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
       ...result.predictions
     }));
     const ws = utils.json_to_sheet(exportData);
+    
+    // Aplicar formatação de datas
+    const headers = Object.keys(exportData[0] || {});
+    import('@/lib/excel-date-formatter').then(({ autoFormatDateColumns }) => {
+      autoFormatDateColumns(ws, headers);
+    });
+    
     const wb = utils.book_new();
     utils.book_append_sheet(wb, ws, 'Predições Nexus 1');
     writeFileXLSX(wb, 'Predicoes_Nexus1.xlsx');

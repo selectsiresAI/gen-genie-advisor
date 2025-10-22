@@ -656,36 +656,48 @@ function BotijaoVirtualPage({ client, farm, bulls: propBulls, selectedBulls = []
   };
 
   const exportBotijao = () => {
-    const csvData = botijao.itens.map(item => ({
-      NAAB: item.touro.code,
-      Nome: item.touro.name,
-      Empresa: item.touro.empresa || "-",
-      Tipo: item.tipo,
-      Doses: item.doses,
-      Preco: item.preco.toFixed(2),
-      Nov: item.distribuicao.Nov,
-      Prim: item.distribuicao.Prim,
-      Secund: item.distribuicao.Secund,
-      Mult: item.distribuicao.Mult,
-      Doadoras: item.distribuicao.Doadoras,
-      Intermediarias: item.distribuicao.Intermediarias,
-      Receptoras: item.distribuicao.Receptoras,
-      DataAdicao: new Date(item.dataAdicao).toLocaleDateString(),
-      Observacoes: item.observacoes || ""
-    }));
+    // Importar XLSX para exportação
+    import('xlsx').then(({ utils, writeFile }) => {
+      import('@/lib/excel-date-formatter').then(({ autoFormatDateColumns }) => {
+        const headers = ['NAAB', 'Nome', 'Empresa', 'Tipo', 'Doses', 'Preco', 'Nov', 'Prim', 'Secund', 'Mult', 'Doadoras', 'Intermediarias', 'Receptoras', 'DataAdicao', 'Observacoes'];
+        
+        const dataRows = botijao.itens.map(item => [
+          item.touro.code,
+          item.touro.name,
+          item.touro.empresa || "-",
+          item.tipo,
+          item.doses,
+          item.preco.toFixed(2),
+          item.distribuicao.Nov,
+          item.distribuicao.Prim,
+          item.distribuicao.Secund,
+          item.distribuicao.Mult,
+          item.distribuicao.Doadoras,
+          item.distribuicao.Intermediarias,
+          item.distribuicao.Receptoras,
+          item.dataAdicao, // Manter como string ISO, será convertido depois
+          item.observacoes || ""
+        ]);
 
-    const headers = Object.keys(csvData[0] || {});
-    const csv = [headers.join(",")]
-      .concat(csvData.map(row => headers.map(h => String((row as any)[h] ?? "")).join(",")))
-      .join("\n");
-    
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.setAttribute("download", `botijao-virtual-${farm.nome}-${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+        // Criar worksheet
+        const worksheet = utils.aoa_to_sheet([headers, ...dataRows]);
+        
+        // Aplicar formatação automática de datas
+        autoFormatDateColumns(worksheet, headers);
+        
+        // Criar workbook e exportar
+        const workbook = utils.book_new();
+        utils.book_append_sheet(workbook, worksheet, 'Botijão Virtual');
+        
+        const fileName = `botijao-virtual-${farm.nome}-${new Date().toISOString().split('T')[0]}.xlsx`;
+        writeFile(workbook, fileName);
+        
+        toast({
+          title: "Exportação concluída",
+          description: "Arquivo XLSX foi baixado com sucesso!"
+        });
+      });
+    });
   };
 
   return (

@@ -283,6 +283,13 @@ const buildResultInsertRows = (rows: BatchRow[], farmId: string): FemaleInsert[]
 
 const saveSheet = (data: Record<string, string>[], sheetName: string, filename: string, format: 'xlsx' | 'csv') => {
   const worksheet = utils.json_to_sheet(data);
+  
+  // Aplicar formatação de datas
+  const headers = Object.keys(data[0] || {});
+  import('@/lib/excel-date-formatter').then(({ autoFormatDateColumns }) => {
+    autoFormatDateColumns(worksheet, headers);
+  });
+  
   const workbook = utils.book_new();
   utils.book_append_sheet(workbook, worksheet, sheetName);
 
