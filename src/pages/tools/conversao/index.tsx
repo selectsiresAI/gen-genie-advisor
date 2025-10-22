@@ -163,7 +163,7 @@ const ConversaoPage: React.FC = () => {
       }
     });
 
-    if (bestHeader && bestScore >= 0.75) {
+    if (bestHeader && bestScore >= 0.25) {
       return {
         value: bestHeader,
         method: "fuzzy",
