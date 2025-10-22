@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { HelpCircle, Bug, Star, Sparkles } from "lucide-react";
 import { useAGFilters } from "@/features/auditoria/store";
 function useTenantId(): string | null {
   const filters = useAGFilters();
@@ -29,7 +30,6 @@ export default function HomeHintDialog({ userId = null }: HomeHintDialogProps) {
 
   const key = useMemo(() => storageKey(userId, tenantId), [userId, tenantId]);
   const [open, setOpen] = useState(false);
-  const [dontShow, setDontShow] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -44,12 +44,17 @@ export default function HomeHintDialog({ userId = null }: HomeHintDialogProps) {
   function closeDialog() {
     if (typeof window !== "undefined") {
       try {
-        if (dontShow) localStorage.setItem(key, "true");
+        localStorage.setItem(key, "true");
       } catch (error) {
         console.warn("HomeHintDialog: unable to persist preference", error);
       }
     }
     setOpen(false);
+  }
+
+  function handleStartTutorial() {
+    closeDialog();
+    // Tutorial será implementado futuramente
   }
 
   return (
@@ -60,33 +65,70 @@ export default function HomeHintDialog({ userId = null }: HomeHintDialogProps) {
         setOpen(true);
       }
     }}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Bem-vindo ao ToolSS!</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            Bem-vindo à Plataforma!
+          </DialogTitle>
           <DialogDescription>
-            Em caso de dúvidas, clique no botão <strong>Tutorial</strong> no topo da página para ver um tour guiado.
-            Você pode abrir o tour a qualquer momento.
+            Estamos aqui para ajudar você a aproveitar ao máximo todas as funcionalidades.
           </DialogDescription>
         </DialogHeader>
+        
+        <div className="space-y-4 mt-4">
+          <div className="flex gap-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <HelpCircle className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1">
+              <h4 className="font-semibold text-sm mb-1">Central de Ajuda</h4>
+              <p className="text-sm text-muted-foreground">
+                Acesse FAQs contextuais, guias e vídeos tutoriais pelo botão vermelho no canto inferior direito.
+              </p>
+            </div>
+          </div>
 
-        <div className="mt-2 text-sm text-muted-foreground">
-          Esta mensagem aparece apenas uma vez para cada usuário/fazenda.
+          <div className="flex gap-3 p-4 rounded-lg bg-orange-500/5 border border-orange-500/20">
+            <div className="h-10 w-10 rounded-full bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+              <Bug className="h-5 w-5 text-orange-500" />
+            </div>
+            <div className="flex-1">
+              <h4 className="font-semibold text-sm mb-1">Reporte de Erros</h4>
+              <p className="text-sm text-muted-foreground">
+                Encontrou um bug? Use o botão laranja flutuante para nos avisar rapidamente.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-3 p-4 rounded-lg bg-purple-500/5 border border-purple-500/20">
+            <div className="h-10 w-10 rounded-full bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+              <Star className="h-5 w-5 text-purple-500" />
+            </div>
+            <div className="flex-1">
+              <h4 className="font-semibold text-sm mb-1">Avalie a Plataforma</h4>
+              <p className="text-sm text-muted-foreground">
+                Sua opinião é importante! Compartilhe feedback sobre aparência, gráficos e usabilidade.
+              </p>
+            </div>
+          </div>
         </div>
-
-        <div className="mt-3 flex items-center gap-2">
-          <input
-            id="dontshow"
-            type="checkbox"
-            checked={dontShow}
-            onChange={(e) => setDontShow(e.target.checked)}
-            className="h-4 w-4"
-          />
-          <label htmlFor="dontshow" className="text-sm cursor-pointer">Não mostrar novamente</label>
+        
+        <div className="flex gap-3 mt-6">
+          <Button 
+            variant="outline" 
+            onClick={closeDialog}
+            className="flex-1"
+          >
+            Entendi
+          </Button>
+          <Button 
+            onClick={handleStartTutorial}
+            className="flex-1"
+          >
+            Iniciar Tutorial
+          </Button>
         </div>
-
-        <DialogFooter className="mt-4">
-          <Button onClick={closeDialog}>Ok</Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

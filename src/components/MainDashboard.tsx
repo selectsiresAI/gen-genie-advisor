@@ -29,6 +29,8 @@ import { useHerdStore } from '@/hooks/useHerdStore';
 import ConversaoPage from '@/pages/tools/conversao';
 import AuditoriaGeneticaPage from '@/pages/AuditoriaGeneticaPage';
 import { StagingMigrationButton } from './StagingMigrationButton';
+import { ErrorReportButton } from '@/components/feedback/ErrorReportButton';
+import { SatisfactionSurvey } from '@/components/feedback/SatisfactionSurvey';
 interface MainDashboardProps {
   user: User;
   onLogout: () => void;
@@ -762,6 +764,9 @@ Select Sires do Brasil</p>
       {selectedFarm && <FemaleUploadModal isOpen={showUploadModal} onClose={() => setShowUploadModal(false)} farmId={selectedFarm.farm_id} farmName={selectedFarm.farm_name} />}
       
       <HelpButton />
+      <ErrorReportButton />
+      <SatisfactionSurvey />
+      <HomeHintDialog userId={user?.id} />
     </div>;
 };
 export default MainDashboard;

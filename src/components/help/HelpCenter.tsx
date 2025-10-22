@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getHelpContent } from "./helpContent";
+import { SupportDialog } from "@/components/feedback/SupportDialog";
 
 interface HelpCenterProps {
   open: boolean;
@@ -16,6 +17,7 @@ interface HelpCenterProps {
 
 export function HelpCenter({ open, onOpenChange, context = 'dashboard' }: HelpCenterProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [supportOpen, setSupportOpen] = useState(false);
   
   // Obter conteúdo contextual baseado na página atual
   const helpContent = getHelpContent(context);
@@ -128,13 +130,19 @@ export function HelpCenter({ open, onOpenChange, context = 'dashboard' }: HelpCe
               <p className="text-sm text-muted-foreground mb-4">
                 Entre em contato com nossa equipe de suporte
               </p>
-              <Button className="w-full" size="sm">
+              <Button 
+                className="w-full" 
+                size="sm"
+                onClick={() => setSupportOpen(true)}
+              >
                 Falar com Suporte
               </Button>
             </CardContent>
           </Card>
         </div>
       </SheetContent>
+      
+      <SupportDialog open={supportOpen} onOpenChange={setSupportOpen} />
     </Sheet>
   );
 }
