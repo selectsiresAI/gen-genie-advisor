@@ -389,10 +389,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
             </div>
           </div>
           <div className="container mx-auto px-4 py-8">
-            <NexusApp
-              selectedFarmId={selectedFarm?.farm_id}
-              defaultFarmId={userProfile?.default_farm_id ?? null}
-            />
+            <NexusApp selectedFarmId={selectedFarm?.farm_id} defaultFarmId={userProfile?.default_farm_id ?? null} />
           </div>
         </div>;
     }
@@ -604,7 +601,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
       
       {/* Header */}
       <div className="border-b">
-        <div className="flex h-16 items-center px-4 gap-4" data-tour="dashboard:header">
+        <div data-tour="dashboard:header" className="flex h-16 items-center px-4 gap-4 bg-stone-50">
           <div className="flex items-center space-x-4">
             <img src={toolssLogo} alt="ToolSS Logo" className="h-10" />
             
@@ -647,10 +644,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <h3 className="text-xl font-semibold">Suas Fazendas</h3>
-                <HelpHint 
-                  content="Lista de todas as suas fazendas cadastradas. Clique em uma fazenda para visualizar detalhes ou criar uma nova."
-                  side="right"
-                />
+                <HelpHint content="Lista de todas as suas fazendas cadastradas. Clique em uma fazenda para visualizar detalhes ou criar uma nova." side="right" />
               </div>
               <Button onClick={handleCreateFarm} data-tour="home:criar">
                 <Plus className="w-4 h-4 mr-2" />
@@ -711,10 +705,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
           <div className="space-y-6" data-tour="home:resumo">
             <div className="flex items-center gap-2">
               <h3 className="text-xl font-semibold">Resumo da Conta</h3>
-              <HelpHint 
-                content="Visão geral da sua conta, incluindo número total de fazendas e animais cadastrados."
-                side="right"
-              />
+              <HelpHint content="Visão geral da sua conta, incluindo número total de fazendas e animais cadastrados." side="right" />
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
