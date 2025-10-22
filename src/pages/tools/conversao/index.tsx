@@ -10,6 +10,8 @@ import { normalizeKey, jaroWinkler, type LegendEntry } from "./utils";
 import { FileUploadCard } from "./components/FileUploadCard";
 import { LegendBankSummary } from "./components/LegendBankSummary";
 import { DetectionTable, type MappingRow, type MappingMethod } from "./components/DetectionTable";
+import { HelpButton } from "@/components/help/HelpButton";
+import { HelpHint } from "@/components/help/HelpHint";
 
 interface ParsedWorkbook {
   headers: string[];
@@ -382,9 +384,14 @@ const ConversaoPage: React.FC = () => {
 
   return (
     <div className="space-y-8">
+      <HelpButton context="conversao" />
+      
       <div className="space-y-2">
-        <Badge variant="secondary">Preview</Badge>
-        <h1 className="text-3xl font-bold">Conversão e padronização de planilhas</h1>
+        <div className="flex items-center gap-3">
+          <Badge variant="secondary">Preview</Badge>
+          <h1 className="text-3xl font-bold">Conversão e padronização de planilhas</h1>
+          <HelpHint content="Padronize planilhas com nomenclaturas diferentes usando detecção automática: banco de aliases > regex > fuzzy matching" />
+        </div>
         <p className="text-muted-foreground max-w-3xl">
           Faça o upload do modelo padrão, do banco de nomenclaturas e do arquivo de dados. A ToolSS sugere mapeamentos automáticos
           (priorizando o banco, depois regex e fuzzy) para converter cabeçalhos e gerar um arquivo padronizado com todas as PTAs e

@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Save, Trash2, Plus, Target, TrendingUp, Users, Milk, Heart, Activity } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { HelpButton } from "@/components/help/HelpButton";
+import { HelpHint } from "@/components/help/HelpHint";
 interface Farm {
   id: string;
   nome: string;
@@ -278,12 +280,14 @@ export default function MetasPage({
     return Math.min(100, Math.max(0, atual / meta * 100));
   };
   return <div className="min-h-screen bg-background p-6">
+      <HelpButton context="metas" />
+      
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-
+          <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold">Metas da Fazenda</h1>
+            <HelpHint content="Estabeleça objetivos mensuráveis em 4 áreas: Genética, Reproductiva, Produção e Populacional. Acompanhe o progresso em tempo real" />
           </div>
           <div className="flex items-center gap-3">
             <Button variant="outline" onClick={limparTodasMetas} className="text-red-600">

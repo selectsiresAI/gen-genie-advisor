@@ -1137,57 +1137,6 @@ export const helpContentMap: Record<string, HelpContent> = {
     }
   },
 
-  // Botijão Virtual
-  "botijao-virtual": {
-    faq: [
-      {
-        question: "Como adicionar touros ao Botijão?",
-        answer: "Selecione touros na Busca e clique em 'Enviar para Botijão'. Você pode complementar com doses manuais diretamente no módulo."
-      },
-      {
-        question: "Consigo controlar estoque de doses?",
-        answer: "Sim. Informe doses disponíveis, utilizadas e reservadas. O painel mostra saldo em tempo real e alerta quando faltar estoque."
-      },
-      {
-        question: "Posso calcular investimento?",
-        answer: "Preencha o custo por dose e despesas extras. O módulo calcula automaticamente investimento total e custo por prenhez esperada."
-      },
-      {
-        question: "Existe histórico de uso?",
-        answer: "Toda atualização gera registro na linha do tempo. Você pode exportar para auditoria."
-      },
-      {
-        question: "Como exportar o botijão?",
-        answer: "Clique em 'Exportar Botijão' para gerar PDF com composição, estoque, custos e recomendações."
-      }
-    ],
-    resources: [
-      {
-        title: "Guia: Botijão Virtual",
-        description: "Configuração de doses, custos e integração com o Plano",
-        type: "Guia"
-      },
-      {
-        title: "Vídeo: Controle de estoque genético",
-        description: "Acompanhe doses, consumo e reposição",
-        type: "Vídeo"
-      },
-      {
-        title: "Modelo de investimento",
-        description: "Planilha para comparar custo dos touros",
-        type: "Guia"
-      }
-    ],
-    hints: {
-      selectBulls: "Importe touros da lista ou adicione manualmente",
-      doses: "Registre doses disponíveis, reservadas e utilizadas",
-      investment: "Informe custos para calcular investimento total",
-      export: "Gere PDF completo com composição do botijão",
-      duplicate: "Duplique itens para ajustar rapidamente lotes semelhantes",
-      syncPlan: "Sincronize com a Projeção Genética para garantir doses suficientes"
-    }
-  },
-
   // Estrutural Populacional
   estrutural: {
     faq: [
@@ -1276,6 +1225,172 @@ export const helpContentMap: Record<string, HelpContent> = {
       search: "Use a busca para encontrar relatórios por nome ou tag",
       download: "Baixe qualquer arquivo em um clique",
       history: "Acesse o histórico de versões para restaurar documentos"
+    }
+  },
+
+  // Botijão Virtual
+  "botijao-virtual": {
+    faq: [
+      {
+        question: "O que é o Botijão Virtual?",
+        answer: "É uma ferramenta para gerenciar o inventário de sêmen da fazenda. Controle doses disponíveis, distribua por categoria de fêmeas, registre abastecimentos de nitrogênio e acompanhe o valor do estoque."
+      },
+      {
+        question: "Como adicionar touros ao botijão?",
+        answer: "Clique em 'Adicionar ao Botijão', busque o touro desejado, defina tipo (convencional/sexado), quantidade de doses, preço e distribua por categoria. Os dados são salvos automaticamente."
+      },
+      {
+        question: "Como distribuir doses por categoria?",
+        answer: "Na edição de cada touro, defina quantas doses alocar para: Novilhas, Primíparas, Secundíparas, Multíparas, Doadoras, Intermediárias e Receptoras. O sistema valida que a soma não exceda o estoque."
+      },
+      {
+        question: "Para que serve o registro de nitrogênio?",
+        answer: "Registre cada abastecimento de nitrogênio líquido com data, volume e observações. Fundamental para controle de custos e planejamento de reposição."
+      },
+      {
+        question: "Como exportar o inventário?",
+        answer: "Clique em 'Exportar' para baixar CSV completo com todos os touros, doses, distribuições e valores. Use para backup ou análise externa."
+      }
+    ],
+    resources: [
+      {
+        title: "Guia: Gestão de Estoque de Sêmen",
+        description: "Como organizar e controlar seu botijão virtual",
+        type: "Guia"
+      },
+      {
+        title: "Vídeo: Distribuição Estratégica",
+        description: "Como alocar doses por categoria de forma eficiente",
+        type: "Vídeo"
+      },
+      {
+        title: "Controle de Custos",
+        description: "Calcule o ROI do seu inventário genético",
+        type: "Guia"
+      }
+    ],
+    hints: {
+      addBull: "Adicione touros ao botijão para controlar inventário de sêmen",
+      stockType: "Diferencie sêmen convencional e sexado para planejamento correto",
+      distribution: "Distribua doses por categoria antes de fazer inseminações",
+      nitrogen: "Registre abastecimentos de nitrogênio para controle de custos",
+      stats: "Acompanhe estatísticas de doses totais, por tipo e valor do estoque",
+      export: "Exporte para CSV para backup ou análise em outras ferramentas",
+      price: "Defina o preço por dose para calcular o valor total do estoque",
+      categories: "7 categorias disponíveis para distribuição estratégica de doses",
+      sorting: "Ordene por nome, empresa ou tipo para encontrar touros rapidamente"
+    }
+  },
+
+  // Metas
+  metas: {
+    faq: [
+      {
+        question: "Para que servem as metas?",
+        answer: "Estabeleça objetivos mensuráveis em 4 áreas: Genética (PTAs), Reproductiva (taxas e intervalos), Produção (leite e qualidade) e Populacional (estrutura do rebanho). Acompanhe o progresso em tempo real."
+      },
+      {
+        question: "Como definir metas genéticas?",
+        answer: "Na aba 'Genéticas', defina valores atuais e metas desejadas para cada PTA (TPI, NM$, Milk, Fat, Protein, SCS, DPR, PTAT). O sistema calcula o percentual de progresso automaticamente."
+      },
+      {
+        question: "Posso customizar as metas?",
+        answer: "As metas padrão cobrem os principais indicadores, mas você pode adicionar novas metas ou modificar as existentes conforme necessidades específicas da fazenda."
+      },
+      {
+        question: "Como interpretar o progresso?",
+        answer: "Barras de progresso mostram visualmente quanto falta para atingir cada meta. Valores acima de 100% indicam que você já superou o objetivo definido."
+      },
+      {
+        question: "Os dados são salvos automaticamente?",
+        answer: "Sim. Todos os valores inseridos são salvos localmente em tempo real. Use o botão 'Salvar Metas' para registrar um checkpoint específico com data e hora."
+      }
+    ],
+    resources: [
+      {
+        title: "Guia: Definindo Metas Realistas",
+        description: "Como estabelecer objetivos alcançáveis e mensuráveis",
+        type: "Guia"
+      },
+      {
+        title: "Vídeo: Sistema de Metas",
+        description: "Tour completo pelas 4 categorias de metas",
+        type: "Vídeo"
+      },
+      {
+        title: "Metas e Estratégia Genética",
+        description: "Alinhe suas metas com o planejamento de acasalamentos",
+        type: "Guia"
+      }
+    ],
+    hints: {
+      geneticGoals: "Defina metas para PTAs alinhadas com seus objetivos de seleção",
+      reproductiveGoals: "Estabeleça taxas reprodutivas compatíveis com seu manejo",
+      productionGoals: "Configure metas de produção realistas para sua região",
+      populationGoals: "Planeje a estrutura populacional ideal do rebanho",
+      progress: "Acompanhe barras de progresso para identificar áreas críticas",
+      save: "Salve periodicamente para manter histórico de evolução das metas",
+      reset: "Use 'Reinicializar' apenas se quiser começar do zero",
+      tabs: "Navegue entre as 4 abas para gerenciar diferentes tipos de metas",
+      notes: "Use a aba de anotações para registrar estratégias e observações"
+    }
+  },
+
+  // Conversão de Arquivos
+  conversao: {
+    faq: [
+      {
+        question: "Para que serve a conversão de arquivos?",
+        answer: "Padronize planilhas com nomenclaturas diferentes (de centrais, laboratórios, consultorias) para o formato padrão da ToolSS. O sistema detecta automaticamente mapeamentos e sugere correções."
+      },
+      {
+        question: "Como funciona o processo de conversão?",
+        answer: "1) Faça upload do modelo padrão (chaves canônicas), 2) Opcionalmente adicione banco de nomenclaturas personalizadas, 3) Envie o arquivo de dados. O sistema sugere mapeamentos automaticamente."
+      },
+      {
+        question: "O que é o banco de nomenclaturas?",
+        answer: "É um arquivo que mapeia aliases personalizados para chaves canônicas. Exemplo: 'Merito_Liquido' → 'NM$'. Aliases do usuário têm prioridade sobre o banco padrão (seed)."
+      },
+      {
+        question: "Como funcionam as sugestões automáticas?",
+        answer: "O sistema usa 3 métodos em ordem de prioridade: 1) Banco de nomenclaturas (legend), 2) Regex (padrões conhecidos), 3) Fuzzy matching (similaridade). Cada sugestão tem um score de confiança."
+      },
+      {
+        question: "Preciso aprovar todas as sugestões?",
+        answer: "Sim. Revise e aprove cada mapeamento antes de exportar. Use 'Aprovar sugestões seguras' para aprovar automaticamente apenas mapeamentos com alta confiança (≥88% ou via legend)."
+      },
+      {
+        question: "O que acontece com colunas não mapeadas?",
+        answer: "Colunas não mapeadas do arquivo original são mantidas no arquivo final. Nada é perdido - apenas as colunas reconhecidas são padronizadas."
+      }
+    ],
+    resources: [
+      {
+        title: "Guia: Conversão de Planilhas",
+        description: "Passo a passo completo do processo de padronização",
+        type: "Guia"
+      },
+      {
+        title: "Vídeo: Banco de Nomenclaturas",
+        description: "Como criar e usar aliases personalizados",
+        type: "Vídeo"
+      },
+      {
+        title: "Métodos de Detecção",
+        description: "Entenda legend, regex e fuzzy matching",
+        type: "Guia"
+      }
+    ],
+    hints: {
+      modelFile: "Arquivo com as chaves canônicas (cabeçalhos corretos) da ToolSS",
+      legendFile: "Arquivo opcional com mapeamentos personalizados de aliases",
+      dataFile: "Arquivo CSV ou Excel com dados a serem padronizados",
+      priority: "Prioridade: banco usuário > seed padrão > regex > fuzzy",
+      confidence: "Scores ≥88% ou método 'legend' são considerados seguros",
+      approval: "Aprove sugestões seguras em lote ou revise individualmente",
+      manual: "Ajuste manualmente mapeamentos com baixa confiança",
+      export: "Arquivo final preserva todas as colunas originais + padronizadas",
+      validation: "Sistema valida que não haja conflitos nos mapeamentos"
     }
   }
 };

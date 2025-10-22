@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { BullSelector } from '@/components/BullSelector';
+import { HelpButton } from '@/components/help/HelpButton';
+import { HelpHint } from '@/components/help/HelpHint';
 
 
 // Types - Updated to match Supabase structure
@@ -688,9 +690,14 @@ function BotijaoVirtualPage({ client, farm, bulls: propBulls, selectedBulls = []
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
+      <HelpButton context="botijao-virtual" />
+      
       <div className="flex items-center justify-between mb-6 gap-4">
-        <div>
+        <div className="flex items-center gap-2">
           <h1 className="text-2xl font-bold">Botijão Virtual</h1>
+          <HelpHint content="Gerencie inventário de sêmen: controle doses, distribua por categoria, registre nitrogênio e acompanhe valor do estoque" />
+        </div>
+        <div>
           <p className="text-muted-foreground">Fazenda: {farm.nome}</p>
           <p className="text-xs text-muted-foreground">
             Última atualização: {new Date(botijao.dataAtualizacao).toLocaleString()}
