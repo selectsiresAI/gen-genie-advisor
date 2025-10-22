@@ -30,17 +30,22 @@ export const useActivityTracker = (user: User | null) => {
     if (!user) return;
 
     const startSession = async () => {
-      const { data, error } = await supabase
-        .from('user_activity_tracking')
-        .insert({
-          user_id: user.id,
-          session_start: new Date().toISOString(),
-        })
-        .select()
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from('user_activity_tracking')
+          .insert({
+            user_id: user.id,
+            session_start: new Date().toISOString(),
+          })
+          .select()
+          .single();
 
-      if (data && !error) {
-        sessionRef.current.sessionId = data.id;
+        if (data && !error) {
+          sessionRef.current.sessionId = data.id;
+        }
+      } catch (error) {
+        // Falha silenciosa - não quebrar o app
+        console.debug('Activity tracking initialization failed:', error);
       }
     };
 
@@ -56,13 +61,18 @@ export const useActivityTracker = (user: User | null) => {
 
     // Atualizar no banco
     const updateSession = async () => {
-      await supabase
-        .from('user_activity_tracking')
-        .update({
-          pages_visited: Array.from(sessionRef.current.pagesVisited),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', sessionRef.current.sessionId);
+      try {
+        await supabase
+          .from('user_activity_tracking')
+          .update({
+            pages_visited: Array.from(sessionRef.current.pagesVisited),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', sessionRef.current.sessionId);
+      } catch (error) {
+        // Falha silenciosa
+        console.debug('Activity tracking update failed:', error);
+      }
     };
 
     updateSession();
@@ -77,15 +87,20 @@ export const useActivityTracker = (user: User | null) => {
 
       const sessionTime = Math.floor((Date.now() - sessionRef.current.startTime) / 1000);
 
-      await supabase
-        .from('user_activity_tracking')
-        .update({
-          session_end: new Date().toISOString(),
-          total_session_time_seconds: sessionTime,
-          pages_visited: Array.from(sessionRef.current.pagesVisited),
-          features_used: Array.from(sessionRef.current.featuresUsed),
-        })
-        .eq('id', sessionRef.current.sessionId);
+      try {
+        await supabase
+          .from('user_activity_tracking')
+          .update({
+            session_end: new Date().toISOString(),
+            total_session_time_seconds: sessionTime,
+            pages_visited: Array.from(sessionRef.current.pagesVisited),
+            features_used: Array.from(sessionRef.current.featuresUsed),
+          })
+          .eq('id', sessionRef.current.sessionId);
+      } catch (error) {
+        // Falha silenciosa
+        console.debug('Activity tracking session end failed:', error);
+      }
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -102,13 +117,18 @@ export const useActivityTracker = (user: User | null) => {
 
     sessionRef.current.featuresUsed.add(featureName);
 
-    await supabase
-      .from('user_activity_tracking')
-      .update({
-        features_used: Array.from(sessionRef.current.featuresUsed),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', sessionRef.current.sessionId);
+    try {
+      await supabase
+        .from('user_activity_tracking')
+        .update({
+          features_used: Array.from(sessionRef.current.featuresUsed),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', sessionRef.current.sessionId);
+    } catch (error) {
+      // Falha silenciosa
+      console.debug('Activity tracking feature update failed:', error);
+    }
   };
 
   return { trackFeature };
