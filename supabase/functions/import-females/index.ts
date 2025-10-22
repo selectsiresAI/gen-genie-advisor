@@ -58,6 +58,21 @@ function validateDate(value: unknown): string | null {
 }
 
 function validateRecord(record: any, farmId: string): FemaleRecord | null {
+  // Remove campos gerenciados automaticamente pelo sistema (se existirem no CSV)
+  const forbiddenFields = ['id', 'farm_id', 'ptas', 'created_at', 'updated_at'];
+  let removedFields: string[] = [];
+  
+  forbiddenFields.forEach(field => {
+    if (record[field] !== undefined) {
+      removedFields.push(field);
+      delete record[field];
+    }
+  });
+  
+  if (removedFields.length > 0) {
+    console.log(`Campos ignorados (gerenciados pelo sistema): ${removedFields.join(', ')}`);
+  }
+  
   // Try to get name from 'name' or 'identifier' field
   let name = sanitizeString(record.name);
   if (!name && record.identifier) {
