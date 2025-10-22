@@ -534,6 +534,512 @@ export const helpContentMap: Record<string, HelpContent> = {
     }
   },
 
+  // Auditoria Step 3: Quartis Overview
+  "auditoria-step3": {
+    faq: [
+      {
+        question: "Como o sistema define exatamente os quartis Top 25% e Bottom 25%?",
+        answer: "Para cada PTA, o sistema ordena todos os animais de forma decrescente (melhores primeiro). O Top 25% são os primeiros N/4 animais (arredondado). O Bottom 25% são os N/4 animais com menores valores. Se N=100, cada quartil tem 25 animais."
+      },
+      {
+        question: "Por que algumas PTAs mostram Top 25% e Bottom 25% muito próximos?",
+        answer: "Indica baixa variabilidade genética para aquela característica no rebanho. Todos os animais são similares. Pode significar: seleção muito uniforme, poucos touros utilizados, ou característica pouco priorizada historicamente."
+      },
+      {
+        question: "O que significa quando Top 25% tem valor negativo?",
+        answer: "Significa que até os melhores animais do rebanho estão abaixo da base populacional (0). Indica necessidade urgente de introduzir genética superior para aquela característica (ex: SCS alto ou DPR baixo)."
+      },
+      {
+        question: "Como interpretar a diferença entre Top e Bottom?",
+        answer: "Diferença grande (>2× desvio padrão) = boa variabilidade para seleção. Pequena (<1 DP) = rebanho uniforme, difícil progredir apenas com seleção interna. Use a diferença para priorizar quais PTAs têm maior potencial de ganho genético."
+      },
+      {
+        question: "Como escolher quais PTAs analisar na Step 3?",
+        answer: "Inicie com características econômicas (HHP$, NM$, TPI) para visão macro. Depois expanda para gargalos conhecidos (ex: SCS alto, DPR baixo). Use 'Selecionar todas' apenas para exploração inicial, depois foque em 5-8 PTAs prioritárias."
+      },
+      {
+        question: "Posso exportar a seleção de PTAs como preset?",
+        answer: "Não diretamente na Step 3. Após definir quais PTAs são prioritárias aqui, anote-as e use nos Steps seguintes (4, 5, 6, 7) para manter consistência analítica em toda a auditoria."
+      },
+      {
+        question: "O que fazer quando o cálculo demora muito?",
+        answer: "Reduza o número de PTAs selecionadas. O processamento de 50+ PTAs em rebanhos grandes (>2000 animais) pode levar 10-15s. Selecione grupos menores (5-10 PTAs) e processe em lotes separados."
+      },
+      {
+        question: "Como identificar prioridades de melhoria usando a Step 3?",
+        answer: "Ordene as características por: 1) Impacto econômico (HHP$, PTAM, CFP), 2) Distância do Top 25% para meta, 3) Diferença Top-Bottom (quanto ganhar selecionando). PTAs com Top25% negativo ou muito distante do benchmark são prioridade máxima."
+      },
+      {
+        question: "Qual a relação entre as etapas da auditoria e a Segmentação?",
+        answer: "Step 3 mostra **o que melhorar** (características deficitárias). Segmentação mostra **quem melhorar** (animais superiores/inferiores). Use insights daqui para ajustar pesos na Segmentação: aumente peso de PTAs onde Top 25% está distante da meta."
+      },
+      {
+        question: "Como usar os quartis para decisões de descarte?",
+        answer: "Animais no Bottom 25% de PTAs críticas (SCS, DPR, e outras de fertilidade) são candidatos prioritários a descarte. Exporte essa lista, cruze com idade/produção para decisão final. Evite descartar animais jovens sem chance de melhorar."
+      },
+      {
+        question: "Por que algumas PTAs aparecem como '—' (sem dados)?",
+        answer: "Nenhum animal no rebanho possui valor para aquela PTA. Causas comuns: dados não importados, genótipo/pedigree incompleto, ou PTA não relevante para a raça (ex: PTAs de carne em rebanho leiteiro)."
+      },
+      {
+        question: "O N total varia entre PTAs. Por quê?",
+        answer: "Nem todos os animais têm todas as PTAs. Novilhas sem genótipo podem ter menos PTAs que vacas com pedigree completo. PTAs lineares (STA, STR, UDC) exigem classificação física. Foque análise em PTAs com N >100 para confiabilidade."
+      },
+      {
+        question: "Como comparar quartis entre fazendas?",
+        answer: "Não diretamente na Step 3. Exporte os dados de cada fazenda em CSV, compare externamente. Ou use Step 8 (Benchmark) para comparar Top% do rebanho com média global. Step 3 é análise interna, não comparativa."
+      },
+      {
+        question: "Posso filtrar quartis apenas para novilhas ou primíparas?",
+        answer: "No momento ainda não. Caso seja uma necessidade, envie na caixa de sugestões. Atualmente o cálculo considera todos os animais do rebanho."
+      },
+      {
+        question: "Como salvar análise de quartis para comparar mês a mês?",
+        answer: "Clique em 'Exportar' no canto superior direito do card. Salve o PDF/XLSX com data no nome (ex: Quartis_Jan2025.pdf). Compare versões antigas para ver evolução. Quartis melhorando = seleção eficaz."
+      },
+      {
+        question: "Como identificar trade-offs entre características?",
+        answer: "Compare quartis de PTAs relacionadas. Exemplo: Se Top 25% de PTAM é alto mas Top 25% de CFP é baixo, há trade-off produção vs fertilidade. Use para revisar estratégia de seleção e balancear objetivos no Plano Genético."
+      },
+      {
+        question: "O que fazer quando Top 25% está muito distante do benchmark setorial?",
+        answer: "Indica gap genético grande vs mercado. Ações: 1) Introduzir genética externa (sêmen/embriões de elite), 2) Revisar fornecedores de genética, 3) Ajustar metas no Plano (tornar mais ambiciosas), 4) Avaliar ROI de investimento em genômica."
+      },
+      {
+        question: "Como usar a Step 3 para validar estratégia de IA?",
+        answer: "Compare quartis antes/depois de mudar touros. Se após 2 anos usando touro A, o Top 25% das novilhas melhorou, a escolha foi boa. Se piorou ou estagnou, revise seleção de touros (use Step 2 para identificar quais touros usar/evitar)."
+      },
+      {
+        question: "Posso criar alertas automáticos baseados nos quartis?",
+        answer: "Não nativamente. Solicite ao desenvolvedor criar regras personalizadas. Exemplos: alerta se Top 25% de DPR <0, ou se diferença Top-Bottom de SCS <0.5 (baixa variabilidade). Útil para monitoramento proativo."
+      }
+    ],
+    resources: [
+      {
+        title: "Estatística Básica: Quartis e Percentis",
+        description: "Fundamentos de análise quartil",
+        type: "Guia"
+      }
+    ],
+    hints: {
+      selection: "Inicie com 5-8 PTAs econômicas, não todas",
+      interpretation: "Diferença Top-Bottom grande = alto potencial de seleção",
+      export: "Salve com data (Quartis_Jan2025.pdf) para comparação mensal"
+    }
+  },
+
+  // Auditoria Step 4: Progressão Genética
+  "auditoria-step4": {
+    faq: [
+      {
+        question: "O que significa 'Progressão Genética' na prática?",
+        answer: "É o ganho (ou perda) genético ao longo dos anos de nascimento. Gráfico mostra se animais mais novos são geneticamente superiores aos mais velhos. Tendência positiva = melhoramento funcionando. Negativa = alerta vermelho de regressão."
+      },
+      {
+        question: "Por que usamos ano de nascimento e não idade atual?",
+        answer: "Ano de nascimento representa a genética transmitida naquele momento (touros utilizados, qualidade das mães). Idade atual varia diariamente. Análise por ano de nascimento permite ver evolução da estratégia reprodutiva ao longo do tempo."
+      },
+      {
+        question: "O que é a 'linha de tendência' (trend line)?",
+        answer: "Regressão linear que suaviza as oscilações anuais, mostrando direção geral. Inclinação positiva = ganho genético médio por ano. Negativa = regressão. Valor em '/ano' indica quantos pontos de PTA você ganha (ou perde) anualmente."
+      },
+      {
+        question: "O que significa R² no gráfico de tendência?",
+        answer: "Mede quão bem a linha de tendência explica os dados (0 a 1). R²=0.9 = 90% da variação é explicada pela tendência linear (progressão consistente). R²<0.3 = muita oscilação, tendência fraca. Foque em PTAs com R²>0.5 para decisões estratégicas."
+      },
+      {
+        question: "Como interpretar anos com picos ou 'vales' no gráfico?",
+        answer: "Pico = ano excepcional (touro elite usado, safra de doadoras superior) ou objetivo extremado da característica. Vale = ano problemático (touro ruim, problemas reprodutivos, poucos nascimentos). Investigue causas: revise registros de IA, touros utilizados, eventos de manejo naquele ano."
+      },
+      {
+        question: "Por que a média anual oscila tanto entre anos?",
+        answer: "Oscilações naturais refletem: tamanho da amostra (anos com poucos nascimentos variam mais), touros específicos dominando aquele ano, ou safras de embriões concentradas. Use a tendência (linha) para ver padrão geral, ignore oscilações de anos com N<20."
+      },
+      {
+        question: "O que fazer quando a tendência é negativa?",
+        answer: "Alerta crítico! Significa regressão genética. Causas: touros de baixa qualidade, acasalamentos equivocados, foco em características não genéticas. AÇÃO: revisar seleção de touros, ajustar plano de metas, avaliar fornecedores de sêmen."
+      },
+      {
+        question: "Como usar progressão para prever genética futura?",
+        answer: "Extrapole a linha de tendência. Se ganho é +50 HHP$/ano e tendência é linear, em 3 anos você ganhará +150 HHP$ na média das novilhas. Use para calcular tempo necessário para atingir metas do Plano Genético. Considere R²: baixo = previsão menos confiável."
+      },
+      {
+        question: "O que é a 'Média Geral da Fazenda' (linha laranja tracejada)?",
+        answer: "Média ponderada de todas as fêmeas do rebanho (todos os anos). Serve como referência: anos acima da linha = melhores que a média histórica. Abaixo = piores. Útil para ver quantas safras já superaram a média geral."
+      },
+      {
+        question: "Por que devo mostrar/ocultar a média geral?",
+        answer: "Mostre para ver quais anos já superaram o padrão da fazenda (foco em quantos anos recentes estão acima). Oculte quando quiser focar apenas na tendência de ganho anual (inclinação), sem referência absoluta. Facilita visualização em gráficos com muitos anos."
+      },
+      {
+        question: "Posso comparar progressão de múltiplas PTAs lado a lado?",
+        answer: "Sim, mas não simultaneamente em 1 gráfico. Selecione 2-4 PTAs prioritárias, role verticalmente para comparar. PTAs com tendências divergentes (uma subindo, outra descendo) indicam trade-off: você ganha em uma mas perde em outra. Revise pesos do índice customizado."
+      },
+      {
+        question: "Como lidar com anos sem dados (gaps no gráfico)?",
+        answer: "Sistema pula anos sem nascimentos. Causas: problema de importação (data de nascimento vazia/incorreta), ou realmente sem nascimentos (crise, doença). Revise dados brutos na aba Rebanho. Gaps prejudicam cálculo de tendência, corrija se possível."
+      },
+      {
+        question: "Por que alguns anos têm N muito baixo (<10)?",
+        answer: "Poucos nascimentos ou muitos dados faltantes (PTAs vazias). Anos com N<10 são instáveis (1 animal excepcional distorce a média). Use filtro de categoria ou ano no topo da Auditoria para focar análise em anos robustos (N>20)."
+      },
+      {
+        question: "Posso filtrar apenas novilhas nascidas após 2020?",
+        answer: "Sim. Use o filtro 'Ano de Nascimento' no topo da página de Auditoria. Selecione intervalo desejado. Todos os steps (1 a 7) respeitam esse filtro. Útil para análise de 'nova genética' isolada dos animais antigos."
+      },
+      {
+        question: "Como exportar a progressão para apresentar ao técnico?",
+        answer: "Cada gráfico tem botão 'Exportar' (canto superior direito). Gera PDF com gráfico, tabela de dados e estatísticas (tendência, R²). Ou use 'Exportar Auditoria Completa' no final para relatório consolidado de todos os steps."
+      },
+      {
+        question: "Como identificar efeito de mudança de touros no gráfico?",
+        answer: "Procure mudanças bruscas de inclinação (antes/depois de introduzir touro novo). Se introduziu touro A em 2020 e a partir de 2021 a tendência acelerou, o touro está funcionando. Se a inclinação diminuiu, revise a escolha."
+      },
+      {
+        question: "O que significa quando R² é muito baixo (<0.3) mas há oscilações grandes?",
+        answer: "Indica alta variabilidade sem padrão claro. Causas: mudanças frequentes de estratégia de IA, inconsistência de fornecedores de sêmen, ou efeitos ambientais fortes (nutrição, manejo). Estabilize a estratégia para criar tendência consistente."
+      },
+      {
+        question: "Como usar a progressão para justificar investimento em genômica?",
+        answer: "Mostre que a tendência atual (ex: +30 HHP$/ano) é insuficiente para atingir metas em prazo desejado. Com genômica (seleção de doadoras + embriões), pode-se acelerar para +80 HHP$/ano. Calcule ROI: tempo economizado × valor por ponto de HHP$."
+      },
+      {
+        question: "Posso comparar progressão entre fazendas?",
+        answer: "Não diretamente na Step 4. Exporte gráficos de cada fazenda em PDF, compare visualmente (inclinações das tendências). Fazendas com inclinação maior = ganho genético mais rápido. Use para benchmark interno entre propriedades."
+      },
+      {
+        question: "Como detectar 'platô' genético (ganho estagnado)?",
+        answer: "Quando R² é alto (>0.7) mas inclinação é próxima de zero. Significa que a genética não está melhorando ao longo do tempo. Causas: atingiu limite da estratégia atual, touros de qualidade similar aos animais do rebanho. Solução: introduzir genética externa de elite."
+      },
+      {
+        question: "O que fazer quando a progressão é positiva mas a média geral está caindo?",
+        answer: "Possível erro de dados ou efeito de descarte seletivo. Se você está descartando animais de categorias específicas (ex: multíparas velhas), a média geral pode cair temporariamente. Verifique filtros e consistência dos dados importados."
+      },
+      {
+        question: "Como usar a Step 4 para validar impacto de embriões vs IA convencional?",
+        answer: "Marque anos em que foram usados embriões intensivamente. Se a média desses anos é significativamente maior (+200 HHP$), o investimento em embriões é justificado. Se diferença é pequena (<50 HHP$), revise estratégia ou fornecedores de embriões."
+      },
+      {
+        question: "Posso criar metas de ganho genético anual baseado na progressão?",
+        answer: "Sim. Use a inclinação atual como baseline (ex: +40 HHP$/ano). Defina meta ambiciosa mas realista (ex: +60 HHP$/ano). Ajuste estratégia de IA (melhores touros, mais embriões) para atingir. Monitore nos próximos anos se a nova inclinação está atingindo a meta."
+      },
+      {
+        question: "Como interpretar progressão quando há mudança de raça (ex: introdução de cruzamento)?",
+        answer: "PTAs de raças diferentes não são diretamente comparáveis. Filtre apenas animais da raça principal (Holstein puro) ou crie análises separadas por raça. Cruzamentos (Holstein × Jersey) podem distorcer a tendência se misturados."
+      },
+      {
+        question: "O sistema calcula intervalos de confiança da tendência?",
+        answer: "Não nativamente. A linha de tendência é uma regressão linear simples. Para intervalos de confiança, exporte os dados em CSV e use ferramentas estatísticas (R, Python) para calcular IC95%. Útil para decisões de alto risco (investimentos grandes)."
+      }
+    ],
+    resources: [
+      {
+        title: "Vídeo: Entendendo R² e Tendências",
+        description: "Interpretação de regressão linear",
+        type: "Vídeo"
+      }
+    ],
+    hints: {
+      trend: "Foque em PTAs com R²>0.5 (tendência confiável)",
+      extrapolation: "Use inclinação para prever tempo até meta",
+      alert: "Tendência negativa = alerta crítico de regressão"
+    }
+  },
+
+  // Auditoria Step 5: Comparação por Categoria
+  "auditoria-step5": {
+    faq: [
+      {
+        question: "O que este step faz diferente da Step 4 (Progressão Genética)?",
+        answer: "Step 4 = evolução ao longo do tempo (anos). Step 5 = comparação **entre categorias etárias** (Novilhas vs Primíparas vs Multíparas) em um **ponto no tempo** (rebanho atual). Use Step 5 para ver diferenças entre gerações agora."
+      },
+      {
+        question: "Como o sistema detecta as categorias automaticamente?",
+        answer: "Busca colunas com nomes típicos (Categoria, category, age_group) e valida se contêm valores conhecidos (Bezerra, Novilha, Primípara...). Se não encontrar, tenta calcular pela coluna 'Paridade'. Se falhar, busca no localStorage (cache) de sessões anteriores."
+      },
+      {
+        question: "O que é o gráfico 'Radar' e como interpretar?",
+        answer: "Gráfico de radar (aranha) mostra múltiplas PTAs simultaneamente em eixos radiais. Área maior = grupo superior. Compare os 2 polígonos: características onde um grupo se destaca aparecem como 'pontas' no radar. Útil para ver perfis genéticos de forma visual."
+      },
+      {
+        question: "Por que os valores no radar são normalizados (0-100)?",
+        answer: "PTAs têm escalas diferentes (HHP$ em centenas, SCS em unidades). Normalização transforma tudo para 0-100 baseado nos valores mínimo e máximo presentes nos 2 grupos. 100 = melhor dos dois grupos. 0 = pior. Permite comparação visual justa."
+      },
+      {
+        question: "Como escolher quais 2 grupos comparar?",
+        answer: "Depende do objetivo: 1) **Novilhas vs Primíparas**: ver impacto do primeiro parto. 2) **Primíparas vs Multíparas**: avaliar longevidade genética. 3) **Novilhas vs Multíparas**: medir ganho geracional (maior diferença esperada). Evite comparar Bezerras (dados incompletos)."
+      },
+      {
+        question: "Posso comparar 3 ou mais grupos simultaneamente?",
+        answer: "Não. Step 5 suporta apenas 2 grupos. Para comparar 3+, faça múltiplas comparações 2 a 2 (ex: A vs B, A vs C, B vs C). Ou use Step 3 (Quartis) para ver todas as categorias juntas em formato tabular."
+      },
+      {
+        question: "Como filtrar grupos por outras características (origem, fazenda)?",
+        answer: "Não diretamente aqui. Use filtros gerais da Auditoria (topo da página) antes de acessar Step 5. Ou exporte dados brutos e filtre externamente. Step 5 trabalha com categorias etárias pré-definidas."
+      },
+      {
+        question: "Quais características devo incluir na tabela vs no radar?",
+        answer: "**Tabela:** 5-8 características prioritárias (HHP$, TPI, NM$, PTAM, CFP, SCS, DPR). **Radar:** 8-12 características (adicione lineares importantes: PTAT, UDC, PL). Tabela para números precisos, radar para padrão visual. Muitas características (>15) poluem o radar."
+      },
+      {
+        question: "Por que algumas PTAs aparecem zeradas no radar?",
+        answer: "Nenhum animal dos 2 grupos possui valor para aquela PTA. Remove automaticamente do radar para evitar distorção. Verifique se dados de genótipo/pedigree estão completos. PTAs lineares exigem classificação física."
+      },
+      {
+        question: "Como salvar configuração de PTAs para reusar?",
+        answer: "Atualmente não há preset. Anote as PTAs selecionadas ou exporte a configuração em PDF (botão 'Exportar'). Na próxima sessão, reselecione manualmente. Ou use navegador com auto-preenchimento de formulários para acelerar."
+      },
+      {
+        question: "Como usar a comparação para decisões de seleção?",
+        answer: "Se Novilhas superam Primíparas em características-chave (HHP$, TPI), continue estratégia atual (touros bons). Se Primíparas são melhores, investigue: touros recentes piores? Problema de IA? Ajuste imediatamente antes de deteriorar mais gerações."
+      },
+      {
+        question: "O que significa quando valores brutos são muito diferentes dos normalizados?",
+        answer: "Normalização (0-100) é relativa aos 2 grupos. Se Grupo A tem HHP$ +500 e B +1000, A pode aparecer como 0 e B como 100, mas ambos são positivos. Sempre consulte valores brutos (tooltip ou tabela) para decisões reais."
+      },
+      {
+        question: "Como identificar trade-offs genéticos no radar?",
+        answer: "Procure características onde os grupos se invertem: Grupo A melhor em produção (PTAM alto), Grupo B melhor em saúde (SCS baixo). Indica histórico de seleção conflitante. Use para ajustar estratégia futura: balancear com índice customizado na Segmentação."
+      },
+      {
+        question: "Como interpretar quando Novilhas são piores que Multíparas?",
+        answer: "Alerta crítico! Indica regressão genética recente (touros ruins, embriões de baixa qualidade, ou acasalamentos equivocados). Revise imediatamente: Step 2 (quais touros estão sendo usados), Step 4 (tendência de progressão), e ajuste estratégia de IA."
+      },
+      {
+        question: "Posso comparar mesma categoria entre diferentes anos de nascimento?",
+        answer: "Não diretamente na Step 5 (compara categorias etárias). Use Step 4 (Progressão) para comparar anos. Ou filtre rebanho por ano de nascimento (topo da Auditoria) e compare Novilhas de 2020 vs Novilhas de 2023 em duas sessões separadas."
+      },
+      {
+        question: "Como usar a Step 5 para avaliar impacto de programa de embriões?",
+        answer: "Se usou embriões intensivamente em Novilhas (e não em Multíparas), compare os dois grupos. Novilhas com HHP$ 200+ pontos superiores = programa funcionou. Se diferença <100 pontos, revise fornecedores ou doadoras dos embriões."
+      },
+      {
+        question: "O que fazer quando o radar mostra perfis muito similares?",
+        answer: "Indica que a genética entre gerações é uniforme (pouca evolução). Causas: touros muito similares ao longo dos anos, ou rebanho já atingiu 'platô' genético. Solução: introduzir genética externa de elite para renovar variabilidade."
+      },
+      {
+        question: "Como exportar comparação para compartilhar com técnico?",
+        answer: "Clique em 'Exportar' no canto superior direito. Gera PDF com radar, tabela e estatísticas. Inclua anotações sobre insights (ex: 'Novilhas superiores em DPR, manter estratégia atual'). Útil para reuniões técnicas."
+      },
+      {
+        question: "Posso criar alertas automáticos baseados na comparação?",
+        answer: "Não nativamente. Solicite ao desenvolvedor criar regras. Exemplos: alerta se Novilhas têm HHP$ 50+ pontos inferior a Multíparas (regressão), ou se diferença entre grupos é <10 pontos (estagnação). Útil para monitoramento contínuo."
+      },
+      {
+        question: "Como usar a Step 5 para decisões de descarte seletivo?",
+        answer: "Se Multíparas têm genética muito inferior às Novilhas (gap >300 HHP$), priorize descarte de Multíparas velhas (>5 partos) mesmo com produção razoável. Libere espaço para Novilhas geneticamente superiores (maior retorno futuro)."
+      },
+      {
+        question: "O sistema considera efeitos ambientais na comparação?",
+        answer: "Não. A comparação é **genética pura** (PTAs), não produção observada. Efeitos ambientais (nutrição, manejo) não são considerados. Se quiser comparar produção real (leite, gordura), use módulo 'Rebanho' com filtros por categoria."
+      },
+      {
+        question: "Como validar se a comparação está correta?",
+        answer: "Cruze com Step 3 (Quartis). Se Novilhas têm Top 25% de HHP$ maior que Multíparas, isso deve aparecer na Step 5 (Novilhas superiores no radar). Se houver inconsistência, revise dados (possível problema de importação ou filtros aplicados)."
+      }
+    ],
+    resources: [
+      {
+        title: "Guia: Comparação Categórica",
+        description: "Novilhas vs Vacas: o que analisar",
+        type: "Guia"
+      }
+    ],
+    hints: {
+      groups: "Novilhas vs Multíparas = maior diferença esperada (ganho geracional)",
+      radar: "Área maior = grupo superior naquelas PTAs",
+      normalization: "Sempre consulte valores brutos para decisões reais"
+    }
+  },
+
+  // Auditoria Step 6: Quartis de Índices
+  "auditoria-step6": {
+    faq: [
+      {
+        question: "Qual a diferença entre Step 3 (Quartis Overview) e Step 6 (Quartis Índices)?",
+        answer: "Step 3 = quartis de PTAs individuais (uma por vez). Step 6 = quartis baseados em índices econômicos (HHP$, TPI, NM$, FM$, CM$) e mostra como os TOP 25% desse índice diferem nas PTAs subjacentes. Step 6 responde: 'Se eu selecionar animais pelo TPI, como ficam as outras PTAs?'"
+      },
+      {
+        question: "O que são 'Índice A' e 'Índice B'?",
+        answer: "São dois índices econômicos escolhidos para comparação. Exemplo: Índice A = HHP$ (lucro), Índice B = TPI (genética pura). Sistema classifica animais por cada índice separadamente e mostra como os Top 25% de cada um diferem. Útil para ver trade-offs entre objetivos."
+      },
+      {
+        question: "Como escolher quais índices comparar?",
+        answer: "Depende da estratégia: **HHP$ vs NM$**: lucro geral vs mérito líquido. **TPI vs FM$**: genética de elite vs foco em gordura. **CM$ vs HHP$**: mercado de queijo vs lucro líquido. Comece com HHP$ (sempre) e compare com seu objetivo secundário."
+      },
+      {
+        question: "O que significa a linha 'Difference' (diferença) na tabela?",
+        answer: "Mostra a diferença entre Top 25% do Índice A e Top 25% do Índice B para cada PTA. Valores positivos = Índice A superior naquela PTA. Negativos = Índice B superior. Útil para ver **exatamente onde** os dois índices divergem."
+      },
+      {
+        question: "Como interpretar valores positivos vs negativos na linha Difference?",
+        answer: "Positivo (verde) = Top 25% do Índice A tem média maior naquela PTA. Exemplo: Difference PTAM = +500 → animais top HHP$ produzem 500 lbs a mais que top TPI. Negativo = Índice B é superior. Magnitude indica importância do trade-off."
+      },
+      {
+        question: "Qual o significado prático da diferença entre Top25 e Bottom25?",
+        answer: "Magnitude do gap genético interno. Diferença grande (ex: HHP$ Top25=+800, Bottom25=-200) = potencial enorme de ganho selecionando apenas interno. Pequena = baixa variabilidade, precisa introduzir genética externa (sêmen/embriões)."
+      },
+      {
+        question: "Por que alguns índices têm diferença próxima de zero?",
+        answer: "Ambos os índices (A e B) ponderam aquela PTA de forma similar, então os Top 25% de cada um são geneticamente parecidos. Exemplo: SCS geralmente tem peso similar em HHP$ e NM$, então a diferença é pequena. Foque em PTAs com diferença >100 para insights estratégicos."
+      },
+      {
+        question: "Como usar a tabela para escolher qual índice seguir?",
+        answer: "Identifique qual índice tem Top 25% mais alinhado com suas metas reais. Se prioriza produção de leite (PTAM), escolha o índice onde Difference em PTAM é positivo. Se prioriza saúde (SCS baixo, DPR alto), escolha o índice que pontua melhor nessas PTAs."
+      },
+      {
+        question: "Posso comparar índices customizados (criados na Segmentação)?",
+        answer: "Não diretamente. Step 6 só suporta índices econômicos padrão (HHP$, TPI, NM$, FM$, CM$). Para avaliar índice customizado, use Segmentação (classificação Superior/Intermediário/Inferior) e depois vá à Step 3 para ver quartis das PTAs individuais."
+      },
+      {
+        question: "Por que o botão 'Atualizar' existe se a tabela já carrega automaticamente?",
+        answer: "Carregamento automático ocorre ao entrar no step. Use 'Atualizar' quando: mudar filtros gerais (ano, categoria), ou após importar novos dados. Força recálculo dos quartis. Útil durante sessões longas para garantir dados frescos."
+      },
+      {
+        question: "Como exportar apenas a linha 'Difference' para análise?",
+        answer: "Clique em 'Exportar' no canto superior direito. Gera XLSX com 3 abas: IndexA, IndexB, Difference. Abra a aba Difference no Excel, filtre/ordene por magnitude. Ou copie diretamente da tabela (Ctrl+C) para colar em planilha externa."
+      },
+      {
+        question: "Como usar a Step 6 para decidir entre HHP$ e TPI?",
+        answer: "Compare as linhas Difference. Se HHP$ tem Top 25% muito superior em PTAM (+500) mas inferior em PTAT (-50), e você prioriza produção, siga HHP$. Se prioriza conformação/longevidade, siga TPI. Não há 'certo' ou 'errado', depende da sua estratégia de mercado."
+      },
+      {
+        question: "O que fazer quando os Top 25% dos dois índices são muito similares?",
+        answer: "Indica que ambos os índices selecionam animais parecidos. Nesse caso, escolha o índice mais simples de usar ou mais conhecido pelo mercado (ex: TPI é padrão setorial). Ou crie índice customizado na Segmentação com pesos ajustados às suas prioridades."
+      },
+      {
+        question: "Como identificar características 'conflitantes' entre índices?",
+        answer: "Procure PTAs onde a diferença é grande e negativa. Exemplo: HHP$ prioriza produção (+300 PTAM) mas sacrifica fertilidade (-100 DPR). Se fertilidade é crítica para você, ajuste estratégia: use NM$ (mais balanceado) ou crie índice customizado."
+      },
+      {
+        question: "Posso usar a Step 6 para validar índices de fornecedores de genética?",
+        answer: "Sim. Se um fornecedor usa índice proprietário (ex: 'Índice Fazenda Feliz'), compare os animais classificados como 'Top' pelo índice deles vs Top 25% do HHP$. Se houver divergência grande (>200 pontos), questione a metodologia do fornecedor."
+      },
+      {
+        question: "O que fazer quando Top25 do Índice A tem N muito diferente de Índice B?",
+        answer: "Não deve acontecer (ambos são sempre 25% do rebanho total). Se ocorrer, indica bug ou dados inconsistentes. Verifique se a coluna do índice está preenchida para todos os animais. Relate o problema com screenshot no suporte."
+      },
+      {
+        question: "Posso adicionar mais índices além dos 5 padrão (HHP$, TPI, NM$, FM$, CM$)?",
+        answer: "Não sem modificar o código. Se você usa índice proprietário (ex: Índice Genômico ABS, Índice Gir Leiteiro), solicite ao desenvolvedor adicionar na lista INDEX_OPTIONS. Sistema é extensível, mas requer atualização técnica."
+      },
+      {
+        question: "Como usar a Step 6 para decisões de compra de embriões?",
+        answer: "Compare o índice usado pela central de embriões (ex: TPI) com HHP$. Se a diferença em PTAs-chave (PTAM, CFP) é >200 pontos, negocie preço ou busque fornecedor cujo índice esteja mais alinhado com HHP$ (seu objetivo econômico)."
+      },
+      {
+        question: "O sistema considera seleção de sexo (sêmen sexado) na análise?",
+        answer: "Não. A Step 6 analisa apenas genética pura (PTAs), não estratégia de IA. Para simular impacto de sêmen sexado, use módulo 'Plano Genético' (Calculadora de Reposição) que permite definir % de sexado por categoria."
+      },
+      {
+        question: "Como criar alerta se a diferença entre índices ultrapassar threshold?",
+        answer: "Não nativamente. Solicite ao desenvolvedor criar regra personalizada. Exemplo: alerta se Difference em DPR entre HHP$ e NM$ >100 (sacrifício excessivo de fertilidade). Útil para revisão periódica de estratégia."
+      }
+    ],
+    resources: [
+      {
+        title: "Documentação: Índices Econômicos (HHP$, TPI, NM$)",
+        description: "O que cada índice prioriza",
+        type: "Guia"
+      }
+    ],
+    hints: {
+      comparison: "Comece sempre com HHP$ vs seu objetivo secundário",
+      difference: "Foque em PTAs com diferença >100 (trade-offs significativos)",
+      strategy: "Escolha índice alinhado com suas metas de mercado"
+    }
+  },
+
+  // Auditoria Step 7: Distribuição de PTAs
+  "auditoria-step7": {
+    faq: [
+      {
+        question: "O que são 'bins' e como afetam o histograma?",
+        answer: "Bins são intervalos (faixas) que agrupam os valores. Sistema usa bins fixos. Exemplo: se HHP$ varia de 0 a 1000, cada bin agrupa 50 pontos (0-50, 50-100...). Mais bins = mais detalhamento mas barras menores. 20 é equilíbrio ideal para visualização."
+      },
+      {
+        question: "Por que usar distribuição em vez de média simples?",
+        answer: "Média esconde variabilidade. Exemplo: Média HHP$ = 400, mas distribuição mostra 2 picos (um em 200, outro em 600 = rebanho bimodal). Distribuição revela: assimetria, outliers, múltiplas subpopulações. Essencial para decisões de seleção e cruzamento."
+      },
+      {
+        question: "Como interpretar histograma 'normal' vs 'assimétrico'?",
+        answer: "**Normal** (sino): Maioria dos animais próximo à média, poucos nos extremos. Indica boa homogeneidade. **Assimétrico** (cauda longa): Muitos animais em um extremo, poucos no outro. Exemplo: SCS com cauda à direita = alguns animais com mastite crônica. Identifique e descarte os outliers."
+      },
+      {
+        question: "O que é distribuição 'bimodal' e o que significa?",
+        answer: "Dois picos distintos no histograma. Indica duas subpopulações. Causas comuns: mistura de raças (Holstein puro + cruzado), duas estratégias de IA (touro elite + touro barato), ou importação recente de genética externa. Investigue causas para direcionar seleção."
+      },
+      {
+        question: "Como identificar outliers no histograma?",
+        answer: "Procure barras isoladas nos extremos (longe do pico principal). Exemplo: HHP$ com maioria em 300-500, mas 5 animais em 1000+. Esses são outliers (potenciais doadoras) ou erros de dados. Valide com tabela individual antes de decisões."
+      },
+      {
+        question: "O que fazer com animais na cauda inferior (piores 5%)?",
+        answer: "Candidatos prioritários a descarte. Cruze com: idade (velhas com baixa genética = descarte imediato), problemas de saúde (SCS alto, mastite), baixa produção. Evite descartar novilhas (ainda não provaram potencial). Exporte lista para análise detalhada."
+      },
+      {
+        question: "Como usar distribuição para definir gates na Segmentação?",
+        answer: "Veja onde estão os 'cortes naturais'. Exemplo: HHP$ com vale em 400 → use 400 como gate entre Superior e Intermediário. Distribuição mostra se gates escolhidos fazem sentido estatístico ou são arbitrários. Ajuste gates para coincidir com vales do histograma."
+      },
+      {
+        question: "Por que alguns histogramas têm picos no zero?",
+        answer: "Muitos animais com PTA exatamente zero. Causas: 1) Base populacional (PTA=0 por definição), 2) Animais sem genótipo/pedigree (sistema atribui 0), 3) PTA irrelevante para o rebanho. Se >30% está em zero, investigue qualidade dos dados."
+      },
+      {
+        question: "Como comparar distribuições entre fazendas?",
+        answer: "Exporte histogramas de cada fazenda (PDF), coloque lado a lado. Compare: posição do pico (fazenda A tem média maior?), amplitude (fazenda B tem mais variabilidade?), assimetria. Ou use ferramenta externa (R, Excel) para sobrepor histogramas."
+      },
+      {
+        question: "Posso salvar a seleção de PTAs para reusar?",
+        answer: "Sistema inicia sempre em HHP$. Reselecione manualmente a cada sessão. Ou anote PTAs prioritárias (ex: HHP$, TPI, PTAM, SCS, DPR) e marque rapidamente. Considere criar checklist pessoal para acelerar."
+      },
+      {
+        question: "Como interpretar N total diferente entre PTAs?",
+        answer: "Normal. Nem todos os animais têm todas as PTAs. Novilhas sem genótipo = menos PTAs. PTAs lineares exigem classificação. Foque análise em PTAs com N >100 (amostra robusta). N <50 = distribuição instável, interprete com cautela."
+      },
+      {
+        question: "Como detectar efeito de programa de embriões na distribuição?",
+        answer: "Se usou embriões intensivamente em anos recentes, filtre rebanho por ano de nascimento (ex: 2022-2024). Compare distribuição de HHP$ desses animais vs todo o rebanho. Se há pico à direita (animais de alto valor), programa funcionou."
+      },
+      {
+        question: "O que significa quando a distribuição tem 'cauda longa' à direita?",
+        answer: "Poucos animais de altíssimo valor genético (outliers positivos). Causas: embriões de elite, touros genômicos top, ou importação de genética externa. AÇÃO: identifique esses animais (Step 3, Top 25%), use como doadoras, multiplique genética."
+      },
+      {
+        question: "Como usar distribuição para estimar impacto de descarte seletivo?",
+        answer: "Remova mentalmente a cauda inferior (5-10% piores). Recalcule média apenas com os restantes. Exemplo: média atual HHP$ = 400, removendo 10% piores → média sobe para 450. Ganho estimado = +50 HHP$/animal apenas com descarte."
+      },
+      {
+        question: "Posso criar grupos de seleção baseado nos vales da distribuição?",
+        answer: "Sim. Se distribuição mostra vale em 350 e 650 HHP$, crie 3 grupos: <350 (descarte), 350-650 (manutenção), >650 (elite multiplicação). Use esses valores como gates na Segmentação para automação."
+      },
+      {
+        question: "Como interpretar distribuições muito achatadas (platykurtic)?",
+        answer: "Animais espalhados uniformemente em ampla faixa de valores (baixa concentração). Indica alta variabilidade genética interna. VANTAGEM: grande potencial de ganho por seleção. DESVANTAGEM: rebanho desuniforme, dificulta manejo padronizado."
+      },
+      {
+        question: "O que fazer quando a distribuição tem múltiplos picos (multimodal)?",
+        answer: "Cada pico representa subpopulação distinta. Investigue causas: touros específicos (Step 2), categorias etárias (Step 5), ou origens diferentes (genômica vs pedigree). Decida: manter diversidade (múltiplos picos) ou unificar (focar em 1 pico)?"
+      },
+      {
+        question: "Por que alguns histogramas ficam 'vazios' (poucas barras)?",
+        answer: "Poucos animais com aquela PTA, ou valores muito concentrados. Se N <30, o histograma não é representativo. Aumente amostra (remova filtros de categoria/ano) ou foque em PTAs com dados mais completos."
+      }
+    ],
+    resources: [
+      {
+        title: "Estatística Descritiva: Distribuições",
+        description: "Normal, assimétrica, bimodal",
+        type: "Guia"
+      }
+    ],
+    hints: {
+      outliers: "Barras isoladas nos extremos = potenciais doadoras ou erros",
+      gates: "Use vales da distribuição para definir gates na Segmentação",
+      bimodal: "Dois picos = duas subpopulações (investigue causas)"
+    }
+  },
+
   // Nexus 1 - Predição Genômica
   "nexus1-genomic": {
     faq: [
@@ -940,344 +1446,6 @@ export const helpContentMap: Record<string, HelpContent> = {
       reset: "Use 'Reinicializar' para voltar aos padrões sugeridos",
       save: "Salve as metas para atualizar o dashboard geral",
       export: "Gere um resumo em PDF para reuniões de alinhamento"
-    }
-  },
-
-  // Auditoria - Step 1 a Step 8
-  "auditoria-step1": {
-    faq: [
-      {
-        question: "Qual o objetivo do Step 1?",
-        answer: "Mapear parentesco (pai, avô e bisavô maternos) para identificar possíveis gargalos de consanguinidade."
-      },
-      {
-        question: "Como interpretar o status 'Incompleto'?",
-        answer: "Indica registros com pedigree parcial. Priorize completar essas informações para melhorar as análises seguintes."
-      },
-      {
-        question: "Existe alerta de consanguinidade?",
-        answer: "Sim. Se a porcentagem de parentesco completo de um mesmo touro exceder 25%, mostramos um aviso de risco."
-      },
-      {
-        question: "Posso exportar o levantamento?",
-        answer: "Clique em 'Exportar Detalhamento' para baixar a lista com todos os animais e status de pedigree."
-      },
-      {
-        question: "Como usar esses dados no Nexus?",
-        answer: "Complete pedigrees pendentes e reprocessar no Nexus 2 para obter predições mais precisas."
-      }
-    ],
-    resources: [
-      {
-        title: "Guia: Auditoria Step 1",
-        description: "Diagnóstico de pedigree e ações corretivas",
-        type: "Guia"
-      },
-      {
-        title: "Checklist de pedigree",
-        description: "Campos mínimos para manter o cadastro confiável",
-        type: "Guia"
-      }
-    ],
-    hints: {
-      overview: "Analise a completude do pedigree por ancestral",
-      percentages: "Observe a porcentagem de registros completos versus incompletos",
-      action: "Priorize completar pedigree dos animais críticos",
-      export: "Baixe a lista de animais com falhas de pedigree"
-    }
-  },
-  "auditoria-step2": {
-    faq: [
-      {
-        question: "Quem são os Top Parents?",
-        answer: "Touros e vacas com maior participação no rebanho atual. O cálculo considera número de filhas e contribuição genética."
-      },
-      {
-        question: "Como usar os filtros?",
-        answer: "Filtre por categoria (bezerras, novilhas, vacas), segmento (superior, intermediário, inferior) e defina o Top N (5, 10, 20)."
-      },
-      {
-        question: "O que significa participação acumulada?",
-        answer: "Mostra quanto da base genética está concentrada nos principais reprodutores. Valores acima de 40% indicam necessidade de diversificação."
-      },
-      {
-        question: "Posso exportar a lista de Top Parents?",
-        answer: "Sim. Use 'Exportar Top Parents' para baixar a tabela com participação e PTA médio."
-      },
-      {
-        question: "Como isso impacta o Botijão Virtual?",
-        answer: "Use os insights para substituir touros com excesso de participação por novos candidatos."
-      }
-    ],
-    resources: [
-      {
-        title: "Guia: Auditoria Step 2",
-        description: "Identificação de reprodutores dominantes",
-        type: "Guia"
-      },
-      {
-        title: "Vídeo: Diversificando genética",
-        description: "Estratégias para reduzir concentração de pedigree",
-        type: "Vídeo"
-      }
-    ],
-    hints: {
-      filters: "Ajuste categoria, segmento e Top N para refinar a análise",
-      dominance: "Observe a participação acumulada para evitar gargalos",
-      actions: "Planeje entrada de novos touros quando a concentração for alta",
-      export: "Baixe o relatório para reuniões com consultores"
-    }
-  },
-  "auditoria-step3": {
-    faq: [
-      {
-        question: "O que é a visão de quartis?",
-        answer: "Divide os animais em 4 grupos (Q1 a Q4) com base em cada índice selecionado."
-      },
-      {
-        question: "Quantos traços posso analisar?",
-        answer: "Selecione até 6 características simultaneamente para visualizar a distribuição dos quartis."
-      },
-      {
-        question: "Como interpretar as barras?",
-        answer: "Cada barra mostra o percentual de animais em cada quartil. Q4 é o topo da distribuição; Q1 representa o grupo que precisa de melhoria."
-      },
-      {
-        question: "Posso salvar um conjunto de traços favorito?",
-        answer: "Sim. Após selecionar as características, clique em 'Salvar Configuração' para reutilizar."
-      },
-      {
-        question: "Como usar essa análise na segmentação?",
-        answer: "Identifique PTAs com distribuição desequilibrada e crie gates específicos na Segmentação para acelerar correções."
-      }
-    ],
-    resources: [
-      {
-        title: "Guia: Quartis e interpretação",
-        description: "Entenda cada quartil e defina ações por grupo",
-        type: "Guia"
-      },
-      {
-        title: "Vídeo: Usando quartis na prática",
-        description: "Exemplo de tomada de decisão com Q1 a Q4",
-        type: "Vídeo"
-      }
-    ],
-    hints: {
-      selectTraits: "Clique em 'Selecionar características' para escolher PTAs",
-      clearTraits: "Use 'Limpar seleção' para recomeçar rapidamente",
-      update: "Atualize cálculos após ajustar filtros ou dados",
-      insight: "Compare quartis para priorizar ações de melhoria"
-    }
-  },
-  "auditoria-step4": {
-    faq: [
-      {
-        question: "Qual é o objetivo do Step 4?",
-        answer: "Mostrar a média linear dos principais índices ao longo dos anos de nascimento, avaliando progresso por safra."
-      },
-      {
-        question: "Como interpretar as linhas?",
-        answer: "Cada linha representa um índice selecionado. Observe inclinação e pontos de inflexão para identificar ganhos ou perdas."
-      },
-      {
-        question: "Posso focar em categorias específicas?",
-        answer: "Use os filtros de categoria para comparar vacas em produção versus jovens."
-      },
-      {
-        question: "É possível exportar os dados brutos?",
-        answer: "Sim. Clique em 'Exportar CSV' para baixar os valores ano a ano."
-      },
-      {
-        question: "Como usar isso no planejamento?",
-        answer: "Verifique se o ganho está alinhado às metas e ajuste o Plano Genético caso haja estagnação."
-      }
-    ],
-    resources: [
-      {
-        title: "Guia: Médias lineares",
-        description: "Análise temporal dos índices genéticos",
-        type: "Guia"
-      },
-      {
-        title: "Vídeo: Evolução de safra",
-        description: "Como interpretar a tendência por ano de nascimento",
-        type: "Vídeo"
-      }
-    ],
-    hints: {
-      selectTraits: "Escolha quais índices acompanhar na curva",
-      category: "Use filtros de categoria para análises segmentadas",
-      trend: "Observe a inclinação para confirmar progresso genético",
-      export: "Baixe os valores por ano para análise externa"
-    }
-  },
-  "auditoria-step5": {
-    faq: [
-      {
-        question: "O que o Step 5 compara?",
-        answer: "Compara progressão genética entre períodos ou grupos (ex: rebanho vs. referência externa)."
-      },
-      {
-        question: "Como usar o toggle de tendência?",
-        answer: "Ative para visualizar linha de tendência e suavizar oscilações. Ideal para apresentar progresso em reuniões."
-      },
-      {
-        question: "Posso destacar a média da fazenda?",
-        answer: "Sim. Ative 'Mostrar média da fazenda' para comparar com benchmarks carregados."
-      },
-      {
-        question: "Como definir períodos?",
-        answer: "Selecione faixas de anos (ex: 2018-2020 vs. 2021-2023) para avaliar evolução."
-      },
-      {
-        question: "Há exportação visual?",
-        answer: "Use 'Exportar Gráfico' para baixar PNG ou PDF com a comparação visual."
-      }
-    ],
-    resources: [
-      {
-        title: "Guia: Comparações avançadas",
-        description: "Crie narrativas com dados de evolução",
-        type: "Guia"
-      },
-      {
-        title: "Vídeo: Apresentando progresso",
-        description: "Transforme gráficos em argumentos convincentes",
-        type: "Vídeo"
-      }
-    ],
-    hints: {
-      period: "Defina períodos ou grupos para comparar",
-      farmMean: "Ative a média da fazenda para contextualizar",
-      trend: "Mostre a linha de tendência para evidenciar progresso",
-      export: "Baixe o gráfico pronto para apresentações"
-    }
-  },
-  "auditoria-step6": {
-    faq: [
-      {
-        question: "Qual a diferença do Step 6?",
-        answer: "Compara progressão de índices entre múltiplos períodos ou categorias, mostrando ganho relativo."
-      },
-      {
-        question: "Como interpretar barras positivas/negativas?",
-        answer: "Barras positivas indicam ganho no período atual versus anterior. Negativas sinalizam regressão e exigem ação."
-      },
-      {
-        question: "Posso focar em um índice específico?",
-        answer: "Selecione o PTA desejado no menu suspenso para ver a comparação detalhada."
-      },
-      {
-        question: "Existe modo de tabela?",
-        answer: "Sim. Alterne para tabela para ver números absolutos e variações percentuais."
-      },
-      {
-        question: "Como compartilhar insights?",
-        answer: "Exporte CSV ou PDF com comentários automáticos e recomendações."
-      }
-    ],
-    resources: [
-      {
-        title: "Guia: Step 6",
-        description: "Comparando períodos e identificando ganhos",
-        type: "Guia"
-      },
-      {
-        title: "Vídeo: Diagnóstico rápido",
-        description: "Descubra onde o progresso acelerou ou estagnou",
-        type: "Vídeo"
-      }
-    ],
-    hints: {
-      trait: "Escolha o índice a ser comparado",
-      view: "Alterne entre gráfico e tabela conforme necessidade",
-      highlight: "Destaque barras positivas para celebrar ganhos",
-      share: "Use exportações para comunicar resultados"
-    }
-  },
-  "auditoria-step7": {
-    faq: [
-      {
-        question: "O que mostra a distribuição de PTAs?",
-        answer: "Histogramas que indicam como os animais se concentram ao longo da escala de cada índice."
-      },
-      {
-        question: "Como identificar outliers?",
-        answer: "Procure barras isoladas nas extremidades. Esses animais merecem avaliação especial (potenciais doadoras ou descarte)."
-      },
-      {
-        question: "Posso segmentar por categoria?",
-        answer: "Sim. Use filtros para visualizar a distribuição apenas de novilhas, vacas, etc."
-      },
-      {
-        question: "Existe exportação por subgrupos?",
-        answer: "Use 'Exportar CSV' para baixar os dados filtrados e trabalhar offline."
-      },
-      {
-        question: "Como aplicar no planejamento?",
-        answer: "Identifique gargalos (ex: SCS alto) e crie ações específicas no Plano e Segmentação."
-      }
-    ],
-    resources: [
-      {
-        title: "Guia: Distribuições",
-        description: "Leitura de histogramas e definição de ações",
-        type: "Guia"
-      },
-      {
-        title: "Vídeo: Encontrando outliers",
-        description: "Como usar Step 7 para selecionar doadoras e descartar riscos",
-        type: "Vídeo"
-      }
-    ],
-    hints: {
-      filters: "Selecione categoria ou período para focar na análise",
-      bins: "Ajuste a largura das barras para mais detalhes",
-      highlight: "Clique na barra para ver lista de animais naquele intervalo",
-      export: "Baixe a distribuição filtrada em CSV"
-    }
-  },
-  "auditoria-step8": {
-    faq: [
-      {
-        question: "Como funciona o benchmark?",
-        answer: "Compara médias do rebanho com benchmarks nacionais, regionais ou personalizados."
-      },
-      {
-        question: "Posso escolher o percentual de elite?",
-        answer: "Sim. Defina o Top % (ex: Top 10%) para comparar apenas os melhores animais com o benchmark externo."
-      },
-      {
-        question: "Como interpretar o gap?",
-        answer: "Mostramos diferença absoluta e percentual entre sua média e o benchmark. Valores negativos indicam oportunidade de melhoria."
-      },
-      {
-        question: "Benchmark é atualizado automaticamente?",
-        answer: "Benchmarks oficiais são atualizados a cada avaliação CDCB. Você pode carregar benchmarks customizados via upload."
-      },
-      {
-        question: "Como compartilhar resultados?",
-        answer: "Gere um relatório PDF com destaques automáticos para apresentar a clientes ou gestores."
-      }
-    ],
-    resources: [
-      {
-        title: "Guia: Benchmarking",
-        description: "Compare-se com referências de mercado",
-        type: "Guia"
-      },
-      {
-        title: "Vídeo: Preparando apresentações",
-        description: "Monte relatórios de benchmark em minutos",
-        type: "Vídeo"
-      }
-    ],
-    hints: {
-      benchmark: "Selecione o benchmark (nacional, regional ou customizado)",
-      topPercent: "Defina o percentual de elite para a comparação",
-      gap: "Analise o gap para priorizar ações",
-      export: "Baixe relatório com recomendações automáticas"
     }
   },
 
