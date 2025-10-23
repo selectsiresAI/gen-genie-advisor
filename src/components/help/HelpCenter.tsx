@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { HelpCircle, Search, Book, Video, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,9 +19,16 @@ interface HelpCenterProps {
 export function HelpCenter({ open, onOpenChange, context = 'dashboard' }: HelpCenterProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [supportOpen, setSupportOpen] = useState(false);
+  const navigate = useNavigate();
   
   // Obter conteúdo contextual baseado na página atual
   const helpContent = getHelpContent(context);
+  
+  // Função para navegar e fechar o modal
+  const handleNavigate = (path: string) => {
+    onOpenChange(false);
+    navigate(path);
+  };
 
   const filteredFAQ = helpContent.faq.filter(
     item => {
@@ -81,7 +89,7 @@ export function HelpCenter({ open, onOpenChange, context = 'dashboard' }: HelpCe
                       </AccordionTrigger>
                       <AccordionContent className="text-muted-foreground">
                         <div className="text-sm leading-relaxed">
-                          {item.answer}
+                          {typeof item.answer === 'function' ? item.answer(handleNavigate) : item.answer}
                         </div>
                       </AccordionContent>
                     </AccordionItem>
