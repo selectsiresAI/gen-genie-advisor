@@ -215,10 +215,12 @@ export function SatisfactionSurvey() {
             setVisible(true);
             setStep('qualification');
           }}
-          className="fixed bottom-4 right-4 z-50 shadow-lg"
+          variant="outline"
+          className="fixed bottom-40 right-6 z-40 shadow-lg bg-background/95 backdrop-blur-sm border-2 hover:border-primary/50"
           size="sm"
         >
-          🧪 Testar Survey
+          <Sparkles className="h-4 w-4 mr-2" />
+          Avaliar Plataforma (DEV)
         </Button>
       );
     }
