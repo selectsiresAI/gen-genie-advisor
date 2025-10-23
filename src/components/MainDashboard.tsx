@@ -656,7 +656,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
               </div>
             </div>
             
-            {import.meta.env.DEV && currentView === 'dashboard' && (
+            {currentView === 'dashboard' && (
               <Button 
                 variant="outline" 
                 size="sm" 
