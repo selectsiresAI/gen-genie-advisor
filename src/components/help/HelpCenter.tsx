@@ -23,9 +23,13 @@ export function HelpCenter({ open, onOpenChange, context = 'dashboard' }: HelpCe
   const helpContent = getHelpContent(context);
 
   const filteredFAQ = helpContent.faq.filter(
-    item =>
-      item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.answer.toLowerCase().includes(searchQuery.toLowerCase())
+    item => {
+      const answerText = typeof item.answer === 'string' ? item.answer : '';
+      return (
+        item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        answerText.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
   );
 
   const filteredResources = helpContent.resources.filter(
@@ -76,7 +80,9 @@ export function HelpCenter({ open, onOpenChange, context = 'dashboard' }: HelpCe
                         {item.question}
                       </AccordionTrigger>
                       <AccordionContent className="text-muted-foreground">
-                        {item.answer}
+                        <div className="text-sm leading-relaxed">
+                          {item.answer}
+                        </div>
                       </AccordionContent>
                     </AccordionItem>
                   ))}

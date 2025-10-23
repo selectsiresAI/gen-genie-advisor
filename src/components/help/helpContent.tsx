@@ -1,9 +1,10 @@
 // Conteúdo de ajuda contextual para cada página/módulo
+import { ReactNode } from 'react';
 
 export interface HelpContent {
   faq: Array<{
     question: string;
-    answer: string;
+    answer: string | ReactNode;
   }>;
   resources: Array<{
     title: string;
@@ -109,11 +110,34 @@ export const helpContentMap: Record<string, HelpContent> = {
     faq: [
       {
         question: "Como importar dados de fêmeas?",
-        answer: "Clique em 'Importar Fêmeas' e selecione seu arquivo CSV ou Excel. O sistema aceita diversos formatos e fará a validação automática. Se seu arquivo tiver cabeçalhos diferentes do padrão (ex: arquivos de laboratórios genômicos), <a href='/tools/conversao' style='color: hsl(var(--primary)); text-decoration: underline; font-weight: 500;'>acesse o Menu Conversão aqui</a> para padronizar as colunas automaticamente antes de importar."
+        answer: (
+          <>
+            Clique em 'Importar Fêmeas' e selecione seu arquivo CSV ou Excel. O sistema aceita diversos formatos e fará a validação automática. Se seu arquivo tiver cabeçalhos diferentes do padrão (ex: arquivos de laboratórios genômicos), use o Menu Conversão para padronizar as colunas automaticamente antes de importar.
+          </>
+        )
       },
       {
         question: "Meu arquivo tem cabeçalhos diferentes, como proceder?",
-        answer: "Use o Menu Conversão (disponível no Dashboard em 'Operações e Suporte'). Esta ferramenta converte automaticamente qualquer formato de arquivo genômico para o padrão ToolSS, mapeando centenas de nomenclaturas diferentes. Após converter, importe o arquivo padronizado."
+        answer: (
+          <>
+            <span>Use o Menu Conversão (disponível no Dashboard em 'Operações e Suporte'). Esta ferramenta converte automaticamente qualquer formato de arquivo genômico para o padrão ToolSS, mapeando centenas de nomenclaturas diferentes. Após converter, importe o arquivo padronizado.</span>
+            <div className="mt-3">
+              <a 
+                href="/tools/conversao" 
+                className="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-medium border border-primary/20"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.location.href = '/tools/conversao';
+                }}
+              >
+                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+                Ir para Menu Conversão
+              </a>
+            </div>
+          </>
+        )
       },
       {
         question: "Como exportar os dados do rebanho?",
