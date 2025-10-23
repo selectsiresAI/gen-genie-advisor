@@ -9,6 +9,7 @@ import MainDashboard from "@/components/MainDashboard";
 import QueryProvider from "@/providers/query-client";
 import { TutorialProvider } from "@/features/tutorial/TutorialProvider";
 import { ErrorReportButton } from "@/components/feedback/ErrorReportButton";
+import { SatisfactionSurvey } from "@/components/feedback/SatisfactionSurvey";
 
 const App = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -64,6 +65,7 @@ const App = () => {
           <Toaster />
           <Sonner />
           <ErrorReportButton />
+          <SatisfactionSurvey />
           {user ? (
             <MainDashboard user={user} onLogout={handleLogout} />
           ) : (

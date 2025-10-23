@@ -43,13 +43,16 @@ export function SupportDialog({ open, onOpenChange }: SupportDialogProps) {
       const validated = supportSchema.parse(formData);
       setLoading(true);
 
+      const { data: { user } } = await supabase.auth.getUser();
+
       const { error } = await supabase.from("support_tickets").insert({
+        user_id: user?.id,
         name: validated.name,
         email: validated.email,
         category: validated.category,
         subject: validated.subject,
         message: validated.message,
-        status: "open",
+        status: "new",
       });
 
       if (error) throw error;
