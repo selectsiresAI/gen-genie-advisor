@@ -11,6 +11,8 @@ interface FileUploadCardProps {
   helper?: React.ReactNode;
   disabled?: boolean;
   badge?: React.ReactNode;
+  hideDefaultButton?: boolean;
+  inputId?: string;
 }
 export const FileUploadCard: React.FC<FileUploadCardProps> = ({
   title,
@@ -20,7 +22,9 @@ export const FileUploadCard: React.FC<FileUploadCardProps> = ({
   fileName,
   helper,
   disabled,
-  badge
+  badge,
+  hideDefaultButton = false,
+  inputId
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const handleSelectClick = () => {
@@ -44,18 +48,32 @@ export const FileUploadCard: React.FC<FileUploadCardProps> = ({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <input ref={inputRef} type="file" accept={accept} className="hidden" onChange={handleFileChange} />
-        <Button variant="outline" onClick={handleSelectClick} disabled={disabled} className="bg-gray-200 hover:bg-gray-100">
-          Selecionar arquivo
-        </Button>
-        {fileName ? <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <input 
+          ref={inputRef} 
+          type="file" 
+          accept={accept} 
+          className="hidden" 
+          onChange={handleFileChange}
+          id={inputId}
+        />
+        {!hideDefaultButton && (
+          <Button variant="outline" onClick={handleSelectClick} disabled={disabled} className="bg-gray-200 hover:bg-gray-100">
+            Selecionar arquivo
+          </Button>
+        )}
+        {!hideDefaultButton && fileName && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Badge variant="secondary">Selecionado</Badge>
             <span className="truncate" title={fileName}>
               {fileName}
             </span>
-          </div> : <p className="text-sm text-muted-foreground">
+          </div>
+        )}
+        {!hideDefaultButton && !fileName && (
+          <p className="text-sm text-muted-foreground">
             Nenhum arquivo selecionado até o momento.
-          </p>}
+          </p>
+        )}
         {helper}
       </CardContent>
     </Card>;

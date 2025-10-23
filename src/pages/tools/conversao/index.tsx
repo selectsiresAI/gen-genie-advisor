@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Sparkles, Upload } from "lucide-react";
 import { defaultLegendBank } from "./defaultLegendBank";
 import { normalizeKey, jaroWinkler, type LegendEntry } from "./utils";
 import { FileUploadCard } from "./components/FileUploadCard";
@@ -231,7 +233,11 @@ const ConversaoPage: React.FC = () => {
       }
       setModelHeaders(headers);
       setModelFileName(file.name);
-      toast({ title: "Modelo carregado", description: `${headers.length} cabeçalhos encontrados.` });
+      toast({ 
+        title: "✨ Modelo ToolSS carregado!", 
+        description: `Pronto para converter! ${headers.length} campos disponíveis.`,
+        duration: 4000
+      });
     } catch (error: any) {
       toast({ title: "Erro ao carregar modelo", description: error.message ?? String(error), variant: "destructive" });
     }
@@ -250,7 +256,11 @@ const ConversaoPage: React.FC = () => {
       }
       setLegendEntries(entries);
       setLegendFileName(file.name);
-      toast({ title: "Banco carregado", description: `${entries.length} aliases personalizados disponíveis.` });
+      toast({ 
+        title: "✨ Legendas ToolSS carregadas!", 
+        description: `${defaultLegendBank.length + entries.length} nomenclaturas disponíveis para mapeamento.`,
+        duration: 4000
+      });
     } catch (error: any) {
       toast({ title: "Erro ao carregar banco", description: error.message ?? String(error), variant: "destructive" });
     }
@@ -399,8 +409,9 @@ const ConversaoPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8">
-      <HelpButton context="conversao" />
+    <TooltipProvider>
+      <div className="space-y-8">
+        <HelpButton context="conversao" />
       
       <div className="space-y-2">
         <div className="flex items-center gap-3">
@@ -417,91 +428,171 @@ const ConversaoPage: React.FC = () => {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <FileUploadCard
-          title="1. Modelo padrão"
-          description="Arquivo com as chaves canônicas (cabeçalhos corretos)."
+          title="1. Modelo padrão ✨"
+          description="Use nosso modelo ToolSS com todas as PTAs ou envie o seu."
           onFileSelected={handleModelUpload}
           accept=".xlsx,.xls,.csv"
           fileName={modelFileName}
+          hideDefaultButton
+          inputId="model-file-input"
           helper={
-            <div className="space-y-2">
-              {modelHeaders.length > 0 ? (
-                <p className="text-xs text-muted-foreground">{modelHeaders.length} chaves detectadas.</p>
-              ) : (
-                <p className="text-xs text-muted-foreground">Utilize o arquivo "Planilha modelo padrão" como referência.</p>
+            <div className="space-y-3">
+              {modelHeaders.length === 0 && (
+                <div className="p-2 bg-primary/5 rounded-md border border-primary/20">
+                  <p className="text-xs font-medium text-primary">
+                    👇 Recomendado: Use nosso modelo ToolSS completo
+                  </p>
+                </div>
               )}
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={async () => {
-                  try {
-                    const response = await fetch(`/planilha-modelo-padrao.csv?v=${Date.now()}`, {
-                      cache: 'no-store',
-                      headers: {
-                        'Cache-Control': 'no-cache, no-store, must-revalidate',
-                        'Pragma': 'no-cache'
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="w-full gap-2"
+                    onClick={async () => {
+                      try {
+                        const response = await fetch(`/planilha-modelo-padrao.csv?v=${Date.now()}`, {
+                          cache: 'no-store',
+                          headers: {
+                            'Cache-Control': 'no-cache, no-store, must-revalidate',
+                            'Pragma': 'no-cache'
+                          }
+                        });
+                        if (!response.ok) throw new Error('Não foi possível carregar o modelo padrão');
+                        const blob = await response.blob();
+                        const file = new File([blob], 'Planilha_modelo_padrão.csv', { type: 'text/csv' });
+                        await handleModelUpload(file);
+                      } catch (error: any) {
+                        toast({
+                          title: "Erro ao carregar modelo",
+                          description: error.message ?? String(error),
+                          variant: "destructive"
+                        });
                       }
-                    });
-                    if (!response.ok) throw new Error('Não foi possível carregar o modelo padrão');
-                    const blob = await response.blob();
-                    const file = new File([blob], 'Planilha_modelo_padrão.csv', { type: 'text/csv' });
-                    await handleModelUpload(file);
-                  } catch (error: any) {
-                    toast({
-                      title: "Erro ao carregar modelo",
-                      description: error.message ?? String(error),
-                      variant: "destructive"
-                    });
-                  }
-                }}
-                className="w-full"
+                    }}
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Usar Modelo ToolSS
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">Inclui todas as PTAs e campos padrão da ToolSS</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">ou</span>
+                </div>
+              </div>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2"
+                onClick={() => document.getElementById('model-file-input')?.click()}
               >
-                Usar nosso modelo padrão
+                <Upload className="h-4 w-4" />
+                Enviar arquivo personalizado
               </Button>
+              
+              {modelHeaders.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  ✓ {modelHeaders.length} chaves detectadas
+                </p>
+              )}
             </div>
           }
           badge={modelHeaders.length > 0 ? <Badge>{modelHeaders.length} chaves</Badge> : undefined}
         />
 
         <FileUploadCard
-          title="2. Banco de nomenclaturas"
-          description="Mapeie alias personalizados para chaves canônicas."
+          title="2. Banco de nomenclaturas ✨"
+          description="Use nossas +500 nomenclaturas ou adicione as suas."
           onFileSelected={handleLegendUpload}
           accept=".xlsx,.xls,.csv"
           fileName={legendFileName}
+          hideDefaultButton
+          inputId="legend-file-input"
           helper={
-            <div className="space-y-2">
-              {legendEntries.length > 0 ? (
-                <p className="text-xs text-muted-foreground">Aliases do usuário têm prioridade sobre o seed padrão.</p>
-              ) : (
-                <p className="text-xs text-muted-foreground">Opcional: sem upload usaremos apenas o seed existente.</p>
+            <div className="space-y-3">
+              {legendEntries.length === 0 && (
+                <div className="p-2 bg-primary/5 rounded-md border border-primary/20">
+                  <p className="text-xs font-medium text-primary">
+                    👇 Use nossas legendas (cobre +500 variações)
+                  </p>
+                </div>
               )}
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="w-full gap-2"
+                    onClick={async () => {
+                      try {
+                        const fileName = 'Legendas_27092025.csv';
+                        const encodedFileName = encodeURIComponent(fileName);
+                        const response = await fetch(`/${encodedFileName}?v=${Date.now()}`);
+                        if (!response.ok) throw new Error('Não foi possível carregar as legendas padrão');
+                        const blob = await response.blob();
+                        const file = new File([blob], fileName, { type: 'text/csv' });
+                        await handleLegendUpload(file);
+                      } catch (error: any) {
+                        toast({
+                          title: "Erro ao carregar legendas",
+                          description: error.message ?? String(error),
+                          variant: "destructive"
+                        });
+                      }
+                    }}
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Usar Legendas ToolSS
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">+500 variações de nomenclaturas de laboratórios</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">ou</span>
+                </div>
+              </div>
+              
               <Button
-                variant="secondary"
+                variant="outline"
                 size="sm"
-                onClick={async () => {
-                  try {
-                    const fileName = 'Legendas_27092025.csv';
-                    const encodedFileName = encodeURIComponent(fileName);
-                    const response = await fetch(`/${encodedFileName}?v=${Date.now()}`);
-                    if (!response.ok) throw new Error('Não foi possível carregar as legendas padrão');
-                    const blob = await response.blob();
-                    const file = new File([blob], fileName, { type: 'text/csv' });
-                    await handleLegendUpload(file);
-                  } catch (error: any) {
-                    toast({
-                      title: "Erro ao carregar legendas",
-                      description: error.message ?? String(error),
-                      variant: "destructive"
-                    });
-                  }
-                }}
-                className="w-full"
+                className="w-full gap-2"
+                onClick={() => document.getElementById('legend-file-input')?.click()}
               >
-                Usar nossas legendas padrão
+                <Upload className="h-4 w-4" />
+                Adicionar aliases personalizados
               </Button>
+              
+              {legendEntries.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  ✓ {legendEntries.length} aliases personalizados carregados
+                </p>
+              )}
             </div>
           }
-          badge={legendEntries.length > 0 ? <Badge variant="secondary">{legendEntries.length} entradas</Badge> : <Badge variant="outline">Prioridade usuário</Badge>}
+          badge={
+            legendEntries.length > 0 
+              ? <Badge variant="secondary">{legendEntries.length} entradas</Badge> 
+              : <Badge variant="outline">Recomendado</Badge>
+          }
         />
 
         <FileUploadCard
@@ -563,7 +654,8 @@ const ConversaoPage: React.FC = () => {
         />
       </div>
 
-    </div>
+      </div>
+    </TooltipProvider>
   );
 };
 
