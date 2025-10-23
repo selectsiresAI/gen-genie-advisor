@@ -109,7 +109,7 @@ export const helpContentMap: Record<string, HelpContent> = {
     faq: [
       {
         question: "Como importar dados de fêmeas?",
-        answer: "Clique em 'Importar Fêmeas' e selecione seu arquivo CSV ou Excel. O sistema aceita diversos formatos e fará a validação automática. Se seu arquivo tiver cabeçalhos diferentes do padrão (ex: arquivos de laboratórios genômicos), use primeiro o Menu Conversão para padronizar as colunas automaticamente antes de importar."
+        answer: "Clique em 'Importar Fêmeas' e selecione seu arquivo CSV ou Excel. O sistema aceita diversos formatos e fará a validação automática. Se seu arquivo tiver cabeçalhos diferentes do padrão (ex: arquivos de laboratórios genômicos), <a href='/tools/conversao' style='color: hsl(var(--primary)); text-decoration: underline; font-weight: 500;'>acesse o Menu Conversão aqui</a> para padronizar as colunas automaticamente antes de importar."
       },
       {
         question: "Meu arquivo tem cabeçalhos diferentes, como proceder?",
