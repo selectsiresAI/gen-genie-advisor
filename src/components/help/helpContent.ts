@@ -109,7 +109,11 @@ export const helpContentMap: Record<string, HelpContent> = {
     faq: [
       {
         question: "Como importar dados de fêmeas?",
-        answer: "Clique em 'Importar Fêmeas', selecione seu arquivo CSV ou Excel com os dados dos animais. O sistema aceita diversos formatos e fará a validação automática dos dados."
+        answer: "Clique em 'Importar Fêmeas' e selecione seu arquivo CSV ou Excel. O sistema aceita diversos formatos e fará a validação automática. Se seu arquivo tiver cabeçalhos diferentes do padrão (ex: arquivos de laboratórios genômicos), use primeiro o Menu Conversão para padronizar as colunas automaticamente antes de importar."
+      },
+      {
+        question: "Meu arquivo tem cabeçalhos diferentes, como proceder?",
+        answer: "Use o Menu Conversão (disponível no Dashboard em 'Operações e Suporte'). Esta ferramenta converte automaticamente qualquer formato de arquivo genômico para o padrão ToolSS, mapeando centenas de nomenclaturas diferentes. Após converter, importe o arquivo padronizado."
       },
       {
         question: "Como exportar os dados do rebanho?",
