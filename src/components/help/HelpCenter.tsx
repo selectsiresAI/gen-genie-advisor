@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { HelpCircle, Search, Book, Video, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +18,6 @@ interface HelpCenterProps {
 export function HelpCenter({ open, onOpenChange, context = 'dashboard' }: HelpCenterProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [supportOpen, setSupportOpen] = useState(false);
-  const navigate = useNavigate();
   
   // Obter conteúdo contextual baseado na página atual
   const helpContent = getHelpContent(context);
@@ -27,7 +25,9 @@ export function HelpCenter({ open, onOpenChange, context = 'dashboard' }: HelpCe
   // Função para navegar e fechar o modal
   const handleNavigate = (path: string) => {
     onOpenChange(false);
-    navigate(path);
+    setTimeout(() => {
+      window.location.href = path;
+    }, 100);
   };
 
   const filteredFAQ = helpContent.faq.filter(
