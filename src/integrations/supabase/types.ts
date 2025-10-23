@@ -3375,6 +3375,23 @@ export type Database = {
           },
         ]
       }
+      user_engagement_metrics: {
+        Row: {
+          email: string | null
+          full_name: string | null
+          last_activity: string | null
+          predictions_made: number | null
+          surveys_completed: number | null
+          total_farms: number | null
+          total_sessions: number | null
+          total_time_seconds: number | null
+          unique_features_used: number | null
+          unique_pages_visited: number | null
+          user_id: string | null
+          user_since: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_bull_to_farm: {

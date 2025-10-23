@@ -32,6 +32,7 @@ import AuditoriaGeneticaPage from '@/pages/AuditoriaGeneticaPage';
 import { StagingMigrationButton } from './StagingMigrationButton';
 import { SatisfactionSurvey } from '@/components/feedback/SatisfactionSurvey';
 import { useActivityTracker } from '@/hooks/useActivityTracker';
+import { UserEngagementMetrics } from '@/components/admin/UserEngagementMetrics';
 
 interface MainDashboardProps {
   user: User;
@@ -67,6 +68,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   const [totalFarms, setTotalFarms] = useState(0);
   const [totalAnimals, setTotalAnimals] = useState(0);
   const [showSurvey, setShowSurvey] = useState(false);
+  const [showMetrics, setShowMetrics] = useState(false);
   const {
     toast
   } = useToast();
@@ -668,6 +670,18 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
               </Button>
             )}
             
+            {userProfile?.is_admin && currentView === 'dashboard' && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowMetrics(!showMetrics)}
+                className="gap-2"
+              >
+                <BarChart3 className="h-4 w-4" />
+                {showMetrics ? 'Ocultar' : 'Ver'} Métricas
+              </Button>
+            )}
+            
             <Button variant="outline" size="sm" onClick={handleLogout} className="bg-slate-200 hover:bg-slate-100">
               <LogOut className="w-4 h-4 mr-2" />
               Sair
@@ -763,6 +777,14 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                   </Card>)}
               </div>}
           </div>
+
+          {/* Métricas de Engajamento (apenas para admins) */}
+          {showMetrics && userProfile?.is_admin && (
+            <div className="space-y-4">
+              <h3 className="text-xl font-semibold">Métricas de Engajamento dos Usuários</h3>
+              <UserEngagementMetrics />
+            </div>
+          )}
 
           {/* Account Totals */}
           <div className="space-y-6" data-tour="home:resumo">
