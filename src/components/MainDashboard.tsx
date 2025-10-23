@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Building2, Users, Beef, BarChart3, Plus, LogOut, Zap, ArrowLeft, ArrowLeftRight, TrendingUp, Beaker, Target, FolderOpen, Calculator, Trash2 } from "lucide-react";
+import { Building2, Users, Beef, BarChart3, Plus, LogOut, Zap, ArrowLeft, ArrowLeftRight, TrendingUp, Beaker, Target, FolderOpen, Calculator, Trash2, Sparkles } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import CreateFarmModal from './CreateFarmModal';
@@ -32,6 +32,7 @@ import AuditoriaGeneticaPage from '@/pages/AuditoriaGeneticaPage';
 import { StagingMigrationButton } from './StagingMigrationButton';
 import { SatisfactionSurvey } from '@/components/feedback/SatisfactionSurvey';
 import { useActivityTracker } from '@/hooks/useActivityTracker';
+
 interface MainDashboardProps {
   user: User;
   onLogout: () => void;
@@ -65,6 +66,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [totalFarms, setTotalFarms] = useState(0);
   const [totalAnimals, setTotalAnimals] = useState(0);
+  const [showSurvey, setShowSurvey] = useState(false);
   const {
     toast
   } = useToast();
@@ -653,6 +655,19 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                 <p className="text-muted-foreground">{user.email}</p>
               </div>
             </div>
+            
+            {import.meta.env.DEV && currentView === 'dashboard' && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowSurvey(true)}
+                className="gap-2"
+              >
+                <Sparkles className="h-4 w-4" />
+                Avaliar Plataforma
+              </Button>
+            )}
+            
             <Button variant="outline" size="sm" onClick={handleLogout} className="bg-slate-200 hover:bg-slate-100">
               <LogOut className="w-4 h-4 mr-2" />
               Sair
@@ -810,7 +825,7 @@ Select Sires do Brasil</p>
       {selectedFarm && <FemaleUploadModal isOpen={showUploadModal} onClose={() => setShowUploadModal(false)} farmId={selectedFarm.farm_id} farmName={selectedFarm.farm_name} />}
       
       <HelpButton />
-      <SatisfactionSurvey />
+      <SatisfactionSurvey forceVisible={showSurvey} onClose={() => setShowSurvey(false)} />
       <HomeHintDialog userId={user?.id} />
     </div>;
 };

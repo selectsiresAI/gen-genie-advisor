@@ -17,12 +17,17 @@ const surveySchema = z.object({
   feedback: z.string().trim().max(500).optional(),
 });
 
+interface SatisfactionSurveyProps {
+  forceVisible?: boolean;
+  onClose?: () => void;
+}
+
 // Para DEV: 10 segundos | Para PROD: 5 minutos
 const SURVEY_DELAY = import.meta.env.DEV ? 10 * 1000 : 5 * 60 * 1000;
 const DISMISSAL_COUNT_KEY = "survey_dismissal_count";
 const LAST_SHOWN_KEY = "satisfaction_survey_last_shown";
 
-export function SatisfactionSurvey() {
+export function SatisfactionSurvey({ forceVisible = false, onClose }: SatisfactionSurveyProps = {}) {
   const [visible, setVisible] = useState(false);
   const [step, setStep] = useState<"qualification" | "rating" | "details">("qualification");
   const { toast } = useToast();
@@ -48,6 +53,13 @@ export function SatisfactionSurvey() {
   }, []);
 
   useEffect(() => {
+    // Se forceVisible está ativo, mostrar imediatamente
+    if (forceVisible) {
+      setVisible(true);
+      setStep('qualification');
+      return;
+    }
+
     if (!user) return;
 
     const dismissals = parseInt(localStorage.getItem(DISMISSAL_COUNT_KEY) || '0');
@@ -110,7 +122,7 @@ export function SatisfactionSurvey() {
     }, showDelay);
     
     return () => clearTimeout(timer);
-  }, [user]);
+  }, [user, forceVisible]);
 
   const handleRatingClick = (category: keyof typeof ratings, value: number) => {
     setRatings({ ...ratings, [category]: value });
@@ -145,6 +157,7 @@ export function SatisfactionSurvey() {
     }
 
     setVisible(false);
+    onClose?.();
   };
 
   const handleNext = () => {
@@ -192,6 +205,7 @@ export function SatisfactionSurvey() {
       localStorage.setItem(LAST_SHOWN_KEY, Date.now().toString());
       localStorage.setItem(DISMISSAL_COUNT_KEY, (dismissalCount + 1).toString());
       setVisible(false);
+      onClose?.();
     } catch (err) {
       toast({
         variant: "destructive",
@@ -203,27 +217,10 @@ export function SatisfactionSurvey() {
 
   const handleDismiss = () => {
     handleDismissQualification("dismissed");
+    onClose?.();
   };
 
   if (!visible) {
-    // Botão de teste (apenas em DEV)
-    if (import.meta.env.DEV) {
-      return (
-        <Button
-          onClick={() => {
-            console.log('[SatisfactionSurvey] Force showing via test button');
-            setVisible(true);
-            setStep('qualification');
-          }}
-          variant="outline"
-          className="fixed bottom-40 right-6 z-40 shadow-lg bg-background/95 backdrop-blur-sm border-2 hover:border-primary/50"
-          size="sm"
-        >
-          <Sparkles className="h-4 w-4 mr-2" />
-          Avaliar Plataforma (DEV)
-        </Button>
-      );
-    }
     return null;
   }
 
