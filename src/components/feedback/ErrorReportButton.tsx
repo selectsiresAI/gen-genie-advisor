@@ -35,14 +35,28 @@ export function ErrorReportButton() {
       
       setLoading(true);
 
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError) {
+        console.error("Erro ao obter usuário autenticado:", userError);
+        throw userError;
+      }
+
       const { error: dbError } = await supabase.from("error_reports").insert({
         description: validated.description,
         url: validated.url,
         user_agent: validated.userAgent,
+        user_id: user?.id,
         status: "new",
       });
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error("Erro ao inserir error_report:", dbError);
+        throw dbError;
+      }
 
       toast({
         title: "Erro reportado!",
@@ -55,6 +69,7 @@ export function ErrorReportButton() {
       if (err instanceof z.ZodError) {
         setError(err.errors[0]?.message || "Erro de validação");
       } else {
+        console.error("Erro ao enviar reporte de erro:", err);
         toast({
           variant: "destructive",
           title: "Erro ao enviar",

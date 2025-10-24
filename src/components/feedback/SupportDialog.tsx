@@ -43,7 +43,15 @@ export function SupportDialog({ open, onOpenChange }: SupportDialogProps) {
       const validated = supportSchema.parse(formData);
       setLoading(true);
 
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError) {
+        console.error("Erro ao obter usuário autenticado:", userError);
+        throw userError;
+      }
 
       const { error } = await supabase.from("support_tickets").insert({
         user_id: user?.id,
@@ -52,10 +60,12 @@ export function SupportDialog({ open, onOpenChange }: SupportDialogProps) {
         category: validated.category,
         subject: validated.subject,
         message: validated.message,
-        status: "new",
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao inserir support_ticket:", error);
+        throw error;
+      }
 
       toast({
         title: "Mensagem enviada!",
@@ -80,6 +90,7 @@ export function SupportDialog({ open, onOpenChange }: SupportDialogProps) {
         });
         setErrors(fieldErrors);
       } else {
+        console.error("Erro ao enviar solicitação de suporte:", err);
         toast({
           variant: "destructive",
           title: "Erro ao enviar",
