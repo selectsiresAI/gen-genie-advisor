@@ -161,8 +161,61 @@ function computeSlope(points: SeriesPoint[]): number {
   return cov / varX;
 }
 
+function toPlainString(value: number): string {
+  const str = value.toString();
+  if (!str.includes("e") && !str.includes("E")) {
+    return str;
+  }
+
+  const [significand, exponentPart] = str.split("e");
+  const exponent = Number(exponentPart);
+  const [intPart, fracPart = ""] = significand.split(".");
+  const digits = (intPart + fracPart).replace(/^0+(?=\d)/, "");
+
+  if (!digits) {
+    return "0";
+  }
+
+  if (exponent >= 0) {
+    if (exponent >= fracPart.length) {
+      return digits + "0".repeat(exponent - fracPart.length);
+    }
+    const decimalPos = digits.length - (fracPart.length - exponent);
+    return `${digits.slice(0, decimalPos)}.${digits.slice(decimalPos)}`;
+  }
+
+  const positiveExponent = Math.abs(exponent);
+  const leadingZeros = "0".repeat(Math.max(positiveExponent - 1, 0));
+  return `0.${leadingZeros}${digits}`;
+}
+
+function ensureMinimumDecimals(str: string, minDecimals: number): string {
+  if (minDecimals <= 0) {
+    return str;
+  }
+
+  if (!str.includes(".")) {
+    return `${str}.${"0".repeat(minDecimals)}`;
+  }
+
+  const [intPart, fracPart = ""] = str.split(".");
+  if (fracPart.length >= minDecimals) {
+    return `${intPart}.${fracPart}`;
+  }
+
+  return `${intPart}.${fracPart.padEnd(minDecimals, "0")}`;
+}
+
+function trimFraction(value: string): string {
+  if (!value.includes(".")) {
+    return value;
+  }
+
+  return value.replace(/\.0+$/, "");
+}
+
 function formatSlopeMagnitude(value: number, decimals: number): string {
-  if (!Number.isFinite(value) || value === 0) {
+  if (!Number.isFinite(value) || value < EPSILON) {
     return "0";
   }
 
@@ -170,22 +223,14 @@ function formatSlopeMagnitude(value: number, decimals: number): string {
     return Math.round(value).toString();
   }
 
-  const factor = 10 ** decimals;
-  const rounded = Math.round(value * factor) / factor;
-  const formatted = rounded.toFixed(decimals);
-  if (rounded === 0) {
-    for (let extra = decimals + 1; extra <= decimals + 4; extra++) {
-      const candidate = Number(value.toFixed(extra));
-      if (candidate !== 0) {
-        return value.toFixed(extra);
-      }
-    }
-    return value.toString();
+  if (decimals > 1) {
+    const plain = toPlainString(value);
+    return ensureMinimumDecimals(plain, decimals);
   }
-  if (decimals === 1 && formatted.endsWith(".0")) {
-    return formatted.slice(0, -2);
-  }
-  return formatted;
+
+  const rounded = Math.round(value * 10) / 10;
+  const formatted = rounded % 1 === 0 ? rounded.toString() : rounded.toFixed(1);
+  return trimFraction(formatted);
 }
 
 function computeTrend(points: SeriesPoint[]) {
@@ -253,7 +298,12 @@ const TraitCard = memo(function TraitCard({
     () => formatSlopeMagnitude(Math.abs(slopeValue), slopeDecimals),
     [slopeDecimals, slopeValue]
   );
-  const slopeSign = slopeValue >= 0 ? "+" : "-";
+  const slopeSign = useMemo(() => {
+    if (!Number.isFinite(slopeValue) || Math.abs(slopeValue) < EPSILON) {
+      return "";
+    }
+    return slopeValue > 0 ? "+" : "-";
+  }, [slopeValue]);
 
   const axis = useMemo(() => {
     if (traitKey.toLowerCase() === "scs") {
