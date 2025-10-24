@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { PTA_CATALOG } from "@/lib/pta";
 import { useAGFilters } from "@/features/auditoria/store";
@@ -20,14 +19,12 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  ReferenceLine,
-  ReferenceArea,
   Cell,
 } from "recharts";
 import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
 import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
 import { useRegisterChart } from "@/components/pdf/useRegisterChart";
-import { AlertCircle, TrendingUp, Target } from "lucide-react";
+import { Target } from "lucide-react";
 
 const DEFAULT_SELECTED: string[] = ["hhp_dollar"];
 const BINS = 30;
@@ -362,21 +359,7 @@ function EnhancedHistogramCard({ step, series }: { step: number; series: TraitSe
           </div>
         </div>
 
-        {/* Painel de Comentários Críticos */}
-        <Alert className="border-primary/20 bg-primary/5">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="space-y-2">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingUp className="h-4 w-4" />
-              <strong className="text-sm">Comentários Críticos - Análise Técnica</strong>
-            </div>
-            <ul className="space-y-1.5 text-sm list-none pl-0">
-              {series.comments.map((comment, idx) => (
-                <li key={idx} className="leading-relaxed">{comment}</li>
-              ))}
-            </ul>
-          </AlertDescription>
-        </Alert>
+        {/* Comentários críticos desabilitados temporariamente */}
       </CardContent>
     </Card>
   );
