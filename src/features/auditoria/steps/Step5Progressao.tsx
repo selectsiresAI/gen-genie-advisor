@@ -158,7 +158,34 @@ function computeSlope(points: SeriesPoint[]): number {
   const varX = avg(xs.map((x) => (x - mx) ** 2));
   if (!varX) return 0;
   const cov = avg(xs.map((x, i) => (x - mx) * (ys[i] - my)));
-  return Math.round((cov / varX) * 10) / 10;
+  return cov / varX;
+}
+
+function formatSlopeMagnitude(value: number, decimals: number): string {
+  if (!Number.isFinite(value) || value === 0) {
+    return "0";
+  }
+
+  if (decimals <= 0) {
+    return Math.round(value).toString();
+  }
+
+  const factor = 10 ** decimals;
+  const rounded = Math.round(value * factor) / factor;
+  const formatted = rounded.toFixed(decimals);
+  if (rounded === 0) {
+    for (let extra = decimals + 1; extra <= decimals + 4; extra++) {
+      const candidate = Number(value.toFixed(extra));
+      if (candidate !== 0) {
+        return value.toFixed(extra);
+      }
+    }
+    return value.toString();
+  }
+  if (decimals === 1 && formatted.endsWith(".0")) {
+    return formatted.slice(0, -2);
+  }
+  return formatted;
 }
 
 function computeTrend(points: SeriesPoint[]) {
@@ -207,7 +234,7 @@ const TraitCard = memo(function TraitCard({
     { sum: 0, n: 0 }
   );
   const farmMean = totals.n ? totals.sum / totals.n : 0;
-  const slope = computeSlope(data);
+  const slopeValue = computeSlope(data);
   const chartData = data.map((p, i) => ({
     year: p.year,
     n: p.n,
@@ -221,6 +248,12 @@ const TraitCard = memo(function TraitCard({
   );
 
   const tickStep = useMemo(() => resolveTickStep(traitKey), [traitKey]);
+  const slopeDecimals = useMemo(() => (tickStep < 0.1 ? 2 : 1), [tickStep]);
+  const slopeMagnitude = useMemo(
+    () => formatSlopeMagnitude(Math.abs(slopeValue), slopeDecimals),
+    [slopeDecimals, slopeValue]
+  );
+  const slopeSign = slopeValue >= 0 ? "+" : "-";
 
   const axis = useMemo(() => {
     if (traitKey.toLowerCase() === "scs") {
@@ -250,8 +283,8 @@ const TraitCard = memo(function TraitCard({
           <CardTitle className="text-base font-semibold">{displayTitle}</CardTitle>
           {showTrend && trendResult.r2 > 0 && (
             <div className="text-xs text-muted-foreground">
-              Tendência (R²={trendResult.r2.toFixed(3)}): {slope >= 0 ? "+" : ""}
-              {slope}/ano
+              Tendência (R²={trendResult.r2.toFixed(3)}): {slopeSign}
+              {slopeMagnitude}/ano
             </div>
           )}
         </div>
