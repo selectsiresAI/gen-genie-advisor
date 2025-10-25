@@ -52,10 +52,12 @@ export function SupportDialog({ open, onOpenChange }: SupportDialogProps) {
         category: validated.category,
         subject: validated.subject,
         message: validated.message,
-        status: "new",
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao inserir support_ticket:", error);
+        throw error;
+      }
 
       toast({
         title: "Mensagem enviada!",
