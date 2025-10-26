@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { SupportTicketDetail } from "@/components/admin/SupportTicketDetail";
 import { useNavigate } from "react-router-dom";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface SupportTicket {
   id: string;
@@ -31,8 +32,8 @@ export function SupportTicketsPage() {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [filteredTickets, setFilteredTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const { isAdmin, isLoading: roleLoading } = useUserRole();
   
   const [filters, setFilters] = useState({
     search: "",
@@ -41,37 +42,16 @@ export function SupportTicketsPage() {
   });
 
   useEffect(() => {
-    checkAdminAndLoadTickets();
-  }, []);
+    if (!roleLoading && isAdmin) {
+      loadTickets();
+    } else if (!roleLoading && !isAdmin) {
+      setLoading(false);
+    }
+  }, [isAdmin, roleLoading]);
 
   useEffect(() => {
     applyFilters();
   }, [tickets, filters]);
-
-  const checkAdminAndLoadTickets = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', user.id)
-        .single();
-
-      if (!profile?.is_admin) {
-        setIsAdmin(false);
-        return;
-      }
-
-      setIsAdmin(true);
-      await loadTickets();
-    } catch (error) {
-      console.error('Error checking admin:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const loadTickets = async () => {
     const { data, error } = await supabase

@@ -2643,6 +2643,27 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       admin_temp_passwords: {
@@ -4075,6 +4096,13 @@ export type Database = {
         }
       }
       has_farm_membership: { Args: never; Returns: boolean }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       is_admin: { Args: never; Returns: boolean }
       is_farm_editor: { Args: { farm_uuid: string }; Returns: boolean }
       is_farm_member:
@@ -4316,6 +4344,7 @@ export type Database = {
       }
     }
     Enums: {
+      app_role: "admin" | "moderator" | "user"
       farm_role: "owner" | "editor" | "viewer" | "technician"
       movement_type: "entrada" | "saida"
       prediction_method: "genomic" | "pedigree" | "blup"
@@ -4448,6 +4477,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "moderator", "user"],
       farm_role: ["owner", "editor", "viewer", "technician"],
       movement_type: ["entrada", "saida"],
       prediction_method: ["genomic", "pedigree", "blup"],

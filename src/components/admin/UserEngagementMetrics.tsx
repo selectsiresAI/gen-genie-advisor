@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Users, Activity, Clock, Target } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface UserMetrics {
   user_id: string;
@@ -26,23 +27,14 @@ interface UserMetrics {
 export function UserEngagementMetrics() {
   const [metrics, setMetrics] = useState<UserMetrics[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   const { toast } = useToast();
+  const { isAdmin } = useUserRole();
 
   useEffect(() => {
-    checkAdmin();
-    loadMetrics();
-  }, []);
-
-  const checkAdmin = async () => {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', (await supabase.auth.getUser()).data.user?.id)
-      .single();
-    
-    setIsAdmin(profile?.is_admin || false);
-  };
+    if (isAdmin) {
+      loadMetrics();
+    }
+  }, [isAdmin]);
 
   const loadMetrics = async () => {
     try {

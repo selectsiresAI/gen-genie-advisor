@@ -33,6 +33,7 @@ import { StagingMigrationButton } from './StagingMigrationButton';
 import { SatisfactionSurvey } from '@/components/feedback/SatisfactionSurvey';
 import { useActivityTracker } from '@/hooks/useActivityTracker';
 import { UserEngagementMetrics } from '@/components/admin/UserEngagementMetrics';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface MainDashboardProps {
   user: User;
@@ -69,6 +70,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   const [totalAnimals, setTotalAnimals] = useState(0);
   const [showSurvey, setShowSurvey] = useState(false);
   const [showMetrics, setShowMetrics] = useState(false);
+  const { isAdmin } = useUserRole();
   const {
     toast
   } = useToast();
@@ -670,7 +672,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
               </Button>
             )}
             
-            {userProfile?.is_admin && currentView === 'dashboard' && (
+            {isAdmin && currentView === 'dashboard' && (
               <>
                 <Button 
                   variant="outline" 
@@ -790,7 +792,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
           </div>
 
           {/* Métricas de Engajamento (apenas para admins) */}
-          {showMetrics && userProfile?.is_admin && (
+          {showMetrics && isAdmin && (
             <div className="space-y-4">
               <h3 className="text-xl font-semibold">Métricas de Engajamento dos Usuários</h3>
               <UserEngagementMetrics />
