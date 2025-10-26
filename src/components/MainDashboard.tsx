@@ -666,13 +666,6 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
       <HomeHintDialog userId={user.id} />
       <HelpButton context="dashboard" />
 
-      <div className="absolute top-4 right-4">
-        <Badge
-          className={`shadow ${isAdmin ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
-        >
-          Role: {role ?? 'desconhecido'} | Admin: {isAdmin ? 'Sim' : 'Não'}
-        </Badge>
-      </div>
       
       {/* Header */}
       <div className="border-b">
@@ -742,9 +735,16 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
         <div className="space-y-8">
           {/* Welcome */}
           <div className="space-y-2">
-            <h2 className="text-3xl font-bold">
-              Bem-vindo, {userProfile?.full_name?.split(' ')[0] || 'Usuário'}!
-            </h2>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h2 className="text-3xl font-bold">
+                Bem-vindo, {userProfile?.full_name?.split(' ')[0] || 'Usuário'}!
+              </h2>
+              <Badge
+                className={`shadow ${isAdmin ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
+              >
+                Role: {role ?? 'desconhecido'} | Admin: {isAdmin ? 'Sim' : 'Não'}
+              </Badge>
+            </div>
             <p className="text-muted-foreground">
               Gerencie suas fazendas, rebanhos e análises genéticas em um só lugar.
             </p>
