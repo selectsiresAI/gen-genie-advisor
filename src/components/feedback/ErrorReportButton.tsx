@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -27,6 +27,21 @@ export function ErrorReportButton() {
   // Só mostrar o botão se estiver autenticado
   if (!session) return null;
 
+  // Monitorar mudanças na sessão
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event) => {
+        if (event === 'TOKEN_REFRESHED') {
+          console.log('✅ Token refreshed successfully');
+        } else if (event === 'SIGNED_OUT') {
+          console.log('⚠️ User signed out');
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -40,11 +55,21 @@ export function ErrorReportButton() {
       
       setLoading(true);
 
-      // Obter o user_id da sessão
-      const { data: { user } } = await supabase.auth.getUser();
+      // Tentar obter o usuário - se falhar, tentar refresh da sessão
+      let user;
+      const { data: userData, error: userError } = await supabase.auth.getUser();
       
-      if (!user) {
-        throw new Error('Usuário não autenticado');
+      if (userError || !userData?.user) {
+        // Tentar fazer refresh da sessão
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        
+        if (refreshError || !refreshData?.user) {
+          throw new Error('Sua sessão expirou. Por favor, faça login novamente.');
+        }
+        
+        user = refreshData.user;
+      } else {
+        user = userData.user;
       }
 
       const { error: dbError } = await supabase.from("error_reports").insert({
