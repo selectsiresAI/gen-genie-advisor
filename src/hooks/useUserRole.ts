@@ -14,20 +14,26 @@ export function useUserRole() {
   const checkUserRole = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      console.log('🔍 Verificando role para user:', user?.id);
+      
       if (!user) {
+        console.log('❌ Nenhum usuário autenticado');
         setRole(null);
         return;
       }
 
       // Check if user has admin role
-      const { data: adminRole } = await supabase
+      const { data: adminRole, error: adminError } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id)
         .eq('role', 'admin')
         .maybeSingle();
 
+      console.log('🔍 Verificação de admin:', { adminRole, adminError, userId: user.id });
+
       if (adminRole) {
+        console.log('✅ Usuário é ADMIN');
         setRole('admin');
         return;
       }
@@ -41,14 +47,16 @@ export function useUserRole() {
         .maybeSingle();
 
       if (modRole) {
+        console.log('✅ Usuário é MODERATOR');
         setRole('moderator');
         return;
       }
 
       // Default to user role
+      console.log('👤 Usuário tem role padrão: user');
       setRole('user');
     } catch (error) {
-      console.error('Error checking user role:', error);
+      console.error('❌ Erro ao verificar role:', error);
       setRole(null);
     } finally {
       setIsLoading(false);
