@@ -15,58 +15,43 @@ export function useUserRole() {
   const checkUserRole = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      console.log('🔍 Verificando role para user:', user?.id);
+      console.log('🔄 Verificando role para:', user?.id);
       
       if (!user) {
         console.log('❌ Nenhum usuário autenticado');
         setRole(null);
+        setIsLoading(false);
         return;
       }
 
-      // Primeiro, testar se conseguimos acessar a tabela
-      const { data: testData, error: testError } = await supabase
-        .from('user_roles')
-        .select('*')
-        .limit(1);
-      
-      console.log('🧪 Teste de acesso à tabela user_roles:', { testData, testError });
-
-      // Check if user has admin role
-      const { data: adminRole, error: adminError } = await supabase
+      // ✅ BUSCAR ROLE DIRETAMENTE (sem teste que viola RLS)
+      const { data: userRole, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id)
-        .eq('role', 'admin')
         .maybeSingle();
 
-      console.log('🔍 Verificação de admin:', { adminRole, adminError, userId: user.id });
+      console.log('📋 Resultado da consulta:', { userRole, error, userId: user.id });
 
-      if (adminRole) {
-        console.log('✅ Usuário é ADMIN');
-        setRole('admin');
+      if (error) {
+        console.error('❌ Erro ao buscar role:', error);
+        setRole('user'); // Default em caso de erro
+        setIsLoading(false);
         return;
       }
 
-      // Check if user has moderator role
-      const { data: modRole } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'moderator')
-        .maybeSingle();
-
-      if (modRole) {
-        console.log('✅ Usuário é MODERATOR');
-        setRole('moderator');
+      if (!userRole) {
+        console.log('👤 Usuário sem role específica, usando padrão: user');
+        setRole('user');
+        setIsLoading(false);
         return;
       }
 
-      // Default to user role
-      console.log('👤 Usuário tem role padrão: user');
-      setRole('user');
+      console.log(`✅ Role identificada: ${userRole.role}`);
+      setRole(userRole.role as UserRole);
     } catch (error) {
-      console.error('❌ Erro ao verificar role:', error);
-      setRole(null);
+      console.error('❌ Erro inesperado:', error);
+      setRole('user');
     } finally {
       setIsLoading(false);
     }

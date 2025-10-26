@@ -34,6 +34,7 @@ import { SatisfactionSurvey } from '@/components/feedback/SatisfactionSurvey';
 import { useActivityTracker } from '@/hooks/useActivityTracker';
 import { UserEngagementMetrics } from '@/components/admin/UserEngagementMetrics';
 import { useUserRole } from '@/hooks/useUserRole';
+import UserSupportTickets from '@/components/support/UserSupportTickets';
 
 interface MainDashboardProps {
   user: User;
@@ -52,7 +53,7 @@ interface Farm {
 type SupabaseFarm = Omit<Farm, 'total_females'> & {
   total_females: number | null;
 };
-type DashboardView = 'dashboard' | 'farm' | 'herd' | 'segmentation' | 'bulls' | 'nexus' | 'charts' | 'auditoria' | 'botijao' | 'sms' | 'metas' | 'plano' | 'arquivos' | 'conversao';
+type DashboardView = 'dashboard' | 'farm' | 'herd' | 'segmentation' | 'bulls' | 'nexus' | 'charts' | 'auditoria' | 'botijao' | 'sms' | 'metas' | 'plano' | 'arquivos' | 'conversao' | 'tickets';
 type ModuleView = Exclude<DashboardView, 'dashboard' | 'farm'>;
 const MainDashboard: React.FC<MainDashboardProps> = ({
   user,
@@ -70,7 +71,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   const [totalAnimals, setTotalAnimals] = useState(0);
   const [showSurvey, setShowSurvey] = useState(false);
   const [showMetrics, setShowMetrics] = useState(false);
-  const { isAdmin, isLoading: roleLoading } = useUserRole();
+  const { role, isAdmin, isLoading: roleLoading } = useUserRole();
   const {
     toast
   } = useToast();
@@ -272,6 +273,10 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
       title: 'Conversão (preview)',
       description: 'Padronize planilhas e cabeçalhos',
       view: 'conversao'
+    }, {
+      title: 'Chamados',
+      description: 'Acompanhe seus tickets de suporte e crie novos pedidos',
+      view: 'tickets'
     }]
   }];
   const handleFarmModuleClick = (view: ModuleView) => {
@@ -289,6 +294,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
       conversao: 'conversao',
       charts: 'graficos',
       sms: 'sms',
+      tickets: 'chamados',
     };
     
     if (featureNames[view]) {
@@ -406,6 +412,22 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
     } : null;
 
     // Handle views that need special rendering
+    if (currentView === 'tickets') {
+      return <div className="min-h-screen bg-background">
+          <div className="border-b">
+            <div className="flex h-16 items-center px-4 gap-4">
+              <Button variant="ghost" onClick={handleBackToDashboard} className="mr-4 bg-slate-200 hover:bg-slate-100">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Dashboard
+              </Button>
+              <h1 className="text-xl font-semibold">Chamados de Suporte</h1>
+            </div>
+          </div>
+          <div className="container mx-auto px-4 py-8">
+            <UserSupportTickets userId={user.id} userName={userProfile?.full_name || user.email} />
+          </div>
+        </div>;
+    }
     if (currentView === 'conversao') {
       return <div className="min-h-screen bg-background">
           <div className="border-b">
@@ -639,10 +661,18 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
         </div>
       </div>;
   }
-  return <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background relative">
       <HomeTourAnchors />
       <HomeHintDialog userId={user.id} />
       <HelpButton context="dashboard" />
+
+      <div className="absolute top-4 right-4">
+        <Badge
+          className={`shadow ${isAdmin ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
+        >
+          Role: {role ?? 'desconhecido'} | Admin: {isAdmin ? 'Sim' : 'Não'}
+        </Badge>
+      </div>
       
       {/* Header */}
       <div className="border-b">
