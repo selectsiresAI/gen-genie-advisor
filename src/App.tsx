@@ -9,7 +9,6 @@ import AuthPage from "@/components/AuthPage";
 import MainDashboard from "@/components/MainDashboard";
 import QueryProvider from "@/providers/query-client";
 import { TutorialProvider } from "@/features/tutorial/TutorialProvider";
-import { ErrorReportButton } from "@/components/feedback/ErrorReportButton";
 import { SatisfactionSurvey } from "@/components/feedback/SatisfactionSurvey";
 import { AdminGuard } from "@/components/admin/AdminGuard";
 import { AdminLayout } from "@/pages/admin/AdminLayout";
@@ -67,7 +66,6 @@ const AppContent = () => {
     <>
       <Toaster />
       <Sonner />
-      <ErrorReportButton />
       <SatisfactionSurvey />
       <Routes>
         <Route
