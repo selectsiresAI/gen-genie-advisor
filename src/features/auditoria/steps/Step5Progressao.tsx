@@ -161,57 +161,28 @@ function computeSlope(points: SeriesPoint[]): number {
   return cov / varX;
 }
 
-function toPlainString(value: number): string {
-  const str = value.toString();
-  if (!str.includes("e") && !str.includes("E")) {
-    return str;
+function truncateDecimals(value: number, decimals: number): number {
+  if (decimals <= 0) {
+    return Math.floor(value + Number.EPSILON);
   }
 
-  const [significand, exponentPart] = str.split("e");
-  const exponent = Number(exponentPart);
-  const [intPart, fracPart = ""] = significand.split(".");
-  const digits = (intPart + fracPart).replace(/^0+(?=\d)/, "");
-
-  if (!digits) {
-    return "0";
-  }
-
-  if (exponent >= 0) {
-    if (exponent >= fracPart.length) {
-      return digits + "0".repeat(exponent - fracPart.length);
-    }
-    const decimalPos = digits.length - (fracPart.length - exponent);
-    return `${digits.slice(0, decimalPos)}.${digits.slice(decimalPos)}`;
-  }
-
-  const positiveExponent = Math.abs(exponent);
-  const leadingZeros = "0".repeat(Math.max(positiveExponent - 1, 0));
-  return `0.${leadingZeros}${digits}`;
+  const factor = 10 ** decimals;
+  return Math.floor((value + Number.EPSILON) * factor) / factor;
 }
 
-function ensureMinimumDecimals(str: string, minDecimals: number): string {
-  if (minDecimals <= 0) {
-    return str;
-  }
-
-  if (!str.includes(".")) {
-    return `${str}.${"0".repeat(minDecimals)}`;
-  }
-
-  const [intPart, fracPart = ""] = str.split(".");
-  if (fracPart.length >= minDecimals) {
-    return `${intPart}.${fracPart}`;
-  }
-
-  return `${intPart}.${fracPart.padEnd(minDecimals, "0")}`;
-}
-
-function trimFraction(value: string): string {
+function trimTrailingZeros(value: string, minDecimals: number): string {
   if (!value.includes(".")) {
     return value;
   }
 
-  return value.replace(/\.0+$/, "");
+  const [intPart, fracPart] = value.split(".");
+  let trimmed = fracPart;
+
+  while (trimmed.length > minDecimals && trimmed.endsWith("0")) {
+    trimmed = trimmed.slice(0, -1);
+  }
+
+  return trimmed.length ? `${intPart}.${trimmed}` : intPart;
 }
 
 function formatSlopeMagnitude(value: number, decimals: number): string {
@@ -223,14 +194,18 @@ function formatSlopeMagnitude(value: number, decimals: number): string {
     return Math.round(value).toString();
   }
 
-  if (decimals > 1) {
-    const plain = toPlainString(value);
-    return ensureMinimumDecimals(plain, decimals);
+  const minPrecision = Math.max(decimals, 1);
+  const maxPrecision = Math.max(minPrecision + 4, decimals);
+
+  for (let precision = minPrecision; precision <= maxPrecision; precision += 1) {
+    const truncated = truncateDecimals(value, precision);
+    if (truncated > 0 || precision === maxPrecision) {
+      const formatted = truncated.toFixed(precision);
+      return trimTrailingZeros(formatted, decimals);
+    }
   }
 
-  const rounded = Math.round(value * 10) / 10;
-  const formatted = rounded % 1 === 0 ? rounded.toString() : rounded.toFixed(1);
-  return trimFraction(formatted);
+  return "0";
 }
 
 function computeTrend(points: SeriesPoint[]) {
