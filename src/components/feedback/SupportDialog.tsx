@@ -51,7 +51,7 @@ export function SupportDialog({ open, onOpenChange }: SupportDialogProps) {
         email: validated.email,
         category: validated.category,
         subject: validated.subject,
-        message: validated.message,
+        description: validated.message,
       });
 
       if (error) {

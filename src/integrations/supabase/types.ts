@@ -2247,7 +2247,7 @@ export type Database = {
           created_at: string
           email: string
           id: string
-          message: string
+          description: string
           name: string
           status: string
           subject: string
@@ -2260,7 +2260,7 @@ export type Database = {
           created_at?: string
           email: string
           id?: string
-          message: string
+          description: string
           name: string
           status?: string
           subject: string
@@ -2273,7 +2273,7 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
-          message?: string
+          description?: string
           name?: string
           status?: string
           subject?: string

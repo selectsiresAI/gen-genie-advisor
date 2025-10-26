@@ -31,7 +31,7 @@ interface TicketResponse {
 interface UserTicket {
   id: string;
   subject: string;
-  message: string;
+  description: string;
   category: TicketCategory;
   status: TicketStatus;
   created_at: string;
@@ -88,7 +88,7 @@ export function UserSupportTickets({ userId, userName }: UserSupportTicketsProps
   const [createForm, setCreateForm] = useState({
     subject: "",
     category: "bug" as TicketCategory,
-    message: "",
+    description: "",
   });
   const [replyMessage, setReplyMessage] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
@@ -156,7 +156,7 @@ export function UserSupportTickets({ userId, userName }: UserSupportTicketsProps
 
     const { data, error } = await supabase
       .from("support_tickets")
-      .select("id, subject, message, category, status, created_at, updated_at")
+      .select("id, subject, description, category, status, created_at, updated_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
@@ -213,7 +213,7 @@ export function UserSupportTickets({ userId, userName }: UserSupportTicketsProps
   };
 
   const handleCreateTicket = async () => {
-    if (!createForm.subject.trim() || !createForm.message.trim()) {
+    if (!createForm.subject.trim() || !createForm.description.trim()) {
       toast({
         title: "Preencha os campos obrigatórios",
         description: "Informe assunto e mensagem para abrir um chamado.",
@@ -252,7 +252,7 @@ export function UserSupportTickets({ userId, userName }: UserSupportTicketsProps
       user_id: sessionUserId,
       subject: createForm.subject.trim(),
       category: createForm.category,
-      message: createForm.message.trim(),
+      description: createForm.description.trim(),
       status: "open" as const,
     };
 
@@ -274,7 +274,7 @@ export function UserSupportTickets({ userId, userName }: UserSupportTicketsProps
         description: "Nossa equipe entrará em contato em breve.",
       });
       setCreateDialogOpen(false);
-      setCreateForm({ subject: "", category: "bug" as TicketCategory, message: "" });
+      setCreateForm({ subject: "", category: "bug" as TicketCategory, description: "" });
       await fetchTickets();
       if (data && data.length > 0) {
         setSelectedTicketId(data[0].id);
@@ -403,7 +403,7 @@ export function UserSupportTickets({ userId, userName }: UserSupportTicketsProps
             onOpenChange={(open) => {
               setCreateDialogOpen(open);
               if (!open) {
-                setCreateForm({ subject: "", category: "bug" as TicketCategory, message: "" });
+                setCreateForm({ subject: "", category: "bug" as TicketCategory, description: "" });
               }
             }}
           >
@@ -441,25 +441,25 @@ export function UserSupportTickets({ userId, userName }: UserSupportTicketsProps
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione a categoria" />
                     </SelectTrigger>
-                      <SelectContent>
-                        {CATEGORY_OPTIONS.map((category) => (
-                          <SelectItem key={category.value} value={category.value}>
-                            {category.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                    <SelectContent>
+                      {CATEGORY_OPTIONS.map((category) => (
+                        <SelectItem key={category.value} value={category.value}>
+                          {category.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium" htmlFor="message">
+                  <label className="text-sm font-medium" htmlFor="description">
                     Mensagem
                   </label>
                   <Textarea
-                    id="message"
+                    id="description"
                     placeholder="Descreva o que está acontecendo..."
                     rows={6}
-                    value={createForm.message}
-                    onChange={(event) => setCreateForm((prev) => ({ ...prev, message: event.target.value }))}
+                    value={createForm.description}
+                    onChange={(event) => setCreateForm((prev) => ({ ...prev, description: event.target.value }))}
                   />
                 </div>
               </div>
@@ -522,7 +522,7 @@ export function UserSupportTickets({ userId, userName }: UserSupportTicketsProps
                           {formatDate(ticket.created_at)}
                         </p>
                         <p className="mt-2 text-xs text-muted-foreground line-clamp-2">
-                          {ticket.message}
+                          {ticket.description}
                         </p>
                         <p className="mt-2 text-[11px] uppercase tracking-wide text-muted-foreground">
                           Categoria: {CATEGORY_OPTIONS.find((option) => option.value === ticket.category)?.label || ticket.category}
@@ -554,7 +554,7 @@ export function UserSupportTickets({ userId, userName }: UserSupportTicketsProps
               <CardContent className="space-y-6">
                 <section className="space-y-2">
                   <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Descrição</h3>
-                  <p className="text-sm leading-relaxed whitespace-pre-line">{selectedTicket.message}</p>
+                  <p className="text-sm leading-relaxed whitespace-pre-line">{selectedTicket.description}</p>
                 </section>
 
                 <section className="space-y-3">

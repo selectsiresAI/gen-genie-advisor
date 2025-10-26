@@ -35,7 +35,14 @@ export function ErrorReportButton() {
       
       setLoading(true);
 
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+      if (userError) {
+        console.error("Erro ao buscar usuário autenticado:", userError);
+      }
+
       const { error: dbError } = await supabase.from("error_reports").insert({
+        user_id: user?.id ?? null,
         description: validated.description,
         url: validated.url,
         user_agent: validated.userAgent,
@@ -73,7 +80,7 @@ export function ErrorReportButton() {
           <Button
             variant="outline"
             size="icon"
-            className="fixed bottom-24 right-6 h-14 w-14 rounded-full shadow-lg z-50 hover:scale-110 transition-all bg-orange-500 hover:bg-orange-400 text-white border-orange-600"
+            className="fixed bottom-24 right-6 h-14 w-14 rounded-full shadow-lg z-50 hover:scale-110 transition-all bg-orange-500 hover:bg-orange-600 text-white border-orange-600"
             title="Reportar erro ou problema"
           >
             <Bug className="h-5 w-5" />
