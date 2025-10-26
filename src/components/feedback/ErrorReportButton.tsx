@@ -24,9 +24,6 @@ export function ErrorReportButton() {
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
 
-  // Só mostrar o botão se estiver autenticado
-  if (!session) return null;
-
   // Monitorar mudanças na sessão
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -41,6 +38,9 @@ export function ErrorReportButton() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Só mostrar o botão se estiver autenticado
+  if (!session) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
