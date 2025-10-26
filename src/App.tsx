@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,6 +11,9 @@ import QueryProvider from "@/providers/query-client";
 import { TutorialProvider } from "@/features/tutorial/TutorialProvider";
 import { ErrorReportButton } from "@/components/feedback/ErrorReportButton";
 import { SatisfactionSurvey } from "@/components/feedback/SatisfactionSurvey";
+import { AdminGuard } from "@/components/admin/AdminGuard";
+import { AdminLayout } from "@/pages/admin/AdminLayout";
+import { AdminDashboard } from "@/pages/admin/AdminDashboard";
 import { SupportTicketsPage } from "@/pages/admin/SupportTicketsPage";
 
 const AppContent = () => {
@@ -78,15 +81,20 @@ const AppContent = () => {
           }
         />
         <Route
-          path="/admin/support-tickets"
+          path="/admin/*"
           element={
             user ? (
-              <SupportTicketsPage />
+              <AdminGuard redirectTo="/">
+                <AdminLayout onLogout={handleLogout} />
+              </AdminGuard>
             ) : (
               <AuthPage onAuthSuccess={handleAuthSuccess} />
             )
           }
-        />
+        >
+          <Route index element={<AdminDashboard />} />
+          <Route path="support-tickets" element={<SupportTicketsPage />} />
+        </Route>
       </Routes>
     </>
   );
