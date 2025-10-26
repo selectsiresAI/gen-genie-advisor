@@ -17,7 +17,7 @@ interface SupportTicket {
   email: string;
   category: string;
   subject: string;
-  description: string;
+  message: string;
   status: string;
   user_id: string | null;
   created_at: string;
@@ -215,7 +215,7 @@ export function SupportTicketDetail({ ticket, onClose }: SupportTicketDetailProp
             
             <div>
               <h3 className="font-semibold mb-2">Descrição:</h3>
-              <p className="text-muted-foreground whitespace-pre-wrap">{ticket.description}</p>
+              <p className="text-muted-foreground whitespace-pre-wrap">{ticket.message}</p>
             </div>
           </CardContent>
         </Card>

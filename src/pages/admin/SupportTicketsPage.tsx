@@ -19,7 +19,7 @@ interface SupportTicket {
   email: string;
   category: string;
   subject: string;
-  description: string;
+  message: string;
   status: string;
   user_id: string | null;
   created_at: string;
@@ -83,7 +83,7 @@ export function SupportTicketsPage() {
         t.name.toLowerCase().includes(searchLower) ||
         t.email.toLowerCase().includes(searchLower) ||
         t.subject.toLowerCase().includes(searchLower) ||
-        t.description.toLowerCase().includes(searchLower)
+        t.message.toLowerCase().includes(searchLower)
       );
     }
 
@@ -298,7 +298,7 @@ export function SupportTicketsPage() {
                       </div>
 
                       <p className="text-sm text-muted-foreground line-clamp-2">
-                        {ticket.description}
+                        {ticket.message}
                       </p>
                     </div>
 
