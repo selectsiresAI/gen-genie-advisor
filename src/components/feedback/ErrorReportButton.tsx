@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useSupabaseSession } from "@/hooks/useSupabaseSession";
 import { AlertCircle, Bug, Loader2, X } from "lucide-react";
 import { z } from "zod";
 
@@ -16,11 +17,15 @@ const errorSchema = z.object({
 });
 
 export function ErrorReportButton() {
+  const session = useSupabaseSession();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
+
+  // Só mostrar o botão se estiver autenticado
+  if (!session) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,11 +40,19 @@ export function ErrorReportButton() {
       
       setLoading(true);
 
+      // Obter o user_id da sessão
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('Usuário não autenticado');
+      }
+
       const { error: dbError } = await supabase.from("error_reports").insert({
         description: validated.description,
         url: validated.url,
         user_agent: validated.userAgent,
         status: "new",
+        user_id: user.id,
       });
 
       if (dbError) throw dbError;
@@ -55,10 +68,11 @@ export function ErrorReportButton() {
       if (err instanceof z.ZodError) {
         setError(err.errors[0]?.message || "Erro de validação");
       } else {
+        console.error('Erro ao enviar report:', err);
         toast({
           variant: "destructive",
           title: "Erro ao enviar",
-          description: "Tente novamente.",
+          description: err instanceof Error ? err.message : "Tente novamente.",
         });
       }
     } finally {
