@@ -167,8 +167,11 @@ export function AdminLayout({ onLogout }: AdminLayoutProps) {
         <DesktopSidebar user={user} onLogout={handleLogout} />
         <div className="flex-1">
           <header className="flex items-center justify-between border-b bg-background/80 px-4 py-3 backdrop-blur lg:px-8">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <MobileSidebar user={user} onLogout={handleLogout} />
+              <div className="rounded-full bg-emerald-500 px-3 py-1 text-xs font-semibold text-emerald-50 shadow-sm">
+                Role: admin | Admin: Sim
+              </div>
               <h1 className="text-xl font-semibold tracking-tight lg:text-2xl">{pageTitle}</h1>
             </div>
             <UserBadge user={user} />
