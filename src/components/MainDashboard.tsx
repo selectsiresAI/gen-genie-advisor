@@ -70,7 +70,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   const [totalAnimals, setTotalAnimals] = useState(0);
   const [showSurvey, setShowSurvey] = useState(false);
   const [showMetrics, setShowMetrics] = useState(false);
-  const { isAdmin, isLoading: roleLoading } = useUserRole();
+  const { role, isAdmin, isLoading: roleLoading } = useUserRole();
   const {
     toast
   } = useToast();
@@ -639,10 +639,18 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
         </div>
       </div>;
   }
-  return <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background relative">
       <HomeTourAnchors />
       <HomeHintDialog userId={user.id} />
       <HelpButton context="dashboard" />
+
+      <div className="absolute top-4 right-4">
+        <Badge
+          className={`shadow ${isAdmin ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
+        >
+          Role: {role ?? 'desconhecido'} | Admin: {isAdmin ? 'Sim' : 'Não'}
+        </Badge>
+      </div>
       
       {/* Header */}
       <div className="border-b">
