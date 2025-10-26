@@ -1,71 +1,91 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useHasRole } from "./useHasRole";
 
-export type UserRole = 'admin' | 'moderator' | 'user' | null;
+export type UserRole = "admin" | "moderator" | "user" | null;
+
+const FALLBACK_TABLE = "user_roles";
 
 export function useUserRole() {
   const [role, setRole] = useState<UserRole>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    console.log('🔄 useUserRole: inicializando...');
-    checkUserRole();
-  }, []);
+  const hasAdminRole = useHasRole("admin", { autoFetch: false });
+  const hasModeratorRole = useHasRole("moderator", { autoFetch: false });
 
-  const checkUserRole = async () => {
+  const fetchRoleFromTable = useCallback(async (userId: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      console.log('🔄 Verificando role para:', user?.id);
-      
-      if (!user) {
-        console.log('❌ Nenhum usuário autenticado');
-        setRole(null);
-        setIsLoading(false);
-        return;
-      }
-
-      // ✅ BUSCAR ROLE DIRETAMENTE (sem teste que viola RLS)
-      const { data: userRole, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
+      const { data, error } = await supabase
+        .from(FALLBACK_TABLE)
+        .select("role")
+        .eq("user_id", userId)
         .maybeSingle();
 
-      console.log('📋 Resultado da consulta:', { userRole, error, userId: user.id });
-
       if (error) {
-        console.error('❌ Erro ao buscar role:', error);
-        setRole('user'); // Default em caso de erro
-        setIsLoading(false);
+        throw error;
+      }
+
+      return (data?.role ?? "user") as UserRole;
+    } catch (tableError: any) {
+      console.warn("Não foi possível carregar role via tabela de fallback", tableError);
+      return "user" as UserRole;
+    }
+  }, []);
+
+  const checkUserRole = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setRole(null);
         return;
       }
 
-      if (!userRole) {
-        console.log('👤 Usuário sem role específica, usando padrão: user');
-        setRole('user');
-        setIsLoading(false);
+      const [adminResult, moderatorResult] = await Promise.all([
+        hasAdminRole.refetch(),
+        hasModeratorRole.refetch()
+      ]);
+
+      if (adminResult) {
+        setRole("admin");
         return;
       }
 
-      console.log(`✅ Role identificada: ${userRole.role}`);
-      setRole(userRole.role as UserRole);
-    } catch (error) {
-      console.error('❌ Erro inesperado:', error);
-      setRole('user');
+      if (moderatorResult) {
+        setRole("moderator");
+        return;
+      }
+
+      const fallbackRole = await fetchRoleFromTable(user.id);
+      setRole(fallbackRole ?? "user");
+    } catch (err: any) {
+      console.error("Erro ao verificar role do usuário", err);
+      setError(err?.message ?? "Não foi possível verificar permissões");
+      setRole("user");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [fetchRoleFromTable, hasAdminRole, hasModeratorRole]);
 
-  const result = {
-    role,
-    isAdmin: role === 'admin',
-    isModerator: role === 'moderator',
-    isLoading,
-    refetch: checkUserRole
-  };
-  
-  console.log('📊 useUserRole retornando:', result);
-  
-  return result;
+  useEffect(() => {
+    checkUserRole();
+  }, [checkUserRole]);
+
+  return useMemo(
+    () => ({
+      role,
+      isAdmin: role === "admin",
+      isModerator: role === "moderator",
+      isLoading,
+      refetch: checkUserRole,
+      error
+    }),
+    [checkUserRole, error, isLoading, role]
+  );
 }
