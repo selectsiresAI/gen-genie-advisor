@@ -47,25 +47,23 @@ export function useUserRole() {
         return;
       }
 
-      // Buscar role diretamente do user_roles
-      const { data: userRole, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      const [adminResult, moderatorResult] = await Promise.all([
+        hasAdminRole.refetch(),
+        hasModeratorRole.refetch()
+      ]);
 
-      if (roleError) {
-        console.error('Erro ao buscar role:', roleError);
-        setRole('user');
+      if (adminResult) {
+        setRole("admin");
         return;
       }
 
-      if (!userRole) {
-        setRole('user');
+      if (moderatorResult) {
+        setRole("moderator");
         return;
       }
 
-      setRole(userRole.role as UserRole);
+      const fallbackRole = await fetchRoleFromTable(user.id);
+      setRole(fallbackRole ?? "user");
     } catch (err: any) {
       console.error("Erro ao verificar role do usuário", err);
       setError(err?.message ?? "Não foi possível verificar permissões");
@@ -73,7 +71,7 @@ export function useUserRole() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [fetchRoleFromTable, hasAdminRole, hasModeratorRole]);
 
   useEffect(() => {
     checkUserRole();
