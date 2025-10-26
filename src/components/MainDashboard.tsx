@@ -79,6 +79,11 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
     refreshFromSupabase
   } = useHerdStore();
   const { trackFeature } = useActivityTracker(user);
+  
+  // Debug admin status
+  useEffect(() => {
+    console.log('🎯 MainDashboard - Admin Status:', { isAdmin, roleLoading, userId: user?.id });
+  }, [isAdmin, roleLoading, user?.id]);
   useEffect(() => {
     loadUserData();
   }, []);

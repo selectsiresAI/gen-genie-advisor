@@ -8,6 +8,7 @@ export function useUserRole() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    console.log('🔄 useUserRole: inicializando...');
     checkUserRole();
   }, []);
 
@@ -21,6 +22,14 @@ export function useUserRole() {
         setRole(null);
         return;
       }
+
+      // Primeiro, testar se conseguimos acessar a tabela
+      const { data: testData, error: testError } = await supabase
+        .from('user_roles')
+        .select('*')
+        .limit(1);
+      
+      console.log('🧪 Teste de acesso à tabela user_roles:', { testData, testError });
 
       // Check if user has admin role
       const { data: adminRole, error: adminError } = await supabase
@@ -63,11 +72,15 @@ export function useUserRole() {
     }
   };
 
-  return {
+  const result = {
     role,
     isAdmin: role === 'admin',
     isModerator: role === 'moderator',
     isLoading,
     refetch: checkUserRole
   };
+  
+  console.log('📊 useUserRole retornando:', result);
+  
+  return result;
 }
