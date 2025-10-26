@@ -16,7 +16,7 @@ export function useUserRole() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       console.log('🔄 Verificando role para:', user?.id);
-
+      
       if (!user) {
         console.log('❌ Nenhum usuário autenticado');
         setRole(null);
@@ -24,24 +24,31 @@ export function useUserRole() {
         return;
       }
 
+      // ✅ BUSCAR ROLE DIRETAMENTE (sem teste que viola RLS)
       const { data: userRole, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      console.log('📋 Resultado:', { userRole, error });
+      console.log('📋 Resultado da consulta:', { userRole, error, userId: user.id });
 
       if (error) {
-        console.error('❌ Erro:', error);
+        console.error('❌ Erro ao buscar role:', error);
+        setRole('user'); // Default em caso de erro
+        setIsLoading(false);
+        return;
+      }
+
+      if (!userRole) {
+        console.log('👤 Usuário sem role específica, usando padrão: user');
         setRole('user');
         setIsLoading(false);
         return;
       }
 
-      const finalRole = userRole?.role || 'user';
-      console.log(`✅ Role definida: ${finalRole}`);
-      setRole(finalRole as UserRole);
+      console.log(`✅ Role identificada: ${userRole.role}`);
+      setRole(userRole.role as UserRole);
     } catch (error) {
       console.error('❌ Erro inesperado:', error);
       setRole('user');
