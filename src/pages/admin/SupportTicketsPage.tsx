@@ -54,17 +54,24 @@ export function SupportTicketsPage() {
   }, [tickets, filters]);
 
   const loadTickets = async () => {
-    const { data, error } = await supabase
-      .from('support_tickets')
-      .select('*')
-      .order('created_at', { ascending: false });
+    try {
+      setLoading(true);
 
-    if (error) {
+      const { data, error } = await supabase
+        .from('support_tickets')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      setTickets(data || []);
+    } catch (error) {
       console.error('Error loading tickets:', error);
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    setTickets(data || []);
   };
 
   const applyFilters = () => {
