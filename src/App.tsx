@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,8 +11,9 @@ import QueryProvider from "@/providers/query-client";
 import { TutorialProvider } from "@/features/tutorial/TutorialProvider";
 import { ErrorReportButton } from "@/components/feedback/ErrorReportButton";
 import { SatisfactionSurvey } from "@/components/feedback/SatisfactionSurvey";
+import { SupportTicketsPage } from "@/pages/admin/SupportTicketsPage";
 
-const App = () => {
+const AppContent = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,21 +61,48 @@ const App = () => {
   }
 
   return (
-    <QueryProvider>
-      <TutorialProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <ErrorReportButton />
-          <SatisfactionSurvey />
-          {user ? (
-            <MainDashboard user={user} onLogout={handleLogout} />
-          ) : (
-            <AuthPage onAuthSuccess={handleAuthSuccess} />
-          )}
-        </TooltipProvider>
-      </TutorialProvider>
-    </QueryProvider>
+    <>
+      <Toaster />
+      <Sonner />
+      <ErrorReportButton />
+      <SatisfactionSurvey />
+      <Routes>
+        <Route
+          path="/"
+          element={
+            user ? (
+              <MainDashboard user={user} onLogout={handleLogout} />
+            ) : (
+              <AuthPage onAuthSuccess={handleAuthSuccess} />
+            )
+          }
+        />
+        <Route
+          path="/admin/support-tickets"
+          element={
+            user ? (
+              <SupportTicketsPage />
+            ) : (
+              <AuthPage onAuthSuccess={handleAuthSuccess} />
+            )
+          }
+        />
+      </Routes>
+    </>
+  );
+};
+
+const App = () => {
+  return (
+    <BrowserRouter>
+      <QueryProvider>
+        <TutorialProvider>
+          <TooltipProvider>
+            <AppContent />
+          </TooltipProvider>
+        </TutorialProvider>
+      </QueryProvider>
+    </BrowserRouter>
   );
 };
 

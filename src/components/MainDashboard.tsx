@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Building2, Users, Beef, BarChart3, Plus, LogOut, Zap, ArrowLeft, ArrowLeftRight, TrendingUp, Beaker, Target, FolderOpen, Calculator, Trash2, Sparkles } from "lucide-react";
+import { Building2, Users, Beef, BarChart3, Plus, LogOut, Zap, ArrowLeft, ArrowLeftRight, TrendingUp, Beaker, Target, FolderOpen, Calculator, Trash2, Sparkles, MessageSquare } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import CreateFarmModal from './CreateFarmModal';
@@ -671,15 +671,26 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
             )}
             
             {userProfile?.is_admin && currentView === 'dashboard' && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setShowMetrics(!showMetrics)}
-                className="gap-2"
-              >
-                <BarChart3 className="h-4 w-4" />
-                {showMetrics ? 'Ocultar' : 'Ver'} Métricas
-              </Button>
+              <>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setShowMetrics(!showMetrics)}
+                  className="gap-2"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  {showMetrics ? 'Ocultar' : 'Ver'} Métricas
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => window.location.href = '/admin/support-tickets'}
+                  className="gap-2"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  Tickets de Suporte
+                </Button>
+              </>
             )}
             
             <Button variant="outline" size="sm" onClick={handleLogout} className="bg-slate-200 hover:bg-slate-100">
