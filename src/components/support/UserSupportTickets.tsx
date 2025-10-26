@@ -13,6 +13,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, MessageSquarePlus, MessageSquareText, RefreshCw } from "lucide-react";
 
+type TicketCategory = "bug" | "feature" | "question" | "other";
+type TicketStatus = "open" | "in_progress" | "resolved" | "closed";
+
 interface UserSupportTicketsProps {
   userId: string;
   userName?: string | null;
@@ -29,26 +32,41 @@ interface UserTicket {
   id: string;
   subject: string;
   message: string;
-  category: string;
-  status: string;
+  category: TicketCategory;
+  status: TicketStatus;
   created_at: string;
   updated_at?: string | null;
-  support_ticket_responses?: TicketResponse[];
 }
 
 const CATEGORY_OPTIONS = [
-  { value: "technical", label: "Técnico" },
-  { value: "billing", label: "Financeiro" },
-  { value: "feature", label: "Funcionalidade" },
-  { value: "other", label: "Outro" },
+  { value: "bug" as TicketCategory, label: "Bug" },
+  { value: "feature" as TicketCategory, label: "Funcionalidade" },
+  { value: "question" as TicketCategory, label: "Pergunta" },
+  { value: "other" as TicketCategory, label: "Outro" },
 ];
 
-const STATUS_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" | "success" }> = {
+const ALLOWED_CATEGORIES = new Set<TicketCategory>(["bug", "feature", "question", "other"]);
+const ALLOWED_STATUSES = new Set<TicketStatus>(["open", "in_progress", "resolved", "closed"]);
+
+const STATUS_LABELS: Record<TicketStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline" | "success" }> = {
   open: { label: "Aberto", variant: "destructive" },
-  new: { label: "Novo", variant: "destructive" },
   in_progress: { label: "Em andamento", variant: "default" },
   resolved: { label: "Resolvido", variant: "success" },
   closed: { label: "Fechado", variant: "outline" },
+};
+
+const normalizeCategory = (category: string | null | undefined): TicketCategory => {
+  if (category && ALLOWED_CATEGORIES.has(category as TicketCategory)) {
+    return category as TicketCategory;
+  }
+  return "other";
+};
+
+const normalizeStatus = (status: string | null | undefined): TicketStatus => {
+  if (status && ALLOWED_STATUSES.has(status as TicketStatus)) {
+    return status as TicketStatus;
+  }
+  return "open";
 };
 
 const formatDate = (date: string) => {
@@ -69,13 +87,15 @@ export function UserSupportTickets({ userId, userName }: UserSupportTicketsProps
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createForm, setCreateForm] = useState({
     subject: "",
-    category: "technical",
+    category: "bug" as TicketCategory,
     message: "",
   });
   const [replyMessage, setReplyMessage] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [responsesLoading, setResponsesLoading] = useState(false);
+  const [selectedTicketResponses, setSelectedTicketResponses] = useState<TicketResponse[]>([]);
 
   useEffect(() => {
     if (!userId) {
@@ -86,6 +106,16 @@ export function UserSupportTickets({ userId, userName }: UserSupportTicketsProps
     fetchTickets();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
+
+  useEffect(() => {
+    if (!selectedTicketId) {
+      setSelectedTicketResponses([]);
+      return;
+    }
+
+    fetchTicketResponses(selectedTicketId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTicketId]);
 
   const firstName = useMemo(() => {
     if (!userName) {
@@ -99,33 +129,87 @@ export function UserSupportTickets({ userId, userName }: UserSupportTicketsProps
     return tickets.find(ticket => ticket.id === selectedTicketId) || null;
   }, [tickets, selectedTicketId]);
 
+  const resolveErrorDescription = (error: any, defaultMessage: string) => {
+    if (!error) {
+      return defaultMessage;
+    }
+
+    const rawStatus = error.status ?? error.code;
+    const status = typeof rawStatus === "string" ? parseInt(rawStatus, 10) : rawStatus;
+    const message: string = error.message ?? defaultMessage;
+    const normalizedMessage = message.toLowerCase();
+
+    if (status === 401 || normalizedMessage.includes("jwt")) {
+      return "Sessão expirada. Faça login novamente para acessar seus chamados.";
+    }
+
+    if (status === 403 || normalizedMessage.includes("permission")) {
+      return "Você não possui permissão para acessar os chamados. Entre em contato com o suporte se o problema persistir.";
+    }
+
+    return message || defaultMessage;
+  };
+
   const fetchTickets = async () => {
     setLoading(true);
     setRefreshing(true);
 
     const { data, error } = await supabase
       .from("support_tickets")
-      .select("id, subject, message, category, status, created_at, updated_at, support_ticket_responses(id, responder_id, message, created_at)")
+      .select("id, subject, message, category, status, created_at, updated_at")
       .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .order("created_at", { ascending: true, foreignTable: "support_ticket_responses" });
+      .order("created_at", { ascending: false });
 
     if (error) {
       console.error("Error fetching support tickets", error);
       toast({
         title: "Erro ao carregar chamados",
-        description: error.message,
+        description: resolveErrorDescription(error, "Tente novamente em instantes."),
         variant: "destructive",
       });
+      setTickets([]);
+      setSelectedTicketId(null);
     } else {
-      setTickets(data || []);
-      if (!selectedTicketId && data && data.length > 0) {
-        setSelectedTicketId(data[0].id);
+      const normalizedTickets = (data || []).map((ticket) => ({
+        ...ticket,
+        category: normalizeCategory(ticket.category),
+        status: normalizeStatus(ticket.status),
+      }));
+      setTickets(normalizedTickets);
+      if (normalizedTickets.length === 0) {
+        setSelectedTicketId(null);
+      } else if (!selectedTicketId || !normalizedTickets.some((ticket) => ticket.id === selectedTicketId)) {
+        setSelectedTicketId(normalizedTickets[0].id);
       }
     }
 
     setLoading(false);
     setRefreshing(false);
+  };
+
+  const fetchTicketResponses = async (ticketId: string) => {
+    setResponsesLoading(true);
+
+    const { data, error } = await supabase
+      .from("support_ticket_responses")
+      .select("id, responder_id, message, created_at")
+      .eq("ticket_id", ticketId)
+      .eq("is_internal", false)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching ticket responses", error);
+      toast({
+        title: "Erro ao carregar respostas",
+        description: resolveErrorDescription(error, "Não foi possível carregar as respostas."),
+        variant: "destructive",
+      });
+      setSelectedTicketResponses([]);
+    } else {
+      setSelectedTicketResponses(data || []);
+    }
+
+    setResponsesLoading(false);
   };
 
   const handleCreateTicket = async () => {
@@ -140,8 +224,32 @@ export function UserSupportTickets({ userId, userName }: UserSupportTicketsProps
 
     setCreating(true);
 
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    const sessionUserId = sessionData?.session?.user?.id;
+
+    if (sessionError) {
+      console.error("Error retrieving session", sessionError);
+      toast({
+        title: "Sessão inválida",
+        description: resolveErrorDescription(sessionError, "Não foi possível validar sua sessão."),
+        variant: "destructive",
+      });
+      setCreating(false);
+      return;
+    }
+
+    if (!sessionUserId) {
+      toast({
+        title: "Sessão expirada",
+        description: "Faça login novamente para abrir um chamado.",
+        variant: "destructive",
+      });
+      setCreating(false);
+      return;
+    }
+
     const payload = {
-      user_id: userId,
+      user_id: sessionUserId,
       subject: createForm.subject.trim(),
       category: createForm.category,
       message: createForm.message.trim(),
@@ -157,7 +265,7 @@ export function UserSupportTickets({ userId, userName }: UserSupportTicketsProps
       console.error("Error creating ticket", error);
       toast({
         title: "Não foi possível abrir o chamado",
-        description: error.message,
+        description: resolveErrorDescription(error, "Verifique os dados e tente novamente."),
         variant: "destructive",
       });
     } else {
@@ -166,7 +274,7 @@ export function UserSupportTickets({ userId, userName }: UserSupportTicketsProps
         description: "Nossa equipe entrará em contato em breve.",
       });
       setCreateDialogOpen(false);
-      setCreateForm({ subject: "", category: "technical", message: "" });
+      setCreateForm({ subject: "", category: "bug" as TicketCategory, message: "" });
       await fetchTickets();
       if (data && data.length > 0) {
         setSelectedTicketId(data[0].id);
@@ -176,7 +284,7 @@ export function UserSupportTickets({ userId, userName }: UserSupportTicketsProps
     setCreating(false);
   };
 
-  const handleStatusUpdate = async (ticketId: string, status: string) => {
+  const handleStatusUpdate = async (ticketId: string, status: TicketStatus) => {
     setUpdatingStatus(true);
 
     const { error } = await supabase
@@ -189,7 +297,7 @@ export function UserSupportTickets({ userId, userName }: UserSupportTicketsProps
       console.error("Error updating ticket status", error);
       toast({
         title: "Não foi possível atualizar o status",
-        description: error.message,
+        description: resolveErrorDescription(error, "Tente novamente em instantes."),
         variant: "destructive",
       });
     } else {
@@ -210,15 +318,29 @@ export function UserSupportTickets({ userId, userName }: UserSupportTicketsProps
 
     setSendingReply(true);
 
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    const sessionUserId = sessionData?.session?.user?.id;
+
+    if (sessionError || !sessionUserId) {
+      console.error("Error retrieving session", sessionError);
+      toast({
+        title: "Sessão inválida",
+        description: resolveErrorDescription(sessionError, "Faça login novamente para enviar uma mensagem."),
+        variant: "destructive",
+      });
+      setSendingReply(false);
+      return;
+    }
+
     const { error } = await supabase
       .from("support_ticket_responses")
-      .insert([{ ticket_id: selectedTicketId, responder_id: userId, message: replyMessage.trim() }]);
+      .insert([{ ticket_id: selectedTicketId, responder_id: sessionUserId, message: replyMessage.trim(), is_internal: false }]);
 
     if (error) {
       console.error("Error sending response", error);
       toast({
         title: "Não foi possível enviar a mensagem",
-        description: error.message,
+        description: resolveErrorDescription(error, "Tente novamente em instantes."),
         variant: "destructive",
       });
     } else {
@@ -228,12 +350,13 @@ export function UserSupportTickets({ userId, userName }: UserSupportTicketsProps
       });
       setReplyMessage("");
       await fetchTickets();
+      await fetchTicketResponses(selectedTicketId);
     }
 
     setSendingReply(false);
   };
 
-  const renderStatusBadge = (status: string) => {
+  const renderStatusBadge = (status: TicketStatus) => {
     const statusConfig = STATUS_LABELS[status] ?? STATUS_LABELS.open;
     const badgeVariant = statusConfig.variant === "success" ? "default" : statusConfig.variant;
 
@@ -280,7 +403,7 @@ export function UserSupportTickets({ userId, userName }: UserSupportTicketsProps
             onOpenChange={(open) => {
               setCreateDialogOpen(open);
               if (!open) {
-                setCreateForm({ subject: "", category: "technical", message: "" });
+                setCreateForm({ subject: "", category: "bug" as TicketCategory, message: "" });
               }
             }}
           >
@@ -313,18 +436,18 @@ export function UserSupportTickets({ userId, userName }: UserSupportTicketsProps
                   <label className="text-sm font-medium">Categoria</label>
                   <Select
                     value={createForm.category}
-                    onValueChange={(value) => setCreateForm((prev) => ({ ...prev, category: value }))}
+                    onValueChange={(value) => setCreateForm((prev) => ({ ...prev, category: value as TicketCategory }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione a categoria" />
                     </SelectTrigger>
-                    <SelectContent>
-                      {CATEGORY_OPTIONS.map((category) => (
-                        <SelectItem key={category.value} value={category.value}>
-                          {category.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
+                      <SelectContent>
+                        {CATEGORY_OPTIONS.map((category) => (
+                          <SelectItem key={category.value} value={category.value}>
+                            {category.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
@@ -449,8 +572,12 @@ export function UserSupportTickets({ userId, userName }: UserSupportTicketsProps
                   </div>
 
                   <div className="space-y-3">
-                    {selectedTicket.support_ticket_responses && selectedTicket.support_ticket_responses.length > 0 ? (
-                      selectedTicket.support_ticket_responses.map((response) => (
+                    {responsesLoading ? (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" /> Carregando respostas...
+                      </div>
+                    ) : selectedTicketResponses.length > 0 ? (
+                      selectedTicketResponses.map((response) => (
                         <div key={response.id} className="rounded-lg border bg-muted/30 p-4">
                           <div className="flex items-center justify-between text-xs text-muted-foreground">
                             <span>
