@@ -70,7 +70,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   const [totalAnimals, setTotalAnimals] = useState(0);
   const [showSurvey, setShowSurvey] = useState(false);
   const [showMetrics, setShowMetrics] = useState(false);
-  const { isAdmin } = useUserRole();
+  const { isAdmin, isLoading: roleLoading } = useUserRole();
   const {
     toast
   } = useToast();
