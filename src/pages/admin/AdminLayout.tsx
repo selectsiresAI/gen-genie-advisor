@@ -29,7 +29,12 @@ const UserBadge = ({ user }: { user: User | null }) => {
         <AvatarFallback>{initials}</AvatarFallback>
       </Avatar>
       <div className="flex flex-col">
-        <span className="font-medium leading-none">{user.email}</span>
+        <div className="flex items-center gap-2">
+          <span className="font-medium leading-none">{user.email}!</span>
+          <div className="rounded-full bg-emerald-500 px-2 py-0.5 text-xs font-semibold text-emerald-50 shadow-sm">
+            Role: admin | Admin: Sim
+          </div>
+        </div>
         <span className="text-xs text-muted-foreground">Área administrativa</span>
       </div>
     </div>
@@ -169,9 +174,6 @@ export function AdminLayout({ onLogout }: AdminLayoutProps) {
           <header className="flex items-center justify-between border-b bg-background/80 px-4 py-3 backdrop-blur lg:px-8">
             <div className="flex flex-wrap items-center gap-3">
               <MobileSidebar user={user} onLogout={handleLogout} />
-              <div className="rounded-full bg-emerald-500 px-3 py-1 text-xs font-semibold text-emerald-50 shadow-sm">
-                Role: admin | Admin: Sim
-              </div>
               <h1 className="text-xl font-semibold tracking-tight lg:text-2xl">{pageTitle}</h1>
             </div>
             <UserBadge user={user} />
