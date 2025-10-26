@@ -49,8 +49,8 @@ export function ErrorReportButton() {
         description: validated.description,
         url: validated.url,
         user_agent: validated.userAgent,
-        user_id: user?.id,
-        status: "open",
+        user_id: user?.id ?? null,
+        status: "new",
       });
 
       if (dbError) {
