@@ -1,37 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useHasRole } from "./useHasRole";
 
 export type UserRole = "admin" | "moderator" | "user" | null;
-
-const FALLBACK_TABLE = "user_roles";
 
 export function useUserRole() {
   const [role, setRole] = useState<UserRole>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const hasAdminRole = useHasRole("admin", { autoFetch: false });
-  const hasModeratorRole = useHasRole("moderator", { autoFetch: false });
-
-  const fetchRoleFromTable = useCallback(async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from(FALLBACK_TABLE)
-        .select("role")
-        .eq("user_id", userId)
-        .maybeSingle();
-
-      if (error) {
-        throw error;
-      }
-
-      return (data?.role ?? "user") as UserRole;
-    } catch (tableError: any) {
-      console.warn("Não foi possível carregar role via tabela de fallback", tableError);
-      return "user" as UserRole;
-    }
-  }, []);
 
   const checkUserRole = useCallback(async () => {
     setIsLoading(true);
@@ -47,23 +22,35 @@ export function useUserRole() {
         return;
       }
 
-      const [adminResult, moderatorResult] = await Promise.all([
-        hasAdminRole.refetch(),
-        hasModeratorRole.refetch()
-      ]);
+      console.log("🔍 Verificando role para usuário:", user.id);
 
-      if (adminResult) {
+      // Verificar admin usando RPC SECURITY DEFINER
+      const { data: isAdmin, error: adminError } = await supabase
+        .rpc("has_role_v2", { _user_id: user.id, _role: "admin" });
+
+      if (adminError) {
+        console.error("Erro ao buscar role:", adminError);
+        throw adminError;
+      }
+
+      console.log("✅ Resultado has_role_v2 (admin):", isAdmin);
+
+      if (isAdmin) {
         setRole("admin");
         return;
       }
 
-      if (moderatorResult) {
+      // Verificar moderator
+      const { data: isModerator } = await supabase
+        .rpc("has_role_v2", { _user_id: user.id, _role: "moderator" });
+
+      if (isModerator) {
         setRole("moderator");
         return;
       }
 
-      const fallbackRole = await fetchRoleFromTable(user.id);
-      setRole(fallbackRole ?? "user");
+      // Default para user
+      setRole("user");
     } catch (err: any) {
       console.error("Erro ao verificar role do usuário", err);
       setError(err?.message ?? "Não foi possível verificar permissões");
@@ -71,7 +58,7 @@ export function useUserRole() {
     } finally {
       setIsLoading(false);
     }
-  }, [fetchRoleFromTable, hasAdminRole, hasModeratorRole]);
+  }, []);
 
   useEffect(() => {
     checkUserRole();
