@@ -79,19 +79,17 @@ export default function ImportFemalesUploader({ farmId, onSuccess }: Props) {
     setLoading(true);
 
     try {
-      // Ensure we have a valid session, refresh if needed
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      // Refresh session to ensure valid token
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
       
-      if (sessionError || !sessionData.session) {
-        console.log('No valid session, attempting to refresh...');
-        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        
-        if (refreshError || !refreshData.session) {
-          toastError('Sessão expirada. Faça login novamente.');
-          setLoading(false);
-          return;
-        }
+      if (refreshError || !refreshData?.session?.access_token) {
+        toastError('Sessão expirada. Faça login novamente.');
+        setLoading(false);
+        return;
       }
+
+      // Use the fresh token from the refreshed session
+      const token = refreshData.session.access_token;
 
       let uploadFile = fileRef.current;
 
@@ -106,15 +104,6 @@ export default function ImportFemalesUploader({ farmId, onSuccess }: Props) {
       const clone = new File([
         await uploadFile.arrayBuffer(),
       ], uploadFile.name, { type: uploadFile.type || 'text/csv' });
-
-      // Get fresh access token after session refresh
-      const token = await getAccessToken();
-
-      if (!token) {
-        toastError('Não foi possível obter token de autenticação.');
-        setLoading(false);
-        return;
-      }
 
       const formData = new FormData();
       formData.append('file', clone);
