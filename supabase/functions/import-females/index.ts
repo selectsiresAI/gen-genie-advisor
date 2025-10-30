@@ -212,27 +212,34 @@ Deno.serve(async (req) => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-  if (!supabaseUrl || !serviceRoleKey) {
+  if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
     console.error("Missing Supabase environment variables");
     return jsonResponse({ error: "Server configuration error" }, 500);
   }
 
-  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+  // Create client with user's token for auth validation
+  const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } },
     auth: { persistSession: false },
   });
 
-  const accessToken = authHeader.replace("Bearer ", "");
   const {
     data: { user },
     error: authError,
-  } = await supabase.auth.getUser(accessToken);
+  } = await supabaseClient.auth.getUser();
 
   if (authError || !user) {
     console.error("Auth error", authError);
     return jsonResponse({ error: "Unauthorized" }, 401);
   }
+
+  // Create service role client for privileged operations
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false },
+  });
 
   if (action === "upload") {
     try {
