@@ -124,6 +124,28 @@ function parseCSV(csvContent: string): any[] {
   const lines = csvContent.trim().split('\n');
   if (lines.length < 2) return [];
 
+  // Detect delimiter (comma or semicolon)
+  const firstLine = lines[0];
+  const delimiter = firstLine.includes(';') ? ';' : ',';
+  
+  console.log(`Detected CSV delimiter: '${delimiter}'`);
+
+  // Column name mapping for different CSV formats
+  const columnMapping: Record<string, string> = {
+    'hhp$': 'hhp_dollar',
+    'nm$': 'nm_dollar',
+    'cm$': 'cm_dollar',
+    'fm$': 'fm_dollar',
+    'gm$': 'gm_dollar',
+    'ptaf%': 'ptaf_pct',
+    'ptap%': 'ptap_pct',
+    'h liv': 'h_liv',
+    'f sav': 'f_sav',
+    'beta-casein': 'beta_casein',
+    'kappa-casein': 'kappa_casein',
+    'fonte': 'fonte',
+  };
+
   // Parse header row
   const headerLine = lines[0];
   const headers: string[] = [];
@@ -135,16 +157,23 @@ function parseCSV(csvContent: string): any[] {
     
     if (char === '"') {
       inQuotes = !inQuotes;
-    } else if (char === ',' && !inQuotes) {
-      headers.push(currentField.trim().toLowerCase());
+    } else if (char === delimiter && !inQuotes) {
+      let normalized = currentField.trim().toLowerCase();
+      // Apply column mapping if exists
+      normalized = columnMapping[normalized] || normalized;
+      headers.push(normalized);
       currentField = '';
     } else {
       currentField += char;
     }
   }
   if (currentField) {
-    headers.push(currentField.trim().toLowerCase());
+    let normalized = currentField.trim().toLowerCase();
+    normalized = columnMapping[normalized] || normalized;
+    headers.push(normalized);
   }
+
+  console.log(`Parsed ${headers.length} headers:`, headers.slice(0, 15));
 
   // Parse data rows
   const records: any[] = [];
@@ -162,7 +191,7 @@ function parseCSV(csvContent: string): any[] {
       
       if (char === '"') {
         inQuotes = !inQuotes;
-      } else if (char === ',' && !inQuotes) {
+      } else if (char === delimiter && !inQuotes) {
         values.push(currentField.trim());
         currentField = '';
       } else {
@@ -189,6 +218,7 @@ function parseCSV(csvContent: string): any[] {
     }
   }
 
+  console.log(`Parsed ${records.length} records from CSV`);
   return records;
 }
 
