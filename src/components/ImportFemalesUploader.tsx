@@ -79,7 +79,19 @@ export default function ImportFemalesUploader({ farmId, onSuccess }: Props) {
     setLoading(true);
 
     try {
-      await supabase.auth.getSession();
+      // Ensure we have a valid session, refresh if needed
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !sessionData.session) {
+        console.log('No valid session, attempting to refresh...');
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        
+        if (refreshError || !refreshData.session) {
+          toastError('Sessão expirada. Faça login novamente.');
+          setLoading(false);
+          return;
+        }
+      }
 
       let uploadFile = fileRef.current;
 
@@ -95,10 +107,11 @@ export default function ImportFemalesUploader({ farmId, onSuccess }: Props) {
         await uploadFile.arrayBuffer(),
       ], uploadFile.name, { type: uploadFile.type || 'text/csv' });
 
+      // Get fresh access token after session refresh
       const token = await getAccessToken();
 
       if (!token) {
-        toastError('Sessão inválida. Faça login novamente.');
+        toastError('Não foi possível obter token de autenticação.');
         setLoading(false);
         return;
       }
