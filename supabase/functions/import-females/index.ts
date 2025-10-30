@@ -58,21 +58,6 @@ function validateDate(value: unknown): string | null {
 }
 
 function validateRecord(record: any, farmId: string): FemaleRecord | null {
-  // Remove campos gerenciados automaticamente pelo sistema (se existirem no CSV)
-  const forbiddenFields = ['id', 'farm_id', 'ptas', 'created_at', 'updated_at'];
-  let removedFields: string[] = [];
-  
-  forbiddenFields.forEach(field => {
-    if (record[field] !== undefined) {
-      removedFields.push(field);
-      delete record[field];
-    }
-  });
-  
-  if (removedFields.length > 0) {
-    console.log(`Campos ignorados (gerenciados pelo sistema): ${removedFields.join(', ')}`);
-  }
-  
   // Try to get name from 'name' or 'identifier' field
   let name = sanitizeString(record.name);
   if (!name && record.identifier) {
@@ -121,7 +106,13 @@ function validateRecord(record: any, farmId: string): FemaleRecord | null {
 }
 
 function parseCSV(csvContent: string): any[] {
-  const lines = csvContent.trim().split('\n');
+  // Remove BOM if present
+  let content = csvContent;
+  if (content.charCodeAt(0) === 0xFEFF) {
+    content = content.slice(1);
+  }
+  
+  const lines = content.trim().split('\n');
   if (lines.length < 2) return [];
 
   // Detect delimiter (comma or semicolon)
@@ -129,6 +120,9 @@ function parseCSV(csvContent: string): any[] {
   const delimiter = firstLine.includes(';') ? ';' : ',';
   
   console.log(`Detected CSV delimiter: '${delimiter}'`);
+
+  // System-managed fields that should be completely ignored
+  const forbiddenFields = ['id', 'farm_id', 'ptas', 'created_at', 'updated_at'];
 
   // Column name mapping for different CSV formats
   const columnMapping: Record<string, string> = {
@@ -148,9 +142,11 @@ function parseCSV(csvContent: string): any[] {
 
   // Parse header row
   const headerLine = lines[0];
-  const headers: string[] = [];
+  const allHeaders: string[] = [];
+  const headerIndices: number[] = []; // Track which columns to keep
   let currentField = '';
   let inQuotes = false;
+  let columnIndex = 0;
 
   for (let i = 0; i < headerLine.length; i++) {
     const char = headerLine[i];
@@ -158,22 +154,33 @@ function parseCSV(csvContent: string): any[] {
     if (char === '"') {
       inQuotes = !inQuotes;
     } else if (char === delimiter && !inQuotes) {
-      let normalized = currentField.trim().toLowerCase();
+      let normalized = currentField.trim().toLowerCase().replace(/\ufeff/g, '');
       // Apply column mapping if exists
       normalized = columnMapping[normalized] || normalized;
-      headers.push(normalized);
+      
+      // Only include if not a forbidden field
+      if (!forbiddenFields.includes(normalized)) {
+        allHeaders.push(normalized);
+        headerIndices.push(columnIndex);
+      }
+      
       currentField = '';
+      columnIndex++;
     } else {
       currentField += char;
     }
   }
   if (currentField) {
-    let normalized = currentField.trim().toLowerCase();
+    let normalized = currentField.trim().toLowerCase().replace(/\ufeff/g, '');
     normalized = columnMapping[normalized] || normalized;
-    headers.push(normalized);
+    
+    if (!forbiddenFields.includes(normalized)) {
+      allHeaders.push(normalized);
+      headerIndices.push(columnIndex);
+    }
   }
 
-  console.log(`Parsed ${headers.length} headers:`, headers.slice(0, 15));
+  console.log(`Parsed ${allHeaders.length} headers (filtered):`, allHeaders.slice(0, 15));
 
   // Parse data rows
   const records: any[] = [];
@@ -182,7 +189,7 @@ function parseCSV(csvContent: string): any[] {
     const line = lines[lineIndex].trim();
     if (!line) continue;
 
-    const values: string[] = [];
+    const allValues: string[] = [];
     currentField = '';
     inQuotes = false;
 
@@ -192,21 +199,23 @@ function parseCSV(csvContent: string): any[] {
       if (char === '"') {
         inQuotes = !inQuotes;
       } else if (char === delimiter && !inQuotes) {
-        values.push(currentField.trim());
+        allValues.push(currentField.trim());
         currentField = '';
       } else {
         currentField += char;
       }
     }
-    if (currentField || values.length < headers.length) {
-      values.push(currentField.trim());
+    if (currentField !== undefined) {
+      allValues.push(currentField.trim());
     }
 
     const record: any = {};
     let hasData = false;
 
-    headers.forEach((header, index) => {
-      const value = values[index]?.trim().replace(/^"|"$/g, '');
+    // Only process columns that we kept from headers
+    allHeaders.forEach((header, index) => {
+      const columnIdx = headerIndices[index];
+      const value = allValues[columnIdx]?.trim().replace(/^"|"$/g, '');
       if (value && value !== '') {
         record[header] = value;
         hasData = true;
