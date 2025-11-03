@@ -171,7 +171,7 @@ Deno.serve(async (req) => {
       .eq('user_id', user.id)
       .single();
 
-    if (!farmAccess || !['owner', 'editor'].includes(farmAccess.role)) {
+    if (!farmAccess || !['owner', 'editor', 'technician'].includes(farmAccess.role)) {
       return new Response(
         JSON.stringify({ error: 'Permission denied: insufficient farm access' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
