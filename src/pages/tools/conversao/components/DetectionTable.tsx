@@ -94,6 +94,7 @@ export const DetectionTable: React.FC<DetectionTableProps> = ({
             <TableHead>Método</TableHead>
             <TableHead>Confiança</TableHead>
             <TableHead className="w-[280px]">Chave canônica sugerida</TableHead>
+            <TableHead className="w-[100px]">Excluir</TableHead>
             <TableHead className="w-[140px]">Aprovado</TableHead>
           </TableRow>
         </TableHeader>
@@ -116,14 +117,11 @@ export const DetectionTable: React.FC<DetectionTableProps> = ({
                 <TableCell>{renderConfidence(row.confidence)}</TableCell>
                 <TableCell>
                   <Select
-                    value={row.exclude ? "exclude" : (row.selectedCanonical ? row.selectedCanonical : "none")}
+                    value={row.selectedCanonical ? row.selectedCanonical : "none"}
+                    disabled={row.exclude}
                     onValueChange={(value) => {
                       if (value === "none") {
                         onSelectCanonical(row.original, undefined, true);
-                        return;
-                      }
-                      if (value === "exclude") {
-                        onSelectCanonical(row.original, "exclude", true);
                         return;
                       }
                       onSelectCanonical(row.original, value, value !== row.suggestion);
@@ -134,7 +132,6 @@ export const DetectionTable: React.FC<DetectionTableProps> = ({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">— Nenhum —</SelectItem>
-                      <SelectItem value="exclude" className="text-destructive">🗑️ Excluir coluna</SelectItem>
                       {canonicalOptions.map((option) => (
                         <SelectItem key={option} value={option}>
                           {option}
@@ -147,17 +144,27 @@ export const DetectionTable: React.FC<DetectionTableProps> = ({
                       Diferente da sugestão automática.
                     </p>
                   )}
-                  {row.exclude && (
-                    <p className="mt-1 text-xs text-destructive">
-                      Esta coluna não será incluída no arquivo final.
-                    </p>
-                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center justify-center">
+                    <Checkbox
+                      checked={row.exclude || false}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          onSelectCanonical(row.original, "exclude", true);
+                        } else {
+                          // Restaura a sugestão original ou deixa vazio
+                          onSelectCanonical(row.original, row.suggestion, false);
+                        }
+                      }}
+                    />
+                  </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <Checkbox
                       checked={row.approved}
-                      disabled={!row.selectedCanonical}
+                      disabled={!row.selectedCanonical || row.exclude}
                       onCheckedChange={(checked) =>
                         onToggleApproved(row.original, checked === true)
                       }
