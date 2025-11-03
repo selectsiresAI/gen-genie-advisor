@@ -77,9 +77,18 @@ function resolveTickStep(traitKey: string) {
 
 /**
  * Calcula a categoria do animal baseado em birth_date e parity_order
- * Mesma lógica da página HerdPage (getAutomaticCategory)
+ * MESMA LÓGICA da página HerdPage (getAutomaticCategory)
+ * Usa MESES para determinar categoria
  */
 function calculateCategory(birthDate: any, parityOrder: any): Categoria {
+  if (!birthDate) return "novilha";
+  
+  const birth = new Date(birthDate);
+  if (!isFinite(+birth)) return "novilha";
+  
+  const today = new Date();
+  const ageInMonths = Math.floor((today.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
+  
   const parity = Number(parityOrder);
   
   // Se tem ordem de parto definida (maior que 0), usa ela
@@ -89,19 +98,12 @@ function calculateCategory(birthDate: any, parityOrder: any): Categoria {
     if (parity >= 3) return "multipara";
   }
   
-  // Se não tem ordem de parto, usa idade em dias
-  if (!birthDate) return "novilha";
-  
-  const birth = new Date(birthDate);
-  if (!isFinite(+birth)) return "novilha";
-  
-  const ageDays = Math.floor(
-    (Date.now() - birth.getTime()) / (1000 * 60 * 60 * 24)
-  );
-  
-  // Bezerra: até 90 dias
-  // Novilha: mais de 90 dias sem ordem de parto
-  return ageDays <= 90 ? "bezerra" : "novilha";
+  // Se não tem ordem de parto, usa idade em meses
+  if (ageInMonths <= 12) return "bezerra";  // até 12 meses
+  if (ageInMonths <= 23) return "novilha";  // até 23 meses
+  if (ageInMonths <= 36) return "primipara"; // até 36 meses
+  if (ageInMonths <= 48) return "secundipara"; // até 48 meses
+  return "multipara"; // mais de 48 meses
 }
 
 function buildAxisDomain(values: number[], step: number) {
