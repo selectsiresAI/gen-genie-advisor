@@ -335,7 +335,7 @@ Deno.serve(async (req) => {
         }
       });
 
-      // Insert validated records in batches
+      // Insert validated records in batches with UPSERT logic
       const batchSize = 500;
       let inserted = 0;
       const insertErrors: any[] = [];
@@ -343,19 +343,25 @@ Deno.serve(async (req) => {
       for (let i = 0; i < validatedRecords.length; i += batchSize) {
         const batch = validatedRecords.slice(i, i + batchSize);
         
-        const { error: insertError } = await supabase
+        const { data, error: insertError, count } = await supabase
           .from('females')
-          .insert(batch);
+          .upsert(batch, {
+            onConflict: 'farm_id,identifier',
+            ignoreDuplicates: false
+          })
+          .select('id', { count: 'exact' });
 
         if (insertError) {
           console.error('Insert error:', insertError);
           insertErrors.push(insertError);
         } else {
-          inserted += batch.length;
+          // Count is the number of rows affected
+          const affected = count || batch.length;
+          inserted += affected;
         }
       }
 
-      console.log(`Upload concluído: ${inserted} registros inseridos, ${errors.length} erros de validação, ${insertErrors.length} erros de inserção`);
+      console.log(`Upload concluído: ${inserted} registros processados (inseridos/atualizados), ${errors.length} erros de validação, ${insertErrors.length} erros de inserção`);
 
       const importBatchId = crypto.randomUUID();
 
