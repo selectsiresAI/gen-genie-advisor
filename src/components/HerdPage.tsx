@@ -79,35 +79,24 @@ const HerdPage: React.FC<HerdPageProps> = ({
   }), []);
   const getAutomaticCategory = (birthDate?: string, parityOrder?: number) => {
     if (!birthDate) return 'Indefinida';
+    
     const birth = new Date(birthDate);
     const today = new Date();
-    const daysDiff = Math.floor((today.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24));
+    const ageInMonths = Math.floor((today.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
 
-    // Bezerras - até 90 dias pós nascimento e ordem de parto 0 ou null
-    if (daysDiff <= 90 && (!parityOrder || parityOrder === 0)) {
-      return 'Bezerra';
+    // Se tem ordem de parto definida (maior que 0), usa ela
+    if (parityOrder && parityOrder > 0) {
+      if (parityOrder === 1) return 'Primípara';
+      if (parityOrder === 2) return 'Secundípara';
+      if (parityOrder >= 3) return 'Multípara';
     }
 
-    // Novilhas - de 91 dias após nascimento até primeiro parto (ordem de parto 0 ou null)
-    if (daysDiff > 90 && (!parityOrder || parityOrder === 0)) {
-      return 'Novilha';
-    }
-
-    // Primípara - ordem de parto 1
-    if (parityOrder === 1) {
-      return 'Primípara';
-    }
-
-    // Secundípara - ordem de parto 2
-    if (parityOrder === 2) {
-      return 'Secundípara';
-    }
-
-    // Multípara - ordem de parto 3 ou maior
-    if (parityOrder && parityOrder >= 3) {
-      return 'Multípara';
-    }
-    return 'Indefinida';
+    // Se não tem ordem de parto, usa idade em meses
+    if (ageInMonths <= 12) return 'Bezerra';
+    if (ageInMonths <= 23) return 'Novilha';
+    if (ageInMonths <= 36) return 'Primípara';
+    if (ageInMonths <= 48) return 'Secundípara';
+    return 'Multípara';
   };
   const getFonteDisplay = (fonte?: string | null) => {
     if (!fonte) {

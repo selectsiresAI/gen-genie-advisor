@@ -592,13 +592,23 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
       // Filtrar por categoria usando a categoria automática
       const getAutomaticCategory = (birthDate: string | null, parityOrder: number | null) => {
         if (!birthDate) return 'indefinida';
+        
         const birth = new Date(birthDate);
         const today = new Date();
-        const ageInMonths = (today.getFullYear() - birth.getFullYear()) * 12 + (today.getMonth() - birth.getMonth());
-        if (ageInMonths < 12) return 'bezerra';
-        if (ageInMonths < 24 || !parityOrder || parityOrder === 0) return 'novilha';
-        if (parityOrder === 1) return 'primipara';
-        if (parityOrder === 2) return 'secundipara';
+        const ageInMonths = Math.floor((today.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
+
+        // Se tem ordem de parto definida (maior que 0), usa ela
+        if (parityOrder && parityOrder > 0) {
+          if (parityOrder === 1) return 'primipara';
+          if (parityOrder === 2) return 'secundipara';
+          if (parityOrder >= 3) return 'multipara';
+        }
+
+        // Se não tem ordem de parto, usa idade em meses
+        if (ageInMonths <= 12) return 'bezerra';
+        if (ageInMonths <= 23) return 'novilha';
+        if (ageInMonths <= 36) return 'primipara';
+        if (ageInMonths <= 48) return 'secundipara';
         return 'multipara';
       };
       const filteredFemales = sanitizedSegmentations.filter(segmentation => {
