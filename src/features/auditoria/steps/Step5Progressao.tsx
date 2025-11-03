@@ -77,26 +77,31 @@ function resolveTickStep(traitKey: string) {
 
 /**
  * Calcula a categoria do animal baseado em birth_date e parity_order
- * Mesma lógica da função ag_age_group do banco
+ * Mesma lógica da página HerdPage (getAutomaticCategory)
  */
 function calculateCategory(birthDate: any, parityOrder: any): Categoria {
   const parity = Number(parityOrder);
   
-  if (!isNaN(parity) && parity >= 3) return "multipara";
-  if (parity === 2) return "secundipara";
-  if (parity === 1) return "primipara";
+  // Se tem ordem de parto definida (maior que 0), usa ela
+  if (!isNaN(parity) && parity > 0) {
+    if (parity === 1) return "primipara";
+    if (parity === 2) return "secundipara";
+    if (parity >= 3) return "multipara";
+  }
   
-  // Bezerra ou Novilha baseado na idade
+  // Se não tem ordem de parto, usa idade em dias
   if (!birthDate) return "novilha";
   
   const birth = new Date(birthDate);
   if (!isFinite(+birth)) return "novilha";
   
-  const ageMonths = Math.floor(
-    (Date.now() - birth.getTime()) / (1000 * 60 * 60 * 24 * 30.44)
+  const ageDays = Math.floor(
+    (Date.now() - birth.getTime()) / (1000 * 60 * 60 * 24)
   );
   
-  return ageMonths < 12 ? "bezerra" : "novilha";
+  // Bezerra: até 90 dias
+  // Novilha: mais de 90 dias sem ordem de parto
+  return ageDays <= 90 ? "bezerra" : "novilha";
 }
 
 function buildAxisDomain(values: number[], step: number) {
@@ -505,23 +510,56 @@ export default function Step5Progressao() {
     todas: "Todas"
   };
 
-  // Contar animais por categoria
-  const categoriaCounts = useMemo(() => {
-    const counts: Record<Categoria, number> = {
-      bezerra: 0,
-      novilha: 0,
-      primipara: 0,
-      secundipara: 0,
-      multipara: 0,
-      todas: females.length
+  // Contar animais e calcular médias por categoria
+  const categoriaStats = useMemo(() => {
+    const stats: Record<Categoria | "todas", { count: number; avgTPI: number; avgHHP: number; avgNM: number }> = {
+      bezerra: { count: 0, avgTPI: 0, avgHHP: 0, avgNM: 0 },
+      novilha: { count: 0, avgTPI: 0, avgHHP: 0, avgNM: 0 },
+      primipara: { count: 0, avgTPI: 0, avgHHP: 0, avgNM: 0 },
+      secundipara: { count: 0, avgTPI: 0, avgHHP: 0, avgNM: 0 },
+      multipara: { count: 0, avgTPI: 0, avgHHP: 0, avgNM: 0 },
+      todas: { count: females.length, avgTPI: 0, avgHHP: 0, avgNM: 0 }
+    };
+    
+    // Agrupar por categoria
+    const groups: Record<Categoria, any[]> = {
+      bezerra: [],
+      novilha: [],
+      primipara: [],
+      secundipara: [],
+      multipara: [],
+      todas: []
     };
     
     (females as any[]).forEach((f: any) => {
       const cat = calculateCategory(f.birth_date, f.parity_order);
-      counts[cat]++;
+      groups[cat].push(f);
+      groups.todas.push(f);
     });
     
-    return counts;
+    // Calcular médias
+    Object.keys(groups).forEach((cat) => {
+      const group = groups[cat as Categoria];
+      stats[cat as Categoria].count = group.length;
+      
+      if (group.length > 0) {
+        const tpiValues = group.map(f => Number(f.tpi)).filter(v => Number.isFinite(v));
+        const hhpValues = group.map(f => Number(f.hhp_dollar)).filter(v => Number.isFinite(v));
+        const nmValues = group.map(f => Number(f.nm_dollar)).filter(v => Number.isFinite(v));
+        
+        stats[cat as Categoria].avgTPI = tpiValues.length > 0 
+          ? tpiValues.reduce((a, b) => a + b, 0) / tpiValues.length 
+          : 0;
+        stats[cat as Categoria].avgHHP = hhpValues.length > 0 
+          ? hhpValues.reduce((a, b) => a + b, 0) / hhpValues.length 
+          : 0;
+        stats[cat as Categoria].avgNM = nmValues.length > 0 
+          ? nmValues.reduce((a, b) => a + b, 0) / nmValues.length 
+          : 0;
+      }
+    });
+    
+    return stats;
   }, [females]);
 
   return (
@@ -533,22 +571,44 @@ export default function Step5Progressao() {
             <CardTitle>Progressão Genética — Seleção de PTAs</CardTitle>
           </CardHeader>
           <CardContent>
-            {/* Filtro de Categoria */}
-            <div className="mb-4 flex flex-wrap gap-2 border-b pb-4">
-              <span className="text-sm font-medium text-muted-foreground">Categoria:</span>
-              {(["todas", "bezerra", "novilha", "primipara", "secundipara", "multipara"] as Categoria[]).map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setCategoria(cat)}
-                  className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
-                    categoria === cat 
-                      ? "border-primary bg-primary text-primary-foreground" 
-                      : "border-input hover:bg-accent hover:text-accent-foreground"
-                  }`}
-                >
-                  {categoriaLabels[cat]} ({categoriaCounts[cat]})
-                </button>
-              ))}
+            {/* Filtro de Categoria com Médias */}
+            <div className="mb-4 space-y-3 border-b pb-4">
+              <div className="flex flex-wrap gap-2">
+                <span className="text-sm font-medium text-muted-foreground">Categoria:</span>
+                {(["todas", "bezerra", "novilha", "primipara", "secundipara", "multipara"] as Categoria[]).map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setCategoria(cat)}
+                    className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                      categoria === cat 
+                        ? "border-primary bg-primary text-primary-foreground" 
+                        : "border-input hover:bg-accent hover:text-accent-foreground"
+                    }`}
+                  >
+                    {categoriaLabels[cat]} ({categoriaStats[cat].count})
+                  </button>
+                ))}
+              </div>
+              
+              {/* Médias da Categoria Selecionada */}
+              {categoriaStats[categoria].count > 0 && (
+                <div className="flex items-center gap-4 rounded-md bg-muted/50 px-4 py-2 text-sm">
+                  <span className="font-semibold">Médias {categoriaLabels[categoria]}:</span>
+                  <div className="flex gap-4">
+                    <span>
+                      TPI: <strong>{categoriaStats[categoria].avgTPI.toFixed(0)}</strong>
+                    </span>
+                    {categoriaStats[categoria].avgHHP > 0 && (
+                      <span>
+                        HHP$: <strong>{categoriaStats[categoria].avgHHP.toFixed(0)}</strong>
+                      </span>
+                    )}
+                    <span>
+                      NM$: <strong>{categoriaStats[categoria].avgNM.toFixed(0)}</strong>
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex flex-wrap gap-2">
               {options.map((pta) => {
