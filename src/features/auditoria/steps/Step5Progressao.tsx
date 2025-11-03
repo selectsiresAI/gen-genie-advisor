@@ -16,7 +16,7 @@ import {
 } from "recharts";
 import { PTA_CATALOG } from "@/lib/pta";
 import { useFemales } from "../hooks";
-import { useAGFilters } from "../store";
+import { useAGFilters, type Categoria } from "../store";
 import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
 import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
 import { useRegisterChart } from "@/components/pdf/useRegisterChart";
@@ -73,6 +73,30 @@ const SCS_FIXED_DOMAIN: [number, number] = [
 function resolveTickStep(traitKey: string) {
   const normalized = traitKey.toLowerCase();
   return TRAIT_TICK_STEPS[normalized] ?? DEFAULT_TICK_STEP;
+}
+
+/**
+ * Calcula a categoria do animal baseado em birth_date e parity_order
+ * Mesma lógica da função ag_age_group do banco
+ */
+function calculateCategory(birthDate: any, parityOrder: any): Categoria {
+  const parity = Number(parityOrder);
+  
+  if (!isNaN(parity) && parity >= 3) return "multipara";
+  if (parity === 2) return "secundipara";
+  if (parity === 1) return "primipara";
+  
+  // Bezerra ou Novilha baseado na idade
+  if (!birthDate) return "novilha";
+  
+  const birth = new Date(birthDate);
+  if (!isFinite(+birth)) return "novilha";
+  
+  const ageMonths = Math.floor(
+    (Date.now() - birth.getTime()) / (1000 * 60 * 60 * 24 * 30.44)
+  );
+  
+  return ageMonths < 12 ? "bezerra" : "novilha";
 }
 
 function buildAxisDomain(values: number[], step: number) {
@@ -392,7 +416,7 @@ const TraitCard = memo(function TraitCard({
 });
 
 export default function Step5Progressao() {
-  const { farmId, ptasSelecionadas = [], setPTAs } = useAGFilters();
+  const { farmId, ptasSelecionadas = [], setPTAs, categoria, setCategoria } = useAGFilters();
   const { data: females = [], isLoading } = useFemales(farmId);
   const [showFarmMean, setShowFarmMean] = useState(true);
   const [showTrend, setShowTrend] = useState(true);
@@ -404,9 +428,18 @@ export default function Step5Progressao() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Filtrar fêmeas por categoria selecionada
+  const filteredFemales = useMemo(() => {
+    if (categoria === "todas") return females;
+    return (females as any[]).filter((f: any) => {
+      const cat = calculateCategory(f.birth_date, f.parity_order);
+      return cat === categoria;
+    });
+  }, [females, categoria]);
+
   const domainTicks = useMemo(() => {
     const years = new Set<number>();
-    for (const f of females as any[]) {
+    for (const f of filteredFemales as any[]) {
       const y = getYearFromBirth((f as any)?.birth_date);
       if (Number.isFinite(y)) years.add(y as number);
     }
@@ -421,7 +454,7 @@ export default function Step5Progressao() {
       allYears.push(y);
     }
     return allYears;
-  }, [females]);
+  }, [filteredFemales]);
 
   const seriesByKey = useMemo(() => {
     const out: Record<string, SeriesPoint[]> = {};
@@ -430,7 +463,7 @@ export default function Step5Progressao() {
       const byYear = new Map<number, number[]>();
       
       // Agrupar valores por ano
-      for (const f of females as any[]) {
+      for (const f of filteredFemales as any[]) {
         const y = getYearFromBirth((f as any)?.birth_date);
         const v = Number((f as any)?.[key]);
         if (Number.isFinite(y) && Number.isFinite(v)) {
@@ -450,7 +483,7 @@ export default function Step5Progressao() {
         .filter((p): p is SeriesPoint => p !== null);
     }
     return out;
-  }, [ptasSelecionadas, females, domainTicks]);
+  }, [ptasSelecionadas, filteredFemales, domainTicks]);
 
   const options = useMemo(
     () =>
@@ -463,6 +496,34 @@ export default function Step5Progressao() {
   const labelOf = (key: string) =>
     PTA_CATALOG.find((i) => i.key === key)?.label ?? key.toUpperCase();
 
+  const categoriaLabels: Record<Categoria, string> = {
+    bezerra: "Bezerras",
+    novilha: "Novilhas",
+    primipara: "Primíparas",
+    secundipara: "Secundíparas",
+    multipara: "Multíparas",
+    todas: "Todas"
+  };
+
+  // Contar animais por categoria
+  const categoriaCounts = useMemo(() => {
+    const counts: Record<Categoria, number> = {
+      bezerra: 0,
+      novilha: 0,
+      primipara: 0,
+      secundipara: 0,
+      multipara: 0,
+      todas: females.length
+    };
+    
+    (females as any[]).forEach((f: any) => {
+      const cat = calculateCategory(f.birth_date, f.parity_order);
+      counts[cat]++;
+    });
+    
+    return counts;
+  }, [females]);
+
   return (
     <ChartExportProvider>
       <BatchExportBar step={5} />
@@ -472,6 +533,23 @@ export default function Step5Progressao() {
             <CardTitle>Progressão Genética — Seleção de PTAs</CardTitle>
           </CardHeader>
           <CardContent>
+            {/* Filtro de Categoria */}
+            <div className="mb-4 flex flex-wrap gap-2 border-b pb-4">
+              <span className="text-sm font-medium text-muted-foreground">Categoria:</span>
+              {(["todas", "bezerra", "novilha", "primipara", "secundipara", "multipara"] as Categoria[]).map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setCategoria(cat)}
+                  className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                    categoria === cat 
+                      ? "border-primary bg-primary text-primary-foreground" 
+                      : "border-input hover:bg-accent hover:text-accent-foreground"
+                  }`}
+                >
+                  {categoriaLabels[cat]} ({categoriaCounts[cat]})
+                </button>
+              ))}
+            </div>
             <div className="flex flex-wrap gap-2">
               {options.map((pta) => {
                 const active = ptasSelecionadas.includes(pta.key);
