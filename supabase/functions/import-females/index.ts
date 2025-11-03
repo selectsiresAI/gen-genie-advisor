@@ -296,7 +296,7 @@ Deno.serve(async (req) => {
 
       const farmId = String(farmIdParam);
 
-      // Check farm access
+      // Check farm access - any user with farm access can import
       const { data: farmAccess } = await supabase
         .from('user_farms')
         .select('role')
@@ -304,7 +304,7 @@ Deno.serve(async (req) => {
         .eq('user_id', user.id)
         .single();
 
-      if (!farmAccess || !['owner', 'editor', 'technician'].includes(farmAccess.role)) {
+      if (!farmAccess) {
         return jsonResponse({ error: 'Permissão negada: acesso insuficiente à fazenda' }, 403);
       }
 

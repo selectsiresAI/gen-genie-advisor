@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check farm edit permission
+    // Check farm access - any user with farm access can upload
     const { data: farmAccess } = await supabase
       .from('user_farms')
       .select('role')
@@ -171,7 +171,7 @@ Deno.serve(async (req) => {
       .eq('user_id', user.id)
       .single();
 
-    if (!farmAccess || !['owner', 'editor', 'technician'].includes(farmAccess.role)) {
+    if (!farmAccess) {
       return new Response(
         JSON.stringify({ error: 'Permission denied: insufficient farm access' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
