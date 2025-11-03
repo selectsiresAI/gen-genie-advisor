@@ -17,6 +17,7 @@ export interface MappingRow {
   approved: boolean;
   selectedCanonical?: string;
   manual?: boolean;
+  exclude?: boolean;
 }
 
 interface DetectionTableProps {
@@ -26,7 +27,11 @@ interface DetectionTableProps {
   onToggleApproved: (original: string, approved: boolean) => void;
 }
 
-const renderMethodBadge = (method: MappingMethod, legendSource?: "default" | "user") => {
+const renderMethodBadge = (method: MappingMethod, legendSource?: "default" | "user", isExcluded?: boolean) => {
+  if (isExcluded) {
+    return <Badge variant="destructive">Será excluída</Badge>;
+  }
+
   if (!method) {
     return <Badge variant="outline">Não mapeado</Badge>;
   }
@@ -100,21 +105,25 @@ export const DetectionTable: React.FC<DetectionTableProps> = ({
               !!row.selectedCanonical && row.suggestion && normalizedSelected !== normalizedSuggestion;
 
             return (
-              <TableRow key={row.original} className={cn(!row.suggestion && "opacity-70")}> 
+              <TableRow key={row.original} className={cn((!row.suggestion && !row.exclude) && "opacity-70", row.exclude && "bg-destructive/5")}> 
                 <TableCell>
                   <div className="font-medium">{row.original}</div>
                   {row.manual && (
                     <span className="text-xs text-muted-foreground">Ajuste manual</span>
                   )}
                 </TableCell>
-                <TableCell>{renderMethodBadge(row.method, row.legendSource)}</TableCell>
+                <TableCell>{renderMethodBadge(row.method, row.legendSource, row.exclude)}</TableCell>
                 <TableCell>{renderConfidence(row.confidence)}</TableCell>
                 <TableCell>
                   <Select
-                    value={row.selectedCanonical ? row.selectedCanonical : "none"}
+                    value={row.exclude ? "exclude" : (row.selectedCanonical ? row.selectedCanonical : "none")}
                     onValueChange={(value) => {
                       if (value === "none") {
                         onSelectCanonical(row.original, undefined, true);
+                        return;
+                      }
+                      if (value === "exclude") {
+                        onSelectCanonical(row.original, "exclude", true);
                         return;
                       }
                       onSelectCanonical(row.original, value, value !== row.suggestion);
@@ -125,6 +134,7 @@ export const DetectionTable: React.FC<DetectionTableProps> = ({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">— Nenhum —</SelectItem>
+                      <SelectItem value="exclude" className="text-destructive">🗑️ Excluir coluna</SelectItem>
                       {canonicalOptions.map((option) => (
                         <SelectItem key={option} value={option}>
                           {option}
@@ -132,9 +142,14 @@ export const DetectionTable: React.FC<DetectionTableProps> = ({
                       ))}
                     </SelectContent>
                   </Select>
-                  {isSuggestionChanged && (
+                  {isSuggestionChanged && !row.exclude && (
                     <p className="mt-1 text-xs text-amber-600">
                       Diferente da sugestão automática.
+                    </p>
+                  )}
+                  {row.exclude && (
+                    <p className="mt-1 text-xs text-destructive">
+                      Esta coluna não será incluída no arquivo final.
                     </p>
                   )}
                 </TableCell>

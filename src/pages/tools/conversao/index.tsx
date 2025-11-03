@@ -292,8 +292,22 @@ const ConversaoPage: React.FC = () => {
         if (row.original !== original) {
           return row;
         }
+        
+        // Se o valor for "exclude", marcar como excluída e aprovada
+        if (value === "exclude") {
+          return {
+            ...row,
+            exclude: true,
+            selectedCanonical: undefined,
+            approved: true,
+            manual: true,
+          };
+        }
+        
+        // Se estava excluída e agora está sendo mapeada, remover exclusão
         return {
           ...row,
+          exclude: false,
           selectedCanonical: value,
           approved: value ? row.approved : false,
           manual,
@@ -332,6 +346,8 @@ const ConversaoPage: React.FC = () => {
   );
 
   const approvedCount = useMemo(() => mappings.filter((row) => row.approved).length, [mappings]);
+  
+  const excludedCount = useMemo(() => mappings.filter((row) => row.exclude).length, [mappings]);
 
   const hasPendingApprovals = useMemo(
     () => mappings.some((row) => row.selectedCanonical && !row.approved),
@@ -353,8 +369,15 @@ const ConversaoPage: React.FC = () => {
 
     const canonicalSet = new Set(modelHeaders.map((header) => normalizeKey(header)));
     const canonicalAssignments = new Map<string, string>();
+    const excludedHeaders = new Set<string>();
 
     mappings.forEach((row) => {
+      // Registrar colunas marcadas para exclusão
+      if (row.exclude) {
+        excludedHeaders.add(row.original);
+        return;
+      }
+      
       if (!row.approved || !row.selectedCanonical) {
         return;
       }
@@ -365,7 +388,10 @@ const ConversaoPage: React.FC = () => {
     });
 
     const finalHeaders = [...modelHeaders];
-    const additionalHeaders = dataHeaders.filter((header) => !canonicalSet.has(normalizeKey(header)));
+    // Adicionar apenas headers não mapeados E não excluídos
+    const additionalHeaders = dataHeaders.filter((header) => 
+      !canonicalSet.has(normalizeKey(header)) && !excludedHeaders.has(header)
+    );
     finalHeaders.push(...additionalHeaders);
 
     const convertedRows = dataRows.map((row) => {
@@ -405,7 +431,11 @@ const ConversaoPage: React.FC = () => {
     const fileName = `${baseName}_padronizado.xlsx`;
     XLSX.writeFile(workbook, fileName);
 
-    toast({ title: "Download iniciado", description: `Arquivo ${fileName} gerado com sucesso.` });
+    const excludeMsg = excludedCount > 0 ? ` ${excludedCount} coluna(s) excluída(s).` : '';
+    toast({ 
+      title: "Download iniciado", 
+      description: `Arquivo ${fileName} gerado com sucesso.${excludeMsg}` 
+    });
   };
 
   return (
@@ -630,6 +660,9 @@ const ConversaoPage: React.FC = () => {
           </div>
           <div className="flex items-center gap-3">
             <Badge variant="outline">{approvedCount} aprovadas</Badge>
+            {excludedCount > 0 && (
+              <Badge variant="destructive">{excludedCount} excluídas</Badge>
+            )}
             <Button variant="outline" onClick={handleApproveSafe} disabled={safeSuggestions.length === 0}>
               Aprovar sugestões seguras ({safeSuggestions.length})
             </Button>
