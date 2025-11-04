@@ -335,13 +335,38 @@ Deno.serve(async (req) => {
         }
       });
 
-      // Insert validated records in batches with UPSERT logic
+      // Detect and remove duplicates within the upload batch
+      // Keep the last occurrence of each duplicate (by identifier or name)
+      const uniqueRecordsMap = new Map<string, FemaleRecord>();
+      let duplicatesRemoved = 0;
+
+      validatedRecords.forEach((record) => {
+        // Use identifier if available, otherwise use name as unique key
+        const uniqueKey = record.identifier || record.name;
+        
+        if (uniqueRecordsMap.has(uniqueKey)) {
+          duplicatesRemoved++;
+        }
+        
+        // Always keep the latest occurrence (this will overwrite previous duplicates)
+        uniqueRecordsMap.set(uniqueKey, record);
+      });
+
+      const uniqueRecords = Array.from(uniqueRecordsMap.values());
+
+      if (duplicatesRemoved > 0) {
+        console.log(`Removidas ${duplicatesRemoved} duplicatas do arquivo antes da inserção`);
+      }
+
+      console.log(`Processando ${uniqueRecords.length} registros únicos (${duplicatesRemoved} duplicatas removidas)`);
+
+      // Insert unique records in batches with UPSERT logic
       const batchSize = 500;
       let inserted = 0;
       const insertErrors: any[] = [];
 
-      for (let i = 0; i < validatedRecords.length; i += batchSize) {
-        const batch = validatedRecords.slice(i, i + batchSize);
+      for (let i = 0; i < uniqueRecords.length; i += batchSize) {
+        const batch = uniqueRecords.slice(i, i + batchSize);
         
         const { data, error: insertError, count } = await supabase
           .from('females')
@@ -361,7 +386,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      console.log(`Upload concluído: ${inserted} registros processados (inseridos/atualizados), ${errors.length} erros de validação, ${insertErrors.length} erros de inserção`);
+      console.log(`Upload concluído: ${inserted} registros processados (inseridos/atualizados), ${errors.length} erros de validação, ${insertErrors.length} erros de inserção, ${duplicatesRemoved} duplicatas removidas`);
 
       const importBatchId = crypto.randomUUID();
 
@@ -371,6 +396,7 @@ Deno.serve(async (req) => {
         inserted,
         validation_errors: errors.length,
         insert_errors: insertErrors.length,
+        duplicates_removed: duplicatesRemoved,
         errors: errors.slice(0, 100),
       });
     } catch (error) {
