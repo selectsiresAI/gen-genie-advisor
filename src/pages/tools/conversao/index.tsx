@@ -387,18 +387,21 @@ const ConversaoPage: React.FC = () => {
       }
     });
 
+    // Usar SOMENTE as colunas do modelo padrão (não adicionar colunas originais)
     const finalHeaders = [...modelHeaders];
-    // Adicionar apenas headers não mapeados E não excluídos
-    const additionalHeaders = dataHeaders.filter((header) => 
-      !canonicalSet.has(normalizeKey(header)) && !excludedHeaders.has(header)
-    );
-    finalHeaders.push(...additionalHeaders);
 
     const convertedRows = dataRows.map((row) => {
       const output: Record<string, any> = {};
 
       finalHeaders.forEach((header) => {
         const normalized = normalizeKey(header);
+        
+        // Preencher automaticamente a coluna "Fonte" com "Genomica"
+        if (header.toLowerCase() === 'fonte' || normalizeKey(header) === 'fonte') {
+          output[header] = "Genomica";
+          return;
+        }
+        
         if (canonicalSet.has(normalized)) {
           const sourceHeader = canonicalAssignments.get(normalized);
           if (sourceHeader) {
@@ -409,7 +412,7 @@ const ConversaoPage: React.FC = () => {
             output[header] = "";
           }
         } else {
-          output[header] = row[header];
+          output[header] = "";
         }
       });
 
