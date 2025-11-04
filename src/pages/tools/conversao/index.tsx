@@ -393,24 +393,20 @@ const ConversaoPage: React.FC = () => {
     const convertedRows = dataRows.map((row) => {
       const output: Record<string, any> = {};
 
+      // Iterar APENAS sobre os headers do modelo
       finalHeaders.forEach((header) => {
         const normalized = normalizeKey(header);
         
         // Preencher automaticamente a coluna "Fonte" com "Genomica"
-        if (header.toLowerCase() === 'fonte' || normalizeKey(header) === 'fonte') {
+        if (normalizeKey(header) === 'fonte') {
           output[header] = "Genomica";
           return;
         }
         
-        if (canonicalSet.has(normalized)) {
-          const sourceHeader = canonicalAssignments.get(normalized);
-          if (sourceHeader) {
-            output[header] = row[sourceHeader] ?? "";
-          } else if (Object.prototype.hasOwnProperty.call(row, header)) {
-            output[header] = row[header];
-          } else {
-            output[header] = "";
-          }
+        // Buscar o valor mapeado do arquivo original
+        const sourceHeader = canonicalAssignments.get(normalized);
+        if (sourceHeader && row[sourceHeader] !== undefined) {
+          output[header] = row[sourceHeader];
         } else {
           output[header] = "";
         }
@@ -419,8 +415,12 @@ const ConversaoPage: React.FC = () => {
       return output;
     });
 
+    // Criar workbook usando APENAS os headers do modelo (garantir não há colunas extras)
     const workbook = XLSX.utils.book_new();
-    const aoa = [finalHeaders, ...convertedRows.map((row) => finalHeaders.map((header) => row[header]))];
+    const aoa = [
+      finalHeaders,
+      ...convertedRows.map((row) => finalHeaders.map((header) => row[header] ?? ""))
+    ];
     const sheet = XLSX.utils.aoa_to_sheet(aoa);
     
     // Aplicar formatação de datas
