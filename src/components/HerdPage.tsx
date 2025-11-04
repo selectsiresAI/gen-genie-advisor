@@ -18,6 +18,7 @@ import { HelpHint } from '@/components/help/HelpHint';
 import SortableHeader from '@/components/animals/SortableHeader';
 import { ANIMAL_METRIC_COLUMNS } from '@/constants/animalMetrics';
 import { useAnimalTableSort } from '@/hooks/useAnimalTableSort';
+import { getAutomaticCategory, calculateCategoryCounts } from '@/utils/femaleCategories';
 interface Farm {
   farm_id: string;
   farm_name: string;
@@ -77,27 +78,8 @@ const HerdPage: React.FC<HerdPageProps> = ({
       left: 'var(--herd-sticky-name-left)'
     } as React.CSSProperties
   }), []);
-  const getAutomaticCategory = (birthDate?: string, parityOrder?: number) => {
-    if (!birthDate) return 'Indefinida';
-    
-    const birth = new Date(birthDate);
-    const today = new Date();
-    const ageInMonths = Math.floor((today.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
-
-    // Se tem ordem de parto definida (maior que 0), usa ela
-    if (parityOrder && parityOrder > 0) {
-      if (parityOrder === 1) return 'Primípara';
-      if (parityOrder === 2) return 'Secundípara';
-      if (parityOrder >= 3) return 'Multípara';
-    }
-
-    // Se não tem ordem de parto, usa idade em meses
-    if (ageInMonths <= 12) return 'Bezerra';
-    if (ageInMonths <= 23) return 'Novilha';
-    if (ageInMonths <= 36) return 'Primípara';
-    if (ageInMonths <= 48) return 'Secundípara';
-    return 'Multípara';
-  };
+  // Importar função centralizada de categorização
+  // REMOVIDO: agora usa import de femaleCategories
   const getFonteDisplay = (fonte?: string | null) => {
     if (!fonte) {
       return {
@@ -126,35 +108,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
 
   // Memoize category counts to avoid recalculating on every render
   const categoryCounts = useMemo(() => {
-    const counts = {
-      total: females.length,
-      bezerras: 0,
-      novilhas: 0,
-      primiparas: 0,
-      secundiparas: 0,
-      multiparas: 0
-    };
-    females.forEach(female => {
-      const category = getAutomaticCategory(female.birth_date, female.parity_order);
-      switch (category) {
-        case 'Bezerra':
-          counts.bezerras++;
-          break;
-        case 'Novilha':
-          counts.novilhas++;
-          break;
-        case 'Primípara':
-          counts.primiparas++;
-          break;
-        case 'Secundípara':
-          counts.secundiparas++;
-          break;
-        case 'Multípara':
-          counts.multiparas++;
-          break;
-      }
-    });
-    return counts;
+    return calculateCategoryCounts(females);
   }, [females]);
 
   // Update the herd store when counts change

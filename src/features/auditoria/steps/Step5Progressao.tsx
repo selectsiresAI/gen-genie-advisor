@@ -20,6 +20,7 @@ import { useAGFilters, type Categoria } from "../store";
 import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
 import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
 import { useRegisterChart } from "@/components/pdf/useRegisterChart";
+import { getAutomaticCategoryLower } from "@/utils/femaleCategories";
 
 type SeriesPoint = { year: number; n: number; mean: number };
 
@@ -75,36 +76,8 @@ function resolveTickStep(traitKey: string) {
   return TRAIT_TICK_STEPS[normalized] ?? DEFAULT_TICK_STEP;
 }
 
-/**
- * Calcula a categoria do animal baseado em birth_date e parity_order
- * MESMA LÓGICA da página HerdPage (getAutomaticCategory)
- * Usa MESES para determinar categoria
- */
-function calculateCategory(birthDate: any, parityOrder: any): Categoria {
-  if (!birthDate) return "novilha";
-  
-  const birth = new Date(birthDate);
-  if (!isFinite(+birth)) return "novilha";
-  
-  const today = new Date();
-  const ageInMonths = Math.floor((today.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
-  
-  const parity = Number(parityOrder);
-  
-  // Se tem ordem de parto definida (maior que 0), usa ela
-  if (!isNaN(parity) && parity > 0) {
-    if (parity === 1) return "primipara";
-    if (parity === 2) return "secundipara";
-    if (parity >= 3) return "multipara";
-  }
-  
-  // Se não tem ordem de parto, usa idade em meses
-  if (ageInMonths <= 12) return "bezerra";  // até 12 meses
-  if (ageInMonths <= 23) return "novilha";  // até 23 meses
-  if (ageInMonths <= 36) return "primipara"; // até 36 meses
-  if (ageInMonths <= 48) return "secundipara"; // até 48 meses
-  return "multipara"; // mais de 48 meses
-}
+// REMOVIDO: função calculateCategory agora é importada de femaleCategories.ts
+// usando getAutomaticCategoryLower para manter consistência com HerdPage
 
 function buildAxisDomain(values: number[], step: number) {
   if (!Number.isFinite(step) || step <= 0) {
@@ -439,7 +412,7 @@ export default function Step5Progressao() {
   const filteredFemales = useMemo(() => {
     if (categoria === "todas") return females;
     return (females as any[]).filter((f: any) => {
-      const cat = calculateCategory(f.birth_date, f.parity_order);
+      const cat = getAutomaticCategoryLower(f.birth_date, f.parity_order);
       return cat === categoria;
     });
   }, [females, categoria]);
@@ -534,7 +507,7 @@ export default function Step5Progressao() {
     };
     
     (females as any[]).forEach((f: any) => {
-      const cat = calculateCategory(f.birth_date, f.parity_order);
+      const cat = getAutomaticCategoryLower(f.birth_date, f.parity_order);
       groups[cat].push(f);
       groups.todas.push(f);
     });
