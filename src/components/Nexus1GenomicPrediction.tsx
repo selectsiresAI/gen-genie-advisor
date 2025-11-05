@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useHerdStore } from '@/hooks/useHerdStore';
 import { HelpButton } from '@/components/help/HelpButton';
 import { HelpHint } from '@/components/help/HelpHint';
+import { getAutomaticCategory } from '@/utils/femaleCategories';
 
 import { searchBulls } from '@/supabase/queries/bulls';
 import type { BullsDenormSelection } from '@/supabase/queries/bulls';
@@ -589,33 +590,13 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
         });
       }
 
-      // Filtrar por categoria usando a categoria automática
-      const getAutomaticCategory = (birthDate: string | null, parityOrder: number | null) => {
-        if (!birthDate) return 'indefinida';
-        
-        const birth = new Date(birthDate);
-        const today = new Date();
-        const ageInMonths = Math.floor((today.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
-
-        // Se tem ordem de parto definida (maior que 0), usa ela
-        if (parityOrder && parityOrder > 0) {
-          if (parityOrder === 1) return 'primipara';
-          if (parityOrder === 2) return 'secundipara';
-          if (parityOrder >= 3) return 'multipara';
-        }
-
-        // Se não tem ordem de parto, usa idade em meses
-        if (ageInMonths <= 12) return 'bezerra';
-        if (ageInMonths <= 23) return 'novilha';
-        if (ageInMonths <= 36) return 'primipara';
-        if (ageInMonths <= 48) return 'secundipara';
-        return 'multipara';
-      };
+      // Filtrar por categoria usando a função centralizada
       const filteredFemales = sanitizedSegmentations.filter(segmentation => {
         const femaleData = segmentation.females;
         if (!femaleData) return false;
         const category = getAutomaticCategory(femaleData.birth_date, femaleData.parity_order);
-        return selectedCategories.includes(category);
+        const categoryLower = category.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        return selectedCategories.includes(categoryLower);
       });
 
       // Converter para formato esperado pelo Nexus

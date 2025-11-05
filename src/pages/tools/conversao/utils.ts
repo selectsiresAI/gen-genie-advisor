@@ -12,8 +12,9 @@ export const normalizeKey = (value: string, fuzzyMode = false): string => {
     // Remove hífens e espaços para fuzzy matching
     normalized = normalized.replace(/[-\s]+/g, "");
   } else {
-    // Mantém comportamento original
-    normalized = normalized.replace(/[^a-z0-9]+/g, "_");
+    // Preserva caracteres importantes: %, $
+    // Substitui outros caracteres especiais por underscore
+    normalized = normalized.replace(/[^a-z0-9%$]+/g, "_");
   }
   
   return normalized

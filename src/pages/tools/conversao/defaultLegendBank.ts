@@ -78,7 +78,6 @@ const entries: Array<Omit<LegendEntry, "source">> = [
   { alias: "gord", canonical: "PTAF" },
   { alias: "gord (lbs)", canonical: "PTAF" },
   { alias: "fat (lbs)", canonical: "PTAF" },
-  { alias: "%_fat", canonical: "PTAF" },
   { alias: "fat.(lbs)", canonical: "PTAF" },
   { alias: "gord. (lbs.)", canonical: "PTAF" },
   { alias: "fat", canonical: "PTAF" },
@@ -93,6 +92,7 @@ const entries: Array<Omit<LegendEntry, "source">> = [
   { alias: "g%", canonical: "PTAF%" },
   { alias: "fat.(%)", canonical: "PTAF%" },
   { alias: "% gordura", canonical: "PTAF%" },
+  { alias: "%_fat", canonical: "PTAF%" },
   
   { alias: "pta pro", canonical: "PTAP" },
   { alias: "ptap", canonical: "PTAP" },

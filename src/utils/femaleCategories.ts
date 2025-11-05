@@ -1,48 +1,80 @@
 /**
  * Lógica centralizada de categorização de fêmeas
  * Esta é a ÚNICA fonte de verdade para cálculo de categorias
- * Baseada na lógica da página HerdPage
+ * 
+ * NOVA REGRA (padronizada):
+ * 1. Calcula deliveries = days_alive / 365 (sem bissexto)
+ * 2. Mapeia deliveries para parity_order:
+ *    - 0,00-1,00 → 0 (bezerra)
+ *    - 1,01-1,99 → 0.1 (novilha)
+ *    - 2,00-2,99 → 1 (primípara)
+ *    - 3,00-3,99 → 2 (secundípara)
+ *    - ≥4,00 → 3 (multípara)
  */
 
 export type FemaleCategory = 'Bezerra' | 'Novilha' | 'Primípara' | 'Secundípara' | 'Multípara' | 'Indefinida';
 export type FemaleCategoryLower = 'bezerra' | 'novilha' | 'primipara' | 'secundipara' | 'multipara' | 'todas';
 
 /**
- * Calcula a categoria de uma fêmea baseado em data de nascimento e ordem de parto
- * 
- * Regras:
- * 1. Se tem ordem de parto > 0, usa ela:
- *    - parity_order = 1 → Primípara
- *    - parity_order = 2 → Secundípara  
- *    - parity_order >= 3 → Multípara
- * 
- * 2. Se não tem ordem de parto, usa idade em meses:
- *    - 0-12 meses → Bezerra
- *    - 13-23 meses → Novilha
- *    - 24-36 meses → Primípara
- *    - 37-48 meses → Secundípara
- *    - 49+ meses → Multípara
+ * Calcula deliveries (número de partos estimado) baseado na data de nascimento
  */
-export function getAutomaticCategory(birthDate?: string | null, parityOrder?: number | null): FemaleCategory {
-  if (!birthDate) return 'Indefinida';
+export function calculateDeliveries(birthDate?: string | null): number | null {
+  if (!birthDate) return null;
   
   const birth = new Date(birthDate);
   const today = new Date();
-  const ageInMonths = Math.floor((today.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
+  
+  // Validar data no futuro
+  if (birth.getTime() > today.getTime()) return null;
+  
+  const daysAlive = Math.floor((today.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24));
+  const deliveries = daysAlive / 365;
+  
+  return deliveries;
+}
 
-  // Se tem ordem de parto definida (maior que 0), usa ela
-  if (parityOrder && parityOrder > 0) {
-    if (parityOrder === 1) return 'Primípara';
-    if (parityOrder === 2) return 'Secundípara';
-    if (parityOrder >= 3) return 'Multípara';
-  }
+/**
+ * Calcula parity_order baseado em deliveries
+ * Mapeamento:
+ * - 0,00-1,00 → 0
+ * - 1,01-1,99 → 0.1
+ * - 2,00-2,99 → 1
+ * - 3,00-3,99 → 2
+ * - ≥4,00 → 3
+ */
+export function calculateParityOrder(deliveries: number | null): number | null {
+  if (deliveries === null) return null;
+  
+  if (deliveries <= 1.00) return 0;
+  if (deliveries < 2.00) return 0.1;
+  if (deliveries < 3.00) return 1;
+  if (deliveries < 4.00) return 2;
+  return 3;
+}
 
-  // Se não tem ordem de parto, usa idade em meses
-  if (ageInMonths <= 12) return 'Bezerra';
-  if (ageInMonths <= 23) return 'Novilha';
-  if (ageInMonths <= 36) return 'Primípara';
-  if (ageInMonths <= 48) return 'Secundípara';
-  return 'Multípara';
+/**
+ * Mapeia parity_order para categoria
+ */
+export function parityOrderToCategory(parityOrder: number | null): FemaleCategory {
+  if (parityOrder === null) return 'Indefinida';
+  
+  if (parityOrder === 0) return 'Bezerra';
+  if (parityOrder === 0.1) return 'Novilha';
+  if (parityOrder === 1) return 'Primípara';
+  if (parityOrder === 2) return 'Secundípara';
+  if (parityOrder >= 3) return 'Multípara';
+  
+  return 'Indefinida';
+}
+
+/**
+ * Calcula a categoria de uma fêmea baseado APENAS em data de nascimento
+ * Esta é a função principal que deve ser usada em toda a aplicação
+ */
+export function getAutomaticCategory(birthDate?: string | null, _parityOrder?: number | null): FemaleCategory {
+  const deliveries = calculateDeliveries(birthDate);
+  const parityOrder = calculateParityOrder(deliveries);
+  return parityOrderToCategory(parityOrder);
 }
 
 /**

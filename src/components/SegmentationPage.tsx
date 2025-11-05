@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { HelpButton } from '@/components/help/HelpButton';
 import { HelpHint } from '@/components/help/HelpHint';
+import { getAutomaticCategory } from '@/utils/femaleCategories';
 
 import SortableHeader from '@/components/animals/SortableHeader';
 import { ANIMAL_METRIC_COLUMNS } from '@/constants/animalMetrics';
@@ -238,16 +239,6 @@ function getFonteDisplay(fonte?: string | null) {
     className: 'border-gray-200 bg-gray-50 text-gray-700'
   };
 }
-function getAutomaticCategory(birthDate?: string, parityOrder?: number): string {
-  if (!birthDate) return 'Indefinida';
-  const birth = new Date(birthDate);
-  const today = new Date();
-  const daysDiff = Math.floor((today.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24));
-
-  // Bezerras - até 90 dias pós nascimento e ordem de parto 0 ou null
-  if (daysDiff <= 90 && (!parityOrder || parityOrder === 0)) {
-    return 'Bezerra';
-  }
 
   // Novilhas - de 91 dias após nascimento até primeiro parto (ordem de parto 0 ou null)
   if (daysDiff > 90 && (!parityOrder || parityOrder === 0)) {
@@ -658,7 +649,7 @@ export default function SegmentationPage({
     // Apply category filter
     if (categoryFilter !== "all") {
       result = result.filter(animal => {
-        const automaticCategory = getAutomaticCategory((animal as any).birth_date, animal.parity_order);
+        const automaticCategory = getAutomaticCategory((animal as any).birth_date, null);
         return automaticCategory === categoryFilter;
       });
     }
@@ -1103,7 +1094,7 @@ export default function SegmentationPage({
   const availableCategories = useMemo(() => {
     const categories = new Set<string>();
     animals.forEach(animal => {
-      const category = getAutomaticCategory((animal as any).birth_date, animal.parity_order);
+      const category = getAutomaticCategory((animal as any).birth_date, null);
       categories.add(category);
     });
     return Array.from(categories).sort();
