@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { fetchFemalesDenormByFarm } from '@/supabase/queries/females';
+import { getAutomaticCategoryLower } from '@/utils/femaleCategories';
 
 // PTA Label to Database Column Mapping
 export const PTA_COLUMN_MAP: Record<string, string> = {
@@ -163,7 +164,6 @@ export const usePTAStore = create<PTAStoreState>((set, get) => ({
         };
 
         data.forEach((row: any) => {
-          const parityOrder = row.parity_order;
           const ptaValue = validateValue(row[columnName]);
           
           if (ptaValue === null) return; // Skip null/invalid values
@@ -171,13 +171,10 @@ export const usePTAStore = create<PTAStoreState>((set, get) => ({
           // Determine weight (try rel, then reliability, then weight_pta, fallback to 1)
           const weight = validateWeight(row.rel || row.reliability || row.weight_pta);
           
-          // Categorize by parity_order
-          let category: CategoryKey;
-          if (parityOrder === 0) category = 'novilha';
-          else if (parityOrder === 1) category = 'primipara';
-          else if (parityOrder === 2) category = 'secundipara';
-          else if (parityOrder >= 3) category = 'multipara';
-          else return; // Skip invalid parity values
+          // Categorize using centralized function based on birth_date only
+          const category = getAutomaticCategoryLower(row.birth_date, null);
+          
+          if (category === 'todas' || category === 'bezerra') return; // Skip invalid categories
           
           categoryData[category].push({ value: ptaValue, weight });
         });

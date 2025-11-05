@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { getAutomaticCategory } from '@/utils/femaleCategories';
 
 // Lista completa de PTAs disponíveis (fonte de verdade única)
 // Exatamente como aparecem no banco de fêmeas, na ordem especificada
@@ -270,34 +271,11 @@ function countFromCategoria(list: any[]): PopulationCounts {
   let heifers = 0, primiparous = 0, secundiparous = 0, multiparous = 0;
   let missingCategoriaCount = 0;
   
-  // Utility function for automatic categorization (same as in ToolSSApp)
+  // Utility function using centralized category logic
   function categorizeAnimal(nascimento: string, ordemParto?: number): string {
     if (!nascimento) return "Novilha"; // Default if no birth date
     
-    const birthDate = new Date(nascimento);
-    const now = new Date();
-    const ageInDays = Math.floor((now.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24));
-    
-    // Se não tem ordem de parto definida, assumir 0
-    const parity = ordemParto || 0;
-    
-    // Bezerra: do nascimento até 90 dias
-    if (ageInDays <= 90) {
-      return "Bezerra";
-    }
-    
-    // Baseado na ordem de parto
-    if (parity === 0) {
-      return "Novilha"; // Após 90 dias e nunca pariu
-    } else if (parity === 1) {
-      return "Primípara"; // Pariu uma vez
-    } else if (parity === 2) {
-      return "Secundípara"; // Pariu duas vezes
-    } else if (parity >= 3) {
-      return "Multípara"; // Pariu 3 ou mais vezes
-    }
-    
-    return "Novilha"; // Default
+    return getAutomaticCategory(nascimento, null);
   }
   
   for (const row of list) {
@@ -351,23 +329,27 @@ function countFromCategoria(list: any[]): PopulationCounts {
   return { heifers, primiparous, secundiparous, multiparous, total };
 }
 
-// Category definitions for automatic counting (improved)
+// Category definitions using centralized function
 export const CATEGORY_DEFINITIONS = {
   heifers: (female: any) => {
-    const parity = deriveParity(female);
-    return parity === 0 || female.categoria === "Novilha" || female.categoria === "Calf" || female.categoria === "Heifer";
+    const category = getAutomaticCategory(female.birth_date || female.nascimento, null);
+    return category === 'Novilha' || category === 'Bezerra' || 
+           female.categoria === "Novilha" || female.categoria === "Calf" || female.categoria === "Heifer";
   },
   primiparous: (female: any) => {
-    const parity = deriveParity(female);
-    return parity === 1 || female.categoria === "Primípara" || female.categoria === "Primiparous";
+    const category = getAutomaticCategory(female.birth_date || female.nascimento, null);
+    return category === 'Primípara' || 
+           female.categoria === "Primípara" || female.categoria === "Primiparous";
   }, 
   secundiparous: (female: any) => {
-    const parity = deriveParity(female);
-    return parity === 2 || female.categoria === "Secundípara" || female.categoria === "Secondiparous";
+    const category = getAutomaticCategory(female.birth_date || female.nascimento, null);
+    return category === 'Secundípara' || 
+           female.categoria === "Secundípara" || female.categoria === "Secondiparous";
   },
   multiparous: (female: any) => {
-    const parity = deriveParity(female);
-    return (parity >= 3) || female.categoria === "Multípara" || female.categoria === "Multiparous";
+    const category = getAutomaticCategory(female.birth_date || female.nascimento, null);
+    return category === 'Multípara' || 
+           female.categoria === "Multípara" || female.categoria === "Multiparous";
   }
 };
 

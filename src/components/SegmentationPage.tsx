@@ -240,27 +240,6 @@ function getFonteDisplay(fonte?: string | null) {
   };
 }
 
-  // Novilhas - de 91 dias após nascimento até primeiro parto (ordem de parto 0 ou null)
-  if (daysDiff > 90 && (!parityOrder || parityOrder === 0)) {
-    return 'Novilha';
-  }
-
-  // Primípara - ordem de parto 1
-  if (parityOrder === 1) {
-    return 'Primípara';
-  }
-
-  // Secundípara - ordem de parto 2
-  if (parityOrder === 2) {
-    return 'Secundípara';
-  }
-
-  // Multípara - ordem de parto 3 ou maior
-  if (parityOrder && parityOrder >= 3) {
-    return 'Multípara';
-  }
-  return 'Indefinida';
-}
 const CATEGORY_BADGE_CLASSES: Record<string, string> = {
   Bezerra: "border-blue-200 bg-blue-100 text-blue-700 dark:border-blue-800 dark:bg-blue-900/40 dark:text-blue-200",
   Novilha: "border-accent/80 bg-accent/20 text-accent-foreground",
@@ -683,7 +662,7 @@ export default function SegmentationPage({
       case 'parity_order':
         return record.parity_order ?? null;
       case 'category':
-        return getAutomaticCategory(record.birth_date as string | undefined, record.parity_order as number | undefined);
+        return getAutomaticCategory(record.birth_date as string | undefined, null);
       case 'fonte':
         return record.fonte ?? '';
       case 'Classification':
@@ -1651,7 +1630,7 @@ export default function SegmentationPage({
                   <tbody>
                     {sortedAnimals.map((a, idx) => {
                     const classificationBg = a.Classification === "Superior" ? "bg-accent/10" : a.Classification === "Intermediário" ? "bg-amber-50 dark:bg-amber-950/20" : a.Classification === "Inferior" ? "bg-destructive/10" : "";
-                    const category = getAutomaticCategory((a as any).birth_date, (a as any).parity_order);
+                    const category = getAutomaticCategory((a as any).birth_date, null);
                     const fonteInfo = getFonteDisplay((a as any).fonte);
                     return (
                       <tr key={a.__idKey ? (a as any)[a.__idKey] : a.id ?? idx} className={`border-b border-secondary text-foreground hover:opacity-90 ${segmentationEnabled && a.Classification ? classificationBg : ""}`}>
