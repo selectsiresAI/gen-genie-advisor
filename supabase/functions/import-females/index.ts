@@ -42,7 +42,9 @@ function sanitizeString(value: unknown): string {
 
 function validateNumber(value: unknown, min?: number, max?: number): number | null {
   if (value === null || value === undefined || value === '') return null;
-  const num = typeof value === 'number' ? value : parseFloat(String(value));
+  // Replace comma with dot for Brazilian decimal format (0,02 -> 0.02)
+  const numStr = typeof value === 'number' ? String(value) : String(value).replace(',', '.');
+  const num = parseFloat(numStr);
   if (isNaN(num)) return null;
   if (min !== undefined && num < min) return null;
   if (max !== undefined && num > max) return null;
