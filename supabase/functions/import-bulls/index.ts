@@ -13,11 +13,15 @@ interface ParsedCSVRow {
 const COLUMN_MAP: Record<string, string> = {
   // === IDENTIFICAÇÃO ===
   'naab': 'code',
+  'naab code': 'code',
+  'naab_code': 'code',
   'code': 'code',
   'codigo': 'code',
+  'código': 'code',
   'name': 'name',
   'nome': 'name',
   'registration name': 'registration',
+  'reg name': 'registration',
   'registration': 'registration',
   'registro': 'registration',
   
@@ -41,8 +45,9 @@ const COLUMN_MAP: Record<string, string> = {
   'mn': 'nm_dollar',
   'mn$': 'nm_dollar',
   'net_merit': 'nm_dollar',
-  'mérito liquido': 'nm_dollar',
   'net merit': 'nm_dollar',
+  'mérito liquido': 'nm_dollar',
+  'mérito líquido': 'nm_dollar',
   
   // CM$ (Cheese Merit)
   'cm$': 'cm_dollar',
@@ -67,20 +72,22 @@ const COLUMN_MAP: Record<string, string> = {
   'gm$': 'gm_dollar',
   'gm$®': 'gm_dollar',
   'gm': 'gm_dollar',
+  'grazing merit': 'gm_dollar',
   'mg': 'gm_dollar',
   'mg$': 'gm_dollar',
   'mérito pasto': 'gm_dollar',
-  'grazing merit': 'gm_dollar',
   
   // HHP$ (Health & Wellness Profit)
   'hhp$': 'hhp_dollar',
   'hhp$®': 'hhp_dollar',
+  'health index': 'hhp_dollar',
   'hhp': 'hhp_dollar',
   
   // === PRODUÇÃO ===
   // Leite
   'ptam': 'ptam',
   'milk': 'ptam',
+  'pta milk': 'ptam',
   'leite (lbs)': 'ptam',
   'gpta milk': 'ptam',
   'leite': 'ptam',
@@ -105,6 +112,7 @@ const COLUMN_MAP: Record<string, string> = {
   
   'ptaf%': 'ptaf_pct',
   'f %': 'ptaf_pct',
+  '% fat': 'ptaf_pct',
   'gordura %': 'ptaf_pct',
   'g%': 'ptaf_pct',
   'pta fat': 'ptaf_pct',
@@ -127,6 +135,7 @@ const COLUMN_MAP: Record<string, string> = {
   
   'ptap%': 'ptap_pct',
   'p %': 'ptap_pct',
+  '% pro': 'ptap_pct',
   'proteína %': 'ptap_pct',
   'prot.(%)': 'ptap_pct',
   '% prot': 'ptap_pct',
@@ -138,8 +147,8 @@ const COLUMN_MAP: Record<string, string> = {
   
   // Feed Saved
   'f sav': 'f_sav',
-  'fs': 'f_sav',
   'feed saved': 'f_sav',
+  'fs': 'f_sav',
   
   // === LONGEVIDADE E FERTILIDADE ===
   // Productive Life
