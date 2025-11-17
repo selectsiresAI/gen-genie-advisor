@@ -14,6 +14,7 @@ import { AdminGuard } from "@/components/admin/AdminGuard";
 import { AdminLayout } from "@/pages/admin/AdminLayout";
 import { AdminDashboard } from "@/pages/admin/AdminDashboard";
 import { SupportTicketsPage } from "@/pages/admin/SupportTicketsPage";
+import BullsImportPage from "@/pages/BullsImportPage";
 
 const AppContent = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -73,6 +74,16 @@ const AppContent = () => {
           element={
             user ? (
               <MainDashboard user={user} onLogout={handleLogout} />
+            ) : (
+              <AuthPage onAuthSuccess={handleAuthSuccess} />
+            )
+          }
+        />
+        <Route
+          path="/import-bulls"
+          element={
+            user ? (
+              <BullsImportPage />
             ) : (
               <AuthPage onAuthSuccess={handleAuthSuccess} />
             )

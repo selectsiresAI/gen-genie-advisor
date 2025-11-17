@@ -344,6 +344,30 @@ export type Database = {
         }
         Relationships: []
       }
+      clients: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          id: string
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       economic_indices: {
         Row: {
           created_at: string | null
@@ -905,6 +929,234 @@ export type Database = {
           },
         ]
       }
+      females_duplicates_backup: {
+        Row: {
+          beta_casein: string | null
+          birth_date: string | null
+          bwc: number | null
+          category: string | null
+          ccr: number | null
+          cdcb_id: string | null
+          cfp: number | null
+          cm_dollar: number | null
+          created_at: string | null
+          da: number | null
+          dce: number | null
+          dfm: number | null
+          dpr: number | null
+          dsb: number | null
+          efc: number | null
+          f_sav: number | null
+          farm_id: string | null
+          fi: number | null
+          flc: number | null
+          fls: number | null
+          fm_dollar: number | null
+          fonte: string | null
+          fta: number | null
+          ftl: number | null
+          ftp: number | null
+          fua: number | null
+          gfi: number | null
+          gl: number | null
+          gm_dollar: number | null
+          h_liv: number | null
+          hcr: number | null
+          hhp_dollar: number | null
+          id: string | null
+          identifier: string | null
+          kappa_casein: string | null
+          ket: number | null
+          liv: number | null
+          mast: number | null
+          met: number | null
+          mf: number | null
+          mgs_naab: string | null
+          mmgs_naab: string | null
+          name: string | null
+          nm_dollar: number | null
+          parity_order: number | null
+          pl: number | null
+          ptaf: number | null
+          ptaf_pct: number | null
+          ptam: number | null
+          ptap: number | null
+          ptap_pct: number | null
+          ptas: Json | null
+          ptat: number | null
+          rfi: number | null
+          rlr: number | null
+          rls: number | null
+          rp: number | null
+          rtp: number | null
+          rua: number | null
+          ruh: number | null
+          ruw: number | null
+          rw: number | null
+          sce: number | null
+          scs: number | null
+          sire_naab: string | null
+          ssb: number | null
+          sta: number | null
+          str: number | null
+          tpi: number | null
+          ucl: number | null
+          udc: number | null
+          udp: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          beta_casein?: string | null
+          birth_date?: string | null
+          bwc?: number | null
+          category?: string | null
+          ccr?: number | null
+          cdcb_id?: string | null
+          cfp?: number | null
+          cm_dollar?: number | null
+          created_at?: string | null
+          da?: number | null
+          dce?: number | null
+          dfm?: number | null
+          dpr?: number | null
+          dsb?: number | null
+          efc?: number | null
+          f_sav?: number | null
+          farm_id?: string | null
+          fi?: number | null
+          flc?: number | null
+          fls?: number | null
+          fm_dollar?: number | null
+          fonte?: string | null
+          fta?: number | null
+          ftl?: number | null
+          ftp?: number | null
+          fua?: number | null
+          gfi?: number | null
+          gl?: number | null
+          gm_dollar?: number | null
+          h_liv?: number | null
+          hcr?: number | null
+          hhp_dollar?: number | null
+          id?: string | null
+          identifier?: string | null
+          kappa_casein?: string | null
+          ket?: number | null
+          liv?: number | null
+          mast?: number | null
+          met?: number | null
+          mf?: number | null
+          mgs_naab?: string | null
+          mmgs_naab?: string | null
+          name?: string | null
+          nm_dollar?: number | null
+          parity_order?: number | null
+          pl?: number | null
+          ptaf?: number | null
+          ptaf_pct?: number | null
+          ptam?: number | null
+          ptap?: number | null
+          ptap_pct?: number | null
+          ptas?: Json | null
+          ptat?: number | null
+          rfi?: number | null
+          rlr?: number | null
+          rls?: number | null
+          rp?: number | null
+          rtp?: number | null
+          rua?: number | null
+          ruh?: number | null
+          ruw?: number | null
+          rw?: number | null
+          sce?: number | null
+          scs?: number | null
+          sire_naab?: string | null
+          ssb?: number | null
+          sta?: number | null
+          str?: number | null
+          tpi?: number | null
+          ucl?: number | null
+          udc?: number | null
+          udp?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          beta_casein?: string | null
+          birth_date?: string | null
+          bwc?: number | null
+          category?: string | null
+          ccr?: number | null
+          cdcb_id?: string | null
+          cfp?: number | null
+          cm_dollar?: number | null
+          created_at?: string | null
+          da?: number | null
+          dce?: number | null
+          dfm?: number | null
+          dpr?: number | null
+          dsb?: number | null
+          efc?: number | null
+          f_sav?: number | null
+          farm_id?: string | null
+          fi?: number | null
+          flc?: number | null
+          fls?: number | null
+          fm_dollar?: number | null
+          fonte?: string | null
+          fta?: number | null
+          ftl?: number | null
+          ftp?: number | null
+          fua?: number | null
+          gfi?: number | null
+          gl?: number | null
+          gm_dollar?: number | null
+          h_liv?: number | null
+          hcr?: number | null
+          hhp_dollar?: number | null
+          id?: string | null
+          identifier?: string | null
+          kappa_casein?: string | null
+          ket?: number | null
+          liv?: number | null
+          mast?: number | null
+          met?: number | null
+          mf?: number | null
+          mgs_naab?: string | null
+          mmgs_naab?: string | null
+          name?: string | null
+          nm_dollar?: number | null
+          parity_order?: number | null
+          pl?: number | null
+          ptaf?: number | null
+          ptaf_pct?: number | null
+          ptam?: number | null
+          ptap?: number | null
+          ptap_pct?: number | null
+          ptas?: Json | null
+          ptat?: number | null
+          rfi?: number | null
+          rlr?: number | null
+          rls?: number | null
+          rp?: number | null
+          rtp?: number | null
+          rua?: number | null
+          ruh?: number | null
+          ruw?: number | null
+          rw?: number | null
+          sce?: number | null
+          scs?: number | null
+          sire_naab?: string | null
+          ssb?: number | null
+          sta?: number | null
+          str?: number | null
+          tpi?: number | null
+          ucl?: number | null
+          udc?: number | null
+          udp?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       genetic_predictions: {
         Row: {
           confidence: number | null
@@ -1435,6 +1687,7 @@ export type Database = {
           full_name: string
           id: string
           is_admin: boolean | null
+          manager_id: string | null
           temporary_password: string | null
           updated_at: string | null
         }
@@ -1445,6 +1698,7 @@ export type Database = {
           full_name: string
           id: string
           is_admin?: boolean | null
+          manager_id?: string | null
           temporary_password?: string | null
           updated_at?: string | null
         }
@@ -1455,6 +1709,7 @@ export type Database = {
           full_name?: string
           id?: string
           is_admin?: boolean | null
+          manager_id?: string | null
           temporary_password?: string | null
           updated_at?: string | null
         }
@@ -1580,6 +1835,44 @@ export type Database = {
             columns: ["tank_id"]
             isOneToOne: false
             referencedRelation: "farm_tanks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_orders: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          deleted_at: string | null
+          id: string
+          ordem_servico_ssgen: number | null
+          representative_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          ordem_servico_ssgen?: number | null
+          representative_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          ordem_servico_ssgen?: number | null
+          representative_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
@@ -3451,6 +3744,44 @@ export type Database = {
         }
         Relationships: []
       }
+      v_map_orders: {
+        Row: {
+          client_id: string | null
+          client_name: string | null
+          created_at: string | null
+          deleted_at: string | null
+          id: string | null
+          ordem_servico_ssgen: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vw_orders_unified: {
+        Row: {
+          client_id: string | null
+          client_name: string | null
+          created_at: string | null
+          deleted_at: string | null
+          id: string | null
+          ordem_servico_ssgen: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       add_bull_to_farm: {
@@ -4095,6 +4426,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_user_role: { Args: never; Returns: string }
       has_farm_membership: { Args: never; Returns: boolean }
       has_role: {
         Args: {
@@ -4119,6 +4451,18 @@ export type Database = {
       is_farm_technician: { Args: { farm_uuid: string }; Returns: boolean }
       is_jsonb: { Args: { "": string }; Returns: boolean }
       is_member_of_farm: { Args: { _farm_id: string }; Returns: boolean }
+      is_rep_of_manager: {
+        Args: { manager: string; rep: string }
+        Returns: boolean
+      }
+      link_order_to_client: {
+        Args: { p_client_name: string; p_order_id: string }
+        Returns: {
+          client_id: string
+          client_name: string
+          order_id: string
+        }[]
+      }
       my_farms: {
         Args: never
         Returns: {
