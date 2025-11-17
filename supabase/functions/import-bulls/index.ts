@@ -769,6 +769,16 @@ Deno.serve(async (req) => {
           console.log(`⚠️ Removed ${bullsToUpsert.length - uniqueBulls.length} duplicate codes in batch`);
         }
         
+        // VERIFICAR QUAIS JÁ EXISTEM **ANTES** DO UPSERT
+        const codes = uniqueBulls.map(b => b.code);
+        const { data: existingBulls } = await supabase
+          .from('bulls')
+          .select('code')
+          .in('code', codes);
+
+        const existingCodes = new Set(existingBulls?.map(b => b.code) || []);
+        console.log(`📊 Before upsert: ${existingCodes.size} codes already exist`);
+        
         const { data: upsertData, error: upsertError } = await supabase
           .from('bulls')
           .upsert(uniqueBulls, { 
@@ -782,18 +792,12 @@ Deno.serve(async (req) => {
           console.error('First bull in failed batch:', JSON.stringify(uniqueBulls[0]));
           skipped = uniqueBulls.length;
         } else {
-          // Contar quantos já existiam antes
-          const codes = uniqueBulls.map(b => b.code);
-          const { data: existingBulls } = await supabase
-            .from('bulls')
-            .select('code')
-            .in('code', codes);
-
-          const existingCodes = new Set(existingBulls?.map(b => b.code) || []);
+          // Contar baseado no que existia ANTES do upsert
           updated = codes.filter(c => existingCodes.has(c)).length;
           inserted = codes.length - updated;
           
           console.log(`✅ Batch upsert successful: ${inserted} new, ${updated} updated`);
+          console.log(`📝 Upsert returned ${upsertData?.length || 0} IDs`);
         }
       }
 
