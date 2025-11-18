@@ -15,6 +15,7 @@ import { ANIMAL_METRIC_COLUMNS } from '@/constants/animalMetrics';
 import { useAnimalTableSort } from '@/hooks/useAnimalTableSort';
 import { useToast } from '@/hooks/use-toast';
 import { StagingMigrationButton } from './StagingMigrationButton';
+import { normalizeNaabCode } from '@/utils/bullNormalization';
 import {
   supabase,
   supabaseAnonKey,
@@ -692,9 +693,8 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
   })), [bulls, weights]);
 
   const filteredBulls = useMemo(() => bullsWithScores.filter(bull => {
-    const normalizedSearch = searchTerm.trim().replace(/[\s-]/g, '').toUpperCase();
-    const normalizedCode = bull.code.trim().replace(/[\s-]/g, '').toUpperCase();
-    const normalizedCodeWithoutLeadingZeros = normalizedCode.replace(/^0+([1-9]\d*[A-Z]+)/, '$1').replace(/^0+([A-Z]+)/, '$1');
+    const normalizedSearch = normalizeNaabCode(searchTerm);
+    const normalizedCode = normalizeNaabCode(bull.code);
     
     const pedigreeCandidates = [
       bull.sire_name,
@@ -708,8 +708,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
       .map(value => value!.toLowerCase());
     
     const matchesSearch = bull.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         normalizedCode.includes(normalizedSearch) ||
-                         normalizedCodeWithoutLeadingZeros.includes(normalizedSearch) ||
+                         (normalizedSearch && normalizedCode && normalizedCode.includes(normalizedSearch)) ||
                          pedigreeCandidates.some(candidate => candidate.includes(searchTerm.toLowerCase()));
     const matchesCompany = !selectedEmpresa || selectedEmpresa === "todas" || selectedEmpresa === "Todas" || bull.company && bull.company.toLowerCase().includes(selectedEmpresa.toLowerCase());
     const matchesYear = !selectedYear || selectedYear === "all-years" || bull.birth_date && new Date(bull.birth_date).getFullYear().toString() === selectedYear;

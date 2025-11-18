@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { BullSelector } from '@/components/BullSelector';
 import { HelpButton } from '@/components/help/HelpButton';
 import { HelpHint } from '@/components/help/HelpHint';
+import { normalizeNaabCode } from '@/utils/bullNormalization';
 
 
 // Types - Updated to match Supabase structure
@@ -336,9 +337,15 @@ function BotijaoVirtualPage({ client, farm, bulls: propBulls, selectedBulls = []
   useEffect(() => {
     if (selectedBulls.length > 0 && bulls.length > 0) {
       const bullsToAdd = selectedBulls
-        .map(code => bulls.find(b => b.code === code))
+        .map(code => {
+          const normalizedSearch = normalizeNaabCode(code);
+          return bulls.find(b => normalizeNaabCode(b.code) === normalizedSearch);
+        })
         .filter(Boolean)
-        .filter(bull => !botijao.itens.some(item => item.touro.code === bull!.code));
+        .filter(bull => {
+          const normalizedBullCode = normalizeNaabCode(bull!.code);
+          return !botijao.itens.some(item => normalizeNaabCode(item.touro.code) === normalizedBullCode);
+        });
 
       if (bullsToAdd.length > 0) {
         const newItems: BotijaoItem[] = bullsToAdd.map(bull => ({
@@ -384,10 +391,15 @@ function BotijaoVirtualPage({ client, farm, bulls: propBulls, selectedBulls = []
 
   // Filtrar touros
   const filteredBulls = useMemo(() => {
-    let filtered = bulls.filter(bull => 
-      bull.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      bull.code.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    let filtered = bulls.filter(bull => {
+      const normalizedSearch = normalizeNaabCode(searchTerm);
+      const normalizedCode = normalizeNaabCode(bull.code);
+      
+      const nameMatch = bull.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const codeMatch = normalizedSearch && normalizedCode && normalizedCode.includes(normalizedSearch);
+      
+      return nameMatch || codeMatch;
+    });
     
     if (selectedEmpresa !== "todas") {
       filtered = filtered.filter(bull => bull.empresa === selectedEmpresa);
