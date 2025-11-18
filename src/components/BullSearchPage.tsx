@@ -637,11 +637,26 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
         kappa_casein: bull.kappa_casein,
         gfi: bull.gfi
       }));
-      setBulls(transformedBulls);
+      
+      // Remove duplicatas mantendo o registro mais completo
+      const uniqueBullsMap = new Map<string, Bull>();
+      transformedBulls.forEach(bull => {
+        const normalizedCode = bull.code.trim().replace(/[\s-]/g, '').toUpperCase().replace(/^0+([1-9]\d*[A-Z]+)/, '$1').replace(/^0+([A-Z]+)/, '$1');
+        
+        const existing = uniqueBullsMap.get(normalizedCode);
+        if (!existing || (bull.company && !existing.company)) {
+          // Prefere o registro com company preenchida ou substitui se não existir
+          uniqueBullsMap.set(normalizedCode, bull);
+        }
+      });
+      
+      const deduplicatedBulls = Array.from(uniqueBullsMap.values());
+      console.log(`🔍 Removidas ${transformedBulls.length - deduplicatedBulls.length} duplicatas`);
+      setBulls(deduplicatedBulls);
 
       // Extract unique companies from loaded bulls
       const uniqueCompanies = new Set<string>();
-      transformedBulls.forEach(bull => {
+      deduplicatedBulls.forEach(bull => {
         if (bull.company && bull.company.trim()) {
           uniqueCompanies.add(bull.company.trim());
         }
@@ -677,7 +692,10 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
   })), [bulls, weights]);
 
   const filteredBulls = useMemo(() => bullsWithScores.filter(bull => {
-    const normalizedSearch = searchTerm.toLowerCase();
+    const normalizedSearch = searchTerm.trim().replace(/[\s-]/g, '').toUpperCase();
+    const normalizedCode = bull.code.trim().replace(/[\s-]/g, '').toUpperCase();
+    const normalizedCodeWithoutLeadingZeros = normalizedCode.replace(/^0+([1-9]\d*[A-Z]+)/, '$1').replace(/^0+([A-Z]+)/, '$1');
+    
     const pedigreeCandidates = [
       bull.sire_name,
       bull.mgs_name,
@@ -688,7 +706,11 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
     ]
       .filter(Boolean)
       .map(value => value!.toLowerCase());
-    const matchesSearch = bull.name.toLowerCase().includes(normalizedSearch) || bull.code.toLowerCase().includes(normalizedSearch) || pedigreeCandidates.some(candidate => candidate.includes(normalizedSearch));
+    
+    const matchesSearch = bull.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         normalizedCode.includes(normalizedSearch) ||
+                         normalizedCodeWithoutLeadingZeros.includes(normalizedSearch) ||
+                         pedigreeCandidates.some(candidate => candidate.includes(searchTerm.toLowerCase()));
     const matchesCompany = !selectedEmpresa || selectedEmpresa === "todas" || selectedEmpresa === "Todas" || bull.company && bull.company.toLowerCase().includes(selectedEmpresa.toLowerCase());
     const matchesYear = !selectedYear || selectedYear === "all-years" || bull.birth_date && new Date(bull.birth_date).getFullYear().toString() === selectedYear;
     return matchesSearch && matchesCompany && matchesYear;
