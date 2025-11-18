@@ -9,6 +9,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { normalizeNaabCode } from '@/utils/bullNormalization';
 
 export interface BullSearchResult {
   id: string;
@@ -93,11 +94,15 @@ export function BullSelector({
   const filteredBulls = useMemo(() => {
     if (!searchTerm) return bulls.slice(0, 50); // Show first 50 by default
     
-    return bulls.filter(bull => 
-      bull.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      bull.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (bull.company && bull.company.toLowerCase().includes(searchTerm.toLowerCase()))
-    ).slice(0, 50);
+    const normalizedSearch = normalizeNaabCode(searchTerm);
+    
+    return bulls.filter(bull => {
+      const nameMatch = bull.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const companyMatch = bull.company && bull.company.toLowerCase().includes(searchTerm.toLowerCase());
+      const codeMatch = normalizedSearch && normalizeNaabCode(bull.code)?.includes(normalizedSearch);
+      
+      return nameMatch || companyMatch || codeMatch;
+    }).slice(0, 50);
   }, [bulls, searchTerm]);
 
   // Validate NAAB code
