@@ -4492,15 +4492,25 @@ export type Database = {
           trait_value: number
         }[]
       }
-      nx3_bulls_lookup: {
-        Args: { p_limit?: number; p_query: string; p_trait: string }
-        Returns: {
-          code: string
-          id: string
-          name: string
-          trait_value: number
-        }[]
-      }
+      nx3_bulls_lookup:
+        | {
+            Args: { p_limit?: number; p_query: string; p_trait: string }
+            Returns: {
+              code: string
+              id: string
+              name: string
+              trait_value: number
+            }[]
+          }
+        | {
+            Args: { p_query: string; p_trait: string }
+            Returns: {
+              code: string
+              id: string
+              name: string
+              trait_value: number
+            }[]
+          }
       nx3_list_pta_traits: {
         Args: never
         Returns: {
