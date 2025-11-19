@@ -17,6 +17,7 @@ import {
 import type { LabelProps, TooltipProps } from "recharts";
 import { ChevronLeft, Loader2, Search as SearchIcon, Sparkles } from "lucide-react";
 import { ANIMAL_METRIC_COLUMNS } from "../../constants/animalMetrics";
+import { getAdaptiveYAxisDomainMultiple } from "../../lib/chart-utils";
 
 /**
  * Componente Vite-friendly (sem Next helpers, sem shadcn, sem aliases).
@@ -106,6 +107,10 @@ export default function Nexus3Groups() {
   // 3) Carregar médias das mães por ano (quando trait ou farmId mudarem)
   useEffect(() => {
     if (!farmId || !trait) return;
+    
+    // Limpa touros escolhidos quando a PTA muda
+    setChosen([]);
+    
     (async () => {
       try {
         setLoading(true);
@@ -165,6 +170,11 @@ export default function Nexus3Groups() {
       daughters_pred: ((m.avg_value + bullsAvg) / 2) * 0.93,
     }));
   }, [mothers, bullsAvg]);
+
+  // Calcular domínio dinâmico do eixo Y
+  const [yMin, yMax] = useMemo(() => {
+    return getAdaptiveYAxisDomainMultiple(chartData, ["mothers_avg", "daughters_pred"]);
+  }, [chartData]);
 
   // 6) Helpers UI
   const addBull = (b: BullRow) => {
@@ -464,7 +474,13 @@ export default function Nexus3Groups() {
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                 <XAxis dataKey="year" stroke="#6B7280" tickLine={false} axisLine={false} />
-                <YAxis stroke="#6B7280" tickLine={false} axisLine={false} />
+                <YAxis 
+                  stroke="#6B7280" 
+                  tickLine={false} 
+                  axisLine={false} 
+                  domain={[yMin, yMax]}
+                  tickFormatter={(value) => Math.round(value).toString()}
+                />
                 <Tooltip content={renderChartTooltip} />
                 <Legend
                   verticalAlign="top"

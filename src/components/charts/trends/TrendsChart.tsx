@@ -12,6 +12,7 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
+import { getAdaptiveYAxisDomainMultiple } from '@/lib/chart-utils';
 
 interface TrendStats {
   mean: number | null;
@@ -147,12 +148,23 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ data, traits, showTren
     [traits, showTrendLine, formatValue],
   );
 
+  // Calcular domínio dinâmico do eixo Y baseado nos valores Z-score
+  const [yMin, yMax] = React.useMemo(() => {
+    const dataKeys = traits.map((trait) => `${trait.key}_z`);
+    return getAdaptiveYAxisDomainMultiple(data, dataKeys);
+  }, [data, traits]);
+
   return (
     <ResponsiveContainer width="100%" height={400}>
       <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
         <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
         <XAxis dataKey="year" stroke="#666" fontSize={12} />
-        <YAxis stroke="#666" fontSize={12} label={{ value: 'Z-score', angle: -90, position: 'insideLeft' }} />
+        <YAxis 
+          stroke="#666" 
+          fontSize={12} 
+          label={{ value: 'Z-score', angle: -90, position: 'insideLeft' }}
+          domain={[yMin, yMax]}
+        />
         <Tooltip content={tooltipRenderer} />
         <Legend />
         {traits.map((trait) => (
