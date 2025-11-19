@@ -16,6 +16,7 @@ import {
 } from "recharts";
 import type { LabelProps, TooltipProps } from "recharts";
 import { ChevronLeft, Loader2, Search as SearchIcon, Sparkles } from "lucide-react";
+import { ANIMAL_METRIC_COLUMNS } from "../../constants/animalMetrics";
 
 /**
  * Componente Vite-friendly (sem Next helpers, sem shadcn, sem aliases).
@@ -274,15 +275,19 @@ export default function Nexus3Groups() {
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">Trait (PTA)</label>
             <select
-              className="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium uppercase text-gray-900 shadow-sm focus:border-gray-900 focus:outline-none"
+              className="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-900 shadow-sm focus:border-gray-900 focus:outline-none"
               value={trait}
               onChange={(e) => setTrait(e.target.value)}
             >
-              {traits.map((t) => (
-                <option key={t} value={t}>
-                  {t.toUpperCase()}
-                </option>
-              ))}
+              {traits.map((t) => {
+                const metric = ANIMAL_METRIC_COLUMNS.find(m => m.key === t);
+                const displayLabel = metric?.label || t.toUpperCase();
+                return (
+                  <option key={t} value={t}>
+                    {displayLabel}
+                  </option>
+                );
+              })}
             </select>
           </div>
           <div className="space-y-2">
