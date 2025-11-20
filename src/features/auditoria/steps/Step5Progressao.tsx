@@ -21,6 +21,7 @@ import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
 import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
 import { useRegisterChart } from "@/components/pdf/useRegisterChart";
 import { getAutomaticCategoryLower } from "@/utils/femaleCategories";
+import { formatPtaValue } from "@/utils/ptaFormat";
 
 type SeriesPoint = { year: number; n: number; mean: number };
 
@@ -284,16 +285,16 @@ const TraitCard = memo(function TraitCard({
               <YAxis
                 domain={axis.domain}
                 ticks={axis.ticks}
-                tickFormatter={(value) => value.toFixed(2)}
+                tickFormatter={(value) => formatPtaValue(traitKey, value)}
                 allowDecimals
               />
               <Tooltip
                 formatter={(value: any, name: string) => {
                   if (name === "mean")
-                    return [typeof value === "number" ? value.toFixed(2) : value, "Média anual " + traitLabel];
+                    return [typeof value === "number" ? formatPtaValue(traitKey, value) : value, "Média anual " + traitLabel];
                   if (name === "trend")
                     return [
-                      typeof value === "number" ? value.toFixed(2) : value,
+                      typeof value === "number" ? formatPtaValue(traitKey, value) : value,
                       "Tendência (R²=" + trendResult.r2.toFixed(3) + ")",
                     ];
                   if (name === "n") return [value, "N"];
