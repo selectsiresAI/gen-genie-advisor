@@ -9,6 +9,7 @@ import { ArrowLeft, Search, Upload, Download, Beaker } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { HelpButton } from '@/components/help/HelpButton';
 import { HelpHint } from '@/components/help/HelpHint';
+import { formatPtaValue } from '@/utils/ptaFormat';
 
 import SortableHeader from '@/components/animals/SortableHeader';
 import { ANIMAL_METRIC_COLUMNS } from '@/constants/animalMetrics';
@@ -802,11 +803,11 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
           bull.sire_naab || '-',
           bull.mgs_naab || '-',
           bull.score?.toFixed(2) || '-',
-          bull.hhp_dollar || '-',
-          bull.tpi || '-',
-          bull.nm_dollar || '-',
-          bull.ptam || '-',
-          bull.cfp || '-'
+          formatPtaValue('HHP$', bull.hhp_dollar),
+          formatPtaValue('TPI', bull.tpi),
+          formatPtaValue('NM$', bull.nm_dollar),
+          formatPtaValue('PTAM', bull.ptam),
+          formatPtaValue('CFP', bull.cfp)
         ]);
 
         // Criar worksheet

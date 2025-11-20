@@ -11,6 +11,7 @@ import { ArrowLeft, Settings, Download, RefreshCw, Users, TrendingUp, BarChart3,
 import { useToast } from "@/hooks/use-toast";
 import { HelpButton } from "@/components/help/HelpButton";
 import { HelpHint } from "@/components/help/HelpHint";
+import { formatPtaValue } from "@/utils/ptaFormat";
 
 import {
   fetchFemalesDenormByFarm,
@@ -510,7 +511,7 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
                             borderRadius: '8px',
                             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
                           }}
-                          formatter={(value: any) => [Number(value).toFixed(2), '']}
+                          formatter={(value: any, name: string) => [formatPtaValue(name, Number(value)), '']}
                         />
                         <Legend />
                         {selectedPTAs.map((ptaKey, index) => {
@@ -798,7 +799,7 @@ function TraitCard({
                   <div className="bg-white/95 shadow rounded-md px-3 py-2 text-xs text-gray-800">
                     <div className="font-semibold">Ano: {label}</div>
                     <div>N: {Math.round(p.n || 0)}</div>
-                    <div>Ganho: {Math.round(p.delta || 0)}</div>
+                    <div>Ganho: {formatPtaValue(trait, p.delta)}</div>
                   </div>
                 );
               }}
@@ -812,7 +813,7 @@ function TraitCard({
               name="Média anual"
               stroke={colorMean}
               dot={{ r: 5, strokeWidth: 2, stroke: '#111827', fill: '#fff' }}
-              label={{ position: 'top', formatter: (v:any) => Math.round(v), fontSize: 12 }}
+              label={{ position: 'top', formatter: (v:any) => formatPtaValue(trait, v), fontSize: 12 }}
             />
             {showFarmMean && (
               <ReferenceLine 
@@ -821,11 +822,11 @@ function TraitCard({
                 strokeDasharray="6 6" 
                 ifOverflow="extendDomain" 
                 label={{ 
-                  value: `Média ${farmMean}`, 
+                  value: `Média ${formatPtaValue(trait, farmMean)}`, 
                   position: 'insideTopLeft', 
                   fill: '#0EA5B7', 
                   fontSize: 12 
-                }} 
+                }}
               />
             )}
             {showTrend && trendLine.length === 2 && (
@@ -844,10 +845,10 @@ function TraitCard({
 
       {/* Rodapé estatística descritiva */}
       <div className="border-t px-4 py-2 text-xs text-gray-700 flex flex-wrap gap-x-6 gap-y-1">
-        <span><strong>STD:</strong> {Math.round(stats.std)}</span>
-        <span><strong>Max:</strong> {Math.round(stats.max)}</span>
-        <span><strong>Média:</strong> {Math.round(stats.mean)}</span>
-        <span><strong>Min:</strong> {Math.round(stats.min)}</span>
+        <span><strong>STD:</strong> {formatPtaValue(trait, stats.std)}</span>
+        <span><strong>Max:</strong> {formatPtaValue(trait, stats.max)}</span>
+        <span><strong>Média:</strong> {formatPtaValue(trait, stats.mean)}</span>
+        <span><strong>Min:</strong> {formatPtaValue(trait, stats.min)}</span>
         <span><strong>% &lt; Média:</strong> {Math.round(stats.belowPct)}%</span>
         <span><strong>Herdabilidade:</strong> {(h2 ?? 0.30).toFixed(2).replace('.', ',')}</span>
       </div>

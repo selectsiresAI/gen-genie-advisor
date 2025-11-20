@@ -185,23 +185,13 @@ export const usePedigreeStore = create<PedigreeState>()(
 );
 
 // Utility functions for calculations
+// Importar a função global de formatação
+import { formatPtaValue as formatPtaValueGlobal } from '@/utils/ptaFormat';
+
 export const formatPTAValue = (key: string, value: number | null): string => {
-  if (value === null || value === undefined) return '—';
-
-  const label = PTA_KEY_TO_LABEL[key];
-
-  // Dollar traits (0 decimals)
-  if (label && (label.includes('$') || label === 'HHP$®')) {
-    return Math.round(value).toString();
-  }
-  
-  // Percentage traits (2 decimals)
-  if (label && label.includes('%')) {
-    return value.toFixed(2);
-  }
-  
-  // Other traits (2 decimals)
-  return value.toFixed(2);
+  // Usar a função global que segue as listas oficiais
+  const label = PTA_KEY_TO_LABEL[key] || key;
+  return formatPtaValueGlobal(label, value);
 };
 
 export const predictFromPedigree = (sire: Bull | null, mgs: Bull | null, mmgs: Bull | null): Record<string, number | null> => {

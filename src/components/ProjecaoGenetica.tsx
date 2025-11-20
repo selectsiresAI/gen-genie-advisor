@@ -10,6 +10,7 @@ import { BullSelector } from "@/components/BullSelector";
 import { IM5Configurator, type IM5Config } from "@/components/plano-genetico/IM5Configurator";
 import { IM5Results, type IM5Row } from "@/components/plano-genetico/IM5Results";
 import { usePlanBulls } from "@/hooks/usePlanBulls";
+import { formatPtaValue } from "@/utils/ptaFormat";
 import {
   PlanObjectiveProvider,
   usePlanObjective,

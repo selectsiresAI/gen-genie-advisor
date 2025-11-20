@@ -6,6 +6,7 @@ import { usePTAStore } from '@/hooks/usePTAStore';
 import { useHerdStore } from '@/hooks/useHerdStore';
 import { usePlanStore } from '@/hooks/usePlanStore';
 import { useToast } from '@/hooks/use-toast';
+import { formatPtaValue } from '@/utils/ptaFormat';
 
 // Default PTAs to display in the table
 const DEFAULT_PTAS = [
@@ -103,8 +104,9 @@ const PTAMothersTable: React.FC<PTAMothersTableProps> = ({
   };
 
   // Get value for a specific PTA and category
-  const getPTAValue = (ptaLabel: string, category: string): number => {
-    return ptaMeansByCategory[ptaLabel]?.[category as keyof typeof ptaMeansByCategory[string]] || 0;
+  const getPTAValue = (ptaLabel: string, category: string): string => {
+    const value = ptaMeansByCategory[ptaLabel]?.[category as keyof typeof ptaMeansByCategory[string]] || 0;
+    return formatPtaValue(ptaLabel, value);
   };
 
   // Show empty alert if no herd selected or all values are zero

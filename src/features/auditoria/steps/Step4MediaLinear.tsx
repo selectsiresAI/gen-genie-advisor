@@ -16,6 +16,7 @@ import { useAGFilters } from "../store";
 import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
 import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
 import { useRegisterChart } from "@/components/pdf/useRegisterChart";
+import { formatPtaValue } from "@/utils/ptaFormat";
 
 type Mode = "coarse" | "full";
 
@@ -382,7 +383,12 @@ function Step4MediaLinearContent() {
                 allowDecimals
               />
               <YAxis dataKey="trait" type="category" width={90} />
-              <Tooltip />
+              <Tooltip 
+                formatter={(val: number, name: string, props: any) => {
+                  const traitKey = props?.payload?.trait_key || '';
+                  return formatPtaValue(traitKey, val);
+                }}
+              />
               <Bar dataKey="avgValue" fill="hsl(var(--muted))">
                 <LabelList dataKey="avgValue" position="right" formatter={(val: number) => val.toFixed(2)} />
                 {chartData.map((entry, index) => (

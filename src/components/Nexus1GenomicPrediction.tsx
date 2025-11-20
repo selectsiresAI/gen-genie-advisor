@@ -16,6 +16,7 @@ import { useHerdStore } from '@/hooks/useHerdStore';
 import { HelpButton } from '@/components/help/HelpButton';
 import { HelpHint } from '@/components/help/HelpHint';
 import { getAutomaticCategory } from '@/utils/femaleCategories';
+import { formatPtaValue } from '@/utils/ptaFormat';
 
 import { searchBulls } from '@/supabase/queries/bulls';
 import type { BullsDenormSelection } from '@/supabase/queries/bulls';
@@ -963,8 +964,8 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
                        {searchResults.map((bull, index) => <div key={bull.code || bull.id || index} className="flex items-center justify-between p-3 border rounded-lg">
                           <div>
                             <p className="font-medium">{bull.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {bull.code} | TPI: {bull.tpi || 'N/A'} | NM$: {bull.nm_dollar || 'N/A'}
+                             <p className="text-sm text-muted-foreground">
+                              {bull.code} | TPI: {formatPtaValue('TPI', bull.tpi)} | NM$: {formatPtaValue('NM$', bull.nm_dollar)}
                             </p>
                           </div>
                           <Button size="sm" onClick={() => addBullFromSearch(bull)} disabled={selectedBullsFromSearch.some(b => b.code === bull.code)}>
@@ -983,7 +984,7 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
                           <div>
                             <p className="font-medium">{bull.name}</p>
                             <p className="text-sm text-muted-foreground">
-                              {bull.code} | TPI: {bull.tpi || 'N/A'} | NM$: {bull.nm_dollar || 'N/A'}
+                              {bull.code} | TPI: {formatPtaValue('TPI', bull.tpi)} | NM$: {formatPtaValue('NM$', bull.nm_dollar)}
                             </p>
                           </div>
                           <Button size="sm" variant="outline" onClick={() => removeBullFromSearch(bull.code ?? null)}>
@@ -1071,7 +1072,7 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
                                   <Badge variant="outline">Touro {pred.bullNumber}</Badge>
                                 </TableCell>
                                 {PTA_COLUMNS.slice(0, 5).map(pta => <TableCell key={pta}>
-                                    {pred.predictions[pta]?.toFixed(2) || '—'}
+                                    {formatPtaValue(pta, pred.predictions[pta])}
                                   </TableCell>)}
                                 <TableCell>
                                   <span className="text-xs text-muted-foreground">
