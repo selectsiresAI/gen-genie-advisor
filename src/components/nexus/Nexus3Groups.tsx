@@ -18,6 +18,7 @@ import type { LabelProps, TooltipProps } from "recharts";
 import { ChevronLeft, Loader2, Search as SearchIcon, Sparkles } from "lucide-react";
 import { ANIMAL_METRIC_COLUMNS } from "../../constants/animalMetrics";
 import { getAdaptiveYAxisDomainMultiple } from "../../lib/chart-utils";
+import { formatPtaValue } from "@/utils/ptaFormat";
 
 /**
  * Componente Vite-friendly (sem Next helpers, sem shadcn, sem aliases).
@@ -204,22 +205,17 @@ export default function Nexus3Groups() {
     if (!active || !payload || !payload.length) return null;
     const mom = payload.find((item) => item.dataKey === "mothers_avg")?.value;
     const dau = payload.find((item) => item.dataKey === "daughters_pred")?.value;
-    const formatTooltipValue = (val: unknown) => {
-      if (typeof val === "number") return Math.round(val);
-      const parsed = Number(val ?? 0);
-      return Number.isFinite(parsed) ? Math.round(parsed) : 0;
-    };
     return (
       <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-lg text-sm">
         <div className="font-medium text-gray-900">Ano: {label}</div>
         <div className="mt-2 space-y-1">
           <div className="flex items-center justify-between text-[#ED1C24]">
             <span>Mães (média)</span>
-            <span className="font-semibold">{formatTooltipValue(mom)}</span>
+            <span className="font-semibold">{formatPtaValue(trait, mom)}</span>
           </div>
           <div className="flex items-center justify-between text-gray-900">
             <span>Filhas (predição)</span>
-            <span className="font-semibold">{formatTooltipValue(dau)}</span>
+            <span className="font-semibold">{formatPtaValue(trait, dau)}</span>
           </div>
         </div>
       </div>
@@ -233,7 +229,7 @@ export default function Nexus3Groups() {
     if (Number.isNaN(xPos) || Number.isNaN(yPos)) return null;
     return (
       <text x={xPos} y={yPos - 8} fill="#ED1C24" fontSize={12} fontWeight={600} textAnchor="middle">
-        {Math.round(Number(value))}
+        {formatPtaValue(trait, value)}
       </text>
     );
   };
@@ -245,7 +241,7 @@ export default function Nexus3Groups() {
     if (Number.isNaN(xPos) || Number.isNaN(yPos)) return null;
     return (
       <text x={xPos} y={yPos - 8} fill="#111827" fontSize={12} fontWeight={600} textAnchor="middle">
-        {Math.round(Number(value))}
+        {formatPtaValue(trait, value)}
       </text>
     );
   };
@@ -325,7 +321,7 @@ export default function Nexus3Groups() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Média dos Touros</p>
-                <p className="mt-2 text-3xl font-bold text-gray-900">{Math.round(bullsAvg)}</p>
+                <p className="mt-2 text-3xl font-bold text-gray-900">{formatPtaValue(trait, bullsAvg)}</p>
               </div>
               <div className="rounded-full bg-gray-50 p-3 text-[#ED1C24]">
                 <Sparkles className="h-6 w-6" />
@@ -346,7 +342,7 @@ export default function Nexus3Groups() {
                   >
                     <span className="text-sm font-semibold">{m.birth_year}</span>
                     <span className="text-xs uppercase text-gray-500">média {trait.toUpperCase()}</span>
-                    <span className="text-xl font-semibold">{Math.round(m.avg_value)}</span>
+                    <span className="text-xl font-semibold">{formatPtaValue(trait, m.avg_value)}</span>
                   </div>
                 ))
               ) : (
@@ -400,7 +396,7 @@ export default function Nexus3Groups() {
                       <p className="text-sm text-gray-500">{r.name || "—"}</p>
                     </div>
                     <p className="mt-4 text-sm font-medium text-gray-700">
-                      PTA ({trait.toUpperCase()}): {Math.round(r.trait_value ?? 0)}
+                      PTA ({trait.toUpperCase()}): {formatPtaValue(trait, r.trait_value ?? 0)}
                     </p>
                   </div>
                 </button>
@@ -427,7 +423,7 @@ export default function Nexus3Groups() {
                   <div>
                     <p className="text-base font-semibold text-gray-900">{b.code}</p>
                     <p className="text-sm text-gray-500">
-                      PTA ({trait.toUpperCase()}): {Math.round(b.trait_value ?? 0)}
+                      PTA ({trait.toUpperCase()}): {formatPtaValue(trait, b.trait_value ?? 0)}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">

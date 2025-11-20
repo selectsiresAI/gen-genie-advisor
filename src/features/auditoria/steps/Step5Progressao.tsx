@@ -338,18 +338,18 @@ const TraitCard = memo(function TraitCard({
               />
 
               {showFarmMean && (
-                <ReferenceLine
-                  y={farmMean}
-                  stroke="#F59E0B"
-                  strokeDasharray="5 5"
-                  strokeWidth={1.5}
-                  label={{
-                    value: `Média geral (${farmMean.toFixed(2)})`,
-                    position: "insideTopRight",
-                    fill: "#F59E0B",
-                    fontSize: 12,
-                  }}
-                />
+              <ReferenceLine
+                y={farmMean}
+                stroke="#F59E0B"
+                strokeDasharray="5 5"
+                strokeWidth={1.5}
+                label={{
+                  value: `Média geral (${formatPtaValue(traitKey, farmMean)})`,
+                  position: "insideTopRight",
+                  fill: "#F59E0B",
+                  fontSize: 12,
+                }}
+              />
               )}
 
               {showTrend && trendResult.trendLine.length === 2 && (
@@ -383,7 +383,7 @@ const TraitCard = memo(function TraitCard({
                 {data.map((row, idx) => (
                   <tr key={row.year} className={idx % 2 === 0 ? "bg-background" : "bg-muted/30"}>
                     <td className="p-2">{row.year}</td>
-                    <td className="p-2 text-right">{row.mean.toFixed(2)}</td>
+                    <td className="p-2 text-right">{formatPtaValue(traitKey, row.mean)}</td>
                     <td className="p-2 text-right">{row.n}</td>
                   </tr>
                 ))}
