@@ -23,6 +23,9 @@ allowed_origins = ["https://toolss-ssb.lovable.app", "https://*.vercel.app", "ht
 allowed_headers = ["authorization", "content-type"]
 methods = ["POST", "OPTIONS"]
 
+[functions.translate-i18n]
+verify_jwt = true
+
 [auth.password]
 # Enforce strong passwords and reject those found in public breach corpora
 min_length = 10
