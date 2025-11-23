@@ -35,6 +35,7 @@ import { useActivityTracker } from '@/hooks/useActivityTracker';
 import { UserEngagementMetrics } from '@/components/admin/UserEngagementMetrics';
 import { useUserRole } from '@/hooks/useUserRole';
 import { LanguageSelector } from '@/components/LanguageSelector';
+import { useTranslation } from '@/hooks/useTranslation';
 import UserSupportTickets from '@/components/support/UserSupportTickets';
 
 interface MainDashboardProps {
@@ -73,6 +74,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   const [showSurvey, setShowSurvey] = useState(false);
   const [showMetrics, setShowMetrics] = useState(false);
   const { role, isAdmin, isLoading: roleLoading } = useUserRole();
+  const { t } = useTranslation();
   const {
     toast
   } = useToast();
@@ -224,59 +226,59 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
       view: ModuleView;
     }>;
   }> = [{
-    title: 'Bancos de Dados',
+    title: t("modules.databases"),
     items: [{
-      title: 'Rebanho',
-      description: 'Banco de fêmeas — consultas, filtros e importação',
+      title: t("modules.herd"),
+      description: t("modules.herd.desc"),
       view: 'herd'
     }, {
-      title: 'Busca de Touros',
-      description: 'Base global — pesquisa e comparação',
+      title: t("modules.bulls"),
+      description: t("modules.bulls.desc"),
       view: 'bulls'
     }, {
-      title: 'Botijão Virtual',
-      description: 'Touros da fazenda — estoque e lotes',
+      title: t("modules.botijao"),
+      description: t("modules.botijao.desc"),
       view: 'botijao'
     }]
   }, {
-    title: 'Análises e Estratégia',
+    title: t("modules.analysis"),
     items: [{
-      title: 'Segmentação',
-      description: 'Monte índices e classifique o rebanho',
+      title: t("modules.segmentation"),
+      description: t("modules.segmentation.desc"),
       view: 'segmentation'
     }, {
-      title: 'Auditoria Genética',
-      description: 'Desempenho por lotes, quartis e tendências',
+      title: t("modules.auditoria"),
+      description: t("modules.auditoria.desc"),
       view: 'auditoria'
     }, {
-      title: 'Nexus',
-      description: 'Predições e acasalamentos otimizados',
+      title: t("modules.nexus"),
+      description: t("modules.nexus.desc"),
       view: 'nexus'
     }]
   }, {
-    title: 'Planejamento e Direcionamento',
+    title: t("modules.planning"),
     items: [{
-      title: 'Metas',
-      description: 'Defina objetivos de genética e produção',
+      title: t("modules.metas"),
+      description: t("modules.metas.desc"),
       view: 'metas'
     }, {
-      title: 'Plano Genético',
-      description: 'Projeções e cálculo de reposição',
+      title: t("modules.plano"),
+      description: t("modules.plano.desc"),
       view: 'plano'
     }]
   }, {
-    title: 'Operações e Suporte',
+    title: t("modules.operations"),
     items: [{
-      title: 'Arquivos',
-      description: 'Gerenciamento de documentos e anexos',
+      title: t("modules.arquivos"),
+      description: t("modules.arquivos.desc"),
       view: 'arquivos'
     }, {
-      title: 'Conversão (preview)',
-      description: 'Padronize planilhas e cabeçalhos',
+      title: t("modules.conversao"),
+      description: t("modules.conversao.desc"),
       view: 'conversao'
     }, {
-      title: 'Chamados',
-      description: 'Acompanhe seus tickets de suporte e crie novos pedidos',
+      title: t("modules.tickets"),
+      description: t("modules.tickets.desc"),
       view: 'tickets'
     }]
   }];
@@ -342,7 +344,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
     return <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="text-muted-foreground">Carregando dashboard...</p>
+          <p className="text-muted-foreground">{t("dashboard.loading")}</p>
         </div>
       </div>;
   }
@@ -357,16 +359,16 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                 <TooltipTrigger asChild>
                   <Button variant="ghost" onClick={handleBackToDashboard} className="flex items-center bg-gray-200 hover:bg-gray-100">
                     <ArrowLeft className="w-4 h-4 mr-2" />
-                    Voltar
+                    {t("dashboard.back")}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Voltar ao painel de fazendas</p>
+                  <p>{t("dashboard.backToDashboard")}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">Fazenda selecionada</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">{t("dashboard.selectedFarm")}</p>
               <h1 className="text-xl font-semibold text-neutral-900">{selectedFarm.farm_name}</h1>
             </div>
           </div>
@@ -376,10 +378,10 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
           <div className="rounded-3xl border bg-white/70 p-6 shadow-sm md:p-10">
             <header className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-3xl font-bold text-black tracking-tight">Painel Principal</h2>
-                <p className="mt-1 text-sm text-neutral-600">Selecione um módulo do ecossistema ToolSS para continuar.</p>
+                <h2 className="text-3xl font-bold text-black tracking-tight">{t("dashboard.mainPanel")}</h2>
+                <p className="mt-1 text-sm text-neutral-600">{t("dashboard.selectModule")}</p>
               </div>
-              <p className="text-base italic text-neutral-600">Ecossistema ToolSS</p>
+              <p className="text-base italic text-neutral-600">{t("dashboard.ecosystem")}</p>
             </header>
 
             <div className="space-y-10">
