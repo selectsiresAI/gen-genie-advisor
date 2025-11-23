@@ -10,29 +10,32 @@ import { useI18n } from "@/providers/I18nProvider";
 
 export function LanguageSelector() {
   const { locale, setLocale } = useI18n();
+  
+  const currentLanguage = locale === 'pt-BR' ? '🇧🇷 PT' : '🇺🇸 EN';
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-9 w-9">
-          <Globe className="h-4 w-4" />
-          <span className="sr-only">Select language</span>
+        <Button variant="outline" size="default" className="h-10 gap-2 px-3 font-medium">
+          <Globe className="h-5 w-5" />
+          <span className="hidden sm:inline">{currentLanguage}</span>
+          <span className="sm:hidden">{locale === 'pt-BR' ? '🇧🇷' : '🇺🇸'}</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" className="w-48">
         <DropdownMenuItem
           onClick={() => setLocale('pt-BR')}
-          className={locale === 'pt-BR' ? 'bg-accent' : ''}
+          className={`cursor-pointer ${locale === 'pt-BR' ? 'bg-accent font-semibold' : ''}`}
         >
-          <span className="mr-2">🇧🇷</span>
-          Português (BR)
+          <span className="mr-2 text-lg">🇧🇷</span>
+          <span>Português (BR)</span>
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => setLocale('en-US')}
-          className={locale === 'en-US' ? 'bg-accent' : ''}
+          className={`cursor-pointer ${locale === 'en-US' ? 'bg-accent font-semibold' : ''}`}
         >
-          <span className="mr-2">🇺🇸</span>
-          English (US)
+          <span className="mr-2 text-lg">🇺🇸</span>
+          <span>English (US)</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
