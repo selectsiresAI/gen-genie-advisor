@@ -17,6 +17,8 @@ import { AdminDashboard } from "@/pages/admin/AdminDashboard";
 import { SupportTicketsPage } from "@/pages/admin/SupportTicketsPage";
 import BullsImportPage from "@/pages/BullsImportPage";
 import GlossaryManager from "@/pages/admin/GlossaryManager";
+import TranslationBatch from "@/pages/admin/TranslationBatch";
+import I18nDashboard from "@/pages/admin/I18nDashboard";
 
 const AppContent = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -105,7 +107,9 @@ const AppContent = () => {
         >
           <Route index element={<AdminDashboard />} />
           <Route path="support-tickets" element={<SupportTicketsPage />} />
+          <Route path="i18n" element={<I18nDashboard />} />
           <Route path="glossary" element={<GlossaryManager />} />
+          <Route path="translation" element={<TranslationBatch />} />
         </Route>
       </Routes>
     </>

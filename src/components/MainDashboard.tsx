@@ -34,6 +34,7 @@ import { SatisfactionSurvey } from '@/components/feedback/SatisfactionSurvey';
 import { useActivityTracker } from '@/hooks/useActivityTracker';
 import { UserEngagementMetrics } from '@/components/admin/UserEngagementMetrics';
 import { useUserRole } from '@/hooks/useUserRole';
+import { LanguageSelector } from '@/components/LanguageSelector';
 import UserSupportTickets from '@/components/support/UserSupportTickets';
 
 interface MainDashboardProps {
@@ -676,6 +677,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
           </div>
 
           <div className="ml-auto flex items-center gap-4">
+            <LanguageSelector />
             <div className="flex items-center space-x-2">
               <Avatar>
                 <AvatarFallback>

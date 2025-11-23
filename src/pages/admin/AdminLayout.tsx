@@ -16,7 +16,9 @@ interface AdminLayoutProps {
 const adminLinks = [
   { label: "Visão geral", to: "/admin" },
   { label: "Tickets de suporte", to: "/admin/support-tickets" },
-  { label: "Glossário Técnico", to: "/admin/glossary" }
+  { label: "i18n Dashboard", to: "/admin/i18n" },
+  { label: "Glossário Técnico", to: "/admin/glossary" },
+  { label: "Tradução em Lote", to: "/admin/translation" }
 ];
 
 const UserBadge = ({ user }: { user: User | null }) => {
