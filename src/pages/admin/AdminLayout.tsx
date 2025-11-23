@@ -15,7 +15,8 @@ interface AdminLayoutProps {
 
 const adminLinks = [
   { label: "Visão geral", to: "/admin" },
-  { label: "Tickets de suporte", to: "/admin/support-tickets" }
+  { label: "Tickets de suporte", to: "/admin/support-tickets" },
+  { label: "Glossário Técnico", to: "/admin/glossary" }
 ];
 
 const UserBadge = ({ user }: { user: User | null }) => {

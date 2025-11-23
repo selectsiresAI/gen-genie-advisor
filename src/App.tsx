@@ -8,6 +8,7 @@ import { User, Session } from "@supabase/supabase-js";
 import AuthPage from "@/components/AuthPage";
 import MainDashboard from "@/components/MainDashboard";
 import QueryProvider from "@/providers/query-client";
+import { I18nProvider } from "@/providers/I18nProvider";
 import { TutorialProvider } from "@/features/tutorial/TutorialProvider";
 import { SatisfactionSurvey } from "@/components/feedback/SatisfactionSurvey";
 import { AdminGuard } from "@/components/admin/AdminGuard";
@@ -15,6 +16,7 @@ import { AdminLayout } from "@/pages/admin/AdminLayout";
 import { AdminDashboard } from "@/pages/admin/AdminDashboard";
 import { SupportTicketsPage } from "@/pages/admin/SupportTicketsPage";
 import BullsImportPage from "@/pages/BullsImportPage";
+import GlossaryManager from "@/pages/admin/GlossaryManager";
 
 const AppContent = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -103,6 +105,7 @@ const AppContent = () => {
         >
           <Route index element={<AdminDashboard />} />
           <Route path="support-tickets" element={<SupportTicketsPage />} />
+          <Route path="glossary" element={<GlossaryManager />} />
         </Route>
       </Routes>
     </>
@@ -113,11 +116,13 @@ const App = () => {
   return (
     <BrowserRouter>
       <QueryProvider>
-        <TutorialProvider>
-          <TooltipProvider>
-            <AppContent />
-          </TooltipProvider>
-        </TutorialProvider>
+        <I18nProvider>
+          <TutorialProvider>
+            <TooltipProvider>
+              <AppContent />
+            </TooltipProvider>
+          </TutorialProvider>
+        </I18nProvider>
       </QueryProvider>
     </BrowserRouter>
   );
