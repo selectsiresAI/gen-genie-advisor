@@ -26,8 +26,6 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const setLocale = (newLocale: Locale) => {
     setI18nLocale(newLocale);
     setLocaleState(newLocale);
-    // Force re-render of all components using t()
-    window.location.reload();
   };
 
   return (

@@ -6,6 +6,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface HelpHintProps {
   content: string;
@@ -14,6 +15,8 @@ interface HelpHintProps {
 }
 
 export function HelpHint({ content, className, side = "top" }: HelpHintProps) {
+  const { t } = useTranslation();
+  
   return (
     <TooltipProvider delayDuration={200}>
       <Tooltip>
@@ -29,7 +32,7 @@ export function HelpHint({ content, className, side = "top" }: HelpHintProps) {
             onClick={(e) => e.stopPropagation()}
           >
             <HelpCircle className="h-5 w-5" strokeWidth={2.5} />
-            <span className="sr-only">Ajuda</span>
+            <span className="sr-only">{t("help.label")}</span>
           </button>
         </TooltipTrigger>
         <TooltipContent 
