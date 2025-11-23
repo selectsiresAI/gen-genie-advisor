@@ -159,7 +159,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   const handleDeleteFarm = async (farmId: string, farmName: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevenir que o click do delete abra a fazenda
 
-    const isConfirmed = confirm(`Tem certeza que deseja apagar a fazenda "${farmName}"? Esta ação não pode ser desfeita.`);
+    const isConfirmed = confirm(`${t("farm.delete.confirm")} "${farmName}"? ${t("farm.delete.warning")}`);
     if (!isConfirmed) {
       return;
     }
@@ -177,8 +177,8 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
         const result = data[0];
         if (result.success) {
           toast({
-            title: "Fazenda apagada com sucesso!",
-            description: `${farmName} foi removida do seu portfólio`
+            title: t("farm.delete.success"),
+            description: `${farmName} ${t("farm.delete.removed")}`
           });
 
           // Recarregar a lista de fazendas
@@ -324,11 +324,11 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   const getRoleLabel = (role: string) => {
     switch (role) {
       case 'owner':
-        return 'Proprietário';
+        return t("dashboard.role.owner");
       case 'editor':
-        return 'Editor';
+        return t("dashboard.role.editor");
       case 'viewer':
-        return 'Visualizador';
+        return t("dashboard.role.viewer");
       default:
         return role;
     }
@@ -700,7 +700,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                 className="gap-2"
               >
                 <Sparkles className="h-4 w-4" />
-                Avaliar Plataforma
+                {t("farm.evaluatePlatform")}
               </Button>
             )}
             
@@ -713,7 +713,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                   className="gap-2"
                 >
                   <BarChart3 className="h-4 w-4" />
-                  {showMetrics ? 'Ocultar' : 'Ver'} Métricas
+                  {showMetrics ? t("farm.hideMetrics") : t("farm.viewMetrics")}
                 </Button>
                 <Button 
                   variant="outline" 
@@ -722,14 +722,14 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                   className="gap-2"
                 >
                   <MessageSquare className="h-4 w-4" />
-                  Tickets de Suporte
+                  {t("farm.supportTickets")}
                 </Button>
               </>
             )}
             
             <Button variant="outline" size="sm" onClick={handleLogout} className="bg-slate-200 hover:bg-slate-100">
               <LogOut className="w-4 h-4 mr-2" />
-              Sair
+              {t("dashboard.logout")}
             </Button>
           </div>
         </div>
@@ -741,16 +741,16 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
           <div className="space-y-2">
             <div className="flex items-center gap-3 flex-wrap">
               <h2 className="text-3xl font-bold">
-                Bem-vindo, {userProfile?.full_name?.split(' ')[0] || 'Usuário'}!
+                {t("farm.welcome")}, {userProfile?.full_name?.split(' ')[0] || 'Usuário'}!
               </h2>
               <Badge
                 className={`shadow ${isAdmin ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
               >
-                Role: {role ?? 'desconhecido'} | Admin: {isAdmin ? 'Sim' : 'Não'}
+                {t("farm.role")}: {role ?? t("farm.unknown")} | {t("farm.admin")}: {isAdmin ? t("farm.yes") : t("farm.no")}
               </Badge>
             </div>
             <p className="text-muted-foreground">
-              Gerencie suas fazendas, rebanhos e análises genéticas em um só lugar.
+              {t("farm.welcomeMessage")}
             </p>
           </div>
 
@@ -758,19 +758,19 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
           <div className="space-y-6" data-tour="home:fazendas">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-2">
-                <h3 className="text-xl font-semibold">Suas Fazendas</h3>
-                <HelpHint content="Lista de todas as suas fazendas cadastradas. Clique em uma fazenda para visualizar detalhes ou criar uma nova." side="right" />
+                <h3 className="text-xl font-semibold">{t("farm.yourFarms")}</h3>
+                <HelpHint content={t("farm.helpHint")} side="right" />
               </div>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2 md:gap-3 w-full md:w-auto">
                 <Input
                   value={searchTerm}
                   onChange={event => setSearchTerm(event.target.value)}
-                  placeholder="Buscar fazendas..."
+                  placeholder={t("farm.search")}
                   className="w-full sm:w-64 bg-white"
                 />
                 <Button onClick={handleCreateFarm} data-tour="home:criar" className="sm:w-auto">
                   <Plus className="w-4 h-4 mr-2" />
-                  Criar Fazenda
+                  {t("farm.create")}
                 </Button>
               </div>
             </div>
@@ -778,20 +778,20 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
             {farms.length === 0 ? <Card>
                 <CardContent className="flex flex-col items-center justify-center py-8">
                   <Building2 className="w-12 h-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Nenhuma fazenda encontrada</h3>
+                  <h3 className="text-lg font-semibold mb-2">{t("farm.noFarms")}</h3>
                   <p className="text-muted-foreground text-center mb-4">
-                    Comece criando sua primeira fazenda para gerenciar seu rebanho.
+                    {t("farm.noFarmsMessage")}
                   </p>
                   <Button onClick={handleCreateFarm}>
                     <Plus className="w-4 h-4 mr-2" />
-                    Criar Primeira Fazenda
+                    {t("farm.createFirst")}
                   </Button>
                 </CardContent>
               </Card> : filteredFarms.length === 0 ? <Card>
                 <CardContent className="py-10 text-center space-y-2">
                   <Building2 className="w-10 h-10 mx-auto text-muted-foreground" />
-                  <h3 className="text-lg font-semibold">Nenhum resultado encontrado</h3>
-                  <p className="text-sm text-muted-foreground">Ajuste sua busca para encontrar uma fazenda específica.</p>
+                  <h3 className="text-lg font-semibold">{t("farm.noResults")}</h3>
+                  <p className="text-sm text-muted-foreground">{t("farm.noResultsMessage")}</p>
                 </CardContent>
               </Card> : <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {filteredFarms.map(farm => <Card key={farm.farm_id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleFarmSelect(farm)}>
@@ -800,26 +800,26 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                          <div className="space-y-1">
                            <CardTitle className="text-lg">{farm.farm_name}</CardTitle>
                            <CardDescription>
-                             Proprietário: {farm.owner_name}
+                             {t("farm.owner")}: {farm.owner_name}
                            </CardDescription>
                          </div>
                          <div className="flex gap-2 items-center">
                            <Badge variant={getRoleBadgeVariant(farm.my_role)}>
                              {getRoleLabel(farm.my_role)}
                            </Badge>
-                           {farm.is_default && <Badge variant="outline">Padrão</Badge>}
-                           {farm.my_role === 'owner' && <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-destructive hover:text-destructive-foreground" onClick={e => handleDeleteFarm(farm.farm_id, farm.farm_name, e)} title="Apagar fazenda">
+                           {farm.is_default && <Badge variant="outline">{t("farm.default")}</Badge>}
+                           {farm.my_role === 'owner' && <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-destructive hover:text-destructive-foreground" onClick={e => handleDeleteFarm(farm.farm_id, farm.farm_name, e)} title={t("farm.delete")}>
                                <Trash2 className="h-4 w-4" />
                              </Button>}
                          </div>
                        </div>
                      </CardHeader>
                     <CardContent>
-                      <div className="flex justify-between text-sm">
-                        <div className="flex items-center gap-1">
-                          <Users className="w-4 h-4 text-muted-foreground" />
-                          <span>{farm.total_females ?? 0} fêmeas</span>
-                        </div>
+                       <div className="flex justify-between text-sm">
+                         <div className="flex items-center gap-1">
+                           <Users className="w-4 h-4 text-muted-foreground" />
+                           <span>{farm.total_females ?? 0} {t("farm.females")}</span>
+                         </div>
                         <div className="flex items-center gap-1">
                           
                           
@@ -833,7 +833,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
           {/* Métricas de Engajamento (apenas para admins) */}
           {showMetrics && isAdmin && (
             <div className="space-y-4">
-              <h3 className="text-xl font-semibold">Métricas de Engajamento dos Usuários</h3>
+              <h3 className="text-xl font-semibold">{t("farm.userEngagementMetrics")}</h3>
               <UserEngagementMetrics />
             </div>
           )}
@@ -841,8 +841,8 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
           {/* Account Totals */}
           <div className="space-y-6" data-tour="home:resumo">
             <div className="flex items-center gap-2">
-              <h3 className="text-xl font-semibold">Resumo da Conta</h3>
-              <HelpHint content="Visão geral da sua conta, incluindo número total de fazendas e animais cadastrados." side="right" />
+              <h3 className="text-xl font-semibold">{t("farm.accountSummary")}</h3>
+              <HelpHint content={t("farm.accountSummaryHint")} side="right" />
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
