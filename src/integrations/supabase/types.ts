@@ -2602,6 +2602,45 @@ export type Database = {
         }
         Relationships: []
       }
+      technical_glossary: {
+        Row: {
+          category: string
+          context: string | null
+          created_at: string | null
+          description: string | null
+          en_us: string | null
+          id: string
+          is_translatable: boolean | null
+          pt_br: string
+          term_key: string
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          context?: string | null
+          created_at?: string | null
+          description?: string | null
+          en_us?: string | null
+          id?: string
+          is_translatable?: boolean | null
+          pt_br: string
+          term_key: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          context?: string | null
+          created_at?: string | null
+          description?: string | null
+          en_us?: string | null
+          id?: string
+          is_translatable?: boolean | null
+          pt_br?: string
+          term_key?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       tenant_feature_flags: {
         Row: {
           tenant_id: string
