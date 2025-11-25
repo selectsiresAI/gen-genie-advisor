@@ -11,6 +11,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { CreateUsersButton } from "@/components/admin/CreateUsersButton";
 
 interface SupportTicketSummary {
   id: string;
@@ -312,11 +313,16 @@ export function AdminDashboard() {
     <div className="space-y-8">
       <div className="flex flex-col gap-3">
         <Badge variant="outline" className="w-fit">Role atual: {role ?? "desconhecido"}</Badge>
-        <h2 className="text-3xl font-bold tracking-tight">Bem-vindo ao painel administrativo</h2>
-        <p className="text-muted-foreground max-w-2xl">
-          Todas as chamadas abaixo utilizam o cliente oficial <code>@supabase/supabase-js</code>, demonstrando como combinar
-          autenticação, RPC, tabelas, Storage e funções Edge com o Supabase.
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Bem-vindo ao painel administrativo</h2>
+            <p className="text-muted-foreground max-w-2xl mt-2">
+              Todas as chamadas abaixo utilizam o cliente oficial <code>@supabase/supabase-js</code>, demonstrando como combinar
+              autenticação, RPC, tabelas, Storage e funções Edge com o Supabase.
+            </p>
+          </div>
+          <CreateUsersButton />
+        </div>
       </div>
 
       {loading ? (
