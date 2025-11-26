@@ -658,37 +658,99 @@ export default function CalculadoraReposicao() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Novilhas */}
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold">Novilhas</h3>
+            <h3 className="text-lg font-semibold mb-4">Novilhas</h3>
             
             <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-destructive">Top (100%)</span>
-                <span className="text-sm font-medium">Meio (0%)</span>
-                <span className="text-sm font-medium">Inferior (0%)</span>
-              </div>
-              
-              <div className="relative">
-                <Slider
-                  value={[data.novilhas.top]}
-                  onValueChange={([value]) => {
-                    const meio = Math.max(0, 100 - value);
-                    setData({
-                      ...data,
-                      novilhas: {
-                        ...data.novilhas,
-                        top: value,
-                        meio: meio,
-                        inferior: 0
-                      }
-                    });
-                  }}
-                  max={100}
-                  step={1}
-                  className="w-full"
-                />
-                <div className="absolute top-full mt-2 w-full flex justify-center">
-                  <span className="bg-foreground text-background px-2 py-1 rounded text-xs">100%</span>
-                </div>
+              {/* Superior */}
+              <Card className="border-2 border-border">
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="font-semibold">Superior</span>
+                    <span className="font-bold text-lg">{data.novilhas.top}%</span>
+                  </div>
+                  <Slider
+                    value={[data.novilhas.top]}
+                    onValueChange={([value]) => {
+                      const remaining = 100 - value;
+                      const meio = Math.min(data.novilhas.meio, remaining);
+                      const inferior = remaining - meio;
+                      setData({
+                        ...data,
+                        novilhas: {
+                          ...data.novilhas,
+                          top: value,
+                          inferior: inferior
+                        }
+                      });
+                    }}
+                    max={100}
+                    step={1}
+                    className="w-full"
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Intermediário */}
+              <Card className="border-2 border-border">
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="font-semibold">Intermediário</span>
+                    <span className="font-bold text-lg">{data.novilhas.meio}%</span>
+                  </div>
+                  <Slider
+                    value={[data.novilhas.meio]}
+                    onValueChange={([value]) => {
+                      const remaining = 100 - value;
+                      const top = Math.min(data.novilhas.top, remaining);
+                      const inferior = remaining - top;
+                      setData({
+                        ...data,
+                        novilhas: {
+                          ...data.novilhas,
+                          meio: value,
+                          inferior: inferior
+                        }
+                      });
+                    }}
+                    max={100}
+                    step={1}
+                    className="w-full"
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Inferior */}
+              <Card className="border-2 border-border">
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="font-semibold">Inferior</span>
+                    <span className="font-bold text-lg">{data.novilhas.inferior}%</span>
+                  </div>
+                  <Slider
+                    value={[data.novilhas.inferior]}
+                    onValueChange={([value]) => {
+                      const remaining = 100 - value;
+                      const top = Math.min(data.novilhas.top, remaining);
+                      const meio = remaining - top;
+                      setData({
+                        ...data,
+                        novilhas: {
+                          ...data.novilhas,
+                          meio: meio,
+                          inferior: value
+                        }
+                      });
+                    }}
+                    max={100}
+                    step={1}
+                    className="w-full"
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Total */}
+              <div className="bg-green-50 border border-green-200 rounded p-3 text-center">
+                <span className="font-semibold">Total: {data.novilhas.top + data.novilhas.meio + data.novilhas.inferior}% {data.novilhas.top + data.novilhas.meio + data.novilhas.inferior === 100 ? '✓' : '⚠️'}</span>
               </div>
 
               <div>
@@ -768,42 +830,101 @@ export default function CalculadoraReposicao() {
             </div>
           </div>
 
-          {/* Grupo em lactação */}
+          {/* Grupo Vacas */}
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold">Grupo em lactação</h3>
+            <h3 className="text-lg font-semibold mb-4">Grupo Vacas</h3>
             
             <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-destructive">Top (30%)</span>
-                <span className="text-sm font-medium">Meio (50%)</span>
-                <span className="text-sm font-medium">Inferior (20%)</span>
-              </div>
-              
-              <div className="relative">
-                <Slider
-                  value={[data.grupoLactacao.top]}
-                  onValueChange={([value]) => {
-                    const remaining = 100 - value;
-                    const meio = Math.min(50, remaining);
-                    const inferior = remaining - meio;
-                    
-                    setData({
-                      ...data,
-                      grupoLactacao: {
-                        ...data.grupoLactacao,
-                        top: value,
-                        meio: meio,
-                        inferior: inferior
-                      }
-                    });
-                  }}
-                  max={100}
-                  step={1}
-                  className="w-full"
-                />
-                <div className="absolute top-full mt-2 w-full flex justify-center">
-                  <span className="bg-foreground text-background px-2 py-1 rounded text-xs">30%</span>
-                </div>
+              {/* Superior */}
+              <Card className="border-2 border-border">
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="font-semibold">Superior</span>
+                    <span className="font-bold text-lg">{data.grupoLactacao.top}%</span>
+                  </div>
+                  <Slider
+                    value={[data.grupoLactacao.top]}
+                    onValueChange={([value]) => {
+                      const remaining = 100 - value;
+                      const meio = Math.min(data.grupoLactacao.meio, remaining);
+                      const inferior = remaining - meio;
+                      setData({
+                        ...data,
+                        grupoLactacao: {
+                          ...data.grupoLactacao,
+                          top: value,
+                          inferior: inferior
+                        }
+                      });
+                    }}
+                    max={100}
+                    step={1}
+                    className="w-full"
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Intermediário */}
+              <Card className="border-2 border-border">
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="font-semibold">Intermediário</span>
+                    <span className="font-bold text-lg">{data.grupoLactacao.meio}%</span>
+                  </div>
+                  <Slider
+                    value={[data.grupoLactacao.meio]}
+                    onValueChange={([value]) => {
+                      const remaining = 100 - value;
+                      const top = Math.min(data.grupoLactacao.top, remaining);
+                      const inferior = remaining - top;
+                      setData({
+                        ...data,
+                        grupoLactacao: {
+                          ...data.grupoLactacao,
+                          meio: value,
+                          inferior: inferior
+                        }
+                      });
+                    }}
+                    max={100}
+                    step={1}
+                    className="w-full"
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Inferior */}
+              <Card className="border-2 border-border">
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="font-semibold">Inferior</span>
+                    <span className="font-bold text-lg">{data.grupoLactacao.inferior}%</span>
+                  </div>
+                  <Slider
+                    value={[data.grupoLactacao.inferior]}
+                    onValueChange={([value]) => {
+                      const remaining = 100 - value;
+                      const top = Math.min(data.grupoLactacao.top, remaining);
+                      const meio = remaining - top;
+                      setData({
+                        ...data,
+                        grupoLactacao: {
+                          ...data.grupoLactacao,
+                          meio: meio,
+                          inferior: value
+                        }
+                      });
+                    }}
+                    max={100}
+                    step={1}
+                    className="w-full"
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Total */}
+              <div className="bg-green-50 border border-green-200 rounded p-3 text-center">
+                <span className="font-semibold">Total: {data.grupoLactacao.top + data.grupoLactacao.meio + data.grupoLactacao.inferior}% {data.grupoLactacao.top + data.grupoLactacao.meio + data.grupoLactacao.inferior === 100 ? '✓' : '⚠️'}</span>
               </div>
 
               <div>
