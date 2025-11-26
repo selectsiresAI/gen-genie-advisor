@@ -270,7 +270,7 @@ export default function CalculadoraReposicao() {
               />
             </div>
             <div>
-              <Label>Novilhas referenciais</Label>
+              <Label>Novilhas natimortas</Label>
               <Input
                 type="number"
                 value={data.novilhasReferencias}
@@ -280,7 +280,7 @@ export default function CalculadoraReposicao() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <Label>Aborto em vetustas</Label>
+                <Label>Aborto em vacas</Label>
                 <Tooltip>
                   <TooltipTrigger>
                     <Info className="w-4 h-4 text-muted-foreground" />
@@ -351,7 +351,7 @@ export default function CalculadoraReposicao() {
               />
             </div>
             <div>
-              <Label>Investidas de novilhas</Label>
+              <Label>Inventário de novilhas</Label>
               <Input
                 type="number"
                 value={data.novilhasInsemedas}
@@ -369,7 +369,7 @@ export default function CalculadoraReposicao() {
               />
             </div>
             <div>
-              <Label>Número total de vacas lactantes e falnestes</Label>
+              <Label>Número total de vacas (secas e lactantes)</Label>
               <Input
                 type="number"
                 value={data.novilhasInsemedas}
@@ -410,7 +410,7 @@ export default function CalculadoraReposicao() {
               />
             </div>
             <div>
-              <Label>Novilhas precisas</Label>
+              <Label>Novilhas prenhas</Label>
               <Input
                 type="number"
                 value={data.novilhasPrecisas}
