@@ -771,6 +771,7 @@ export default function SegmentationPage({
         identificador: (a as any).identifier ?? "",
         id_cdcb: (a as any).fonte === 'Predição' ? '' : ((a as any).cdcb_id ?? ""),
         data_nascimento: (a as any).birth_date ? formatDate((a as any).birth_date) : "",
+        ordem_parto: (a as any).parity_order ?? "",
         Categoria: (a as any).category ?? "",
         Fonte: fonteInfo.label === '—' ? '' : fonteInfo.label,
         CustomScore: customScore,
@@ -795,6 +796,7 @@ export default function SegmentationPage({
       "identificador",
       "id_cdcb",
       "data_nascimento",
+      "Ordem de Parto",
       "Categoria",
       "Fonte",
       "CustomScore",
@@ -816,6 +818,7 @@ export default function SegmentationPage({
         row.identificador,
         row.id_cdcb,
         row.data_nascimento,
+        row.ordem_parto,
         row.Categoria,
         row.Fonte,
         row.CustomScore,
@@ -869,6 +872,7 @@ export default function SegmentationPage({
       { wch: 12 }, // identificador
       { wch: 12 }, // id_cdcb
       { wch: 14 }, // data_nascimento
+      { wch: 14 }, // Ordem de Parto
       { wch: 12 }, // Categoria
       { wch: 10 }, // Fonte
       { wch: 16 }, // CustomScore
