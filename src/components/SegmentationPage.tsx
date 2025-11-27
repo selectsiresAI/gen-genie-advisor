@@ -771,6 +771,7 @@ export default function SegmentationPage({
         identificador: (a as any).identifier ?? "",
         id_cdcb: (a as any).fonte === 'Predição' ? '' : ((a as any).cdcb_id ?? ""),
         data_nascimento: (a as any).birth_date ? formatDate((a as any).birth_date) : "",
+        Categoria: (a as any).category ?? "",
         Fonte: fonteInfo.label === '—' ? '' : fonteInfo.label,
         CustomScore: customScore,
         Classificacao: a.Classification ?? "",
@@ -794,6 +795,7 @@ export default function SegmentationPage({
       "identificador",
       "id_cdcb",
       "data_nascimento",
+      "Categoria",
       "Fonte",
       "CustomScore",
       ...(shouldIncludeNormalized ? ["CustomScore_Normalizado"] : []),
@@ -814,6 +816,7 @@ export default function SegmentationPage({
         row.identificador,
         row.id_cdcb,
         row.data_nascimento,
+        row.Categoria,
         row.Fonte,
         row.CustomScore,
         ...(shouldIncludeNormalized ? [normalizedScore] : []),
@@ -863,6 +866,10 @@ export default function SegmentationPage({
     worksheet['!cols'] = [
       { wch: 38 }, // id
       { wch: 18 }, // nome
+      { wch: 12 }, // identificador
+      { wch: 12 }, // id_cdcb
+      { wch: 14 }, // data_nascimento
+      { wch: 12 }, // Categoria
       { wch: 10 }, // Fonte
       { wch: 16 }, // CustomScore
       ...(shouldIncludeNormalized ? [{ wch: 16 }] : []), // CustomScore_Normalizado
