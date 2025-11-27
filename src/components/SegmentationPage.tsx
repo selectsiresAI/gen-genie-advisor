@@ -765,6 +765,8 @@ export default function SegmentationPage({
         return String(rawValue);
       });
 
+      const autoCategory = getAutomaticCategory((a as any).birth_date, null);
+
       return {
         id: a.__idKey ? (a as any)[a.__idKey] : a.id ?? "",
         nome: a.__nameKey ? (a as any)[a.__nameKey] : a.name ?? "",
@@ -772,7 +774,7 @@ export default function SegmentationPage({
         id_cdcb: (a as any).fonte === 'Predição' ? '' : ((a as any).cdcb_id ?? ""),
         data_nascimento: (a as any).birth_date ? formatDate((a as any).birth_date) : "",
         ordem_parto: (a as any).parity_order ?? "",
-        Categoria: (a as any).category ?? "",
+        Categoria: autoCategory,
         Fonte: fonteInfo.label === '—' ? '' : fonteInfo.label,
         CustomScore: customScore,
         Classificacao: a.Classification ?? "",
