@@ -327,34 +327,55 @@ function calculateOutputs(inputs: CalculatorInputs): CalculatorOutputs {
     growth.targetHerdSize * (growth.cullingRate / 100) * (growth.calvingIntervalMonths / 12)
   );
   
-  // Taxa de sobrevivência do nascimento até lactação
-  const stillbornRate = growth.stillbornHeifers / 100;
-  const deathsAfterBirthRate = growth.heiferDeathsPreWeaning / 100;
-  const survivalRate = (1 - stillbornRate) * (1 - deathsAfterBirthRate);
+  // Taxa de sobrevivência fixa do Excel (0.64)
+  // Representa sobrevivência do nascimento até entrada no rebanho
+  const SURVIVAL_RATE = 0.64;
   
   // Novilhas necessárias AO NASCER (bezerras vivas)
   // Fórmula: necessárias_lactação / taxa_sobrevivência
-  const heifersNeededAtBirth = Math.round(heifersNeededAtLactation / survivalRate);
+  const heifersNeededAtBirth = Math.round(heifersNeededAtLactation / SURVIVAL_RATE);
   
   // ---- SUBSTITUIÇÕES CRIADAS ----
   
-  // Cálculo baseado na estratégia genética e taxas de concepção
-  // Total de prenhezes anuais projetadas
-  const cowsPregnancies = growth.pregnantCowsPerMonth * 12;
-  const heifersPregnancies = growth.pregnantHeifersPerMonth * 12;
-  const totalPregnancies = cowsPregnancies + heifersPregnancies;
+  // Taxas de mortalidade para cálculo de bezerras criadas
+  const stillbornRate = growth.stillbornHeifers / 100;
+  const deathsAfterBirthRate = growth.heiferDeathsPreWeaning / 100;
   
-  // Calcula % de sêmen sexado usado baseado na estratégia
-  const sexedUsagePercent = calculateSemenTypePercentage('sexed', strategy.heifersPlan, strategy.cowsPlan, strategy.heifersGroup, strategy.cowsGroup) / 100;
-  const conventionalUsagePercent = calculateSemenTypePercentage('conventional', strategy.heifersPlan, strategy.cowsPlan, strategy.heifersGroup, strategy.cowsGroup) / 100;
+  // Prenhezes mensais dos inputs
+  const cowsPregnanciesMonthly = growth.pregnantCowsPerMonth;
+  const heifersPregnanciesMonthly = growth.pregnantHeifersPerMonth;
+  const totalPregnanciesMonthly = cowsPregnanciesMonthly + heifersPregnanciesMonthly;
+  const totalPregnanciesAnnual = totalPregnanciesMonthly * 12;
   
-  // Bezerras do sêmen sexado (~90% fêmeas)
-  const calvesFromSexed = totalPregnancies * sexedUsagePercent * 0.9;
-  // Bezerras do convencional (~50% fêmeas)
-  const calvesFromConventional = totalPregnancies * conventionalUsagePercent * 0.5;
+  // Percentuais de sêmen por categoria (dos inputs de concepção Fase 2)
+  // Novilhas
+  const heiferSexedPct = conception.heifers.sexedSemen / 100;
+  const heiferConvPct = conception.heifers.conventional / 100;
+  // Vacas  
+  const cowSexedPct = conception.cows.sexedSemen / 100;
+  const cowConvPct = conception.cows.conventional / 100;
   
-  // Total de bezerras vivas ao nascer (já aplicando natimortalidade)
-  const totalHeifersBorn = Math.round((calvesFromSexed + calvesFromConventional) * (1 - stillbornRate));
+  // Proporção de prenhezes de novilhas vs vacas
+  const heiferPregnancyRatio = totalPregnanciesMonthly > 0 
+    ? heifersPregnanciesMonthly / totalPregnanciesMonthly 
+    : 0.4;
+  const cowPregnancyRatio = 1 - heiferPregnancyRatio;
+  
+  // Bezerras nascidas vivas por tipo de sêmen
+  // Sêmen sexado: ~90% fêmeas, aplicando natimortalidade
+  const heifersFromSexed = totalPregnanciesAnnual * (
+    heiferPregnancyRatio * heiferSexedPct + 
+    cowPregnancyRatio * cowSexedPct
+  ) * 0.9 * (1 - stillbornRate);
+  
+  // Convencional: ~50% fêmeas, aplicando natimortalidade  
+  const heifersFromConventional = totalPregnanciesAnnual * (
+    heiferPregnancyRatio * heiferConvPct + 
+    cowPregnancyRatio * cowConvPct
+  ) * 0.5 * (1 - stillbornRate);
+  
+  // Total de bezerras vivas ao nascer
+  const totalHeifersBorn = Math.round(heifersFromSexed + heifersFromConventional);
   
   // Novilhas entrando no rebanho em lactação (aplicando mortes pós-nascimento)
   const heifersCreated = Math.round(totalHeifersBorn * (1 - deathsAfterBirthRate));
@@ -373,7 +394,8 @@ function calculateOutputs(inputs: CalculatorInputs): CalculatorOutputs {
   const totalGeneticCost = sexedGeneticCost + conventionalGeneticCost + beefGeneticCost;
 
   // Animais para venda
-  const dairyMaleCalves = Math.round(calvesFromConventional); // Machos do convencional
+  // Machos do convencional (mesma quantidade que fêmeas do convencional)
+  const dairyMaleCalves = Math.round(heifersFromConventional);
   const beefCalves = Math.round(annualBeef * (conception.cows.beef / 100));
   const beefHeifers = Math.round(beefCalves * 0.5);
 
