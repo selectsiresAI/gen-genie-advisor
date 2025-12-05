@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { GeneticCalculatorProvider } from "@/providers/GeneticCalculatorContext";
+import { GeneticCalculatorProvider } from "@/hooks/useGeneticCalculator";
 import {
   Phase1Growth,
   Phase2Conception,
