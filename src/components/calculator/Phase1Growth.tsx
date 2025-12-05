@@ -42,9 +42,9 @@ export function Phase1Growth({ useReferenceNumbers, setUseReferenceNumbers }: Ph
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Coluna 1 - Parâmetros gerais */}
+            {/* Coluna 1 - Inputs Gerais */}
             <div className="space-y-4">
-              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Parâmetros Gerais</h3>
+              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Inputs Gerais</h3>
               <div>
                 <div className="flex items-center gap-2">
                   <Label>Taxa de descarte (%)</Label>
@@ -106,6 +106,20 @@ export function Phase1Growth({ useReferenceNumbers, setUseReferenceNumbers }: Ph
                 />
               </div>
               <div>
+                <Label>Tamanho do rebanho desejado (nº vacas)</Label>
+                <Input
+                  type="number"
+                  value={growth.targetHerdSize}
+                  onChange={(e) => updateField("targetHerdSize", Number(e.target.value))}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+
+            {/* Coluna 2 - Inputs de Novilhas */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Inputs de Novilhas</h3>
+              <div>
                 <Label>Novilhas natimortas (%)</Label>
                 <Input
                   type="number"
@@ -123,40 +137,6 @@ export function Phase1Growth({ useReferenceNumbers, setUseReferenceNumbers }: Ph
                   className="mt-1"
                 />
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <Label>Aborto em vacas (%)</Label>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Info className="w-4 h-4 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Referência: 10-20%</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-                <Input
-                  type="number"
-                  value={useReferenceNumbers ? 15 : growth.abortionsCows}
-                  onChange={(e) => updateField("abortionsCows", Number(e.target.value))}
-                  className="mt-1"
-                  disabled={useReferenceNumbers}
-                />
-              </div>
-              <div>
-                <Label>Tamanho do rebanho desejado (nº vacas)</Label>
-                <Input
-                  type="number"
-                  value={growth.targetHerdSize}
-                  onChange={(e) => updateField("targetHerdSize", Number(e.target.value))}
-                  className="mt-1"
-                />
-              </div>
-            </div>
-
-            {/* Coluna 2 - Novilhas */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Novilhas</h3>
               <div>
                 <Label>Inventário de novilhas (nº)</Label>
                 <Input
@@ -222,9 +202,29 @@ export function Phase1Growth({ useReferenceNumbers, setUseReferenceNumbers }: Ph
               </div>
             </div>
 
-            {/* Coluna 3 - Vacas */}
+            {/* Coluna 3 - Inputs de Vacas */}
             <div className="space-y-4">
-              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Vacas</h3>
+              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Inputs de Vacas</h3>
+              <div>
+                <div className="flex items-center gap-2">
+                  <Label>Aborto em vacas (%)</Label>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="w-4 h-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Referência: 10-20%</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <Input
+                  type="number"
+                  value={useReferenceNumbers ? 15 : growth.abortionsCows}
+                  onChange={(e) => updateField("abortionsCows", Number(e.target.value))}
+                  className="mt-1"
+                  disabled={useReferenceNumbers}
+                />
+              </div>
               <div>
                 <Label>Número total de vacas (secas e lactantes)</Label>
                 <Input
