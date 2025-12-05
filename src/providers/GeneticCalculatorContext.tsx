@@ -336,46 +336,40 @@ function calculateOutputs(inputs: CalculatorInputs): CalculatorOutputs {
   const heifersNeededAtBirth = Math.round(heifersNeededAtLactation / SURVIVAL_RATE);
   
   // ---- SUBSTITUIÇÕES CRIADAS ----
+  // Fórmula: prenhezes_anuais × % sêmen_leiteiro × taxa_fêmeas × (1 - natimortalidade)
   
-  // Taxas de mortalidade para cálculo de bezerras criadas
+  // Taxas de mortalidade
   const stillbornRate = growth.stillbornHeifers / 100;
   const deathsAfterBirthRate = growth.heiferDeathsPreWeaning / 100;
   
-  // Prenhezes mensais dos inputs
-  const cowsPregnanciesMonthly = growth.pregnantCowsPerMonth;
-  const heifersPregnanciesMonthly = growth.pregnantHeifersPerMonth;
-  const totalPregnanciesMonthly = cowsPregnanciesMonthly + heifersPregnanciesMonthly;
+  // Prenhezes anuais totais
+  const totalPregnanciesMonthly = growth.pregnantCowsPerMonth + growth.pregnantHeifersPerMonth;
   const totalPregnanciesAnnual = totalPregnanciesMonthly * 12;
   
-  // Percentuais de sêmen por categoria (dos inputs de concepção Fase 2)
-  // Novilhas
-  const heiferSexedPct = conception.heifers.sexedSemen / 100;
-  const heiferConvPct = conception.heifers.conventional / 100;
-  // Vacas  
-  const cowSexedPct = conception.cows.sexedSemen / 100;
-  const cowConvPct = conception.cows.conventional / 100;
+  // Percentuais de uso de sêmen (estratégia)
+  const sexedUsagePct = calculateSemenTypePercentage('sexed', strategy.heifersPlan, strategy.cowsPlan, strategy.heifersGroup, strategy.cowsGroup) / 100;
+  const convUsagePct = calculateSemenTypePercentage('conventional', strategy.heifersPlan, strategy.cowsPlan, strategy.heifersGroup, strategy.cowsGroup) / 100;
+  const beefUsagePct = calculateSemenTypePercentage('beef', strategy.heifersPlan, strategy.cowsPlan, strategy.heifersGroup, strategy.cowsGroup) / 100;
   
-  // Proporção de prenhezes de novilhas vs vacas
-  const heiferPregnancyRatio = totalPregnanciesMonthly > 0 
-    ? heifersPregnanciesMonthly / totalPregnanciesMonthly 
-    : 0.4;
-  const cowPregnancyRatio = 1 - heiferPregnancyRatio;
+  // % de sêmen leiteiro (não-corte)
+  const dairySemenPct = 1 - beefUsagePct;
   
-  // Bezerras nascidas vivas por tipo de sêmen
-  // Sêmen sexado: ~90% fêmeas, aplicando natimortalidade
-  const heifersFromSexed = totalPregnanciesAnnual * (
-    heiferPregnancyRatio * heiferSexedPct + 
-    cowPregnancyRatio * cowSexedPct
-  ) * 0.9 * (1 - stillbornRate);
-  
-  // Convencional: ~50% fêmeas, aplicando natimortalidade  
-  const heifersFromConventional = totalPregnanciesAnnual * (
-    heiferPregnancyRatio * heiferConvPct + 
-    cowPregnancyRatio * cowConvPct
-  ) * 0.5 * (1 - stillbornRate);
+  // Taxa média de fêmeas ponderada pelo uso de sêmen
+  // Sexado = 90% fêmeas, Convencional = 50% fêmeas
+  const dairyTotal = sexedUsagePct + convUsagePct;
+  const avgFemaleRate = dairyTotal > 0 
+    ? (sexedUsagePct * 0.9 + convUsagePct * 0.5) / dairyTotal
+    : 0.5;
   
   // Total de bezerras vivas ao nascer
-  const totalHeifersBorn = Math.round(heifersFromSexed + heifersFromConventional);
+  // = prenhezes_anuais × % sêmen_leiteiro × taxa_fêmeas × (1 - natimortalidade)
+  const totalHeifersBorn = Math.round(
+    totalPregnanciesAnnual * dairySemenPct * avgFemaleRate * (1 - stillbornRate)
+  );
+  
+  // Variáveis auxiliares para cálculos posteriores
+  const heifersFromSexed = totalPregnanciesAnnual * sexedUsagePct * 0.9 * (1 - stillbornRate);
+  const heifersFromConventional = totalPregnanciesAnnual * convUsagePct * 0.5 * (1 - stillbornRate);
   
   // Novilhas entrando no rebanho em lactação (aplicando mortes pós-nascimento)
   const heifersCreated = Math.round(totalHeifersBorn * (1 - deathsAfterBirthRate));
