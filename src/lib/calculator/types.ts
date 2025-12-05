@@ -27,6 +27,7 @@ export type GrowthInputs = {
 
 export type ConceptionInputs = {
   cows: {
+    sexedSemen: number;     // Taxa concepção sêmen sexado vacas (%)
     conventional: number;   // Taxa concepção convencional vacas (%)
     beef: number;           // Taxa concepção corte vacas (%)
     embryos: number;        // Taxa concepção embriões vacas (%)
@@ -184,6 +185,7 @@ export const DEFAULT_GROWTH_INPUTS: GrowthInputs = {
 
 export const DEFAULT_CONCEPTION_INPUTS: ConceptionInputs = {
   cows: {
+    sexedSemen: 30,
     conventional: 39,
     beef: 30,
     embryos: 0,
