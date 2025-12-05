@@ -290,7 +290,7 @@ export function Phase3Strategy() {
             <div className="space-y-2">
               <div className="bg-blue-500 text-white p-2 rounded text-center">
                 <div className="text-sm">Substituições necessárias</div>
-                <div className="text-lg font-bold">{roi.heifersNeeded}</div>
+                <div className="text-lg font-bold">{roi.heifersNeededAtBirth}</div>
               </div>
               <div className="bg-green-500 text-white p-2 rounded text-center">
                 <div className="text-sm">Substituições criadas</div>
@@ -303,11 +303,11 @@ export function Phase3Strategy() {
             <h4 className="text-center mb-4 font-semibold">Novilhas entrando no rebanho em lactação</h4>
             <div className="space-y-2">
               <div className="bg-blue-500 text-white p-2 rounded text-center">
-                <div className="text-sm">Novilhas necessárias</div>
-                <div className="text-lg font-bold">{roi.heifersNeeded}</div>
+                <div className="text-sm">Substituições necessárias</div>
+                <div className="text-lg font-bold">{roi.heifersNeededAtLactation}</div>
               </div>
               <div className="bg-green-500 text-white p-2 rounded text-center">
-                <div className="text-sm">Novilhas criadas</div>
+                <div className="text-sm">Substituições criadas</div>
                 <div className="text-lg font-bold">{roi.heifersCreated}</div>
               </div>
             </div>
