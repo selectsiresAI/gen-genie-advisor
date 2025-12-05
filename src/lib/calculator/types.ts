@@ -5,6 +5,7 @@
 export type GrowthInputs = {
   cullingRate: number;                    // Taxa de descarte (%)
   calvingIntervalMonths: number;          // Intervalo entre partos (meses)
+  firstCalvingAge: number;                // Idade ao primeiro parto (meses)
   firstCalfMortality: number;             // Mortes do primeiro parto (%)
   stillbornHeifers: number;               // Novilhas natimortas (%)
   heiferDeathsPreWeaning: number;         // Novilhas mortas/vendidas após nasc. até o parto (%)
@@ -12,10 +13,13 @@ export type GrowthInputs = {
   abortionsCows: number;                  // Aborto em vacas (%)
   heiferInventory: number;                // Inventário de novilhas (nº)
   pregnantHeifersNow: number;             // Novilhas prenhas (nº)
-  heifers2to12Months: number;             // Novilhas de 2 a 12 meses (nº)
+  heifers0to12Months: number;             // Novilhas de 0 a 12 meses (nº)
   heifersInseminatedPerMonth: number;     // Novilhas inseminadas por mês atualmente
+  heifersInseminatedUnconfirmed: number;  // Novilhas inseminadas (não confirmadas)
+  pregnantHeifersPerMonth: number;        // Novilhas prenhas por mês atualmente
   heifersEligibleNext12M: number;         // Novilhas elegíveis para reprodução nos próximos 12 meses
   totalCowsDryAndLactating: number;       // Número total de vacas (secas e lactantes)
+  cowsInseminatedPerMonth: number;        // Vacas inseminadas por mês atualmente
   pregnantCowsPerMonth: number;           // Vacas prenhas por mês atualmente
 };
 
@@ -160,17 +164,21 @@ export type CalculatorInputs = {
 export const DEFAULT_GROWTH_INPUTS: GrowthInputs = {
   cullingRate: 20,
   calvingIntervalMonths: 12.8,
+  firstCalvingAge: 23,
   firstCalfMortality: 23,
   stillbornHeifers: 3,
   heiferDeathsPreWeaning: 40,
   targetHerdSize: 1400,
   abortionsCows: 15,
-  heiferInventory: 40,
-  pregnantHeifersNow: 363,
-  heifers2to12Months: 7.5,
+  heiferInventory: 1310,
+  pregnantHeifersNow: 353,
+  heifers0to12Months: 725,
   heifersInseminatedPerMonth: 143,
+  heifersInseminatedUnconfirmed: 103,
+  pregnantHeifersPerMonth: 40,
   heifersEligibleNext12M: 733,
-  totalCowsDryAndLactating: 40,
+  totalCowsDryAndLactating: 1115,
+  cowsInseminatedPerMonth: 330,
   pregnantCowsPerMonth: 143,
 };
 

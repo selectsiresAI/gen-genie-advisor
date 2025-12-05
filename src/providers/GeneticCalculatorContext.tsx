@@ -212,10 +212,10 @@ function calculateOutputs(inputs: CalculatorInputs): CalculatorOutputs {
   // ============================================
   
   // Valores "atuais" - derivados dos inputs de Fase 1
-  const currentInsemCows = growth.pregnantCowsPerMonth * 2.5; // Estimativa
+  const currentInsemCows = growth.cowsInseminatedPerMonth;
   const currentInsemHeifers = growth.heifersInseminatedPerMonth;
   const currentPregCows = growth.pregnantCowsPerMonth;
-  const currentPregHeifers = Math.round(growth.pregnantHeifersNow / 9); // Média mensal
+  const currentPregHeifers = growth.pregnantHeifersPerMonth;
 
   // Escalando projeções para valores realistas baseados no rebanho
   const scaleFactor = growth.targetHerdSize / 100;
