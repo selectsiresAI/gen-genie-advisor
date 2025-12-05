@@ -42,8 +42,9 @@ export function Phase1Growth({ useReferenceNumbers, setUseReferenceNumbers }: Ph
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Coluna 1 - Taxas e parâmetros gerais */}
+            {/* Coluna 1 - Parâmetros gerais */}
             <div className="space-y-4">
+              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Parâmetros Gerais</h3>
               <div>
                 <div className="flex items-center gap-2">
                   <Label>Taxa de descarte (%)</Label>
@@ -105,26 +106,6 @@ export function Phase1Growth({ useReferenceNumbers, setUseReferenceNumbers }: Ph
                 />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <Label>Mortes do primeiro parto (%)</Label>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Info className="w-4 h-4 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Referência: 20-25%</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-                <Input
-                  type="number"
-                  value={useReferenceNumbers ? 22.5 : growth.firstCalfMortality}
-                  onChange={(e) => updateField("firstCalfMortality", Number(e.target.value))}
-                  className="mt-1"
-                  disabled={useReferenceNumbers}
-                />
-              </div>
-              <div>
                 <Label>Novilhas natimortas (%)</Label>
                 <Input
                   type="number"
@@ -162,10 +143,6 @@ export function Phase1Growth({ useReferenceNumbers, setUseReferenceNumbers }: Ph
                   disabled={useReferenceNumbers}
                 />
               </div>
-            </div>
-
-            {/* Coluna 2 - Dados de novilhas */}
-            <div className="space-y-4">
               <div>
                 <Label>Tamanho do rebanho desejado (nº vacas)</Label>
                 <Input
@@ -175,6 +152,11 @@ export function Phase1Growth({ useReferenceNumbers, setUseReferenceNumbers }: Ph
                   className="mt-1"
                 />
               </div>
+            </div>
+
+            {/* Coluna 2 - Novilhas */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Novilhas</h3>
               <div>
                 <Label>Inventário de novilhas (nº)</Label>
                 <Input
@@ -229,10 +211,6 @@ export function Phase1Growth({ useReferenceNumbers, setUseReferenceNumbers }: Ph
                   className="mt-1"
                 />
               </div>
-            </div>
-
-            {/* Coluna 3 - Dados de vacas */}
-            <div className="space-y-4">
               <div>
                 <Label>Novilhas elegíveis para reprodução nos próx. 12 meses</Label>
                 <Input
@@ -242,6 +220,11 @@ export function Phase1Growth({ useReferenceNumbers, setUseReferenceNumbers }: Ph
                   className="mt-1"
                 />
               </div>
+            </div>
+
+            {/* Coluna 3 - Vacas */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Vacas</h3>
               <div>
                 <Label>Número total de vacas (secas e lactantes)</Label>
                 <Input
