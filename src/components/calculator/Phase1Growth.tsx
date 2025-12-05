@@ -42,11 +42,11 @@ export function Phase1Growth({ useReferenceNumbers, setUseReferenceNumbers }: Ph
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Coluna 1 */}
+            {/* Coluna 1 - Taxas e parâmetros gerais */}
             <div className="space-y-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <Label>Taxa de descarte</Label>
+                  <Label>Taxa de descarte (%)</Label>
                   <Tooltip>
                     <TooltipTrigger>
                       <Info className="w-4 h-4 text-muted-foreground" />
@@ -65,61 +65,8 @@ export function Phase1Growth({ useReferenceNumbers, setUseReferenceNumbers }: Ph
                 />
               </div>
               <div>
-                <Label>Novilhas natimortas</Label>
-                <Input
-                  type="number"
-                  value={growth.stillbornHeifers}
-                  onChange={(e) => updateField("stillbornHeifers", Number(e.target.value))}
-                  className="mt-1"
-                />
-              </div>
-              <div>
                 <div className="flex items-center gap-2">
-                  <Label>Aborto em vacas</Label>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Info className="w-4 h-4 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Referência: 10-20%</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-                <Input
-                  type="number"
-                  value={useReferenceNumbers ? 15 : growth.abortionsCows}
-                  onChange={(e) => updateField("abortionsCows", Number(e.target.value))}
-                  className="mt-1"
-                  disabled={useReferenceNumbers}
-                />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <Label>Novilhas de 2 a 12 meses</Label>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Info className="w-4 h-4 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Referência: 5-10%</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-                <Input
-                  type="number"
-                  value={useReferenceNumbers ? 7.5 : growth.heifers2to12Months}
-                  onChange={(e) => updateField("heifers2to12Months", Number(e.target.value))}
-                  className="mt-1"
-                  disabled={useReferenceNumbers}
-                />
-              </div>
-            </div>
-
-            {/* Coluna 2 */}
-            <div className="space-y-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Label>Intervalo entre partos</Label>
+                  <Label>Intervalo entre partos (meses)</Label>
                   <Tooltip>
                     <TooltipTrigger>
                       <Info className="w-4 h-4 text-muted-foreground" />
@@ -138,48 +85,28 @@ export function Phase1Growth({ useReferenceNumbers, setUseReferenceNumbers }: Ph
                 />
               </div>
               <div>
-                <Label>Novilhas mortas e vendidas após nasc. até o parto</Label>
+                <div className="flex items-center gap-2">
+                  <Label>Idade ao primeiro parto (meses)</Label>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="w-4 h-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Referência: 22-24 meses</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <Input
                   type="number"
-                  value={growth.heiferDeathsPreWeaning}
-                  onChange={(e) => updateField("heiferDeathsPreWeaning", Number(e.target.value))}
+                  value={useReferenceNumbers ? 23 : growth.firstCalvingAge}
+                  onChange={(e) => updateField("firstCalvingAge", Number(e.target.value))}
                   className="mt-1"
+                  disabled={useReferenceNumbers}
                 />
               </div>
-              <div>
-                <Label>Inventário de novilhas</Label>
-                <Input
-                  type="number"
-                  value={growth.heiferInventory}
-                  onChange={(e) => updateField("heiferInventory", Number(e.target.value))}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label>Novilhas inseminadas por mês atualmente</Label>
-                <Input
-                  type="number"
-                  value={growth.heifersInseminatedPerMonth}
-                  onChange={(e) => updateField("heifersInseminatedPerMonth", Number(e.target.value))}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label>Número total de vacas (secas e lactantes)</Label>
-                <Input
-                  type="number"
-                  value={growth.totalCowsDryAndLactating}
-                  onChange={(e) => updateField("totalCowsDryAndLactating", Number(e.target.value))}
-                  className="mt-1"
-                />
-              </div>
-            </div>
-
-            {/* Coluna 3 */}
-            <div className="space-y-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <Label>Mortes do primeiro parto</Label>
+                  <Label>Mortes do primeiro parto (%)</Label>
                   <Tooltip>
                     <TooltipTrigger>
                       <Info className="w-4 h-4 text-muted-foreground" />
@@ -198,7 +125,49 @@ export function Phase1Growth({ useReferenceNumbers, setUseReferenceNumbers }: Ph
                 />
               </div>
               <div>
-                <Label>Tamanho do rebanho desejado</Label>
+                <Label>Novilhas natimortas (%)</Label>
+                <Input
+                  type="number"
+                  value={growth.stillbornHeifers}
+                  onChange={(e) => updateField("stillbornHeifers", Number(e.target.value))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>Novilhas mortas/vendidas após nasc. até o parto (%)</Label>
+                <Input
+                  type="number"
+                  value={growth.heiferDeathsPreWeaning}
+                  onChange={(e) => updateField("heiferDeathsPreWeaning", Number(e.target.value))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <Label>Aborto em vacas (%)</Label>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="w-4 h-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Referência: 10-20%</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <Input
+                  type="number"
+                  value={useReferenceNumbers ? 15 : growth.abortionsCows}
+                  onChange={(e) => updateField("abortionsCows", Number(e.target.value))}
+                  className="mt-1"
+                  disabled={useReferenceNumbers}
+                />
+              </div>
+            </div>
+
+            {/* Coluna 2 - Dados de novilhas */}
+            <div className="space-y-4">
+              <div>
+                <Label>Tamanho do rebanho desejado (nº vacas)</Label>
                 <Input
                   type="number"
                   value={growth.targetHerdSize}
@@ -207,7 +176,16 @@ export function Phase1Growth({ useReferenceNumbers, setUseReferenceNumbers }: Ph
                 />
               </div>
               <div>
-                <Label>Novilhas prenhas</Label>
+                <Label>Inventário de novilhas (nº)</Label>
+                <Input
+                  type="number"
+                  value={growth.heiferInventory}
+                  onChange={(e) => updateField("heiferInventory", Number(e.target.value))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>Novilhas prenhas (nº)</Label>
                 <Input
                   type="number"
                   value={growth.pregnantHeifersNow}
@@ -216,11 +194,69 @@ export function Phase1Growth({ useReferenceNumbers, setUseReferenceNumbers }: Ph
                 />
               </div>
               <div>
-                <Label>Novilhas elegíveis para reprodução nos próximos 12 meses</Label>
+                <Label>Novilhas de 0 a 12 meses (nº)</Label>
+                <Input
+                  type="number"
+                  value={growth.heifers0to12Months}
+                  onChange={(e) => updateField("heifers0to12Months", Number(e.target.value))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>Novilhas inseminadas por mês atualmente</Label>
+                <Input
+                  type="number"
+                  value={growth.heifersInseminatedPerMonth}
+                  onChange={(e) => updateField("heifersInseminatedPerMonth", Number(e.target.value))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>Novilhas inseminadas (não confirmadas)</Label>
+                <Input
+                  type="number"
+                  value={growth.heifersInseminatedUnconfirmed}
+                  onChange={(e) => updateField("heifersInseminatedUnconfirmed", Number(e.target.value))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>Novilhas prenhas por mês atualmente</Label>
+                <Input
+                  type="number"
+                  value={growth.pregnantHeifersPerMonth}
+                  onChange={(e) => updateField("pregnantHeifersPerMonth", Number(e.target.value))}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+
+            {/* Coluna 3 - Dados de vacas */}
+            <div className="space-y-4">
+              <div>
+                <Label>Novilhas elegíveis para reprodução nos próx. 12 meses</Label>
                 <Input
                   type="number"
                   value={growth.heifersEligibleNext12M}
                   onChange={(e) => updateField("heifersEligibleNext12M", Number(e.target.value))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>Número total de vacas (secas e lactantes)</Label>
+                <Input
+                  type="number"
+                  value={growth.totalCowsDryAndLactating}
+                  onChange={(e) => updateField("totalCowsDryAndLactating", Number(e.target.value))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>Vacas inseminadas por mês atualmente</Label>
+                <Input
+                  type="number"
+                  value={growth.cowsInseminatedPerMonth}
+                  onChange={(e) => updateField("cowsInseminatedPerMonth", Number(e.target.value))}
                   className="mt-1"
                 />
               </div>
