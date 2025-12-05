@@ -58,6 +58,26 @@ export function Phase2Conception({ useReferenceNumbers, setUseReferenceNumbers }
               <div className="grid grid-cols-5 gap-4">
                 <div>
                   <div className="flex items-center gap-2">
+                    <Label>Sêmen Sexado</Label>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="w-4 h-4 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Referência: 25-35%</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <Input
+                    type="number"
+                    value={useReferenceNumbers ? 30 : conception.cows.sexedSemen}
+                    onChange={(e) => updateCows("sexedSemen", Number(e.target.value))}
+                    className="mt-1"
+                    disabled={useReferenceNumbers}
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
                     <Label>Convencional</Label>
                     <Tooltip>
                       <TooltipTrigger>
