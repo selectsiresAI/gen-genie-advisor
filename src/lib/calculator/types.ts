@@ -99,10 +99,16 @@ export type DoseBreakdown = {
 // ---------- Outputs - ROI (Fases 6-7) ----------
 
 export type RoiOutputs = {
-  // Balanço de novilhas
-  totalHeifersBorn: number;     // Total de novilhas nascidas
-  heifersNeeded: number;        // Novilhas necessárias
-  heifersCreated: number;       // Novilhas criadas
+  // Balanço de novilhas - Bezerras ao nascer
+  heifersNeededAtBirth: number;   // Substituições necessárias (ao nascer)
+  totalHeifersBorn: number;       // Substituições criadas (bezerras vivas ao nascer)
+  
+  // Balanço de novilhas - Entrando em lactação
+  heifersNeededAtLactation: number; // Substituições necessárias (para lactação)
+  heifersCreated: number;           // Novilhas entrando no rebanho em lactação
+  
+  // Compatibilidade retroativa
+  heifersNeeded: number;        // Alias para heifersNeededAtBirth
 
   // Investimento em genética
   sexedGeneticCost: number;         // Custo sêmen sexado
@@ -174,7 +180,7 @@ export const DEFAULT_GROWTH_INPUTS: GrowthInputs = {
   heiferInventory: 1310,
   pregnantHeifersNow: 353,
   heifers0to12Months: 725,
-  heifersInseminatedPerMonth: 143,
+  heifersInseminatedPerMonth: 63,
   heifersInseminatedUnconfirmed: 103,
   pregnantHeifersPerMonth: 40,
   heifersEligibleNext12M: 733,
@@ -185,23 +191,23 @@ export const DEFAULT_GROWTH_INPUTS: GrowthInputs = {
 
 export const DEFAULT_CONCEPTION_INPUTS: ConceptionInputs = {
   cows: {
-    sexedSemen: 30,
+    sexedSemen: 39,
     conventional: 39,
     beef: 30,
     embryos: 0,
     sexedEmbryo: 40,
   },
   heifers: {
-    sexedSemen: 55,
+    sexedSemen: 56,
     conventional: 70,
     beef: 60,
     embryos: 45,
-    sexedEmbryo: 45,
+    sexedEmbryo: 50,
   },
 };
 
 export const DEFAULT_STRATEGY_INPUTS: StrategyInputs = {
-  heifersGroup: { superior: 42, intermediate: 32, inferior: 26 },
+  heifersGroup: { superior: 100, intermediate: 0, inferior: 0 },
   cowsGroup: { superior: 30, intermediate: 50, inferior: 20 },
   heifersPlan: {
     damGeneticValue: 0,
