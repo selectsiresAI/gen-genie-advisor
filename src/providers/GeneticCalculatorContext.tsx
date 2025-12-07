@@ -336,43 +336,46 @@ function calculateOutputs(inputs: CalculatorInputs): CalculatorOutputs {
   const heifersNeededAtBirth = Math.round(heifersNeededAtLactation / SURVIVAL_RATE);
   
   // ---- SUBSTITUIÇÕES CRIADAS ----
-  // Fórmula: prenhezes_anuais × % sêmen_leiteiro × taxa_fêmeas × (1 - natimortalidade)
+  // Lógica baseada na planilha Excel do usuário
   
   // Taxas de mortalidade
-  const stillbornRate = growth.stillbornHeifers / 100;
-  const deathsAfterBirthRate = growth.heiferDeathsPreWeaning / 100;
+  const stillbornRate = growth.stillbornHeifers / 100; // ex: 8% → 0.08
+  const postBirthMortalityRate = growth.heiferDeathsPreWeaning / 100; // ex: 40% → 0.40
   
-  // Prenhezes anuais totais
-  const totalPregnanciesMonthly = growth.pregnantCowsPerMonth + growth.pregnantHeifersPerMonth;
-  const totalPregnanciesAnnual = totalPregnanciesMonthly * 12;
+  // Prenhezes anuais totais (vacas + novilhas)
+  const annualPregnancies = 
+    (growth.pregnantCowsPerMonth + growth.pregnantHeifersPerMonth) * 12;
   
-  // Percentuais de uso de sêmen (estratégia)
-  const sexedUsagePct = calculateSemenTypePercentage('sexed', strategy.heifersPlan, strategy.cowsPlan, strategy.heifersGroup, strategy.cowsGroup) / 100;
-  const convUsagePct = calculateSemenTypePercentage('conventional', strategy.heifersPlan, strategy.cowsPlan, strategy.heifersGroup, strategy.cowsGroup) / 100;
-  const beefUsagePct = calculateSemenTypePercentage('beef', strategy.heifersPlan, strategy.cowsPlan, strategy.heifersGroup, strategy.cowsGroup) / 100;
+  // Percentuais de uso de sêmen (0-100) vindos da estratégia
+  const semenSexedPct = calculateSemenTypePercentage('sexed', strategy.heifersPlan, strategy.cowsPlan, strategy.heifersGroup, strategy.cowsGroup);
+  const semenConventionalPct = calculateSemenTypePercentage('conventional', strategy.heifersPlan, strategy.cowsPlan, strategy.heifersGroup, strategy.cowsGroup);
   
-  // % de sêmen leiteiro (não-corte)
-  const dairySemenPct = 1 - beefUsagePct;
+  // % de sêmen leiteiro total (sexado + convencional)
+  const totalMilkSemenPct = semenSexedPct + semenConventionalPct;
+  const milkSemenFrac = totalMilkSemenPct > 0 ? totalMilkSemenPct / 100 : 0;
   
-  // Taxa média de fêmeas ponderada pelo uso de sêmen
-  // Sexado = 90% fêmeas, Convencional = 50% fêmeas
-  const dairyTotal = sexedUsagePct + convUsagePct;
-  const avgFemaleRate = dairyTotal > 0 
-    ? (sexedUsagePct * 0.9 + convUsagePct * 0.5) / dairyTotal
-    : 0.5;
+  // Frações INTERNAS de sexado e convencional dentro do sêmen leiteiro
+  const sexedFrac = totalMilkSemenPct > 0 ? semenSexedPct / totalMilkSemenPct : 0;
+  const conventionalFrac = totalMilkSemenPct > 0 ? semenConventionalPct / totalMilkSemenPct : 0;
+  
+  // Taxa de nascimento de fêmeas (90% sexado, 50% convencional)
+  const femaleRate = sexedFrac * 0.90 + conventionalFrac * 0.50;
+  
+  // Fator de nascimento vivo
+  const liveBirthFactor = 1 - stillbornRate;
   
   // Total de bezerras vivas ao nascer
   // = prenhezes_anuais × % sêmen_leiteiro × taxa_fêmeas × (1 - natimortalidade)
   const totalHeifersBorn = Math.round(
-    totalPregnanciesAnnual * dairySemenPct * avgFemaleRate * (1 - stillbornRate)
+    annualPregnancies * milkSemenFrac * femaleRate * liveBirthFactor
   );
   
   // Variáveis auxiliares para cálculos posteriores
-  const heifersFromSexed = totalPregnanciesAnnual * sexedUsagePct * 0.9 * (1 - stillbornRate);
-  const heifersFromConventional = totalPregnanciesAnnual * convUsagePct * 0.5 * (1 - stillbornRate);
+  const heifersFromSexed = annualPregnancies * (semenSexedPct / 100) * 0.9 * liveBirthFactor;
+  const heifersFromConventional = annualPregnancies * (semenConventionalPct / 100) * 0.5 * liveBirthFactor;
   
   // Novilhas entrando no rebanho em lactação (aplicando mortes pós-nascimento)
-  const heifersCreated = Math.round(totalHeifersBorn * (1 - deathsAfterBirthRate));
+  const heifersCreated = Math.round(totalHeifersBorn * (1 - postBirthMortalityRate));
   
   // Valores de compatibilidade com a UI existente
   const heifersNeeded = heifersNeededAtBirth;
