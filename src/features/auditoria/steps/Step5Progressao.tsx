@@ -302,7 +302,14 @@ const TraitCard = memo(function TraitCard({
                 }}
                 labelFormatter={(label) => `Ano ${label}`}
               />
-              <Legend />
+              <Legend 
+                formatter={(value: string) => {
+                  // Ocultar entradas de legenda técnicas/internas (band25, band50, etc.)
+                  if (value.startsWith("band")) return "";
+                  return value;
+                }}
+                wrapperStyle={{ paddingTop: 8 }}
+              />
 
               <ReferenceLine
                 y={0}
