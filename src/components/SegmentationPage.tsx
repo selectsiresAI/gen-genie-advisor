@@ -1131,25 +1131,27 @@ export default function SegmentationPage({
     }
     setSegmentationTriggered(true);
   }
-  // Filtra PTAs que têm dados válidos no rebanho
-  const availablePTAs = useMemo(() => {
-    if (!animals || animals.length === 0) return ALL_PTAS;
-    return ALL_PTAS.filter(pta => {
+  // Verifica quais PTAs têm dados válidos no rebanho
+  const ptaAvailability = useMemo(() => {
+    const availability: Record<string, boolean> = {};
+    for (const pta of ALL_PTAS) {
       const key = getKey(pta);
-      return animals.some(a => {
+      const hasData = animals.some(a => {
         const val = (a as any)[key];
         if (val === null || val === undefined) return false;
         const num = Number(val);
         return Number.isFinite(num) && num !== 0;
       });
-    });
+      availability[pta] = hasData;
+    }
+    return availability;
   }, [animals]);
 
   const filteredPTAs = useMemo(() => {
     const s = ptaSearch.trim().toLowerCase();
-    if (!s) return availablePTAs;
-    return availablePTAs.filter(p => p.toLowerCase().includes(s));
-  }, [ptaSearch, availablePTAs]);
+    if (!s) return ALL_PTAS;
+    return ALL_PTAS.filter(p => p.toLowerCase().includes(s));
+  }, [ptaSearch]);
 
   // ────────────────────────────────────────────────────────────────────
   // UI
@@ -1257,10 +1259,37 @@ export default function SegmentationPage({
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-64 overflow-auto pr-2">
                 {filteredPTAs.map(p => {
                 const checked = selectedTraits.includes(p);
-                return <label key={p} className={cn("flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-foreground transition-colors", checked ? "border-accent bg-accent/20" : "border-border bg-background hover:bg-muted")}>
-                      <input type="checkbox" className="accent-foreground" checked={checked} onChange={() => toggleTrait(p)} />
-                      <span className="text-sm">{p}</span>
-                    </label>;
+                const isDisabled = !ptaAvailability[p];
+                return (
+                  <Tooltip key={p}>
+                    <TooltipTrigger asChild>
+                      <label 
+                        className={cn(
+                          "flex items-center gap-2 rounded-xl border px-3 py-2 text-foreground transition-colors",
+                          isDisabled 
+                            ? "opacity-50 cursor-not-allowed border-border bg-background" 
+                            : checked 
+                              ? "cursor-pointer border-accent bg-accent/20" 
+                              : "cursor-pointer border-border bg-background hover:bg-muted"
+                        )}
+                      >
+                        <input 
+                          type="checkbox" 
+                          className="accent-foreground" 
+                          checked={checked} 
+                          disabled={isDisabled}
+                          onChange={() => !isDisabled && toggleTrait(p)} 
+                        />
+                        <span className="text-sm">{p}</span>
+                      </label>
+                    </TooltipTrigger>
+                    {isDisabled && (
+                      <TooltipContent>
+                        <p>PTA {p} não disponível - sem dados no rebanho</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                );
               })}
               </div>
               <div className="mt-3 text-sm text-foreground">✔ {selectedTraits.length} PTAs selecionadas</div>
