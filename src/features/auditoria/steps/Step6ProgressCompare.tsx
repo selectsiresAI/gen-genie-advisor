@@ -363,6 +363,35 @@ function Step6ProgressCompareContent() {
   const chartTitle = "Comparação por Categoria (Step 5)";
   useRegisterChart("step5-comparacao-categorias", 5, chartTitle, cardRef);
 
+  // Busca paginada para obter todos os animais (sem limite de 1000)
+  async function fetchAllAnimals(table: string, farmCol: string, farmIdVal: string): Promise<any[]> {
+    const PAGE_SIZE = 1000;
+    const allRows: any[] = [];
+    let page = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
+      const { data, error } = await (supabase as any)
+        .from(table)
+        .select("*")
+        .eq(farmCol, farmIdVal)
+        .range(from, to);
+
+      if (error) break;
+
+      const pageData = Array.isArray(data) ? data : [];
+      allRows.push(...pageData);
+
+      hasMore = pageData.length === PAGE_SIZE;
+      page += 1;
+    }
+
+    return allRows;
+  }
+
   const fetchData = useCallback(async () => {
     if (!farmId) {
       setRows([]);
@@ -382,24 +411,28 @@ function Step6ProgressCompareContent() {
     let idKey: string | null = null;
 
     for (const table of TABLE_CANDIDATES) {
-      let res: any = { data: [], error: null };
       for (const fcol of FARM_COLS) {
-        res = await (supabase as any).from(table).select("*").eq(fcol, farmId).limit(100000);
-        if (!res.error && Array.isArray(res.data) && res.data.length > 0) break;
+        // Primeiro, faz uma query pequena para verificar se a tabela/coluna existe
+        const { data: testData, error: testError } = await (supabase as any)
+          .from(table)
+          .select("*")
+          .eq(fcol, farmId)
+          .limit(1);
+        
+        if (!testError && Array.isArray(testData) && testData.length > 0) {
+          // Tabela e coluna existem, agora busca todos os registros com paginação
+          gotRows = await fetchAllAnimals(table, fcol, String(farmId));
+          if (gotRows.length > 0) {
+            const candidateCat = detectCategoryColumn(gotRows.slice(0, 100));
+            const candidateId = detectIdColumn(gotRows.slice(0, 100));
+            usedTable = table;
+            catKey = candidateCat;
+            idKey = candidateId;
+            break;
+          }
+        }
       }
-      if ((!res.data || res.data.length === 0) && !res.error) {
-        res = await supabase.from(table).select("*").limit(20000);
-      }
-      if (!res.error && Array.isArray(res.data) && res.data.length > 0) {
-        const candidateRows = res.data.filter((r: any) => r && typeof r === "object");
-        const candidateCat = detectCategoryColumn(candidateRows);
-        const candidateId = detectIdColumn(candidateRows);
-        gotRows = candidateRows;
-        usedTable = table;
-        catKey = candidateCat;
-        idKey = candidateId;
-        break;
-      }
+      if (gotRows.length > 0) break;
     }
 
     let applied = 0, scanned = 0;
