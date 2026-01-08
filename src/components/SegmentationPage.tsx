@@ -1357,7 +1357,7 @@ export default function SegmentationPage({
               </div>
 
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {selectedTraits.map(t => <div key={t} className="flex items-center justify-between gap-3 rounded-xl border border-border p-3">
+                {selectedTraits.filter(t => ptaAvailability[t]).map(t => <div key={t} className="flex items-center justify-between gap-3 rounded-xl border border-border p-3">
                     <div className="text-sm font-medium text-foreground">{t}</div>
                     <input type="number" step="0.01" className="w-28 rounded-lg border border-border bg-background px-3 py-2 text-right text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" value={Number.isFinite(Number(weights[t])) ? weights[t] : 0} onChange={e => updateWeight(t, e.target.value)} />
                   </div>)}
