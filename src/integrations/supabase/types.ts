@@ -3831,8 +3831,8 @@ export type Database = {
         }[]
       }
       ag_age_group:
-        | { Args: { p_birth_ts: string; p_parity: number }; Returns: string }
         | { Args: { p_birth_date: string; p_parity: number }; Returns: string }
+        | { Args: { p_birth_ts: string; p_parity: number }; Returns: string }
         | { Args: { p_birth_tstz: string; p_parity: number }; Returns: string }
       ag_boxplot_stats: {
         Args: { p_farm: string; p_trait: string }
@@ -4484,8 +4484,8 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_farm_editor: { Args: { farm_uuid: string }; Returns: boolean }
       is_farm_member:
-        | { Args: { p_farm: string; p_user: string }; Returns: boolean }
         | { Args: { farm_uuid: string }; Returns: boolean }
+        | { Args: { p_farm: string; p_user: string }; Returns: boolean }
       is_farm_owner: { Args: { farm_uuid: string }; Returns: boolean }
       is_farm_technician: { Args: { farm_uuid: string }; Returns: boolean }
       is_jsonb: { Args: { "": string }; Returns: boolean }
