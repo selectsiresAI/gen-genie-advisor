@@ -479,29 +479,8 @@ function Step6ProgressCompareContent() {
       setLsPairsApplied(0);
     }
 
-    // Fallback 1: usar parity/parity_order se existir
-    if ((!catKey || !gotRows.some((r) => r?.[catKey!])) && gotRows.length) {
-      const keys = Object.keys(gotRows[0]);
-      const parityKey =
-        detectColumn(keys, ["parity", "paridade", "ordemparto", "order_of_calving", "parity_order"]) ||
-        keys.find((k) => norm(k).includes("parit") || norm(k).includes("ordem"));
-      if (parityKey) {
-        gotRows = gotRows.map((r) => {
-          const p = Number(r?.[parityKey]);
-          let cat: string | null = null;
-          if (Number.isFinite(p)) {
-            if (p >= 3) cat = "Multípara";
-            else if (p === 2) cat = "Secundípara";
-            else if (p === 1) cat = "Primípara";
-            else cat = "Novilha";
-          }
-          return cat ? { ...r, __category: cat } : r;
-        });
-        if (gotRows.some((r) => r?.__category)) catKey = "__category";
-      }
-    }
-
-    // Fallback 2: calcular categoria via birth_date usando getAutomaticCategory
+    // MÉTODO PRINCIPAL: calcular categoria via birth_date usando getAutomaticCategory
+    // Este é o método mais confiável pois birth_date geralmente está preenchido
     if ((!catKey || !gotRows.some((r) => r?.[catKey!])) && gotRows.length) {
       const keys = Object.keys(gotRows[0]);
       const birthKey = detectColumn(keys, ["birth_date", "birthdate", "dob", "data_nascimento", "datanascimento", "nascimento"]) ||
@@ -516,6 +495,28 @@ function Step6ProgressCompareContent() {
             }
           }
           return r;
+        });
+        if (gotRows.some((r) => r?.__category)) catKey = "__category";
+      }
+    }
+
+    // Fallback: usar parity/parity_order se birth_date não funcionou
+    if ((!catKey || !gotRows.some((r) => r?.[catKey!])) && gotRows.length) {
+      const keys = Object.keys(gotRows[0]);
+      const parityKey =
+        detectColumn(keys, ["parity", "paridade", "ordemparto", "order_of_calving", "parity_order"]) ||
+        keys.find((k) => norm(k).includes("parit") || norm(k).includes("ordem"));
+      if (parityKey) {
+        gotRows = gotRows.map((r) => {
+          const p = Number(r?.[parityKey]);
+          let cat: string | null = null;
+          // Só usa parity se o valor for >= 1 (evita interpretar 0 ou null como Novilha)
+          if (Number.isFinite(p) && p >= 1) {
+            if (p >= 3) cat = "Multípara";
+            else if (p === 2) cat = "Secundípara";
+            else cat = "Primípara";
+          }
+          return cat ? { ...r, __category: cat } : r;
         });
         if (gotRows.some((r) => r?.__category)) catKey = "__category";
       }
