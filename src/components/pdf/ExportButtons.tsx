@@ -82,22 +82,26 @@ export function BatchExportBar({ step }: { step: number }) {
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1 text-sm">
-            <span>Orientação:</span>
+            <span className="text-muted-foreground">Formato PDF:</span>
             <Button
               type="button"
+              size="sm"
               variant={orientation === "l" ? "default" : "outline"}
               className={orientation === "l" ? "bg-[#ED1C24] hover:opacity-90 text-white" : ""}
               onClick={() => setOrientation("l")}
+              title="Paisagem – página deitada (horizontal)"
             >
-              Landscape
+              Paisagem
             </Button>
             <Button
               type="button"
+              size="sm"
               variant={orientation === "p" ? "default" : "outline"}
               className={orientation === "p" ? "bg-[#ED1C24] hover:opacity-90 text-white" : ""}
               onClick={() => setOrientation("p")}
+              title="Retrato – página em pé (vertical)"
             >
-              Portrait
+              Retrato
             </Button>
           </div>
           <Button variant="outline" onClick={clear} disabled={selectedIds.size === 0}>
