@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileText, FileSpreadsheet, File, Trash2, Download, Search, ChartBar, Beaker, TrendingUp, Filter } from "lucide-react";
+import { Upload, FileText, FileSpreadsheet, File, Trash2, Download, Search, ChartBar, Beaker, TrendingUp, Filter, Image, Video } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFileStore, SavedReport } from "@/hooks/useFileStore";
 interface ArquivoItem {
@@ -41,8 +41,29 @@ export default function PastaArquivosPage({
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
 
-        // Validar tipo de arquivo
-        const tiposPermitidos = ['application/pdf', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+        // Validar tipo de arquivo (documentos, imagens e vídeos)
+        const tiposPermitidos = [
+          // Documentos
+          'application/pdf', 
+          'application/vnd.ms-excel', 
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 
+          'text/csv', 
+          'application/msword', 
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
+          'text/plain',
+          // Imagens
+          'image/jpeg',
+          'image/png',
+          'image/gif',
+          'image/webp',
+          'image/svg+xml',
+          // Vídeos
+          'video/mp4',
+          'video/webm',
+          'video/quicktime',
+          'video/x-msvideo',
+          'video/mpeg'
+        ];
         if (!tiposPermitidos.includes(file.type)) {
           toast({
             title: "Tipo de arquivo não suportado",
@@ -52,11 +73,14 @@ export default function PastaArquivosPage({
           continue;
         }
 
-        // Validar tamanho (max 10MB)
-        if (file.size > 10 * 1024 * 1024) {
+        // Validar tamanho (max 50MB para vídeos, 10MB para outros)
+        const isVideo = file.type.startsWith('video/');
+        const maxSize = isVideo ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+        const maxSizeLabel = isVideo ? '50MB' : '10MB';
+        if (file.size > maxSize) {
           toast({
             title: "Arquivo muito grande",
-            description: `O arquivo ${file.name} excede o limite de 10MB.`,
+            description: `O arquivo ${file.name} excede o limite de ${maxSizeLabel}.`,
             variant: "destructive"
           });
           continue;
@@ -120,6 +144,8 @@ export default function PastaArquivosPage({
     if (tipo.includes('excel') || tipo.includes('spreadsheet') || tipo.includes('csv')) {
       return <FileSpreadsheet className="w-8 h-8 text-green-500" />;
     }
+    if (tipo.startsWith('image/')) return <Image className="w-8 h-8 text-purple-500" />;
+    if (tipo.startsWith('video/')) return <Video className="w-8 h-8 text-orange-500" />;
     return <File className="w-8 h-8 text-blue-500" />;
   };
   const getReportIcon = (type: SavedReport['type']) => {
@@ -199,7 +225,7 @@ export default function PastaArquivosPage({
         </div>
 
         {/* Input de upload (hidden) */}
-        <input ref={fileInputRef} type="file" multiple accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.txt" onChange={handleFileUpload} style={{
+        <input ref={fileInputRef} type="file" multiple accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.webp,.svg,.mp4,.webm,.mov,.avi,.mpeg" onChange={handleFileUpload} style={{
         display: 'none'
       }} />
 
@@ -350,12 +376,14 @@ export default function PastaArquivosPage({
                   <li>• CSV (.csv)</li>
                   <li>• Word (.doc, .docx)</li>
                   <li>• Texto (.txt)</li>
+                  <li>• Imagens (.jpg, .png, .gif, .webp, .svg)</li>
+                  <li>• Vídeos (.mp4, .webm, .mov, .avi)</li>
                 </ul>
               </div>
             </div>
             <div className="mt-4 p-3 bg-muted rounded-lg">
               <p className="text-sm text-muted-foreground">
-                <strong>Limite:</strong> Máximo 10MB por arquivo manual. 
+                <strong>Limite:</strong> Máximo 10MB para documentos/imagens e 50MB para vídeos. 
                 Relatórios automáticos são salvos sem limite de tamanho.
               </p>
             </div>
