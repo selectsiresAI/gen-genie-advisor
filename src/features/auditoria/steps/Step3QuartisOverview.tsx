@@ -81,6 +81,35 @@ function Step3QuartisOverviewContent() {
   const selectAll = () => setSelected(allTraits);
   const clearAll = () => setSelected([]);
 
+  // Busca paginada para obter todos os animais (sem limite de 1000)
+  async function fetchAllAnimals(farmId: string, columns: string[]): Promise<any[]> {
+    const PAGE_SIZE = 1000;
+    const allRows: any[] = [];
+    let page = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
+      const { data, error } = await supabase
+        .from("females_denorm")
+        .select(["farm_id", ...columns].join(","))
+        .eq("farm_id", farmId)
+        .range(from, to);
+
+      if (error) throw new Error(error.message);
+
+      const pageData = Array.isArray(data) ? data : [];
+      allRows.push(...pageData);
+
+      hasMore = pageData.length === PAGE_SIZE;
+      page += 1;
+    }
+
+    return allRows;
+  }
+
   async function loadData() {
     setIsLoading(true);
     setErrorMsg(null);
@@ -97,17 +126,7 @@ function Step3QuartisOverviewContent() {
         return;
       }
 
-      const { data, error } = await supabase
-        .from("females_denorm")
-        .select(["farm_id", ...sanitized].join(","))
-        .eq("farm_id", farmId);
-
-      if (error) {
-        setErrorMsg(
-          `Falha ao carregar dados do rebanho: ${error.message}. Verifique RLS/Policies e nomes de colunas.`
-        );
-        return;
-      }
+      const data = await fetchAllAnimals(String(farmId), sanitized);
 
       const result: Row[] = [];
 
