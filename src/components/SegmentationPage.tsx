@@ -1131,11 +1131,25 @@ export default function SegmentationPage({
     }
     setSegmentationTriggered(true);
   }
+  // Filtra PTAs que têm dados válidos no rebanho
+  const availablePTAs = useMemo(() => {
+    if (!animals || animals.length === 0) return ALL_PTAS;
+    return ALL_PTAS.filter(pta => {
+      const key = getKey(pta);
+      return animals.some(a => {
+        const val = (a as any)[key];
+        if (val === null || val === undefined) return false;
+        const num = Number(val);
+        return Number.isFinite(num) && num !== 0;
+      });
+    });
+  }, [animals]);
+
   const filteredPTAs = useMemo(() => {
     const s = ptaSearch.trim().toLowerCase();
-    if (!s) return ALL_PTAS;
-    return ALL_PTAS.filter(p => p.toLowerCase().includes(s));
-  }, [ptaSearch]);
+    if (!s) return availablePTAs;
+    return availablePTAs.filter(p => p.toLowerCase().includes(s));
+  }, [ptaSearch, availablePTAs]);
 
   // ────────────────────────────────────────────────────────────────────
   // UI
