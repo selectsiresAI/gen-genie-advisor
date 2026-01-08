@@ -306,12 +306,8 @@ export default function SegmentationPage({
   const [ptaSearch, setPtaSearch] = useState(""); // For filtering PTAs in selection
   const [animalSearch, setAnimalSearch] = useState(""); // For filtering animals in table
   const [categoryFilter, setCategoryFilter] = useState<string>("all"); // Filter by category
-  const [selectedTraits, setSelectedTraits] = useState(["HHP$®", "PTAM", "PTAF"]);
-  const [weights, setWeights] = useState<Record<string, number>>({
-    "HHP$®": 40,
-    PTAM: 30,
-    PTAF: 30
-  });
+  const [selectedTraits, setSelectedTraits] = useState<string[]>([]);
+  const [weights, setWeights] = useState<Record<string, number>>({});
   const [standardize, setStandardize] = useState(true);
   const [segmentationTriggered, setSegmentationTriggered] = useState(false);
 
@@ -339,17 +335,7 @@ export default function SegmentationPage({
   const [newPresetName, setNewPresetName] = useState("");
   const [classificationFilter, setClassificationFilter] = useState<"all" | "Superior" | "Intermediário" | "Inferior">("all");
   const [showChart, setShowChart] = useState(false);
-  const [gates, setGates] = useState<Gate[]>([{
-    trait: "SCS",
-    op: "<=",
-    value: 2.75,
-    enabled: true
-  }, {
-    trait: "PTAF",
-    op: ">=",
-    value: 40,
-    enabled: true
-  }]);
+  const [gates, setGates] = useState<Gate[]>([]);
   const [gatesPhase, setGatesPhase] = useState<"pre" | "post">("pre");
   const [postGateAction, setPostGateAction] = useState<"zero" | "penalize">("zero");
   const [penalty, setPenalty] = useState(-1000);
