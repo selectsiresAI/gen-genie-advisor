@@ -186,9 +186,26 @@ function detectColumn(keys: string[], candidates: string[]): string | null {
 function detectCategoryColumn(rows: any[]): string | null {
   if (!rows.length) return null;
   const keys = Object.keys(rows[0] ?? {});
-  const byName = detectColumn(keys, CATEGORY_NAME_CANDIDATES);
-  if (byName) return byName;
   const known = new Set(AGE_VALUES.map(norm));
+  
+  // Primeiro, tenta encontrar coluna por nome E verificar se tem valores válidos
+  const byName = detectColumn(keys, CATEGORY_NAME_CANDIDATES);
+  if (byName) {
+    // Verifica se a coluna tem pelo menos alguns valores não-nulos
+    let validCount = 0;
+    for (let i = 0; i < Math.min(rows.length, 100); i++) {
+      const v = rows[i]?.[byName];
+      if (v != null && typeof v === "string" && v.trim().length > 0) {
+        validCount++;
+      }
+    }
+    // Só retorna a coluna se tiver pelo menos 5% de valores válidos
+    if (validCount >= Math.max(1, Math.min(rows.length, 100) * 0.05)) {
+      return byName;
+    }
+  }
+  
+  // Fallback: procura coluna com valores conhecidos de categoria
   for (const key of keys) {
     let hits = 0;
     for (let i = 0; i < Math.min(rows.length, 300); i++) {
