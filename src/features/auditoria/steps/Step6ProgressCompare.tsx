@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
+import { getAutomaticCategory } from "@/utils/femaleCategories";
 import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
 import { useRegisterChart } from "@/components/pdf/useRegisterChart";
 import {
@@ -428,10 +429,11 @@ function Step6ProgressCompareContent() {
       setLsPairsApplied(0);
     }
 
+    // Fallback 1: usar parity/parity_order se existir
     if ((!catKey || !gotRows.some((r) => r?.[catKey!])) && gotRows.length) {
       const keys = Object.keys(gotRows[0]);
       const parityKey =
-        detectColumn(keys, ["parity", "paridade", "ordemparto", "order_of_calving"]) ||
+        detectColumn(keys, ["parity", "paridade", "ordemparto", "order_of_calving", "parity_order"]) ||
         keys.find((k) => norm(k).includes("parit") || norm(k).includes("ordem"));
       if (parityKey) {
         gotRows = gotRows.map((r) => {
@@ -444,6 +446,26 @@ function Step6ProgressCompareContent() {
             else cat = "Novilha";
           }
           return cat ? { ...r, __category: cat } : r;
+        });
+        if (gotRows.some((r) => r?.__category)) catKey = "__category";
+      }
+    }
+
+    // Fallback 2: calcular categoria via birth_date usando getAutomaticCategory
+    if ((!catKey || !gotRows.some((r) => r?.[catKey!])) && gotRows.length) {
+      const keys = Object.keys(gotRows[0]);
+      const birthKey = detectColumn(keys, ["birth_date", "birthdate", "dob", "data_nascimento", "datanascimento", "nascimento"]) ||
+        keys.find((k) => norm(k).includes("birth") || norm(k).includes("nasc") || norm(k) === "dob");
+      if (birthKey) {
+        gotRows = gotRows.map((r) => {
+          const birthDate = r?.[birthKey];
+          if (birthDate) {
+            const cat = getAutomaticCategory(birthDate);
+            if (cat && cat !== 'Indefinida') {
+              return { ...r, __category: cat };
+            }
+          }
+          return r;
         });
         if (gotRows.some((r) => r?.__category)) catKey = "__category";
       }
