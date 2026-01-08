@@ -414,6 +414,38 @@ export default function SegmentationPage({
     fetchAnimals();
   }, [farm.farm_id]);
 
+  // Verificar disponibilidade de dados para cada índice
+  const indexAvailability = useMemo(() => {
+    const hasHHP = animals.some(a => {
+      const val = Number(a.hhp_dollar);
+      return Number.isFinite(val) && val !== 0;
+    });
+    const hasTPI = animals.some(a => {
+      const val = Number(a.tpi);
+      return Number.isFinite(val) && val !== 0;
+    });
+    const hasNM = animals.some(a => {
+      const val = Number(a.nm_dollar);
+      return Number.isFinite(val) && val !== 0;
+    });
+    return {
+      "HHP$": hasHHP,
+      "TPI": hasTPI,
+      "NM$": hasNM,
+      "Custom": true
+    };
+  }, [animals]);
+
+  // Auto-selecionar primeiro índice disponível se o atual não tiver dados
+  useEffect(() => {
+    if (!indexAvailability[indexSelection]) {
+      const firstAvailable = (["HHP$", "TPI", "NM$", "Custom"] as const).find(idx => indexAvailability[idx]);
+      if (firstAvailable) {
+        setIndexSelection(firstAvailable);
+      }
+    }
+  }, [indexAvailability, indexSelection]);
+
   // Gates helpers
   function passGate(animal: Female, g: Gate): boolean {
     if (!g.enabled) return true;
@@ -1141,19 +1173,38 @@ export default function SegmentationPage({
               <HelpHint content="Escolha um índice padrão ou monte um personalizado com os traços mais relevantes" />
             </div>
             <div className="flex items-center gap-2">
-              {(["HHP$", "TPI", "NM$", "Custom"] as const).map(opt => <Tooltip key={opt}>
-                  <TooltipTrigger asChild>
-                    <button onClick={() => setIndexSelection(opt)} className={cn("rounded-xl border px-3 py-2 text-sm transition-colors", indexSelection === opt ? "border-foreground bg-foreground text-background" : "border-border bg-background text-foreground hover:bg-muted")}>{opt}</button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>
-                      {opt === "HHP$" && "Índice econômico Health, Herd & Profit"}
-                      {opt === "TPI" && "Total Performance Index - índice geral de performance"}
-                      {opt === "NM$" && "Net Merit Dollar - mérito líquido em dólares"}
-                      {opt === "Custom" && "Índice personalizado com PTAs selecionadas"}
-                    </p>
-                  </TooltipContent>
-                </Tooltip>)}
+              {(["HHP$", "TPI", "NM$", "Custom"] as const).map(opt => {
+                const isDisabled = !indexAvailability[opt];
+                return (
+                  <Tooltip key={opt}>
+                    <TooltipTrigger asChild>
+                      <button 
+                        onClick={() => !isDisabled && setIndexSelection(opt)} 
+                        disabled={isDisabled}
+                        className={cn(
+                          "rounded-xl border px-3 py-2 text-sm transition-colors",
+                          indexSelection === opt 
+                            ? "border-foreground bg-foreground text-background" 
+                            : "border-border bg-background text-foreground hover:bg-muted",
+                          isDisabled && "opacity-50 cursor-not-allowed hover:bg-background"
+                        )}
+                      >
+                        {opt}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        {isDisabled 
+                          ? `Índice ${opt} não disponível - sem dados no rebanho`
+                          : opt === "HHP$" ? "Índice econômico Health, Herd & Profit"
+                          : opt === "TPI" ? "Total Performance Index - índice geral de performance"
+                          : opt === "NM$" ? "Net Merit Dollar - mérito líquido em dólares"
+                          : "Índice personalizado com PTAs selecionadas"}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
             </div>
           </div>
           {indexSelection !== "Custom" && <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-muted px-2 py-1 text-sm text-foreground">
