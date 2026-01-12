@@ -17,6 +17,13 @@ import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
 import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
 import { useRegisterChart } from "@/components/pdf/useRegisterChart";
 
+// Traits otimizados para carregamento rápido - apenas os mais relevantes
+const CORE_PTA_COLUMNS = [
+  "hhp_dollar", "tpi", "nm_dollar", "cm_dollar", "fm_dollar", "gm_dollar",
+  "ptam", "ptaf", "ptap", "pl", "dpr", "liv", "scs", "ptat", "udc"
+];
+
+// Todos os traits (para exportação completa)
 const ALL_PTA_COLUMNS = [
   "hhp_dollar", "tpi", "nm_dollar", "cm_dollar", "fm_dollar", "gm_dollar",
   "f_sav", "ptam", "cfp", "ptaf", "ptaf_pct", "ptap", "ptap_pct",
@@ -54,6 +61,10 @@ function Step7QuartisIndicesContent() {
   const [indexB, setIndexB] = useState("nm_dollar");
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState("");
+  const [showAllTraits, setShowAllTraits] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const chartTitle = "Quartis — Índices (A vs B)";
   useRegisterChart("step7-quartis-indices", 7, chartTitle, cardRef);
@@ -64,30 +75,65 @@ function Step7QuartisIndicesContent() {
     }
   }, [farmId]);
 
+  // Determina quais traits usar baseado no modo
+  const activeTraits = showAllTraits ? ALL_PTA_COLUMNS : CORE_PTA_COLUMNS;
+
   const load = useCallback(async () => {
     if (!farmId) {
       setRows([]);
       return;
     }
-    setLoading(true);
-    const { data, error } = await (supabase.rpc as any)("ag_quartis_indices_compare", {
-      p_farm: farmId,
-      p_index_a: indexA,
-      p_index_b: indexB,
-      p_traits: ALL_PTA_COLUMNS,
-    });
-    if (error) {
-      console.error("Failed to load quartis indices", error);
-      setRows([]);
-      setLoading(false);
-      return;
+    
+    // Cancelar requisição anterior se existir
+    if (abortRef.current) {
+      abortRef.current.abort();
     }
-    setRows(Array.isArray(data) ? (data as Row[]) : []);
-    setLoading(false);
-  }, [farmId, indexA, indexB]);
+    abortRef.current = new AbortController();
+    
+    setLoading(true);
+    setErrorMsg(null);
+    setLoadingProgress("Calculando percentis...");
+    
+    try {
+      const startTime = Date.now();
+      
+      const { data, error } = await (supabase.rpc as any)("ag_quartis_indices_compare", {
+        p_farm: farmId,
+        p_index_a: indexA,
+        p_index_b: indexB,
+        p_traits: activeTraits,
+      });
+      
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.log(`Quartis indices loaded in ${elapsed}s`);
+      
+      if (error) {
+        console.error("Failed to load quartis indices", error);
+        setErrorMsg(error.message?.includes("timeout") 
+          ? "Consulta demorou demais. Tente com menos traits." 
+          : `Erro: ${error.message}`);
+        setRows([]);
+        setLoading(false);
+        return;
+      }
+      
+      setRows(Array.isArray(data) ? (data as Row[]) : []);
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        console.error("Error loading quartis indices", err);
+        setErrorMsg("Erro ao carregar dados. Tente novamente.");
+      }
+    } finally {
+      setLoading(false);
+      setLoadingProgress("");
+    }
+  }, [farmId, indexA, indexB, activeTraits]);
 
   useEffect(() => {
     load();
+    return () => {
+      if (abortRef.current) abortRef.current.abort();
+    };
   }, [load]);
 
   const tableDataByIndex = useMemo(() => {
@@ -107,18 +153,18 @@ function Step7QuartisIndicesContent() {
       indexMap.set(idx, groupData);
     });
 
-    const diffData: any = { index: "Difference", group: "Difference" };
+    const diffData: any = { index: "Difference", group: "Diferença" };
     const top25A = rows.filter((r) => r.index_label === "IndexA" && r.group_label === "Top25");
     const top25B = rows.filter((r) => r.index_label === "IndexB" && r.group_label === "Top25");
 
-    ALL_PTA_COLUMNS.forEach((t) => {
+    activeTraits.forEach((t) => {
       const valA = top25A.find((r) => r.trait_key === t)?.mean_value || 0;
       const valB = top25B.find((r) => r.trait_key === t)?.mean_value || 0;
       diffData[t] = valA - valB;
     });
 
     return [...(indexMap.get("IndexA") || []), ...(indexMap.get("IndexB") || []), diffData];
-  }, [rows]);
+  }, [rows, activeTraits]);
 
   return (
     <Card ref={cardRef}>
@@ -156,27 +202,45 @@ function Step7QuartisIndicesContent() {
             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             Atualizar
           </Button>
+          <Button
+            variant={showAllTraits ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setShowAllTraits((v) => !v)}
+            disabled={loading}
+          >
+            {showAllTraits ? "Todos os Traits (lento)" : "Traits Principais"}
+          </Button>
         </div>
 
         {loading && (
-          <div className="py-6 text-center text-muted-foreground">Carregando dados...</div>
+          <div className="py-6 text-center">
+            <RefreshCw className="mx-auto mb-2 h-6 w-6 animate-spin text-primary" />
+            <p className="text-muted-foreground">{loadingProgress || "Carregando dados..."}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Isso pode levar alguns segundos para rebanhos grandes.
+            </p>
+          </div>
         )}
 
-        {!loading && rows.length === 0 && (
+        {!loading && errorMsg && (
+          <div className="py-6 text-center text-destructive">{errorMsg}</div>
+        )}
+
+        {!loading && !errorMsg && rows.length === 0 && (
           <div className="py-6 text-center text-muted-foreground">Sem dados.</div>
         )}
 
-        {!loading && rows.length > 0 && (
+        {!loading && !errorMsg && rows.length > 0 && (
           <div className="space-y-6">
             <div className="relative overflow-x-auto">
               <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b">
-                    <th className="sticky left-0 z-10 border-r bg-background py-2 px-2 text-left font-semibold">Index</th>
-                    <th className="sticky left-[80px] z-10 border-r bg-background py-2 px-2 text-left font-semibold">Group</th>
-                    {ALL_PTA_COLUMNS.map((t) => (
+                    <th className="sticky left-0 z-10 border-r bg-background py-2 px-2 text-left font-semibold">Índice</th>
+                    <th className="sticky left-[80px] z-10 border-r bg-background py-2 px-2 text-left font-semibold">Grupo</th>
+                    {activeTraits.map((t) => (
                       <th key={t} className="py-2 px-2 whitespace-nowrap text-left font-semibold">
-                        {t.toUpperCase()}
+                        {t.replace("_dollar", "$").toUpperCase()}
                       </th>
                     ))}
                   </tr>
@@ -192,10 +256,12 @@ function Step7QuartisIndicesContent() {
                           ? getIndexDisplayLabel(indexA)
                           : row.index === "IndexB"
                           ? getIndexDisplayLabel(indexB)
-                          : row.index}
+                          : "Diferença"}
                       </td>
-                      <td className="sticky left-[80px] z-10 border-r bg-background py-2 px-2">{row.group}</td>
-                      {ALL_PTA_COLUMNS.map((t) => {
+                      <td className="sticky left-[80px] z-10 border-r bg-background py-2 px-2">
+                        {row.group === "Top25" ? "Top 25%" : row.group === "Bottom25" ? "Bottom 25%" : row.group}
+                      </td>
+                      {activeTraits.map((t) => {
                         const val = row[t] as number | undefined;
                         const isPositive = val && val > 0;
                         const isDiff = row.index === "Difference";
@@ -203,7 +269,7 @@ function Step7QuartisIndicesContent() {
                           <td
                             key={t}
                             className={`whitespace-nowrap py-2 px-2 ${
-                              isDiff && isPositive ? "text-green-600" : ""
+                              isDiff && isPositive ? "text-green-600" : isDiff && val && val < 0 ? "text-red-600" : ""
                             }`}
                           >
                             {val != null ? Math.round(val) : "-"}
