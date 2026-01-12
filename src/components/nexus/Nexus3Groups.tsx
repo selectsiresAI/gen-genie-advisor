@@ -1,6 +1,6 @@
 /* src/components/nexus/Nexus3Groups.tsx */
 // Apenas apresentação alterada — lógica preservada
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { supabase as sharedSupabaseClient } from "../../integrations/supabase/client";
 import {
@@ -15,10 +15,12 @@ import {
   LabelList,
 } from "recharts";
 import type { LabelProps, TooltipProps } from "recharts";
-import { ChevronLeft, Loader2, Search as SearchIcon, Sparkles } from "lucide-react";
+import { ChevronLeft, Download, Loader2, Search as SearchIcon, Sparkles } from "lucide-react";
 import { ANIMAL_METRIC_COLUMNS } from "../../constants/animalMetrics";
 import { getAdaptiveYAxisDomainMultiple } from "../../lib/chart-utils";
 import { formatPtaValue } from "@/utils/ptaFormat";
+import { exportSingleChartToPDF } from "@/lib/pdf/exportCharts";
+import { format } from "date-fns";
 
 /**
  * Componente Vite-friendly (sem Next helpers, sem shadcn, sem aliases).
@@ -63,6 +65,10 @@ export default function Nexus3Groups() {
 
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  
+  // Ref para exportação em PDF
+  const chartRef = useRef<HTMLDivElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   // 1) Resolver farmId: URL ?farmId=... -> profiles.default_farm_id
   useEffect(() => {
@@ -458,12 +464,42 @@ export default function Nexus3Groups() {
           )}
         </div>
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-col gap-1">
-            <h3 className="text-lg font-semibold text-gray-900">Mães vs. Filhas — Predição</h3>
-            <p className="text-sm text-gray-500">
-              Comparação anual entre as médias das mães e a predição das filhas considerando os touros escolhidos.
-            </p>
+        <div ref={chartRef} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Mães vs. Filhas — Predição</h3>
+              <p className="text-sm text-gray-500">
+                Comparação anual entre as médias das mães e a predição das filhas considerando os touros escolhidos.
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={isExporting || !chartData.length}
+              onClick={async () => {
+                if (!chartRef.current) return;
+                setIsExporting(true);
+                try {
+                  const today = format(new Date(), "yyyy-MM-dd");
+                  const traitLabel = trait.toUpperCase();
+                  await exportSingleChartToPDF(chartRef.current, {
+                    filename: `Nexus3_MaesVsFilhas_${traitLabel}_${today}.pdf`,
+                    orientation: "l",
+                    format: "a4",
+                    pageMarginMm: 8,
+                  });
+                } finally {
+                  setIsExporting(false);
+                }
+              }}
+              className="pdf-ignore inline-flex items-center gap-2 rounded-lg border border-[#ED1C24] bg-white px-4 py-2 text-sm font-medium text-[#ED1C24] shadow-sm transition hover:bg-[#ED1C24]/10 disabled:opacity-50"
+            >
+              {isExporting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              Exportar PDF
+            </button>
           </div>
           <div className="mt-6 h-[360px] w-full">
             <ResponsiveContainer width="100%" height="100%">
