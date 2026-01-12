@@ -858,7 +858,14 @@ function Step6ProgressCompareContent() {
                           fillOpacity={0.14}
                         />
 
-                        <Legend />
+                        <Legend 
+                          formatter={(value: string) => {
+                            // Ocultar entradas técnicas (band25, band50, etc.) da legenda
+                            if (value.startsWith("band")) return null;
+                            return value;
+                          }}
+                          wrapperStyle={{ paddingTop: 8 }}
+                        />
                         <Tooltip content={(props) => <RadarTooltip {...props} groupA={groupA} groupB={groupB} />} />
                       </RadarChart>
                     </ResponsiveContainer>
