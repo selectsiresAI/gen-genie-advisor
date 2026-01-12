@@ -29,12 +29,50 @@ function mean(v: number[]) {
   if (!v.length) return null;
   return v.reduce((a, b) => a + b, 0) / v.length;
 }
+
 function topPctStats(values: number[], pct: TopPct) {
   if (!values.length) return { n_total: 0, n_top: 0, mean_top: null as number | null };
   const sorted = [...values].sort((a, b) => b - a);
   const k = Math.max(1, Math.ceil((pct / 100) * sorted.length));
   const slice = sorted.slice(0, k);
   return { n_total: sorted.length, n_top: slice.length, mean_top: mean(slice) };
+}
+// Busca paginada para obter todos os registros (sem limite de 1000)
+async function fetchAllPaginated(
+  table: string, 
+  selectCols: string, 
+  farmId?: string
+): Promise<any[]> {
+  const PAGE_SIZE = 1000;
+  const allRows: any[] = [];
+  let page = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const from = page * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+
+    let query = supabase
+      .from(table)
+      .select(selectCols)
+      .range(from, to);
+    
+    if (farmId) {
+      query = query.eq("farm_id", farmId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) break;
+
+    const pageData = Array.isArray(data) ? data : [];
+    allRows.push(...pageData);
+
+    hasMore = pageData.length === PAGE_SIZE;
+    page += 1;
+  }
+
+  return allRows;
 }
 
 export default function Step8GeneticBenchmark() {
@@ -70,32 +108,11 @@ export default function Step8GeneticBenchmark() {
         return;
       }
 
-      // 1) Herd (filtrado)
-      const { data: herdData, error: herdErr } = await supabase
-        .from("females_denorm")
-        .select(selectCols)
-        .eq("farm_id", farmId);
+      // 1) Herd (filtrado) - com paginação
+      const herdData = await fetchAllPaginated("females_denorm", selectCols, String(farmId));
 
-      if (herdErr) {
-        setRows([]);
-        setErrorMsg(
-          `Falha ao carregar dados do rebanho (${herdErr.message}). Verifique RLS/Policies e nomes de colunas.`
-        );
-        return;
-      }
-
-      // 2) Global (sem filtro)
-      const { data: globalData, error: globErr } = await supabase
-        .from("females_denorm")
-        .select(selectCols);
-
-      if (globErr) {
-        setRows([]);
-        setErrorMsg(
-          `Falha ao carregar dados globais (${globErr.message}). Verifique RLS/Policies.`
-        );
-        return;
-      }
+      // 2) Global (sem filtro) - com paginação
+      const globalData = await fetchAllPaginated("females_denorm", selectCols);
 
       // 3) Computa Top% herd vs global por trait
       const result: BenchRow[] = [];

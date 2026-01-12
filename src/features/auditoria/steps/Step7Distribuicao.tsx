@@ -393,6 +393,38 @@ export default function Step7Distribuicao() {
   const selectAll = () => setSelected(allTraits.map((t) => t.key));
   const clearAll = () => setSelected([]);
 
+  // Busca paginada para obter todos os registros (sem limite de 1000)
+  async function fetchAllPaginated(
+    selectStr: string, 
+    farmIdVal: string
+  ): Promise<any[]> {
+    const PAGE_SIZE = 1000;
+    const allRows: any[] = [];
+    let page = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
+      const { data, error } = await supabase
+        .from("females_denorm")
+        .select(selectStr)
+        .eq("farm_id", farmIdVal)
+        .range(from, to);
+
+      if (error) break;
+
+      const pageData = Array.isArray(data) ? data : [];
+      allRows.push(...pageData);
+
+      hasMore = pageData.length === PAGE_SIZE;
+      page += 1;
+    }
+
+    return allRows;
+  }
+
   useEffect(() => {
     let isMounted = true;
     async function run() {
@@ -405,13 +437,8 @@ export default function Step7Distribuicao() {
         const cols = ["id", ...selected];
         const selectStr = cols.map((c) => `"${c}"`).join(", ");
 
-        const { data, error } = await supabase
-          .from("females_denorm")
-          .select(selectStr)
-          .eq("farm_id", farmId)
-          .limit(200000);
-
-        if (error) throw error;
+        // Usa paginação em vez de limit fixo
+        const data = await fetchAllPaginated(selectStr, String(farmId));
 
         const out: TraitSeries[] = selected.map((traitKey) => {
           const values = (data ?? [])
