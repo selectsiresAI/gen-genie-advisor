@@ -11,6 +11,9 @@ import Step6ProgressCompare from '@/features/auditoria/steps/Step6ProgressCompar
 import Step7QuartisIndices from '@/features/auditoria/steps/Step7QuartisIndices';
 import Step7Distribuicao from '@/features/auditoria/steps/Step7Distribuicao';
 
+// Import report sections
+import HerdSummarySectionContent from './sections/HerdSummarySection';
+
 interface ReportSectionRendererProps {
   farmId: string;
   farmName: string;
@@ -59,11 +62,11 @@ function PlaceholderSection({ title, farmName }: { title: string; farmName: stri
   );
 }
 
-// Herd Summary Section
+// Herd Summary Section - using real component
 function HerdSummarySection({ farmId, farmName }: { farmId: string; farmName: string }) {
   return (
     <SectionWrapper type="herd_summary" title="Resumo do Rebanho">
-      <PlaceholderSection title="Estatísticas do Rebanho" farmName={farmName} />
+      <HerdSummarySectionContent farmId={farmId} farmName={farmName} />
     </SectionWrapper>
   );
 }
