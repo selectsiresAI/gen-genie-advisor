@@ -278,7 +278,6 @@ export async function generateGeneralReport(
     onProgress(progressPercent, `Gerando ${report.label}...`);
 
     // Find the rendered section in the container
-    const sectionId = `report-section-${report.type}`;
     const sectionEl = containerRef.querySelector(`[data-report-section="${report.type}"]`) as HTMLElement;
     
     if (!sectionEl) {
@@ -286,7 +285,66 @@ export async function generateGeneralReport(
       continue;
     }
 
-    // Capture the section
+    // Special handling for Step 7 histograms - each chart on its own landscape page
+    if (report.type === 'auditoria_step7') {
+      const histogramCards = sectionEl.querySelectorAll('[data-chart-page="histogram"]');
+      
+      for (let hIdx = 0; hIdx < histogramCards.length; hIdx++) {
+        const card = histogramCards[hIdx] as HTMLElement;
+        const chartLabel = card.getAttribute('data-chart-label') || `Histograma ${hIdx + 1}`;
+        
+        try {
+          // Capture the individual histogram
+          const canvas = await captureElement(card, 2);
+          const imgData = canvas.toDataURL('image/png');
+          
+          // Add new page in LANDSCAPE orientation (forced for histograms)
+          doc.addPage('a4', 'l');
+          currentPage++;
+          
+          // Landscape A4 dimensions
+          const pageWidth = 297; // mm
+          const pageHeight = 210; // mm
+          const margin = 15;
+          const contentTop = 30;
+          
+          // Add section title
+          addSectionTitle(doc, `Distribuição - ${chartLabel}`);
+          
+          // Calculate image dimensions for landscape
+          const maxW = pageWidth - margin * 2;
+          const maxH = pageHeight - contentTop - margin - 15;
+          const ratio = canvas.height / canvas.width;
+          
+          let imgW = maxW;
+          let imgH = imgW * ratio;
+          
+          if (imgH > maxH) {
+            imgH = maxH;
+            imgW = imgH / ratio;
+          }
+          
+          // Center the image
+          const xOffset = (pageWidth - imgW) / 2;
+          doc.addImage(imgData, 'PNG', xOffset, contentTop, imgW, imgH);
+          
+          // Track page info
+          pageTracker.push({
+            title: `Distribuição - ${chartLabel}`,
+            pageNumber: currentPage,
+          });
+        } catch (error) {
+          console.error(`Error capturing histogram ${chartLabel}:`, error);
+        }
+        
+        // Small delay to prevent UI freezing
+        await new Promise(resolve => requestAnimationFrame(resolve));
+      }
+      
+      continue; // Skip standard section processing
+    }
+
+    // Standard section capture for non-histogram reports
     try {
       const canvas = await captureElement(sectionEl, 2);
       const imgData = canvas.toDataURL('image/png');
@@ -321,11 +379,6 @@ export async function generateGeneralReport(
         title: report.label,
         pageNumber: currentPage,
       });
-      
-      // Add page number if enabled
-      if (config.includePageNumbers) {
-        // Will be added in final pass
-      }
       
       // Add new page for next report (except for last one)
       if (i < selectedReports.length - 1) {
