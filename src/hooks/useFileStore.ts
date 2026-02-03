@@ -4,7 +4,7 @@ import { persist } from 'zustand/middleware';
 export interface SavedReport {
   id: string;
   name: string;
-  type: 'segmentation' | 'botijao' | 'genetic_projection' | 'uploaded';
+  type: 'segmentation' | 'botijao' | 'genetic_projection' | 'uploaded' | 'general_report';
   sourceId?: string; // ID da origem (fazenda, etc)
   data: any;
   metadata: {
