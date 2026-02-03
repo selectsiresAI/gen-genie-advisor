@@ -454,7 +454,7 @@ function Step5ProgressaoContent() {
       <Card>
         <CardContent className="pt-4 space-y-4">
           <div className="flex flex-wrap gap-2">
-            {PTA_CATALOG.slice(0, 20).map((pta) => (
+            {PTA_CATALOG.map((pta) => (
               <Badge
                 key={pta.key}
                 variant={ptasSelecionadas.includes(pta.key) ? "default" : "outline"}
