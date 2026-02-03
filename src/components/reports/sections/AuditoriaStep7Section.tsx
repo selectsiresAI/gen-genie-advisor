@@ -325,9 +325,16 @@ export default function AuditoriaStep7Section({ farmId }: AuditoriaStep7SectionP
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-report-charts="histogram-container">
       {series.map((s) => (
-        <HistogramCard key={s.traitKey} series={s} />
+        <div 
+          key={s.traitKey} 
+          data-chart-page="histogram" 
+          data-chart-label={s.label}
+          data-chart-key={s.traitKey}
+        >
+          <HistogramCard series={s} />
+        </div>
       ))}
     </div>
   );
