@@ -1,8 +1,6 @@
 "use client";
 
 import {
-  Dispatch,
-  SetStateAction,
   useCallback,
   useEffect,
   useMemo,
@@ -11,11 +9,7 @@ import {
 } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
 import { getAutomaticCategory } from "@/utils/femaleCategories";
-import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
-import { useRegisterChart } from "@/components/pdf/useRegisterChart";
 import {
   RadarChart,
   PolarGrid,
@@ -49,7 +43,7 @@ const PTA_LABELS: Record<string, string> = {
 };
 const ALL_PTA_KEYS = Object.keys(PTA_LABELS);
 
-/* ============= Sinônimos comuns (nome de coluna pode variar) ============= */
+/* ============= Sinônimos comuns ============= */
 const PTA_SYNONYMS: Record<string, string[]> = {
   hhp_dollar: ["hhp_dollar", "hhp$", "hhp"],
   nm_dollar: ["nm_dollar", "nm$", "nm", "netmerit", "meritoliquido"],
@@ -72,31 +66,6 @@ const PTA_SYNONYMS: Record<string, string[]> = {
 /* ============= Tabelas/colunas candidatas ============= */
 const TABLE_CANDIDATES = ["rebanho", "females_denorm", "female_denorm", "females", "female"];
 const FARM_COLS = ["farm_id", "id_fazenda", "fazenda_id", "farmId"];
-const CATEGORY_NAME_CANDIDATES = [
-  "Categoria",
-  "categoria",
-  "category",
-  "age_group",
-  "agegroup",
-  "coarse",
-  "grupo",
-  "paridade",
-  "parity",
-  "order_of_calving",
-  "ordemparto",
-];
-const ID_CANDIDATES = [
-  "id",
-  "female_id",
-  "animal_id",
-  "id_animal",
-  "identificacao",
-  "identification",
-  "ident",
-  "brinco",
-  "tag",
-  "ear_tag",
-];
 
 const DEFAULT_TABLE_TRAITS = ["hhp_dollar", "ptam", "cfp", "fi", "pl", "scs", "mast"];
 const DEFAULT_CHART_TRAITS = [
@@ -119,33 +88,6 @@ function toNumber(x: any): number | null {
   if (x == null) return null;
   const v = Number(String(x).replace(",", "."));
   return Number.isFinite(v) ? v : null;
-}
-
-function arraysEqual(a: string[], b: string[]) {
-  if (a.length !== b.length) return false;
-  return a.every((value, index) => value === b[index]);
-}
-
-function sanitizeSelection(
-  prev: string[],
-  defaults: string[],
-  present: string[]
-) {
-  if (!present.length) return [];
-  const valid = prev.filter((key) => present.includes(key));
-  if (valid.length) return valid;
-  const fallback = defaults.filter((key) => present.includes(key));
-  if (fallback.length) return fallback;
-  return [...present];
-}
-
-export default function Step6ProgressCompare() {
-  return (
-    <ChartExportProvider>
-      <BatchExportBar step={5} />
-      <Step6ProgressCompareContent />
-    </ChartExportProvider>
-  );
 }
 
 function resolveTraitValue(row: any, canonical: string): number | null {
@@ -183,146 +125,7 @@ function detectColumn(keys: string[], candidates: string[]): string | null {
   return null;
 }
 
-function detectCategoryColumn(rows: any[]): string | null {
-  if (!rows.length) return null;
-  const keys = Object.keys(rows[0] ?? {});
-  const known = new Set(AGE_VALUES.map(norm));
-  
-  // Primeiro, tenta encontrar coluna por nome E verificar se tem valores válidos
-  const byName = detectColumn(keys, CATEGORY_NAME_CANDIDATES);
-  if (byName) {
-    // Verifica se a coluna tem pelo menos alguns valores não-nulos
-    let validCount = 0;
-    for (let i = 0; i < Math.min(rows.length, 100); i++) {
-      const v = rows[i]?.[byName];
-      if (v != null && typeof v === "string" && v.trim().length > 0) {
-        validCount++;
-      }
-    }
-    // Só retorna a coluna se tiver pelo menos 5% de valores válidos
-    if (validCount >= Math.max(1, Math.min(rows.length, 100) * 0.05)) {
-      return byName;
-    }
-  }
-  
-  // Fallback: procura coluna com valores conhecidos de categoria
-  for (const key of keys) {
-    let hits = 0;
-    for (let i = 0; i < Math.min(rows.length, 300); i++) {
-      const v = rows[i]?.[key];
-      if (typeof v === "string" && known.has(norm(v))) hits++;
-    }
-    if (hits >= 3) return key;
-  }
-  return null;
-}
-
-function detectIdColumn(rows: any[]): string | null {
-  if (!rows.length) return null;
-  const keys = Object.keys(rows[0] ?? {});
-  const byName = detectColumn(keys, ID_CANDIDATES);
-  if (byName) return byName;
-  const idLike = keys.find((k) => norm(k) === "id");
-  return idLike || null;
-}
-
-/* ================== LocalStorage helpers ================== */
-const prefKey = (farmId: string | number) => `ag:rebanho:categories:${farmId}`;
-const knownKeys = (farmId: string | number) => [
-  prefKey(farmId),
-  `rebanho:categorias:${farmId}`,
-  `categories_rebanho_${farmId}`,
-  `female_categories_${farmId}`,
-  `ag:rebanho:list:${farmId}`,
-  `ag:females:list:${farmId}`,
-];
-
-type LSScanResult = {
-  map: Map<string, string>;
-  keysScanned: number;
-  pairsFound: number;
-};
-
-function scanLocalStorageForCategories(
-  farmId: string | number,
-  idCols: string[],
-  catCols: string[]
-): LSScanResult {
-  const res: LSScanResult = { map: new Map(), keysScanned: 0, pairsFound: 0 };
-  if (typeof window === "undefined") return res;
-
-  const candidates = new Set<string>(knownKeys(farmId));
-  for (let i = 0; i < window.localStorage.length; i++) {
-    const k = window.localStorage.key(i);
-    if (k) candidates.add(k);
-  }
-
-  const idNorms = idCols.map(norm);
-  const catNorms = catCols.map(norm);
-  const knownCats = new Set(AGE_VALUES.map(norm));
-
-  for (const key of candidates) {
-    const raw = window.localStorage.getItem(key);
-    if (!raw) continue;
-    res.keysScanned++;
-
-    try {
-      const data = JSON.parse(raw);
-
-      if (data && typeof data === "object" && !Array.isArray(data)) {
-        for (const [k, v] of Object.entries<any>(data)) {
-          if (typeof v === "string" && (knownCats.has(norm(v)) || catNorms.includes(norm(v)))) {
-            res.map.set(String(k), v);
-            res.pairsFound++;
-          }
-        }
-      }
-
-      if (Array.isArray(data)) {
-        for (const item of data) {
-          if (!item || typeof item !== "object") continue;
-          const idKey = Object.keys(item).find((c) => idNorms.includes(norm(c)));
-          const catKey = Object.keys(item).find((c) => catNorms.includes(norm(c))) ??
-            Object.keys(item).find((c) => knownCats.has(norm(item[c])));
-          const idVal = idKey ? item[idKey] : undefined;
-          const catVal = catKey ? item[catKey] : undefined;
-          if (idVal != null && typeof catVal === "string" && String(catVal).trim()) {
-            res.map.set(String(idVal), String(catVal));
-            res.pairsFound++;
-          }
-        }
-      }
-
-      if (data && typeof data === "object" && Array.isArray((data as any).rows)) {
-        for (const item of (data as any).rows) {
-          if (!item || typeof item !== "object") continue;
-          const idKey = Object.keys(item).find((c) => idNorms.includes(norm(c)));
-          const catKey = Object.keys(item).find((c) => catNorms.includes(norm(c))) ??
-            Object.keys(item).find((c) => knownCats.has(norm(item[c])));
-          const idVal = idKey ? item[idKey] : undefined;
-          const catVal = catKey ? item[catKey] : undefined;
-          if (idVal != null && typeof catVal === "string" && String(catVal).trim()) {
-            res.map.set(String(idVal), String(catVal));
-            res.pairsFound++;
-          }
-        }
-      }
-    } catch { /* ignore */ }
-  }
-
-  return res;
-}
-
-function writeCategoriesToLS(farmId: string | number, pairs: Array<{ id: string; cat: string }>) {
-  if (typeof window === "undefined" || !pairs.length) return;
-  const current = scanLocalStorageForCategories(farmId, [], []).map;
-  for (const { id, cat } of pairs) current.set(id, cat);
-  const obj: Record<string, string> = {};
-  current.forEach((v, k) => (obj[k] = v));
-  window.localStorage.setItem(prefKey(farmId), JSON.stringify(obj));
-}
-
-// Tooltip do radar exibindo os valores BRUTOS (não normalizados)
+// Tooltip do radar exibindo valores BRUTOS
 function RadarTooltip(props: any) {
   const { active, payload, label, groupA, groupB } = props;
   if (!active || !payload?.length) return null;
@@ -335,35 +138,29 @@ function RadarTooltip(props: any) {
     </div>
   );
 }
+
 /* ================== Tipos ================== */
 type MeansByCategory = Record<string, Record<string, number | null>>;
 
 /* ================== Componente ================== */
-function Step6ProgressCompareContent() {
+export default function Step6ProgressCompare() {
   const { farmId } = useAGFilters();
 
   const [loading, setLoading] = useState(false);
-  const [sourceTable, setSourceTable] = useState<string>("");
-  const [categoryCol, setCategoryCol] = useState<string>("");
-  const [idCol, setIdCol] = useState<string>("");
-  const [usedLocalStorage, setUsedLocalStorage] = useState(false);
-  const [lsKeysScanned, setLsKeysScanned] = useState(0);
-  const [lsPairsApplied, setLsPairsApplied] = useState(0);
-
   const [rows, setRows] = useState<any[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  const [categoryCol, setCategoryCol] = useState<string>("");
 
-  const [groupA, setGroupA] = useState<string>("Novilha");
-  const [groupB, setGroupB] = useState<string>("Primípara");
-  const [tableTraits, setTableTraits] = useState<string[]>(DEFAULT_TABLE_TRAITS);
-  const [chartTraits, setChartTraits] = useState<string[]>(DEFAULT_CHART_TRAITS);
-
+  // Grupos fixos
+  const groupA = "Novilha";
+  const groupB = "Primípara";
+  const tableTraits = DEFAULT_TABLE_TRAITS;
+  const chartTraits = DEFAULT_CHART_TRAITS;
 
   const cardRef = useRef<HTMLDivElement>(null);
-  const chartTitle = "Comparação por Categoria (Step 5)";
-  useRegisterChart("step5-comparacao-categorias", 5, chartTitle, cardRef);
+  const chartTitle = "Comparação por Categoria";
 
-  // Busca paginada para obter todos os animais (sem limite de 1000)
+  // Busca paginada para obter todos os animais
   async function fetchAllAnimals(table: string, farmCol: string, farmIdVal: string): Promise<any[]> {
     const PAGE_SIZE = 1000;
     const allRows: any[] = [];
@@ -395,24 +192,16 @@ function Step6ProgressCompareContent() {
   const fetchData = useCallback(async () => {
     if (!farmId) {
       setRows([]);
-      setSourceTable("");
       setCategoryCol("");
-      setIdCol("");
-      setUsedLocalStorage(false);
-      setLsKeysScanned(0);
-      setLsPairsApplied(0);
       return;
     }
     setLoading(true);
 
     let gotRows: any[] = [];
-    let usedTable = "";
     let catKey: string | null = null;
-    let idKey: string | null = null;
 
     for (const table of TABLE_CANDIDATES) {
       for (const fcol of FARM_COLS) {
-        // Primeiro, faz uma query pequena para verificar se a tabela/coluna existe
         const { data: testData, error: testError } = await (supabase as any)
           .from(table)
           .select("*")
@@ -420,68 +209,15 @@ function Step6ProgressCompareContent() {
           .limit(1);
         
         if (!testError && Array.isArray(testData) && testData.length > 0) {
-          // Tabela e coluna existem, agora busca todos os registros com paginação
           gotRows = await fetchAllAnimals(table, fcol, String(farmId));
-          if (gotRows.length > 0) {
-            const candidateCat = detectCategoryColumn(gotRows.slice(0, 100));
-            const candidateId = detectIdColumn(gotRows.slice(0, 100));
-            usedTable = table;
-            catKey = candidateCat;
-            idKey = candidateId;
-            break;
-          }
+          if (gotRows.length > 0) break;
         }
       }
       if (gotRows.length > 0) break;
     }
 
-    let applied = 0, scanned = 0;
-    if (!catKey || !gotRows.some((r) => r?.[catKey!])) {
-      const { map, keysScanned } = scanLocalStorageForCategories(
-        farmId,
-        idKey ? [idKey] : ID_CANDIDATES,
-        CATEGORY_NAME_CANDIDATES
-      );
-      scanned = keysScanned;
-      if (map.size && (idKey || ID_CANDIDATES.length)) {
-        const idCandidates = idKey ? [idKey] : ID_CANDIDATES;
-        gotRows = gotRows.map((r) => {
-          const foundIdKey = idCandidates.find((c) => norm(c) in Object.fromEntries(Object.keys(r).map(k => [norm(k), k])));
-          const realIdKey = foundIdKey
-            ? Object.keys(r).find((k) => norm(k) === norm(foundIdKey))!
-            : idKey || "id";
-          const idVal = r?.[realIdKey];
-          const fromLs = idVal != null ? map.get(String(idVal)) : undefined;
-          if (fromLs) {
-            applied++;
-            return { ...r, __category: fromLs };
-          }
-          return r;
-        });
-        if (applied > 0) {
-          catKey = "__category";
-          setUsedLocalStorage(true);
-          setLsKeysScanned(scanned);
-          setLsPairsApplied(applied);
-        } else {
-          setUsedLocalStorage(false);
-          setLsKeysScanned(scanned);
-          setLsPairsApplied(0);
-        }
-      } else {
-        setUsedLocalStorage(false);
-        setLsKeysScanned(scanned);
-        setLsPairsApplied(0);
-      }
-    } else {
-      setUsedLocalStorage(false);
-      setLsKeysScanned(0);
-      setLsPairsApplied(0);
-    }
-
-    // MÉTODO PRINCIPAL: calcular categoria via birth_date usando getAutomaticCategory
-    // Este é o método mais confiável pois birth_date geralmente está preenchido
-    if ((!catKey || !gotRows.some((r) => r?.[catKey!])) && gotRows.length) {
+    // Calcular categoria via birth_date usando getAutomaticCategory
+    if (gotRows.length) {
       const keys = Object.keys(gotRows[0]);
       const birthKey = detectColumn(keys, ["birth_date", "birthdate", "dob", "data_nascimento", "datanascimento", "nascimento"]) ||
         keys.find((k) => norm(k).includes("birth") || norm(k).includes("nasc") || norm(k) === "dob");
@@ -500,7 +236,7 @@ function Step6ProgressCompareContent() {
       }
     }
 
-    // Fallback: usar parity/parity_order se birth_date não funcionou
+    // Fallback: usar parity/parity_order
     if ((!catKey || !gotRows.some((r) => r?.[catKey!])) && gotRows.length) {
       const keys = Object.keys(gotRows[0]);
       const parityKey =
@@ -510,7 +246,6 @@ function Step6ProgressCompareContent() {
         gotRows = gotRows.map((r) => {
           const p = Number(r?.[parityKey]);
           let cat: string | null = null;
-          // Só usa parity se o valor for >= 1 (evita interpretar 0 ou null como Novilha)
           if (Number.isFinite(p) && p >= 1) {
             if (p >= 3) cat = "Multípara";
             else if (p === 2) cat = "Secundípara";
@@ -522,22 +257,8 @@ function Step6ProgressCompareContent() {
       }
     }
 
-    setSourceTable(usedTable);
     setRows(gotRows);
     setCategoryCol(catKey || "");
-    setIdCol(idKey || "");
-
-    if (catKey && catKey !== "__category" && idKey) {
-      const pairs: Array<{ id: string; cat: string }> = [];
-      for (const r of gotRows) {
-        const cid = r?.[idKey];
-        const ccat = r?.[catKey];
-        if (cid != null && typeof ccat === "string" && ccat.trim()) {
-          pairs.push({ id: String(cid), cat: ccat });
-        }
-      }
-      if (pairs.length) writeCategoriesToLS(farmId, pairs);
-    }
 
     const cats =
       catKey && gotRows.length
@@ -556,14 +277,6 @@ function Step6ProgressCompareContent() {
     ];
 
     setCategories(ordered);
-
-    if (ordered.length) {
-      setGroupA((prev) => (ordered.includes(prev) ? prev : ordered[0] || "Grupo A"));
-      setGroupB((prev) =>
-        ordered.includes(prev) ? prev : ordered[1] || ordered[0] || "Grupo B"
-      );
-    }
-
     setLoading(false);
   }, [farmId]);
 
@@ -605,17 +318,6 @@ function Step6ProgressCompareContent() {
     [meansByCategory]
   );
 
-  useEffect(() => {
-    setTableTraits((prev) => {
-      const next = sanitizeSelection(prev, DEFAULT_TABLE_TRAITS, presentPTAs);
-      return arraysEqual(prev, next) ? prev : next;
-    });
-    setChartTraits((prev) => {
-      const next = sanitizeSelection(prev, DEFAULT_CHART_TRAITS, presentPTAs);
-      return arraysEqual(prev, next) ? prev : next;
-    });
-  }, [presentPTAs]);
-
   /* ------------------- Tabela + Radar normalizado ------------------- */
   const view = useMemo(() => {
     const A = meansByCategory[groupA] || {};
@@ -637,7 +339,7 @@ function Step6ProgressCompareContent() {
       ],
     };
 
-    // ---------- Normalização 0–100 por eixo ----------
+    // Normalização 0–100 por eixo
     const radar = cTraits.map((k) => {
       const a = A[k] ?? 0;
       const b = B[k] ?? 0;
@@ -658,137 +360,32 @@ function Step6ProgressCompareContent() {
     });
 
     return { table, radar, presentPTAs };
-  }, [meansByCategory, groupA, groupB, tableTraits, chartTraits, presentPTAs]);
-
-  const traitBadges = (
-    selection: string[],
-    setSelection: Dispatch<SetStateAction<string[]>>
-  ) => (
-    <div className="flex flex-wrap gap-2">
-      {ALL_PTA_KEYS
-        .map((key) => ({ key, label: PTA_LABELS[key] || key.toUpperCase() }))
-        .sort((a, b) => a.label.localeCompare(b.label))
-        .map(({ key, label }) => {
-          const enabled = presentPTAs.includes(key);
-          const active = selection.includes(key);
-          return (
-            <Badge
-              key={key}
-              variant={active ? "default" : "outline"}
-              className={`cursor-pointer ${
-                enabled ? "" : "pointer-events-none opacity-40"
-              }`}
-              onClick={() =>
-                enabled &&
-                setSelection((prev) =>
-                  prev.includes(key)
-                    ? prev.filter((item) => item !== key)
-                    : [...prev, key]
-                )
-              }
-            >
-              {label}
-            </Badge>
-          );
-        })}
-    </div>
-  );
+  }, [meansByCategory, tableTraits, chartTraits, presentPTAs]);
 
   return (
     <Card ref={cardRef}>
-      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <CardHeader>
         <CardTitle>{chartTitle}</CardTitle>
-        <SingleExportButton
-          targetRef={cardRef}
-          step={5}
-          title={chartTitle}
-          slug="Comparacao_Categorias"
-        />
       </CardHeader>
 
       <CardContent className="space-y-6">
-        <div className="pdf-ignore space-y-4">
-          <div className="rounded-lg border bg-muted/20 p-4">
-            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-              <span>Fonte: <b>{sourceTable || "—"}</b></span>
-              <span>Categoria: <b>{categoryCol || "—"}</b></span>
-              <span>ID: <b>{idCol || "—"}</b></span>
-              <span>Registros: <b>{rows.length}</b></span>
-              <span>
-                LocalStorage: <b>{usedLocalStorage ? `sim (${lsPairsApplied} / ${lsKeysScanned})` : "não"}</b>
-              </span>
-              <span>
-                PTAs com dados:&nbsp;
-                <b>
-                  {presentPTAs.length
-                    ? presentPTAs.map((k) => PTA_LABELS[k] ?? k).join(", ")
-                    : "—"}
-                </b>
-              </span>
-            </div>
-          </div>
-
-          {categories.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-medium">Atalhos:</span>
-              {categories.map((c) => (
-                <Badge
-                  key={`ga-${c}`}
-                  variant={groupA === c ? "default" : "outline"}
-                  className="cursor-pointer"
-                  onClick={() => setGroupA(c)}
-                >
-                  {c}
-                </Badge>
-              ))}
-              <span className="mx-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                VS
-              </span>
-              {categories.map((c) => (
-                <Badge
-                  key={`gb-${c}`}
-                  variant={groupB === c ? "default" : "outline"}
-                  className="cursor-pointer"
-                  onClick={() => setGroupB(c)}
-                >
-                  {c}
-                </Badge>
-              ))}
-            </div>
-          )}
-
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <div className="text-sm font-semibold">PTAs para Tabela:</div>
-              {traitBadges(tableTraits, setTableTraits)}
-            </div>
-            <div className="space-y-2">
-              <div className="text-sm font-semibold">PTAs para Gráfico:</div>
-              {traitBadges(chartTraits, setChartTraits)}
-            </div>
-          </div>
-        </div>
-
         {loading && <div className="py-6 text-center text-muted-foreground">Carregando dados…</div>}
 
         {!loading && (!rows.length || !categoryCol) && (
           <div className="py-6 text-center text-muted-foreground">
-            Sem dados com categoria (nem em LocalStorage) nas tabelas {TABLE_CANDIDATES.join(", ")}.
+            Sem dados com categoria nas tabelas {TABLE_CANDIDATES.join(", ")}.
           </div>
         )}
 
         {!loading && rows.length > 0 && categoryCol && (
           <div className="space-y-6">
-            <div className="text-sm font-semibold text-muted-foreground">
-              Comparação {groupA} vs {groupB}
-            </div>
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
               <div className="overflow-x-auto rounded-lg border bg-background">
                 <table className="w-full border-collapse text-sm">
                   <thead>
                     <tr className="border-b bg-muted/30">
                       <th className="py-2 px-3 text-left font-semibold">Grupo</th>
-                      {tableTraits.map((t) => (
+                      {tableTraits.filter(t => presentPTAs.includes(t)).map((t) => (
                         <th key={`th-${t}`} className="py-2 px-3 text-left font-semibold">
                           {(PTA_LABELS[t] ?? t).toUpperCase()}
                         </th>
@@ -802,7 +399,7 @@ function Step6ProgressCompareContent() {
                         className={`border-b ${idx === 2 ? "bg-muted/20" : ""}`}
                       >
                         <td className="py-2 px-3 font-medium">{r.label}</td>
-                        {tableTraits.map((t) => {
+                        {tableTraits.filter(t => presentPTAs.includes(t)).map((t) => {
                           const val = r[t] as number | null | undefined;
                           const isChange = idx === 2;
                           const isPos = (val ?? 0) > 0;
@@ -860,7 +457,6 @@ function Step6ProgressCompareContent() {
 
                         <Legend 
                           formatter={(value: string) => {
-                            // Ocultar entradas técnicas (band25, band50, etc.) da legenda
                             if (value.startsWith("band")) return null;
                             return value;
                           }}
@@ -879,4 +475,3 @@ function Step6ProgressCompareContent() {
     </Card>
   );
 }
-

@@ -2,12 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
 import { PTA_CATALOG } from "@/lib/pta";
 import { useAGFilters } from "@/features/auditoria/store";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,14 +14,10 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  Cell,
 } from "recharts";
-import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
-import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
-import { useRegisterChart } from "@/components/pdf/useRegisterChart";
 import { Target } from "lucide-react";
 
-const DEFAULT_SELECTED: string[] = ["hhp_dollar"];
+const DEFAULT_SELECTED: string[] = ["hhp_dollar", "tpi", "nm_dollar", "dpr", "pl", "scs"];
 const BINS = 30;
 
 // ========== Interfaces ==========
@@ -39,7 +30,6 @@ interface DescriptiveStats {
   q1: number;
   q3: number;
   cv: number;
-  skewness: number;
 }
 
 interface IdealBenchmark {
@@ -84,96 +74,25 @@ function calculateDescriptiveStats(values: number[]): DescriptiveStats {
   const n = sorted.length;
   
   if (n === 0) {
-    return { mean: 0, median: 0, std: 0, min: 0, max: 0, q1: 0, q3: 0, cv: 0, skewness: 0 };
+    return { mean: 0, median: 0, std: 0, min: 0, max: 0, q1: 0, q3: 0, cv: 0 };
   }
 
-  // Média
   const mean = sorted.reduce((sum, v) => sum + v, 0) / n;
-
-  // Mediana
   const median = n % 2 === 0 
     ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2 
     : sorted[Math.floor(n / 2)];
 
-  // Desvio padrão
   const variance = sorted.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / n;
   const std = Math.sqrt(variance);
 
-  // Quartis
   const q1Index = Math.floor(n * 0.25);
   const q3Index = Math.floor(n * 0.75);
   const q1 = sorted[q1Index];
   const q3 = sorted[q3Index];
 
-  // Coeficiente de variação
   const cv = mean !== 0 ? (std / Math.abs(mean)) * 100 : 0;
 
-  // Skewness (assimetria)
-  const skewness = n > 2
-    ? sorted.reduce((sum, v) => sum + Math.pow((v - mean) / std, 3), 0) / n
-    : 0;
-
-  return {
-    mean,
-    median,
-    std,
-    min: sorted[0],
-    max: sorted[n - 1],
-    q1,
-    q3,
-    cv,
-    skewness,
-  };
-}
-
-function generateCriticalComments(traitKey: string, stats: DescriptiveStats, total: number): string[] {
-  const comments: string[] = [];
-  const benchmark = IDEAL_BENCHMARKS[traitKey];
-
-  // Análise de média vs benchmark
-  if (benchmark) {
-    if (stats.mean < benchmark.min) {
-      comments.push(`⚠️ Média atual (${stats.mean.toFixed(1)}) está abaixo do mínimo desejável (${benchmark.min}). ${benchmark.description}.`);
-    } else if (stats.mean >= benchmark.ideal) {
-      comments.push(`✅ Média atual (${stats.mean.toFixed(1)}) atingiu o nível ideal (≥${benchmark.ideal}). Rebanho com excelente mérito genético.`);
-    } else {
-      comments.push(`📊 Média atual (${stats.mean.toFixed(1)}) está em nível intermediário. Meta ideal: ≥${benchmark.ideal}.`);
-    }
-  }
-
-  // Análise de variabilidade (CV)
-  if (stats.cv < 15) {
-    comments.push(`✓ Baixa variabilidade (CV=${stats.cv.toFixed(1)}%). Rebanho homogêneo com seleção consistente.`);
-  } else if (stats.cv < 30) {
-    comments.push(`→ Variabilidade moderada (CV=${stats.cv.toFixed(1)}%). Há espaço para uniformização genética.`);
-  } else {
-    comments.push(`⚠️ Alta variabilidade (CV=${stats.cv.toFixed(1)}%). Rebanho heterogêneo - considerar intensificar seleção.`);
-  }
-
-  // Análise de assimetria (skewness)
-  if (Math.abs(stats.skewness) < 0.5) {
-    comments.push(`✓ Distribuição simétrica (normal). Seleção equilibrada sem viés direcional.`);
-  } else if (stats.skewness > 0.5) {
-    comments.push(`→ Distribuição assimétrica à direita. Concentração de animais com valores abaixo da média - oportunidade de seleção.`);
-  } else {
-    comments.push(`→ Distribuição assimétrica à esquerda. Concentração de animais com valores acima da média - seleção positiva evidente.`);
-  }
-
-  // Análise de outliers
-  const iqr = stats.q3 - stats.q1;
-  const lowerFence = stats.q1 - 1.5 * iqr;
-  const upperFence = stats.q3 + 1.5 * iqr;
-  if (stats.min < lowerFence || stats.max > upperFence) {
-    comments.push(`📌 Presença de outliers detectada. Avaliar animais extremos para decisões de descarte ou acasalamento estratégico.`);
-  }
-
-  // Recomendação final
-  if (benchmark && stats.mean < benchmark.ideal) {
-    const gap = benchmark.ideal - stats.mean;
-    comments.push(`🎯 Recomendação: Para atingir o ideal, aumentar média em ${gap.toFixed(1)} pontos através de acasalamento com touros de alto mérito (>+${(gap * 2).toFixed(0)}).`);
-  }
-
-  return comments;
+  return { mean, median, std, min: sorted[0], max: sorted[n - 1], q1, q3, cv };
 }
 
 function buildHistogram(values: number[], bins: number, stats: DescriptiveStats) {
@@ -195,8 +114,6 @@ function buildHistogram(values: number[], bins: number, stats: DescriptiveStats)
     const start = min + i * width;
     const end = start + width;
     const midpoint = (start + end) / 2;
-    
-    // Calcular z-score do midpoint para colorir barras
     const zScore = stats.std !== 0 ? Math.abs((midpoint - stats.mean) / stats.std) : 0;
     
     return {
@@ -219,30 +136,19 @@ type TraitSeries = {
   total: number;
   values: number[];
   stats: DescriptiveStats;
-  comments: string[];
 };
 
-function EnhancedHistogramCard({ step, series }: { step: number; series: TraitSeries }) {
+function HistogramCard({ series }: { series: TraitSeries }) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const title = `${series.label}`;
-  useRegisterChart(`step${step}-distribuicao-${series.traitKey}`, step, `${series.label} (n=${series.total})`, cardRef);
-
   const { stats } = series;
   const benchmark = IDEAL_BENCHMARKS[series.traitKey];
 
-  // Definir cor das barras baseado no z-score
-  const getBarColor = (zScore: number) => {
-    if (zScore < 0.5) return "hsl(var(--chart-1))"; // Verde - próximo da média
-    if (zScore < 1.5) return "hsl(var(--chart-2))"; // Amarelo - moderado
-    return "hsl(var(--chart-3))"; // Vermelho - distante
-  };
-
   return (
     <Card ref={cardRef} className="w-full">
-      <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+      <CardHeader className="pb-3">
         <div className="flex-1">
           <CardTitle className="text-xl mb-2 flex items-center gap-2">
-            {title}
+            {series.label}
             <Badge variant="outline" className="text-xs">
               n={series.total}
             </Badge>
@@ -286,18 +192,11 @@ function EnhancedHistogramCard({ step, series }: { step: number; series: TraitSe
             </div>
           )}
         </div>
-
-        <SingleExportButton
-          targetRef={cardRef}
-          step={step}
-          title={`${series.label} (n=${series.total})`}
-          slug={`Distribuicao_${series.traitKey}`}
-        />
       </CardHeader>
 
       <CardContent className="space-y-4 px-4 pb-4">
-        {/* Histograma Grande */}
-        <div className="h-96">
+        {/* Histograma com barras pretas */}
+        <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={series.data}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -333,33 +232,27 @@ function EnhancedHistogramCard({ step, series }: { step: number; series: TraitSe
                 }}
               />
 
-              {/* Barras com cor dinâmica baseada no z-score */}
-              <Bar dataKey="n" radius={[4, 4, 0, 0]}>
-                {series.data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={getBarColor(entry.zScore)} />
-                ))}
-              </Bar>
+              {/* Barras pretas sólidas */}
+              <Bar dataKey="n" radius={[4, 4, 0, 0]} fill="#000000" />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Legenda de cores */}
+        {/* Legenda de categorias */}
         <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded" style={{ backgroundColor: "hsl(var(--chart-1))" }} />
+            <div className="w-3 h-3 rounded bg-foreground" />
             <span>Próximo da média (±0.5σ)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded" style={{ backgroundColor: "hsl(var(--chart-2))" }} />
+            <div className="w-3 h-3 rounded bg-muted-foreground" />
             <span>Moderado (0.5σ - 1.5σ)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded" style={{ backgroundColor: "hsl(var(--chart-3))" }} />
+            <div className="w-3 h-3 rounded bg-muted" />
             <span>Distante (&gt;1.5σ)</span>
           </div>
         </div>
-
-        {/* Comentários críticos desabilitados temporariamente */}
       </CardContent>
     </Card>
   );
@@ -369,31 +262,10 @@ export default function Step7Distribuicao() {
   const { farmId } = useAGFilters();
   const allTraits = useAllTraits();
 
-  const [selected, setSelected] = useState<string[]>(DEFAULT_SELECTED);
-  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [series, setSeries] = useState<TraitSeries[]>([]);
 
-  const filteredCatalog = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return allTraits;
-    return allTraits.filter(
-      (t) =>
-        t.label.toLowerCase().includes(q) ||
-        t.key.toLowerCase().includes(q)
-    );
-  }, [allTraits, search]);
-
-  const toggleTrait = (key: string) => {
-    setSelected((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    );
-  };
-
-  const selectAll = () => setSelected(allTraits.map((t) => t.key));
-  const clearAll = () => setSelected([]);
-
-  // Busca paginada para obter todos os registros (sem limite de 1000)
+  // Busca paginada para obter todos os registros
   async function fetchAllPaginated(
     selectStr: string, 
     farmIdVal: string
@@ -428,19 +300,18 @@ export default function Step7Distribuicao() {
   useEffect(() => {
     let isMounted = true;
     async function run() {
-      if (!farmId || selected.length === 0) {
+      if (!farmId) {
         setSeries([]);
         return;
       }
       setLoading(true);
       try {
-        const cols = ["id", ...selected];
+        const cols = ["id", ...DEFAULT_SELECTED];
         const selectStr = cols.map((c) => `"${c}"`).join(", ");
 
-        // Usa paginação em vez de limit fixo
         const data = await fetchAllPaginated(selectStr, String(farmId));
 
-        const out: TraitSeries[] = selected.map((traitKey) => {
+        const out: TraitSeries[] = DEFAULT_SELECTED.map((traitKey) => {
           const values = (data ?? [])
             .map((row: any) => {
               const v = row?.[traitKey];
@@ -450,14 +321,7 @@ export default function Step7Distribuicao() {
             .filter((v: number) => Number.isFinite(v)) as number[];
 
           const label = allTraits.find((t) => t.key === traitKey)?.label ?? traitKey;
-          
-          // Calcular estatísticas descritivas
           const stats = calculateDescriptiveStats(values);
-          
-          // Gerar comentários críticos
-          const comments = generateCriticalComments(traitKey, stats, values.length);
-          
-          // Construir histograma com as estatísticas
           const histogramData = buildHistogram(values, BINS, stats);
           
           return {
@@ -467,7 +331,6 @@ export default function Step7Distribuicao() {
             total: values.length,
             values,
             stats,
-            comments,
           };
         });
 
@@ -483,105 +346,21 @@ export default function Step7Distribuicao() {
     return () => {
       isMounted = false;
     };
-  }, [farmId, selected, allTraits]);
+  }, [farmId, allTraits]);
 
   return (
-    <ChartExportProvider>
-      <BatchExportBar step={7} />
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Step 7 — Distribuição de PTAs (Análise Técnica Completa)</CardTitle>
-          <div className="text-sm text-muted-foreground space-y-1">
-            <p>Análise detalhada da distribuição de características genéticas com estatísticas descritivas completas.</p>
-            <p className="text-xs">
-              Cada histograma apresenta: média, mediana, desvio padrão, quartis, coeficiente de variação e comentários críticos automáticos 
-              comparando com metas ideais de seleção.
-            </p>
-          </div>
-        </CardHeader>
+    <div className="space-y-6">
+      {loading && <div className="text-sm text-muted-foreground">Carregando…</div>}
 
-        <CardContent className="space-y-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap items-center gap-2">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm">
-                  Escolher PTAs ({selected.length})
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-96 p-3">
-                <div className="mb-2 flex items-center gap-2">
-                  <Input
-                    placeholder="Buscar PTA…"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                  <Button variant="outline" size="sm" onClick={selectAll}>
-                    Selecionar todos
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={clearAll}>
-                    Limpar
-                  </Button>
-                </div>
-                <div className="max-h-72 overflow-auto space-y-1 pr-1">
-                  {filteredCatalog.map((t) => (
-                    <label
-                      key={t.key}
-                      className={cn(
-                        "flex items-center gap-2 rounded-md px-2 py-1 cursor-pointer hover:bg-muted"
-                      )}
-                    >
-                      <Checkbox
-                        checked={selected.includes(t.key)}
-                        onCheckedChange={() => toggleTrait(t.key)}
-                      />
-                      <span className="text-sm">{t.label}</span>
-                      <span className="text-xs text-muted-foreground ml-auto">{t.key}</span>
-                    </label>
-                  ))}
-                </div>
-              </PopoverContent>
-            </Popover>
+      {series.map((s) => (
+        <HistogramCard key={s.traitKey} series={s} />
+      ))}
 
-            <div className="flex gap-2 flex-wrap">
-              {selected
-                .slice()
-                .sort((a, b) =>
-                  a === "hhp_dollar" ? -1 : b === "hhp_dollar" ? 1 : 0
-                )
-                .map((k) => {
-                  const label = allTraits.find((t) => t.key === k)?.label ?? k;
-                  return (
-                    <Badge
-                      key={k}
-                      variant={k === "hhp_dollar" ? "default" : "secondary"}
-                      className="cursor-pointer"
-                      onClick={() => toggleTrait(k)}
-                      title="Clique para remover"
-                    >
-                      {label}
-                    </Badge>
-                  );
-                })}
-            </div>
-            </div>
-
-            {loading && <div className="text-sm text-muted-foreground">Carregando…</div>}
-          </div>
-
-          <div className="space-y-6">
-            {series.map((s) => (
-              <EnhancedHistogramCard key={s.traitKey} step={7} series={s} />
-            ))}
-          </div>
-
-          {series.length === 0 && (
-            <div className="text-sm text-muted-foreground">
-              Selecione ao menos uma PTA para visualizar a distribuição.
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </ChartExportProvider>
+      {series.length === 0 && !loading && (
+        <div className="text-sm text-muted-foreground">
+          Nenhum dado disponível.
+        </div>
+      )}
+    </div>
   );
 }
