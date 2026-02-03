@@ -15,14 +15,17 @@ import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { 
   FileText, 
   Download, 
   Settings2, 
-  ChevronDown, 
-  ChevronUp,
   Loader2,
-  CheckCircle2,
   BarChart3,
   Target,
   Beaker,
@@ -65,11 +68,13 @@ const REPORT_ICONS: Record<string, React.ReactNode> = {
 
 const REPORT_GROUPS = [
   {
+    id: 'herd',
     title: 'Dados do Rebanho',
     types: ['herd_summary', 'segmentation'] as ReportType[],
   },
   {
-    title: 'Auditoria Genética',
+    id: 'auditoria',
+    title: 'Auditoria Genética (7 Etapas)',
     types: [
       'auditoria_step1',
       'auditoria_step2', 
@@ -81,6 +86,7 @@ const REPORT_GROUPS = [
     ] as ReportType[],
   },
   {
+    id: 'analysis',
     title: 'Análises e Projeções',
     types: ['botijao', 'projecao', 'trends', 'metas', 'nexus'] as ReportType[],
   },
@@ -110,28 +116,24 @@ export default function GeneralReportModal({
     reset,
   } = useGeneralReport();
 
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['Dados do Rebanho', 'Auditoria Genética']));
   const [showRenderer, setShowRenderer] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const { addReport } = useFileStore();
   const { toast } = useToast();
 
-  const toggleGroup = (title: string) => {
-    setExpandedGroups(prev => {
-      const next = new Set(prev);
-      if (next.has(title)) {
-        next.delete(title);
-      } else {
-        next.add(title);
-      }
-      return next;
-    });
-  };
-
   const handleSelectAllAuditoria = () => {
     const auditoriaReports = reports.filter(r => r.type.startsWith('auditoria_'));
     const allSelected = auditoriaReports.every(r => r.enabled);
     toggleAllAuditoria(!allSelected);
+  };
+
+  const handleSelectAllGroup = (groupTypes: ReportType[]) => {
+    const groupReports = reports.filter(r => groupTypes.includes(r.type));
+    const allSelected = groupReports.every(r => r.enabled);
+    groupReports.forEach(r => {
+      if (allSelected && r.enabled) toggleReport(r.type);
+      if (!allSelected && !r.enabled) toggleReport(r.type);
+    });
   };
 
   const handleGenerate = useCallback(async () => {
@@ -148,8 +150,9 @@ export default function GeneralReportModal({
     setGenerating(true);
     setShowRenderer(true);
 
-    // Wait for renderer to mount and render
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Wait for renderer to mount and render charts (needs time for async data fetching)
+    setProgress(5, 'Carregando dados dos relatórios...');
+    await new Promise(resolve => setTimeout(resolve, 3500));
 
     try {
       const blob = await generateGeneralReport(
@@ -165,14 +168,11 @@ export default function GeneralReportModal({
       );
 
       if (blob) {
-        // Generate filename
         const date = new Date().toISOString().split('T')[0];
         const filename = `Relatorio_Geral_${farmName.replace(/\s+/g, '_')}_${date}.pdf`;
 
-        // Download the file
         downloadPDF(blob, filename);
 
-        // Save to file store
         addReport({
           name: filename,
           type: 'general_report' as any,
@@ -196,7 +196,6 @@ export default function GeneralReportModal({
           description: 'O arquivo foi baixado e salvo na Pasta de Arquivos.',
         });
 
-        // Close modal after success
         setTimeout(() => {
           onOpenChange(false);
           reset();
@@ -257,56 +256,50 @@ export default function GeneralReportModal({
           ) : (
             <>
               <ScrollArea className="flex-1 max-h-[50vh] pr-4">
-                <div className="space-y-4">
+                <Accordion 
+                  type="multiple" 
+                  defaultValue={['herd', 'auditoria', 'analysis']}
+                  className="w-full"
+                >
                   {REPORT_GROUPS.map(group => {
                     const groupReports = reports.filter(r => group.types.includes(r.type));
                     const selectedInGroup = groupReports.filter(r => r.enabled).length;
-                    const isExpanded = expandedGroups.has(group.title);
-                    const isAuditoria = group.title === 'Auditoria Genética';
+                    const allSelected = groupReports.every(r => r.enabled);
+                    const isAuditoria = group.id === 'auditoria';
 
                     return (
-                      <div key={group.title} className="border rounded-lg">
-                        <button
-                          type="button"
-                          onClick={() => toggleGroup(group.title)}
-                          className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{group.title}</span>
+                      <AccordionItem key={group.id} value={group.id} className="border rounded-lg mb-2 px-1">
+                        <AccordionTrigger className="hover:no-underline py-3 px-2">
+                          <div className="flex items-center gap-3 flex-1">
+                            <span className="font-medium text-left">{group.title}</span>
                             {selectedInGroup > 0 && (
-                              <Badge variant="secondary" className="text-xs">
-                                {selectedInGroup} selecionado{selectedInGroup > 1 ? 's' : ''}
+                              <Badge variant="default" className="text-xs">
+                                {selectedInGroup}/{groupReports.length}
                               </Badge>
                             )}
                           </div>
-                          {isExpanded ? (
-                            <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </button>
-
-                        {isExpanded && (
-                          <div className="px-3 pb-3 space-y-2">
-                            {isAuditoria && (
-                              <div className="flex items-center justify-between py-2 border-b mb-2">
-                                <span className="text-sm text-muted-foreground">
-                                  Selecionar todos os steps
-                                </span>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={handleSelectAllAuditoria}
-                                >
-                                  {groupReports.every(r => r.enabled) ? 'Desmarcar' : 'Marcar'} Todos
-                                </Button>
-                              </div>
-                            )}
-                            
+                        </AccordionTrigger>
+                        <AccordionContent className="pt-2 pb-4 px-2">
+                          {/* Botão Selecionar Todos */}
+                          <div className="flex items-center justify-between pb-3 mb-3 border-b">
+                            <span className="text-sm text-muted-foreground">
+                              {isAuditoria ? 'Selecionar todas as etapas' : 'Selecionar todos'}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => isAuditoria ? handleSelectAllAuditoria() : handleSelectAllGroup(group.types)}
+                            >
+                              {allSelected ? 'Desmarcar Todos' : 'Marcar Todos'}
+                            </Button>
+                          </div>
+                          
+                          {/* Lista de relatórios individuais */}
+                          <div className="space-y-1">
                             {groupReports.map(report => (
                               <label
                                 key={report.type}
-                                className="flex items-start gap-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer"
+                                className="flex items-start gap-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer transition-colors"
                               >
                                 <Checkbox
                                   checked={report.enabled}
@@ -315,7 +308,7 @@ export default function GeneralReportModal({
                                 />
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2">
-                                    {REPORT_ICONS[report.type]}
+                                    <span className="text-muted-foreground">{REPORT_ICONS[report.type]}</span>
                                     <span className="font-medium text-sm">{report.label}</span>
                                   </div>
                                   <p className="text-xs text-muted-foreground mt-0.5">
@@ -325,11 +318,11 @@ export default function GeneralReportModal({
                               </label>
                             ))}
                           </div>
-                        )}
-                      </div>
+                        </AccordionContent>
+                      </AccordionItem>
                     );
                   })}
-                </div>
+                </Accordion>
               </ScrollArea>
 
               <Separator />
