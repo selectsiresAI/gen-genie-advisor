@@ -13,7 +13,7 @@ import Step7Distribuicao from '@/features/auditoria/steps/Step7Distribuicao';
 
 // Import report sections
 import HerdSummarySectionContent from './sections/HerdSummarySection';
-
+import SegmentationSectionContent from './sections/SegmentationSection';
 interface ReportSectionRendererProps {
   farmId: string;
   farmName: string;
@@ -71,11 +71,11 @@ function HerdSummarySection({ farmId, farmName }: { farmId: string; farmName: st
   );
 }
 
-// Segmentation Section
+// Segmentation Section - using real component
 function SegmentationSection({ farmId, farmName }: { farmId: string; farmName: string }) {
   return (
     <SectionWrapper type="segmentation" title="Segmentação do Rebanho">
-      <PlaceholderSection title="Classificação Superior/Intermediário/Inferior" farmName={farmName} />
+      <SegmentationSectionContent farmId={farmId} farmName={farmName} />
     </SectionWrapper>
   );
 }
