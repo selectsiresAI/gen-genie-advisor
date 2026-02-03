@@ -1,183 +1,145 @@
 
 
-# Plano Atualizado: Simplificação das Etapas da Auditoria Genética
+# Plano: Restaurar Auditoria Genética e Criar Versões para Relatório
 
-## Objetivo
-Simplificar quatro etapas da Auditoria Genética, removendo elementos de interação e mantendo apenas os dados relevantes para o relatório.
+## Problema Identificado
 
----
+Eu modifiquei incorretamente os componentes originais da Auditoria Genética:
+- `Step3QuartisOverview.tsx` - Removido painel de seleção de PTAs
+- `Step5Progressao.tsx` - Removidos filtros de categoria e opções
+- `Step6ProgressCompare.tsx` - Removido painel de debug e badges de seleção
+- `Step7Distribuicao.tsx` - Removido Popover de seleção e alterado visual
 
-## 1. Quartis Overview (Step3QuartisOverview.tsx)
-
-**Simplificação:** Manter SOMENTE a tabela com os dados relevantes.
-
-**Elementos a Remover:**
-- Card de seleção de características (lado esquerdo)
-- Botões "Selecionar todas" e "Limpar"
-- ScrollArea com checkboxes
-- Botão "Atualizar"
-- BatchExportBar
-- SingleExportButton
-
-**Elementos a Manter:**
-- Tabela de resultados com colunas: PTA | N total | Top 25% (N) | Média Top 25% | Bottom 25% (N) | Média Bottom 25%
-- Carregamento automático com PTAs padrão
+As simplificações deveriam aparecer **apenas no Relatório Geral**, não na interface interativa da Auditoria.
 
 ---
 
-## 2. Progressão (Step5Progressao.tsx)
+## Solução
 
-**Simplificação:** Manter SOMENTE os gráficos de linha com tendência.
+### Estratégia: Dois Conjuntos de Componentes
 
-**Elementos a Remover:**
-- Filtros de categoria
-- Checkboxes de opções
-- Cards de estatísticas por categoria
-- Seletor de PTAs
-- BatchExportBar
-- SingleExportButton
+1. **Componentes Interativos** (para Auditoria Genética)
+   - Restaurar funcionalidades completas
+   - Manter em `src/features/auditoria/steps/`
 
-**Elementos a Manter:**
-- Gráfico de linha (Média Anual Por Ano De Nascimento) com tendência
-- Tabela de médias por ano
-- Título e subtítulo
-- Valor de R² na legenda
+2. **Componentes Simplificados** (para Relatório Geral)
+   - Criar versões novas em `src/components/reports/sections/`
+   - Usar no `ReportSectionRenderer.tsx`
 
 ---
 
-## 3. Comparação por Categoria (Step6ProgressCompare.tsx)
+## Arquivos a Modificar/Criar
 
-**Simplificação:** Manter SOMENTE tabela comparativa e radar chart.
-
-**Elementos a Remover:**
-- Painel de informações de debug
-- Badges de seleção de grupos
-- Badges de seleção de PTAs
-- BatchExportBar
-- SingleExportButton
-
-**Elementos a Manter:**
-- Layout grid: tabela à esquerda + radar à direita
-- Tabela com: Grupo | PTAs selecionadas...
-- Linhas: Grupo A, Grupo B, Change
-- Radar Chart normalizado
-
----
-
-## 4. Distribuição de PTAs (Step7Distribuicao.tsx)
-
-**Conforme as imagens de referência, manter:**
-
-### Imagem 1 - Cabeçalho com Estatísticas:
-```
-DPR (n=271)
-┌─────────┬─────────┬──────────────┬────────┬──────────────┬───────────┐
-│ Média   │ Mediana │ Desvio Padrão│  CV%   │  Mín - Máx   │  Q1 - Q3  │
-│  0.25   │  0.20   │    1.14      │ 458.4% │ -3.2 – 2.8   │ -0.4 – 1.1│
-└─────────┴─────────┴──────────────┴────────┴──────────────┴───────────┘
-⊙ Meta ideal: ≥2.5 (Taxa de prenhez elevada)
-```
-
-### Imagem 2 - Histograma com barras pretas:
-- Barras sólidas pretas (`fill="#000000"`)
-- Eixo Y: "Frequência"
-- Eixo X: intervalos de valores
-- Altura fixa para visualização adequada
-
-### Imagem 3 - Legenda de categorias:
-```
-○ Próximo da média (±0.5σ)   ○ Moderado (0.5σ - 1.5σ)   ○ Distante (>1.5σ)
-```
-
-**Elementos a Remover:**
-- Popover de seleção de PTAs
-- Botões "Selecionar todos" e "Limpar"
-- Campo de busca
-- Badges de PTAs selecionadas
-- BatchExportBar
-- SingleExportButton (removido conforme solicitado)
-
-**Elementos a Manter:**
-- Título da PTA com badge n=total
-- Grid de 6 estatísticas (Média, Mediana, Desvio Padrão, CV%, Mín-Máx, Q1-Q3)
-- Meta ideal com ícone Target
-- Histograma com barras pretas sólidas
-- Legenda de categorias (3 níveis)
-
----
-
-## Modificações Técnicas por Arquivo
-
-### Step7Distribuicao.tsx - Detalhes:
-
-1. **Remover SingleExportButton** (linhas 290-295):
-```tsx
-// REMOVER:
-<SingleExportButton
-  targetRef={cardRef}
-  step={step}
-  title={...}
-  slug={...}
-/>
-```
-
-2. **Manter barras pretas** - Modificar função `getBarColor` para retornar sempre preto:
-```tsx
-// ANTES:
-const getBarColor = (zScore: number) => {
-  if (zScore < 0.5) return "hsl(var(--chart-1))";
-  if (zScore < 1.5) return "hsl(var(--chart-2))";
-  return "hsl(var(--chart-3))";
-};
-
-// DEPOIS:
-const getBarColor = () => "#000000";
-```
-
-3. **Remover controles de seleção** (linhas 504-567):
-   - Remover Popover inteiro
-   - Remover badges de PTAs selecionadas
-   - Usar PTAs padrão fixas
-
-4. **Remover BatchExportBar** (linha 490)
-
-5. **Manter legenda de categorias** - Ela aparece na imagem 3, mantém o layout visual
-
----
-
-## Arquivos a Modificar
+### 1. Restaurar Componentes Originais
 
 | Arquivo | Ação |
 |---------|------|
-| `src/features/auditoria/steps/Step3QuartisOverview.tsx` | Remover painel de seleção, BatchExportBar, SingleExportButton |
-| `src/features/auditoria/steps/Step5Progressao.tsx` | Remover filtros e estatísticas extras, BatchExportBar, SingleExportButton |
-| `src/features/auditoria/steps/Step6ProgressCompare.tsx` | Remover painel de debug e badges, BatchExportBar, SingleExportButton |
-| `src/features/auditoria/steps/Step7Distribuicao.tsx` | Remover Popover de seleção, BatchExportBar, SingleExportButton; usar barras pretas |
+| `Step3QuartisOverview.tsx` | **Restaurar** - Adicionar painel de seleção de PTAs, botões, BatchExportBar |
+| `Step5Progressao.tsx` | **Restaurar** - Adicionar filtros de categoria, checkboxes, cards de estatísticas |
+| `Step6ProgressCompare.tsx` | **Restaurar** - Adicionar painel de debug, badges de seleção de grupos/PTAs |
+| `Step7Distribuicao.tsx` | **Restaurar** - Adicionar Popover de seleção de PTAs, cores por z-score |
+
+### 2. Criar Componentes para Relatório
+
+| Arquivo | Ação |
+|---------|------|
+| `src/components/reports/sections/AuditoriaStep3Section.tsx` | **Criar** - Versão simplificada (só tabela) |
+| `src/components/reports/sections/AuditoriaStep4Section.tsx` | **Criar** - Versão simplificada (só gráficos + tabela) |
+| `src/components/reports/sections/AuditoriaStep5Section.tsx` | **Criar** - Versão simplificada (tabela + radar) |
+| `src/components/reports/sections/AuditoriaStep7Section.tsx` | **Criar** - Versão simplificada (barras pretas, sem seletor) |
+
+### 3. Atualizar ReportSectionRenderer
+
+| Arquivo | Ação |
+|---------|------|
+| `ReportSectionRenderer.tsx` | **Modificar** - Usar novos componentes simplificados em vez dos originais |
 
 ---
 
-## Resultado Visual Esperado para Step7
+## Detalhes da Restauração
 
-Para cada PTA selecionada:
+### Step3QuartisOverview (Restaurar)
+Funcionalidades a adicionar:
+- Grid de 2 colunas: seleção à esquerda, tabela à direita
+- Card de seleção com ScrollArea de checkboxes
+- Botões "Selecionar todas" e "Limpar"
+- Botão "Atualizar" para recarregar
+- BatchExportBar e SingleExportButton
 
+### Step5Progressao (Restaurar)
+Funcionalidades a adicionar:
+- Seletor de PTAs
+- Filtros de categoria (Bezerra, Novilha, Primípara, etc.)
+- Checkboxes "Mostrar média geral" e "Mostrar tendência"
+- Cards de estatísticas por categoria
+- BatchExportBar e SingleExportButton
+
+### Step6ProgressCompare (Restaurar)
+Funcionalidades a adicionar:
+- Painel de debug (Fonte, Categoria, ID, Registros, etc.)
+- Badges de seleção de grupos (A e B)
+- Badges de seleção de PTAs para tabela
+- Badges de seleção de PTAs para gráfico
+- BatchExportBar e SingleExportButton
+
+### Step7Distribuicao (Restaurar)
+Funcionalidades a adicionar:
+- Popover de seleção de PTAs com busca
+- Botões "Todas" e "Limpar"
+- Badges de PTAs selecionadas
+- Cores dinâmicas por z-score
+- BatchExportBar e SingleExportButton
+
+---
+
+## Estrutura Final
+
+```text
+src/features/auditoria/steps/
+├── Step3QuartisOverview.tsx    ← INTERATIVO (com seleção)
+├── Step5Progressao.tsx         ← INTERATIVO (com filtros)
+├── Step6ProgressCompare.tsx    ← INTERATIVO (com debug)
+├── Step7Distribuicao.tsx       ← INTERATIVO (com seleção)
+└── ...
+
+src/components/reports/sections/
+├── HerdSummarySection.tsx
+├── SegmentationSection.tsx
+├── AuditoriaStep3Section.tsx   ← RELATÓRIO (só tabela)
+├── AuditoriaStep4Section.tsx   ← RELATÓRIO (só gráficos)
+├── AuditoriaStep5Section.tsx   ← RELATÓRIO (tabela + radar)
+└── AuditoriaStep7Section.tsx   ← RELATÓRIO (barras pretas)
 ```
-┌────────────────────────────────────────────────────────────────────┐
-│ DPR (n=271)                                                        │
-├────────────────────────────────────────────────────────────────────┤
-│ ┌────────┬────────┬──────────────┬────────┬────────────┬─────────┐│
-│ │ Média  │Mediana │Desvio Padrão │  CV%   │ Mín-Máx    │ Q1-Q3   ││
-│ │  0.25  │  0.20  │    1.14      │458.4%  │ -3.2 – 2.8 │-0.4–1.1 ││
-│ └────────┴────────┴──────────────┴────────┴────────────┴─────────┘│
-│                                                                    │
-│ ⊙ Meta ideal: ≥2.5 (Taxa de prenhez elevada)                      │
-│                                                                    │
-│    ■■■■■■                                                          │
-│    ■■■■■■    ■■■■■■■■■■■■■■■■                                     │
-│    ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                               │
-│  ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                         │
-│ ──────────────────────────────────────────                         │
-│                                                                    │
-│ ○ Próximo da média (±0.5σ)  ○ Moderado (0.5-1.5σ)  ○ Distante (>1.5σ)│
-└────────────────────────────────────────────────────────────────────┘
+
+---
+
+## ReportSectionRenderer Atualizado
+
+```typescript
+// Usar componentes simplificados para o relatório
+import AuditoriaStep3Section from './sections/AuditoriaStep3Section';
+import AuditoriaStep4Section from './sections/AuditoriaStep4Section';
+import AuditoriaStep5Section from './sections/AuditoriaStep5Section';
+import AuditoriaStep7Section from './sections/AuditoriaStep7Section';
+
+// Map atualizado
+const SECTION_COMPONENTS: Record<ReportType, ...> = {
+  // ...outros
+  auditoria_step3: AuditoriaStep3Section,  // ← Nova versão simplificada
+  auditoria_step4: AuditoriaStep4Section,  // ← Nova versão simplificada
+  auditoria_step5: AuditoriaStep5Section,  // ← Nova versão simplificada
+  auditoria_step7: AuditoriaStep7Section,  // ← Nova versão simplificada
+};
 ```
+
+---
+
+## Próximos Passos
+
+Para restaurar os componentes originais, preciso acessar o histórico de versões. Você pode:
+
+1. **Usar o histórico do Lovable**: Clicar em "History" no topo do chat e restaurar uma versão anterior dos arquivos
+2. **Ou eu posso recriar**: Baseado no que sei dos arquivos originais, posso reconstruir as funcionalidades que foram removidas
+
+Qual opção você prefere?
 
