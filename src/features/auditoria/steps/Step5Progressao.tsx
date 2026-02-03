@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, memo } from "react";
+import { useEffect, useMemo, useRef, memo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { RefreshCw } from "lucide-react";
 import {
   CartesianGrid,
@@ -18,6 +20,9 @@ import { PTA_CATALOG } from "@/lib/pta";
 import { useFemales } from "../hooks";
 import { useAGFilters } from "../store";
 import { formatPtaValue } from "@/utils/ptaFormat";
+import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
+import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
+import { useRegisterChart } from "@/components/pdf/useRegisterChart";
 
 type SeriesPoint = { year: number; n: number; mean: number };
 
@@ -26,6 +31,9 @@ type TraitCardProps = {
   traitLabel: string;
   data: SeriesPoint[];
   domainTicks: number[];
+  showMean: boolean;
+  showTrend: boolean;
+  farmMean: number;
 };
 
 const avg = (values: number[]) =>
@@ -49,7 +57,7 @@ const SCS_FIXED_DOMAIN: [number, number] = [
   SCS_FIXED_TICKS[SCS_FIXED_TICKS.length - 1],
 ];
 
-// PTAs padrão fixas
+// PTAs padrão
 const DEFAULT_PTAS = ["hhp_dollar", "tpi", "nm_dollar"];
 
 function resolveTickStep(traitKey: string) {
@@ -176,16 +184,10 @@ const TraitCard = memo(function TraitCard({
   traitLabel,
   data,
   domainTicks,
+  showMean,
+  showTrend,
+  farmMean,
 }: TraitCardProps) {
-  const totals = data.reduce(
-    (acc, p) => {
-      acc.sum += p.mean * p.n;
-      acc.n += p.n;
-      return acc;
-    },
-    { sum: 0, n: 0 }
-  );
-  const farmMean = totals.n ? totals.sum / totals.n : 0;
   const slope = computeSlope(data);
   const chartData = data.map((p, i) => ({
     year: p.year,
@@ -208,27 +210,30 @@ const TraitCard = memo(function TraitCard({
 
     const values = [
       ...data.map((point) => point.mean),
-      ...(trendResult.trendLine.map((point) => point.trend)),
+      ...(showTrend && trendResult.trendLine.length ? trendResult.trendLine.map((point) => point.trend) : []),
+      ...(showMean ? [farmMean] : []),
     ].filter((value): value is number => Number.isFinite(value));
 
     return buildAxisDomain(values, tickStep);
-  }, [data, tickStep, traitKey, trendResult]);
+  }, [data, tickStep, traitKey, showTrend, showMean, farmMean, trendResult]);
 
   const cardRef = useRef<HTMLDivElement>(null);
   const displayTitle = `${traitLabel} - Média Anual Por Ano De Nascimento`;
+  useRegisterChart(`step5-progressao-${traitKey}`, 5, displayTitle, cardRef);
 
   return (
     <Card ref={cardRef} className="overflow-hidden">
-      <CardHeader className="border-b px-4 py-3">
+      <CardHeader className="border-b px-4 py-3 flex flex-row items-start justify-between">
         <div className="space-y-1">
           <CardTitle className="text-base font-semibold">{displayTitle}</CardTitle>
-          {trendResult.r2 > 0 && (
+          {showTrend && trendResult.r2 > 0 && (
             <div className="text-xs text-muted-foreground">
               Tendência (R²={trendResult.r2.toFixed(3)}): {slope >= 0 ? "+" : ""}
               {slope}/ano
             </div>
           )}
         </div>
+        <SingleExportButton targetRef={cardRef} step={5} title={displayTitle} slug={`PROGRESSAO_${traitKey.toUpperCase()}`} />
       </CardHeader>
       <CardContent className="space-y-4 p-0">
         <div className="h-80 px-4 pt-4">
@@ -260,6 +265,8 @@ const TraitCard = memo(function TraitCard({
                       typeof value === "number" ? formatPtaValue(traitKey, value) : value,
                       "Tendência (R²=" + trendResult.r2.toFixed(3) + ")",
                     ];
+                  if (name === "farmMean")
+                    return [typeof value === "number" ? formatPtaValue(traitKey, value) : value, "Média geral"];
                   if (name === "n") return [value, "N"];
                   return [value, name];
                 }}
@@ -284,6 +291,21 @@ const TraitCard = memo(function TraitCard({
                 }}
               />
 
+              {showMean && (
+                <ReferenceLine
+                  y={farmMean}
+                  stroke="#10B981"
+                  strokeWidth={1.5}
+                  strokeDasharray="8 8"
+                  label={{
+                    value: `Média: ${formatPtaValue(traitKey, farmMean)}`,
+                    position: "insideTopRight",
+                    fill: "#10B981",
+                    fontSize: 11,
+                  }}
+                />
+              )}
+
               <Line
                 type="monotone"
                 dataKey="mean"
@@ -306,7 +328,7 @@ const TraitCard = memo(function TraitCard({
                 }}
               />
 
-              {trendResult.trendLine.length === 2 && (
+              {showTrend && trendResult.trendLine.length === 2 && (
                 <Line
                   type="linear"
                   dataKey="trend"
@@ -350,9 +372,12 @@ const TraitCard = memo(function TraitCard({
   );
 });
 
-export default function Step5Progressao() {
+function Step5ProgressaoContent() {
   const { farmId, ptasSelecionadas = [], setPTAs } = useAGFilters();
   const { data: females = [], isLoading } = useFemales(farmId);
+  
+  const [showMean, setShowMean] = useState(true);
+  const [showTrend, setShowTrend] = useState(true);
 
   useEffect(() => {
     if (!ptasSelecionadas.length) {
@@ -380,10 +405,11 @@ export default function Step5Progressao() {
   }, [females]);
 
   const seriesByKey = useMemo(() => {
-    const out: Record<string, SeriesPoint[]> = {};
+    const out: Record<string, { series: SeriesPoint[]; farmMean: number }> = {};
 
     for (const key of ptasSelecionadas) {
       const byYear = new Map<number, number[]>();
+      const allValues: number[] = [];
       
       for (const f of females as any[]) {
         const y = getYearFromBirth((f as any)?.birth_date);
@@ -392,16 +418,22 @@ export default function Step5Progressao() {
           const arr = byYear.get(y as number) ?? [];
           arr.push(v);
           byYear.set(y as number, arr);
+          allValues.push(v);
         }
       }
 
-      out[key] = domainTicks
-        .map((y) => {
-          const arr = byYear.get(y) ?? [];
-          if (arr.length === 0) return null;
-          return { year: y, n: arr.length, mean: avg(arr) };
-        })
-        .filter((p): p is SeriesPoint => p !== null);
+      const farmMean = allValues.length ? avg(allValues) : 0;
+
+      out[key] = {
+        series: domainTicks
+          .map((y) => {
+            const arr = byYear.get(y) ?? [];
+            if (arr.length === 0) return null;
+            return { year: y, n: arr.length, mean: avg(arr) };
+          })
+          .filter((p): p is SeriesPoint => p !== null),
+        farmMean,
+      };
     }
     return out;
   }, [ptasSelecionadas, females, domainTicks]);
@@ -409,8 +441,44 @@ export default function Step5Progressao() {
   const labelOf = (key: string) =>
     PTA_CATALOG.find((i) => i.key === key)?.label ?? key.toUpperCase();
 
+  const togglePta = (key: string) => {
+    const newList = ptasSelecionadas.includes(key)
+      ? ptasSelecionadas.filter((k) => k !== key)
+      : [...ptasSelecionadas, key];
+    setPTAs(newList);
+  };
+
   return (
     <div className="space-y-4">
+      {/* Controles */}
+      <Card>
+        <CardContent className="pt-4 space-y-4">
+          <div className="flex flex-wrap gap-2">
+            {PTA_CATALOG.slice(0, 20).map((pta) => (
+              <Badge
+                key={pta.key}
+                variant={ptasSelecionadas.includes(pta.key) ? "default" : "outline"}
+                className="cursor-pointer"
+                onClick={() => togglePta(pta.key)}
+              >
+                {pta.label}
+              </Badge>
+            ))}
+          </div>
+          
+          <div className="flex gap-6">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox checked={showMean} onCheckedChange={(v) => setShowMean(!!v)} />
+              Mostrar média geral
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox checked={showTrend} onCheckedChange={(v) => setShowTrend(!!v)} />
+              Mostrar tendência
+            </label>
+          </div>
+        </CardContent>
+      </Card>
+
       {isLoading ? (
         <div className="flex items-center justify-center py-12 text-muted-foreground">
           <RefreshCw className="mr-2 h-6 w-6 animate-spin" /> Carregando dados...
@@ -418,21 +486,33 @@ export default function Step5Progressao() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {ptasSelecionadas.map((key) => {
-            const data = seriesByKey[key];
-            if (!data?.length) return null;
+            const item = seriesByKey[key];
+            if (!item?.series?.length) return null;
             const label = labelOf(key);
             return (
               <TraitCard
                 key={key}
                 traitKey={key}
                 traitLabel={label}
-                data={data}
+                data={item.series}
                 domainTicks={domainTicks}
+                showMean={showMean}
+                showTrend={showTrend}
+                farmMean={item.farmMean}
               />
             );
           })}
         </div>
       )}
     </div>
+  );
+}
+
+export default function Step5Progressao() {
+  return (
+    <ChartExportProvider>
+      <BatchExportBar step={5} />
+      <Step5ProgressaoContent />
+    </ChartExportProvider>
   );
 }

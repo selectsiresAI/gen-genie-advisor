@@ -9,6 +9,7 @@ import {
 } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { getAutomaticCategory } from "@/utils/femaleCategories";
 import {
   RadarChart,
@@ -21,6 +22,9 @@ import {
   Tooltip,
 } from "recharts";
 import { useAGFilters } from "../store";
+import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
+import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
+import { useRegisterChart } from "@/components/pdf/useRegisterChart";
 
 /* ================== PTAs suportadas ================== */
 const PTA_LABELS: Record<string, string> = {
@@ -143,7 +147,7 @@ function RadarTooltip(props: any) {
 type MeansByCategory = Record<string, Record<string, number | null>>;
 
 /* ================== Componente ================== */
-export default function Step6ProgressCompare() {
+function Step6ProgressCompareContent() {
   const { farmId } = useAGFilters();
 
   const [loading, setLoading] = useState(false);
@@ -151,14 +155,15 @@ export default function Step6ProgressCompare() {
   const [categories, setCategories] = useState<string[]>([]);
   const [categoryCol, setCategoryCol] = useState<string>("");
 
-  // Grupos fixos
-  const groupA = "Novilha";
-  const groupB = "Primípara";
-  const tableTraits = DEFAULT_TABLE_TRAITS;
-  const chartTraits = DEFAULT_CHART_TRAITS;
+  // Seleção de grupos e traits
+  const [groupA, setGroupA] = useState("Novilha");
+  const [groupB, setGroupB] = useState("Primípara");
+  const [tableTraits, setTableTraits] = useState<string[]>(DEFAULT_TABLE_TRAITS);
+  const [chartTraits, setChartTraits] = useState<string[]>(DEFAULT_CHART_TRAITS);
 
   const cardRef = useRef<HTMLDivElement>(null);
   const chartTitle = "Comparação por Categoria";
+  useRegisterChart("step6-progress-compare", 6, chartTitle, cardRef);
 
   // Busca paginada para obter todos os animais
   async function fetchAllAnimals(table: string, farmCol: string, farmIdVal: string): Promise<any[]> {
@@ -360,15 +365,98 @@ export default function Step6ProgressCompare() {
     });
 
     return { table, radar, presentPTAs };
-  }, [meansByCategory, tableTraits, chartTraits, presentPTAs]);
+  }, [meansByCategory, groupA, groupB, tableTraits, chartTraits, presentPTAs]);
+
+  const toggleTableTrait = (key: string) => {
+    setTableTraits(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
+  };
+
+  const toggleChartTrait = (key: string) => {
+    setChartTraits(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
+  };
 
   return (
     <Card ref={cardRef}>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>{chartTitle}</CardTitle>
+        <SingleExportButton targetRef={cardRef} step={6} title={chartTitle} slug="COMPARACAO" />
       </CardHeader>
 
       <CardContent className="space-y-6">
+        {/* Painel de informações de debug */}
+        <div className="bg-muted/50 p-3 rounded-lg text-xs space-y-1">
+          <div><strong>Fonte:</strong> {TABLE_CANDIDATES[0]} | <strong>Categoria:</strong> {categoryCol || "Não detectada"}</div>
+          <div><strong>Total registros:</strong> {rows.length} | <strong>Categorias:</strong> {categories.join(", ") || "Nenhuma"}</div>
+        </div>
+
+        {/* Seleção de grupos */}
+        <div className="flex flex-wrap gap-4">
+          <div>
+            <span className="text-xs font-semibold text-muted-foreground block mb-1">Grupo A</span>
+            <div className="flex gap-1 flex-wrap">
+              {categories.map(cat => (
+                <Badge
+                  key={`a-${cat}`}
+                  variant={groupA === cat ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => setGroupA(cat)}
+                >
+                  {cat}
+                </Badge>
+              ))}
+            </div>
+          </div>
+          <div>
+            <span className="text-xs font-semibold text-muted-foreground block mb-1">Grupo B</span>
+            <div className="flex gap-1 flex-wrap">
+              {categories.map(cat => (
+                <Badge
+                  key={`b-${cat}`}
+                  variant={groupB === cat ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => setGroupB(cat)}
+                >
+                  {cat}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Seleção de PTAs para tabela */}
+        <div>
+          <span className="text-xs font-semibold text-muted-foreground block mb-1">PTAs da Tabela</span>
+          <div className="flex gap-1 flex-wrap">
+            {ALL_PTA_KEYS.filter(k => presentPTAs.includes(k)).map(key => (
+              <Badge
+                key={`t-${key}`}
+                variant={tableTraits.includes(key) ? "default" : "outline"}
+                className="cursor-pointer text-xs"
+                onClick={() => toggleTableTrait(key)}
+              >
+                {PTA_LABELS[key] || key.toUpperCase()}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        {/* Seleção de PTAs para gráfico */}
+        <div>
+          <span className="text-xs font-semibold text-muted-foreground block mb-1">PTAs do Gráfico</span>
+          <div className="flex gap-1 flex-wrap">
+            {ALL_PTA_KEYS.filter(k => presentPTAs.includes(k)).map(key => (
+              <Badge
+                key={`c-${key}`}
+                variant={chartTraits.includes(key) ? "default" : "outline"}
+                className="cursor-pointer text-xs"
+                onClick={() => toggleChartTrait(key)}
+              >
+                {PTA_LABELS[key] || key.toUpperCase()}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
         {loading && <div className="py-6 text-center text-muted-foreground">Carregando dados…</div>}
 
         {!loading && (!rows.length || !categoryCol) && (
@@ -473,5 +561,14 @@ export default function Step6ProgressCompare() {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+export default function Step6ProgressCompare() {
+  return (
+    <ChartExportProvider>
+      <BatchExportBar step={6} />
+      <Step6ProgressCompareContent />
+    </ChartExportProvider>
   );
 }

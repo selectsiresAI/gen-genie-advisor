@@ -2,18 +2,19 @@ import React, { useEffect, useState } from 'react';
 import { ReportSelection, ReportType } from '@/hooks/useGeneralReport';
 import { useAGFilters } from '@/features/auditoria/store';
 
-// Import actual step components
+// Import actual step components for interactive use
 import Step1Parentesco from '@/features/auditoria/steps/Step1Parentesco';
 import Step2TopParents from '@/features/auditoria/steps/Step2TopParents';
-import Step3QuartisOverview from '@/features/auditoria/steps/Step3QuartisOverview';
-import Step5Progressao from '@/features/auditoria/steps/Step5Progressao';
-import Step6ProgressCompare from '@/features/auditoria/steps/Step6ProgressCompare';
 import Step7QuartisIndices from '@/features/auditoria/steps/Step7QuartisIndices';
-import Step7Distribuicao from '@/features/auditoria/steps/Step7Distribuicao';
 
-// Import report sections
+// Import simplified report sections
 import HerdSummarySectionContent from './sections/HerdSummarySection';
 import SegmentationSectionContent from './sections/SegmentationSection';
+import AuditoriaStep3Section from './sections/AuditoriaStep3Section';
+import AuditoriaStep5Section from './sections/AuditoriaStep5Section';
+import AuditoriaStep6Section from './sections/AuditoriaStep6Section';
+import AuditoriaStep7Section from './sections/AuditoriaStep7Section';
+
 interface ReportSectionRendererProps {
   farmId: string;
   farmName: string;
@@ -80,8 +81,8 @@ function SegmentationSection({ farmId, farmName }: { farmId: string; farmName: s
   );
 }
 
-// Auditoria Step 1 - Parentesco
-function AuditoriaStep1Section({ farmId, farmName }: { farmId: string; farmName: string }) {
+// Auditoria Step 1 - Parentesco (uses interactive component)
+function AuditoriaStep1SectionWrapper({ farmId, farmName }: { farmId: string; farmName: string }) {
   const setFarmId = useAGFilters(state => state.setFarmId);
   
   useEffect(() => {
@@ -95,8 +96,8 @@ function AuditoriaStep1Section({ farmId, farmName }: { farmId: string; farmName:
   );
 }
 
-// Auditoria Step 2 - Top Parents
-function AuditoriaStep2Section({ farmId, farmName }: { farmId: string; farmName: string }) {
+// Auditoria Step 2 - Top Parents (uses interactive component)
+function AuditoriaStep2SectionWrapper({ farmId, farmName }: { farmId: string; farmName: string }) {
   const setFarmId = useAGFilters(state => state.setFarmId);
   
   useEffect(() => {
@@ -110,53 +111,35 @@ function AuditoriaStep2Section({ farmId, farmName }: { farmId: string; farmName:
   );
 }
 
-// Auditoria Step 3 - Quartis Overview
-function AuditoriaStep3Section({ farmId, farmName }: { farmId: string; farmName: string }) {
-  const setFarmId = useAGFilters(state => state.setFarmId);
-  
-  useEffect(() => {
-    setFarmId(farmId);
-  }, [farmId, setFarmId]);
-
+// Auditoria Step 3 - Quartis Overview (uses SIMPLIFIED report component)
+function AuditoriaStep3SectionWrapper({ farmId, farmName }: { farmId: string; farmName: string }) {
   return (
     <SectionWrapper type="auditoria_step3" title="Auditoria - Quartis Overview">
-      <Step3QuartisOverview />
+      <AuditoriaStep3Section farmId={farmId} farmName={farmName} />
     </SectionWrapper>
   );
 }
 
-// Auditoria Step 4 - Progressão (using Step5Progressao which is the actual progression chart)
-function AuditoriaStep4Section({ farmId, farmName }: { farmId: string; farmName: string }) {
-  const setFarmId = useAGFilters(state => state.setFarmId);
-  
-  useEffect(() => {
-    setFarmId(farmId);
-  }, [farmId, setFarmId]);
-
+// Auditoria Step 4 - Progressão (uses SIMPLIFIED report component - AuditoriaStep5Section)
+function AuditoriaStep4SectionWrapper({ farmId, farmName }: { farmId: string; farmName: string }) {
   return (
     <SectionWrapper type="auditoria_step4" title="Auditoria - Progressão Genética">
-      <Step5Progressao />
+      <AuditoriaStep5Section farmId={farmId} farmName={farmName} />
     </SectionWrapper>
   );
 }
 
-// Auditoria Step 5 - Comparação (using Step6ProgressCompare)
-function AuditoriaStep5Section({ farmId, farmName }: { farmId: string; farmName: string }) {
-  const setFarmId = useAGFilters(state => state.setFarmId);
-  
-  useEffect(() => {
-    setFarmId(farmId);
-  }, [farmId, setFarmId]);
-
+// Auditoria Step 5 - Comparação (uses SIMPLIFIED report component - AuditoriaStep6Section)
+function AuditoriaStep5SectionWrapper({ farmId, farmName }: { farmId: string; farmName: string }) {
   return (
     <SectionWrapper type="auditoria_step5" title="Auditoria - Comparação por Categoria">
-      <Step6ProgressCompare />
+      <AuditoriaStep6Section farmId={farmId} farmName={farmName} />
     </SectionWrapper>
   );
 }
 
-// Auditoria Step 6 - Quartis Índices
-function AuditoriaStep6Section({ farmId, farmName }: { farmId: string; farmName: string }) {
+// Auditoria Step 6 - Quartis Índices (uses interactive component)
+function AuditoriaStep6SectionWrapper({ farmId, farmName }: { farmId: string; farmName: string }) {
   const setFarmId = useAGFilters(state => state.setFarmId);
   
   useEffect(() => {
@@ -170,17 +153,11 @@ function AuditoriaStep6Section({ farmId, farmName }: { farmId: string; farmName:
   );
 }
 
-// Auditoria Step 7 - Distribuição
-function AuditoriaStep7Section({ farmId, farmName }: { farmId: string; farmName: string }) {
-  const setFarmId = useAGFilters(state => state.setFarmId);
-  
-  useEffect(() => {
-    setFarmId(farmId);
-  }, [farmId, setFarmId]);
-
+// Auditoria Step 7 - Distribuição (uses SIMPLIFIED report component)
+function AuditoriaStep7SectionWrapper({ farmId, farmName }: { farmId: string; farmName: string }) {
   return (
     <SectionWrapper type="auditoria_step7" title="Auditoria - Distribuição de PTAs">
-      <Step7Distribuicao />
+      <AuditoriaStep7Section farmId={farmId} farmName={farmName} />
     </SectionWrapper>
   );
 }
@@ -222,13 +199,13 @@ function NexusSection({ farmId, farmName }: { farmId: string; farmName: string }
 const SECTION_COMPONENTS: Record<ReportType, React.FC<{ farmId: string; farmName: string }>> = {
   herd_summary: HerdSummarySection,
   segmentation: SegmentationSection,
-  auditoria_step1: AuditoriaStep1Section,
-  auditoria_step2: AuditoriaStep2Section,
-  auditoria_step3: AuditoriaStep3Section,
-  auditoria_step4: AuditoriaStep4Section,
-  auditoria_step5: AuditoriaStep5Section,
-  auditoria_step6: AuditoriaStep6Section,
-  auditoria_step7: AuditoriaStep7Section,
+  auditoria_step1: AuditoriaStep1SectionWrapper,
+  auditoria_step2: AuditoriaStep2SectionWrapper,
+  auditoria_step3: AuditoriaStep3SectionWrapper,
+  auditoria_step4: AuditoriaStep4SectionWrapper,
+  auditoria_step5: AuditoriaStep5SectionWrapper,
+  auditoria_step6: AuditoriaStep6SectionWrapper,
+  auditoria_step7: AuditoriaStep7SectionWrapper,
   botijao: BotijaoSection,
   projecao: ProjecaoSection,
   metas: MetasSection,

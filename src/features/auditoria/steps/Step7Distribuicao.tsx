@@ -3,6 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { PTA_CATALOG } from "@/lib/pta";
 import { useAGFilters } from "@/features/auditoria/store";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,8 +19,12 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  Cell,
 } from "recharts";
-import { Target } from "lucide-react";
+import { Target, ChevronDown, X } from "lucide-react";
+import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
+import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
+import { useRegisterChart } from "@/components/pdf/useRegisterChart";
 
 const DEFAULT_SELECTED: string[] = ["hhp_dollar", "tpi", "nm_dollar", "dpr", "pl", "scs"];
 const BINS = 30;
@@ -129,6 +138,13 @@ function buildHistogram(values: number[], bins: number, stats: DescriptiveStats)
   return data;
 }
 
+// Cores por z-score
+function getBarColor(zScore: number): string {
+  if (zScore < 0.5) return "hsl(var(--chart-1))";
+  if (zScore < 1.5) return "hsl(var(--chart-2))";
+  return "hsl(var(--chart-3))";
+}
+
 type TraitSeries = {
   traitKey: string;
   label: string;
@@ -138,14 +154,16 @@ type TraitSeries = {
   stats: DescriptiveStats;
 };
 
-function HistogramCard({ series }: { series: TraitSeries }) {
+function HistogramCard({ series, step }: { series: TraitSeries; step: number }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const { stats } = series;
   const benchmark = IDEAL_BENCHMARKS[series.traitKey];
+  const chartTitle = `Distribuição — ${series.label}`;
+  useRegisterChart(`step7-dist-${series.traitKey}`, step, chartTitle, cardRef);
 
   return (
     <Card ref={cardRef} className="w-full">
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3 flex flex-row items-start justify-between">
         <div className="flex-1">
           <CardTitle className="text-xl mb-2 flex items-center gap-2">
             {series.label}
@@ -192,10 +210,11 @@ function HistogramCard({ series }: { series: TraitSeries }) {
             </div>
           )}
         </div>
+        <SingleExportButton targetRef={cardRef} step={step} title={chartTitle} slug={`DIST_${series.traitKey.toUpperCase()}`} />
       </CardHeader>
 
       <CardContent className="space-y-4 px-4 pb-4">
-        {/* Histograma com barras pretas */}
+        {/* Histograma com cores por z-score */}
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={series.data}>
@@ -232,8 +251,11 @@ function HistogramCard({ series }: { series: TraitSeries }) {
                 }}
               />
 
-              {/* Barras pretas sólidas */}
-              <Bar dataKey="n" radius={[4, 4, 0, 0]} fill="#000000" />
+              <Bar dataKey="n" radius={[4, 4, 0, 0]}>
+                {series.data.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={getBarColor(entry.zScore)} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -241,15 +263,15 @@ function HistogramCard({ series }: { series: TraitSeries }) {
         {/* Legenda de categorias */}
         <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-foreground" />
+            <div className="w-3 h-3 rounded" style={{ backgroundColor: "hsl(var(--chart-1))" }} />
             <span>Próximo da média (±0.5σ)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-muted-foreground" />
+            <div className="w-3 h-3 rounded" style={{ backgroundColor: "hsl(var(--chart-2))" }} />
             <span>Moderado (0.5σ - 1.5σ)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-muted" />
+            <div className="w-3 h-3 rounded" style={{ backgroundColor: "hsl(var(--chart-3))" }} />
             <span>Distante (&gt;1.5σ)</span>
           </div>
         </div>
@@ -258,12 +280,22 @@ function HistogramCard({ series }: { series: TraitSeries }) {
   );
 }
 
-export default function Step7Distribuicao() {
-  const { farmId } = useAGFilters();
+function Step7DistribuicaoContent() {
+  const { farmId, ptasSelecionadas = [], setPTAs } = useAGFilters();
   const allTraits = useAllTraits();
 
   const [loading, setLoading] = useState(false);
   const [series, setSeries] = useState<TraitSeries[]>([]);
+  const [search, setSearch] = useState("");
+  const [popoverOpen, setPopoverOpen] = useState(false);
+
+  // Inicializa com PTAs padrão
+  useEffect(() => {
+    if (!ptasSelecionadas.length) {
+      setPTAs(DEFAULT_SELECTED);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Busca paginada para obter todos os registros
   async function fetchAllPaginated(
@@ -300,18 +332,18 @@ export default function Step7Distribuicao() {
   useEffect(() => {
     let isMounted = true;
     async function run() {
-      if (!farmId) {
+      if (!farmId || !ptasSelecionadas.length) {
         setSeries([]);
         return;
       }
       setLoading(true);
       try {
-        const cols = ["id", ...DEFAULT_SELECTED];
+        const cols = ["id", ...ptasSelecionadas];
         const selectStr = cols.map((c) => `"${c}"`).join(", ");
 
         const data = await fetchAllPaginated(selectStr, String(farmId));
 
-        const out: TraitSeries[] = DEFAULT_SELECTED.map((traitKey) => {
+        const out: TraitSeries[] = ptasSelecionadas.map((traitKey) => {
           const values = (data ?? [])
             .map((row: any) => {
               const v = row?.[traitKey];
@@ -346,21 +378,119 @@ export default function Step7Distribuicao() {
     return () => {
       isMounted = false;
     };
-  }, [farmId, allTraits]);
+  }, [farmId, ptasSelecionadas, allTraits]);
+
+  const filteredTraits = useMemo(() => {
+    if (!search.trim()) return allTraits;
+    const s = search.toLowerCase();
+    return allTraits.filter(t => 
+      t.label.toLowerCase().includes(s) || t.key.toLowerCase().includes(s)
+    );
+  }, [allTraits, search]);
+
+  const toggleTrait = (key: string) => {
+    const newList = ptasSelecionadas.includes(key)
+      ? ptasSelecionadas.filter((k) => k !== key)
+      : [...ptasSelecionadas, key];
+    setPTAs(newList);
+  };
+
+  const selectAll = () => {
+    setPTAs(allTraits.map(t => t.key));
+    setPopoverOpen(false);
+  };
+
+  const clearAll = () => {
+    setPTAs([]);
+  };
 
   return (
     <div className="space-y-6">
+      {/* Seletor de PTAs */}
+      <Card>
+        <CardContent className="pt-4 space-y-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  Selecionar PTAs <ChevronDown className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-0" align="start">
+                <div className="p-3 border-b">
+                  <Input
+                    placeholder="Buscar PTA..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="h-8"
+                  />
+                </div>
+                <div className="p-2 border-b flex gap-2">
+                  <Button size="sm" variant="ghost" onClick={selectAll}>Todas</Button>
+                  <Button size="sm" variant="ghost" onClick={clearAll}>Limpar</Button>
+                </div>
+                <ScrollArea className="h-[300px]">
+                  <div className="p-2 space-y-1">
+                    {filteredTraits.map((trait) => (
+                      <label
+                        key={trait.key}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm"
+                      >
+                        <Checkbox
+                          checked={ptasSelecionadas.includes(trait.key)}
+                          onCheckedChange={() => toggleTrait(trait.key)}
+                        />
+                        {trait.label}
+                      </label>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </PopoverContent>
+            </Popover>
+
+            <span className="text-sm text-muted-foreground">
+              {ptasSelecionadas.length} selecionadas
+            </span>
+          </div>
+
+          {/* Badges das PTAs selecionadas */}
+          <div className="flex gap-2 flex-wrap">
+            {ptasSelecionadas.map((key) => {
+              const label = allTraits.find(t => t.key === key)?.label ?? key;
+              return (
+                <Badge key={key} variant="secondary" className="gap-1">
+                  {label}
+                  <X
+                    className="h-3 w-3 cursor-pointer hover:text-destructive"
+                    onClick={() => toggleTrait(key)}
+                  />
+                </Badge>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
       {loading && <div className="text-sm text-muted-foreground">Carregando…</div>}
 
       {series.map((s) => (
-        <HistogramCard key={s.traitKey} series={s} />
+        <HistogramCard key={s.traitKey} series={s} step={7} />
       ))}
 
       {series.length === 0 && !loading && (
         <div className="text-sm text-muted-foreground">
-          Nenhum dado disponível.
+          Selecione PTAs para visualizar a distribuição.
         </div>
       )}
     </div>
+  );
+}
+
+export default function Step7Distribuicao() {
+  return (
+    <ChartExportProvider>
+      <BatchExportBar step={7} />
+      <Step7DistribuicaoContent />
+    </ChartExportProvider>
   );
 }

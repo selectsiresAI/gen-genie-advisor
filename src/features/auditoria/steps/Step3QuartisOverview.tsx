@@ -3,8 +3,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { RefreshCw } from "lucide-react";
 import { useAGFilters } from "@/features/auditoria/store";
 import { PTA_CATALOG } from "@/lib/pta";
+import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
+import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
+import { useRegisterChart } from "@/components/pdf/useRegisterChart";
 
 type Row = {
   trait_key: string;
@@ -29,10 +36,11 @@ function safeCols(keys: string[]) {
 // PTAs padrão para exibição automática
 const DEFAULT_PTAS = ["tpi", "ptam", "fm_dollar", "cm_dollar", "nm_dollar", "gm_dollar", "hhp_dollar"];
 
-export default function Step3QuartisOverview() {
+function Step3QuartisOverviewContent() {
   const { farmId } = useAGFilters();
   const quartisCardRef = useRef<HTMLDivElement>(null);
   const chartTitle = "Quartis – Top 25% vs Bottom 25%";
+  useRegisterChart("step3-quartis-overview", 3, chartTitle, quartisCardRef);
 
   const traitCatalog = PTA_CATALOG ?? [];
   const labelMap = useMemo(() => {
@@ -47,6 +55,7 @@ export default function Step3QuartisOverview() {
     [labelMap]
   );
 
+  const [selectedTraits, setSelectedTraits] = useState<string[]>(DEFAULT_PTAS);
   const [rows, setRows] = useState<Row[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -91,9 +100,9 @@ export default function Step3QuartisOverview() {
         return;
       }
       
-      const sanitized = safeCols(DEFAULT_PTAS);
+      const sanitized = safeCols(selectedTraits);
       if (sanitized.length === 0) {
-        setErrorMsg("Nenhuma PTA disponível.");
+        setErrorMsg("Selecione ao menos uma PTA.");
         return;
       }
 
@@ -149,59 +158,128 @@ export default function Step3QuartisOverview() {
   }
 
   useEffect(() => {
-    loadData();
+    if (selectedTraits.length > 0) {
+      loadData();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [farmId]);
 
+  const traitsSorted = useMemo(() => {
+    return [...traitCatalog].sort((a, b) => a.label.localeCompare(b.label));
+  }, [traitCatalog]);
+
+  const toggleTrait = (key: string) => {
+    setSelectedTraits((prev) =>
+      prev.includes(key) ? prev.filter((t) => t !== key) : [...prev, key]
+    );
+  };
+
+  const selectAll = () => {
+    setSelectedTraits(traitCatalog.map((t) => t.key));
+  };
+
+  const clearAll = () => {
+    setSelectedTraits([]);
+  };
+
   return (
-    <Card ref={quartisCardRef}>
-      <CardHeader>
-        <CardTitle className="text-base">{chartTitle}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {isLoading && (
-          <div className="py-6 text-muted-foreground">Calculando...</div>
-        )}
-        
-        {errorMsg && <div className="text-sm text-red-600 mb-4">{errorMsg}</div>}
-        
-        <div className="w-full overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left border-b">
-                <th className="py-2 pr-3">PTA</th>
-                <th className="py-2 pr-3">N total</th>
-                <th className="py-2 pr-3">Top 25% (N)</th>
-                <th className="py-2 pr-3">Média Top 25%</th>
-                <th className="py-2 pr-3">Bottom 25% (N)</th>
-                <th className="py-2 pr-3">Média Bottom 25%</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => {
-                const label = labelOf(r.trait_key);
-                return (
-                  <tr key={r.trait_key} className="border-b last:border-0">
-                    <td className="py-2 pr-3">{label}</td>
-                    <td className="py-2 pr-3">{r.n_total}</td>
-                    <td className="py-2 pr-3">{r.top_n}</td>
-                    <td className="py-2 pr-3">{r.top_mean != null ? r.top_mean.toFixed(2) : "—"}</td>
-                    <td className="py-2 pr-3">{r.bottom_n}</td>
-                    <td className="py-2 pr-3">{r.bottom_mean != null ? r.bottom_mean.toFixed(2) : "—"}</td>
-                  </tr>
-                );
-              })}
-              {rows.length === 0 && !errorMsg && !isLoading && (
-                <tr>
-                  <td colSpan={6} className="py-6 text-muted-foreground">
-                    Nenhum dado disponível.
-                  </td>
+    <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+      {/* Painel de seleção */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Selecionar PTAs</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={selectAll}>
+              Selecionar todas
+            </Button>
+            <Button variant="ghost" size="sm" onClick={clearAll}>
+              Limpar
+            </Button>
+          </div>
+          
+          <ScrollArea className="h-[300px]">
+            <div className="space-y-2">
+              {traitsSorted.map((trait) => (
+                <label key={trait.key} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <Checkbox
+                    checked={selectedTraits.includes(trait.key)}
+                    onCheckedChange={() => toggleTrait(trait.key)}
+                  />
+                  {trait.label}
+                </label>
+              ))}
+            </div>
+          </ScrollArea>
+
+          <Button onClick={loadData} disabled={isLoading || selectedTraits.length === 0} className="w-full">
+            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+            Atualizar
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Tabela de resultados */}
+      <Card ref={quartisCardRef}>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base">{chartTitle}</CardTitle>
+          <SingleExportButton targetRef={quartisCardRef} step={3} title={chartTitle} slug="QUARTIS" />
+        </CardHeader>
+        <CardContent>
+          {isLoading && (
+            <div className="py-6 text-muted-foreground">Calculando...</div>
+          )}
+          
+          {errorMsg && <div className="text-sm text-red-600 mb-4">{errorMsg}</div>}
+          
+          <div className="w-full overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left border-b">
+                  <th className="py-2 pr-3">PTA</th>
+                  <th className="py-2 pr-3">N total</th>
+                  <th className="py-2 pr-3">Top 25% (N)</th>
+                  <th className="py-2 pr-3">Média Top 25%</th>
+                  <th className="py-2 pr-3">Bottom 25% (N)</th>
+                  <th className="py-2 pr-3">Média Bottom 25%</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
+              </thead>
+              <tbody>
+                {rows.map((r) => {
+                  const label = labelOf(r.trait_key);
+                  return (
+                    <tr key={r.trait_key} className="border-b last:border-0">
+                      <td className="py-2 pr-3">{label}</td>
+                      <td className="py-2 pr-3">{r.n_total}</td>
+                      <td className="py-2 pr-3">{r.top_n}</td>
+                      <td className="py-2 pr-3">{r.top_mean != null ? r.top_mean.toFixed(2) : "—"}</td>
+                      <td className="py-2 pr-3">{r.bottom_n}</td>
+                      <td className="py-2 pr-3">{r.bottom_mean != null ? r.bottom_mean.toFixed(2) : "—"}</td>
+                    </tr>
+                  );
+                })}
+                {rows.length === 0 && !errorMsg && !isLoading && (
+                  <tr>
+                    <td colSpan={6} className="py-6 text-muted-foreground">
+                      Selecione PTAs e clique em "Atualizar".
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+export default function Step3QuartisOverview() {
+  return (
+    <ChartExportProvider>
+      <BatchExportBar step={3} />
+      <Step3QuartisOverviewContent />
+    </ChartExportProvider>
   );
 }
