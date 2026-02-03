@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, memo } from "react";
+import { useEffect, useMemo, useRef, memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RefreshCw } from "lucide-react";
 import {
@@ -16,11 +16,7 @@ import {
 } from "recharts";
 import { PTA_CATALOG } from "@/lib/pta";
 import { useFemales } from "../hooks";
-import { useAGFilters, type Categoria } from "../store";
-import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
-import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
-import { useRegisterChart } from "@/components/pdf/useRegisterChart";
-import { getAutomaticCategoryLower } from "@/utils/femaleCategories";
+import { useAGFilters } from "../store";
 import { formatPtaValue } from "@/utils/ptaFormat";
 
 type SeriesPoint = { year: number; n: number; mean: number };
@@ -29,8 +25,6 @@ type TraitCardProps = {
   traitKey: string;
   traitLabel: string;
   data: SeriesPoint[];
-  showFarmMean: boolean;
-  showTrend: boolean;
   domainTicks: number[];
 };
 
@@ -47,24 +41,7 @@ const TRAIT_TICK_STEPS: Record<string, number> = {
 const EPSILON = 1e-9;
 
 const SCS_FIXED_TICKS = [
-  2.4,
-  2.45,
-  2.55,
-  2.6,
-  2.65,
-  2.7,
-  2.75,
-  2.8,
-  2.85,
-  2.9,
-  2.95,
-  3.0,
-  3.05,
-  3.1,
-  3.15,
-  3.25,
-  3.35,
-  3.4,
+  2.4, 2.45, 2.55, 2.6, 2.65, 2.7, 2.75, 2.8, 2.85, 2.9, 2.95, 3.0, 3.05, 3.1, 3.15, 3.25, 3.35, 3.4,
 ].map((value) => Number(value.toFixed(2)));
 
 const SCS_FIXED_DOMAIN: [number, number] = [
@@ -72,13 +49,13 @@ const SCS_FIXED_DOMAIN: [number, number] = [
   SCS_FIXED_TICKS[SCS_FIXED_TICKS.length - 1],
 ];
 
+// PTAs padrão fixas
+const DEFAULT_PTAS = ["hhp_dollar", "tpi", "nm_dollar"];
+
 function resolveTickStep(traitKey: string) {
   const normalized = traitKey.toLowerCase();
   return TRAIT_TICK_STEPS[normalized] ?? DEFAULT_TICK_STEP;
 }
-
-// REMOVIDO: função calculateCategory agora é importada de femaleCategories.ts
-// usando getAutomaticCategoryLower para manter consistência com HerdPage
 
 function buildAxisDomain(values: number[], step: number) {
   if (!Number.isFinite(step) || step <= 0) {
@@ -178,7 +155,6 @@ function computeTrend(points: SeriesPoint[]) {
   const slope = cov / varX;
   const intercept = my - slope * mx;
   
-  // Calcular R²
   const predictions = xs.map(x => intercept + slope * x);
   const ssRes = ys.reduce((sum, y, i) => sum + Math.pow(y - predictions[i], 2), 0);
   const ssTot = ys.reduce((sum, y) => sum + Math.pow(y - my, 2), 0);
@@ -199,8 +175,6 @@ const TraitCard = memo(function TraitCard({
   traitKey,
   traitLabel,
   data,
-  showFarmMean,
-  showTrend,
   domainTicks,
 }: TraitCardProps) {
   const totals = data.reduce(
@@ -220,10 +194,7 @@ const TraitCard = memo(function TraitCard({
     delta: i === 0 ? 0 : p.mean - data[i - 1].mean,
     farmMean,
   }));
-  const trendResult = useMemo(
-    () => (showTrend ? computeTrend(data) : { trendLine: [], r2: 0 }),
-    [data, showTrend]
-  );
+  const trendResult = useMemo(() => computeTrend(data), [data]);
 
   const tickStep = useMemo(() => resolveTickStep(traitKey), [traitKey]);
 
@@ -237,35 +208,27 @@ const TraitCard = memo(function TraitCard({
 
     const values = [
       ...data.map((point) => point.mean),
-      showFarmMean ? farmMean : null,
-      ...(showTrend ? trendResult.trendLine.map((point) => point.trend) : []),
+      ...(trendResult.trendLine.map((point) => point.trend)),
     ].filter((value): value is number => Number.isFinite(value));
 
     return buildAxisDomain(values, tickStep);
-  }, [data, farmMean, showFarmMean, showTrend, tickStep, traitKey, trendResult]);
+  }, [data, tickStep, traitKey, trendResult]);
 
   const cardRef = useRef<HTMLDivElement>(null);
   const displayTitle = `${traitLabel} - Média Anual Por Ano De Nascimento`;
-  useRegisterChart(`step5-${traitKey}`, 5, displayTitle, cardRef);
 
   return (
     <Card ref={cardRef} className="overflow-hidden">
-      <CardHeader className="flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <CardHeader className="border-b px-4 py-3">
         <div className="space-y-1">
           <CardTitle className="text-base font-semibold">{displayTitle}</CardTitle>
-          {showTrend && trendResult.r2 > 0 && (
+          {trendResult.r2 > 0 && (
             <div className="text-xs text-muted-foreground">
               Tendência (R²={trendResult.r2.toFixed(3)}): {slope >= 0 ? "+" : ""}
               {slope}/ano
             </div>
           )}
         </div>
-        <SingleExportButton
-          targetRef={cardRef}
-          step={5}
-          title={displayTitle}
-          slug={`Progressao_${traitKey}`}
-        />
       </CardHeader>
       <CardContent className="space-y-4 p-0">
         <div className="h-80 px-4 pt-4">
@@ -304,7 +267,6 @@ const TraitCard = memo(function TraitCard({
               />
               <Legend 
                 formatter={(value: string) => {
-                  // Ocultar entradas de legenda técnicas/internas (band25, band50, etc.)
                   if (value.startsWith("band")) return "";
                   return value;
                 }}
@@ -344,22 +306,7 @@ const TraitCard = memo(function TraitCard({
                 }}
               />
 
-              {showFarmMean && (
-              <ReferenceLine
-                y={farmMean}
-                stroke="#F59E0B"
-                strokeDasharray="5 5"
-                strokeWidth={1.5}
-                label={{
-                  value: `Média geral (${formatPtaValue(traitKey, farmMean)})`,
-                  position: "insideTopRight",
-                  fill: "#F59E0B",
-                  fontSize: 12,
-                }}
-              />
-              )}
-
-              {showTrend && trendResult.trendLine.length === 2 && (
+              {trendResult.trendLine.length === 2 && (
                 <Line
                   type="linear"
                   dataKey="trend"
@@ -404,36 +351,24 @@ const TraitCard = memo(function TraitCard({
 });
 
 export default function Step5Progressao() {
-  const { farmId, ptasSelecionadas = [], setPTAs, categoria, setCategoria } = useAGFilters();
+  const { farmId, ptasSelecionadas = [], setPTAs } = useAGFilters();
   const { data: females = [], isLoading } = useFemales(farmId);
-  const [showFarmMean, setShowFarmMean] = useState(true);
-  const [showTrend, setShowTrend] = useState(true);
 
   useEffect(() => {
     if (!ptasSelecionadas.length) {
-      setPTAs(["hhp_dollar", "tpi", "nm_dollar"]);
+      setPTAs(DEFAULT_PTAS);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Filtrar fêmeas por categoria selecionada
-  const filteredFemales = useMemo(() => {
-    if (categoria === "todas") return females;
-    return (females as any[]).filter((f: any) => {
-      const cat = getAutomaticCategoryLower(f.birth_date, f.parity_order);
-      return cat === categoria;
-    });
-  }, [females, categoria]);
-
   const domainTicks = useMemo(() => {
     const years = new Set<number>();
-    for (const f of filteredFemales as any[]) {
+    for (const f of females as any[]) {
       const y = getYearFromBirth((f as any)?.birth_date);
       if (Number.isFinite(y)) years.add(y as number);
     }
     if (years.size === 0) return [new Date().getFullYear()];
     
-    // Criar array com TODOS os anos entre min e max
     const sortedYears = Array.from(years).sort((a, b) => a - b);
     const minYear = sortedYears[0];
     const maxYear = sortedYears[sortedYears.length - 1];
@@ -442,7 +377,7 @@ export default function Step5Progressao() {
       allYears.push(y);
     }
     return allYears;
-  }, [filteredFemales]);
+  }, [females]);
 
   const seriesByKey = useMemo(() => {
     const out: Record<string, SeriesPoint[]> = {};
@@ -450,8 +385,7 @@ export default function Step5Progressao() {
     for (const key of ptasSelecionadas) {
       const byYear = new Map<number, number[]>();
       
-      // Agrupar valores por ano
-      for (const f of filteredFemales as any[]) {
+      for (const f of females as any[]) {
         const y = getYearFromBirth((f as any)?.birth_date);
         const v = Number((f as any)?.[key]);
         if (Number.isFinite(y) && Number.isFinite(v)) {
@@ -461,209 +395,44 @@ export default function Step5Progressao() {
         }
       }
 
-      // Criar série com TODOS os anos do domínio (incluindo anos sem dados)
       out[key] = domainTicks
         .map((y) => {
           const arr = byYear.get(y) ?? [];
-          if (arr.length === 0) return null; // Não incluir anos sem dados
+          if (arr.length === 0) return null;
           return { year: y, n: arr.length, mean: avg(arr) };
         })
         .filter((p): p is SeriesPoint => p !== null);
     }
     return out;
-  }, [ptasSelecionadas, filteredFemales, domainTicks]);
-
-  const options = useMemo(
-    () =>
-      PTA_CATALOG.slice().sort(
-        (a, b) => (a.preferOrder ?? 999) - (b.preferOrder ?? 999)
-      ),
-    []
-  );
+  }, [ptasSelecionadas, females, domainTicks]);
 
   const labelOf = (key: string) =>
     PTA_CATALOG.find((i) => i.key === key)?.label ?? key.toUpperCase();
 
-  const categoriaLabels: Record<Categoria, string> = {
-    bezerra: "Bezerras",
-    novilha: "Novilhas",
-    primipara: "Primíparas",
-    secundipara: "Secundíparas",
-    multipara: "Multíparas",
-    todas: "Todas"
-  };
-
-  // Contar animais e calcular médias por categoria
-  const categoriaStats = useMemo(() => {
-    const stats: Record<Categoria | "todas", { count: number; avgTPI: number; avgHHP: number; avgNM: number }> = {
-      bezerra: { count: 0, avgTPI: 0, avgHHP: 0, avgNM: 0 },
-      novilha: { count: 0, avgTPI: 0, avgHHP: 0, avgNM: 0 },
-      primipara: { count: 0, avgTPI: 0, avgHHP: 0, avgNM: 0 },
-      secundipara: { count: 0, avgTPI: 0, avgHHP: 0, avgNM: 0 },
-      multipara: { count: 0, avgTPI: 0, avgHHP: 0, avgNM: 0 },
-      todas: { count: females.length, avgTPI: 0, avgHHP: 0, avgNM: 0 }
-    };
-    
-    // Agrupar por categoria
-    const groups: Record<Categoria, any[]> = {
-      bezerra: [],
-      novilha: [],
-      primipara: [],
-      secundipara: [],
-      multipara: [],
-      todas: []
-    };
-    
-    (females as any[]).forEach((f: any) => {
-      const cat = getAutomaticCategoryLower(f.birth_date, f.parity_order);
-      groups[cat].push(f);
-      groups.todas.push(f);
-    });
-    
-    // Calcular médias
-    Object.keys(groups).forEach((cat) => {
-      const group = groups[cat as Categoria];
-      stats[cat as Categoria].count = group.length;
-      
-      if (group.length > 0) {
-        const tpiValues = group.map(f => Number(f.tpi)).filter(v => Number.isFinite(v));
-        const hhpValues = group.map(f => Number(f.hhp_dollar)).filter(v => Number.isFinite(v));
-        const nmValues = group.map(f => Number(f.nm_dollar)).filter(v => Number.isFinite(v));
-        
-        stats[cat as Categoria].avgTPI = tpiValues.length > 0 
-          ? tpiValues.reduce((a, b) => a + b, 0) / tpiValues.length 
-          : 0;
-        stats[cat as Categoria].avgHHP = hhpValues.length > 0 
-          ? hhpValues.reduce((a, b) => a + b, 0) / hhpValues.length 
-          : 0;
-        stats[cat as Categoria].avgNM = nmValues.length > 0 
-          ? nmValues.reduce((a, b) => a + b, 0) / nmValues.length 
-          : 0;
-      }
-    });
-    
-    return stats;
-  }, [females]);
-
   return (
-    <ChartExportProvider>
-      <BatchExportBar step={5} />
-      <div className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Progressão Genética — Seleção de PTAs</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {/* Filtro de Categoria com Médias */}
-            <div className="mb-4 space-y-3 border-b pb-4">
-              <div className="flex flex-wrap gap-2">
-                <span className="text-sm font-medium text-muted-foreground">Categoria:</span>
-                {(["todas", "bezerra", "novilha", "primipara", "secundipara", "multipara"] as Categoria[]).map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setCategoria(cat)}
-                    className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
-                      categoria === cat 
-                        ? "border-primary bg-primary text-primary-foreground" 
-                        : "border-input hover:bg-accent hover:text-accent-foreground"
-                    }`}
-                  >
-                    {categoriaLabels[cat]} ({categoriaStats[cat].count})
-                  </button>
-                ))}
-              </div>
-              
-              {/* Médias da Categoria Selecionada */}
-              {categoriaStats[categoria].count > 0 && (
-                <div className="flex items-center gap-4 rounded-md bg-muted/50 px-4 py-2 text-sm">
-                  <span className="font-semibold">Médias {categoriaLabels[categoria]}:</span>
-                  <div className="flex gap-4">
-                    <span>
-                      TPI: <strong>{categoriaStats[categoria].avgTPI.toFixed(0)}</strong>
-                    </span>
-                    {categoriaStats[categoria].avgHHP > 0 && (
-                      <span>
-                        HHP$: <strong>{categoriaStats[categoria].avgHHP.toFixed(0)}</strong>
-                      </span>
-                    )}
-                    <span>
-                      NM$: <strong>{categoriaStats[categoria].avgNM.toFixed(0)}</strong>
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {options.map((pta) => {
-                const active = ptasSelecionadas.includes(pta.key);
-                return (
-                  <button
-                    key={pta.key}
-                    onClick={() =>
-                      setPTAs(
-                        active
-                          ? ptasSelecionadas.filter((k: string) => k !== pta.key)
-                          : [...ptasSelecionadas, pta.key]
-                      )
-                    }
-                    className={`rounded-xl border px-3 py-2 text-sm ${
-                      active ? "border-emerald-300 bg-emerald-50" : "hover:bg-gray-50"
-                    }`}
-                    title={pta.group}
-                  >
-                    {pta.label}
-                  </button>
-                );
-              })}
-              <div className="ml-auto flex items-center gap-3">
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    className="accent-black"
-                    checked={showFarmMean}
-                    onChange={(e) => setShowFarmMean(e.target.checked)}
-                  />
-                  Mostrar média da fazenda
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    className="accent-black"
-                    checked={showTrend}
-                    onChange={(e) => setShowTrend(e.target.checked)}
-                  />
-                  Mostrar tendência
-                </label>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12 text-muted-foreground">
-            <RefreshCw className="mr-2 h-6 w-6 animate-spin" /> Carregando dados...
-          </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {ptasSelecionadas.map((key) => {
-              const data = seriesByKey[key];
-              if (!data?.length) return null;
-              const label = labelOf(key);
-              return (
-                <TraitCard
-                  key={key}
-                  traitKey={key}
-                  traitLabel={label}
-                  data={data}
-                  showFarmMean={showFarmMean}
-                  showTrend={showTrend}
-                  domainTicks={domainTicks}
-                />
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </ChartExportProvider>
+    <div className="space-y-4">
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12 text-muted-foreground">
+          <RefreshCw className="mr-2 h-6 w-6 animate-spin" /> Carregando dados...
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {ptasSelecionadas.map((key) => {
+            const data = seriesByKey[key];
+            if (!data?.length) return null;
+            const label = labelOf(key);
+            return (
+              <TraitCard
+                key={key}
+                traitKey={key}
+                traitLabel={label}
+                data={data}
+                domainTicks={domainTicks}
+              />
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
