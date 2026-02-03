@@ -199,14 +199,6 @@ function ProjecaoSection({ farmId, farmName }: { farmId: string; farmName: strin
   );
 }
 
-function TrendsSection({ farmId, farmName }: { farmId: string; farmName: string }) {
-  return (
-    <SectionWrapper type="trends" title="Gráficos de Tendência">
-      <PlaceholderSection title="Evolução Temporal das PTAs" farmName={farmName} />
-    </SectionWrapper>
-  );
-}
-
 function MetasSection({ farmId, farmName }: { farmId: string; farmName: string }) {
   return (
     <SectionWrapper type="metas" title="Metas Genéticas">
@@ -236,7 +228,6 @@ const SECTION_COMPONENTS: Record<ReportType, React.FC<{ farmId: string; farmName
   auditoria_step7: AuditoriaStep7Section,
   botijao: BotijaoSection,
   projecao: ProjecaoSection,
-  trends: TrendsSection,
   metas: MetasSection,
   nexus: NexusSection,
 };

@@ -12,7 +12,6 @@ export type ReportType =
   | 'auditoria_step7'
   | 'botijao'
   | 'projecao'
-  | 'trends'
   | 'metas'
   | 'nexus';
 
@@ -52,7 +51,6 @@ const DEFAULT_REPORTS: ReportSelection[] = [
   { type: 'auditoria_step7', enabled: false, label: 'Auditoria - Distribuição', description: 'Distribuição de PTAs' },
   { type: 'botijao', enabled: false, label: 'Botijão Virtual', description: 'Inventário de doses e touros' },
   { type: 'projecao', enabled: false, label: 'Projeção Genética', description: 'Plano de acasalamento e ROI' },
-  { type: 'trends', enabled: false, label: 'Gráficos de Tendência', description: 'Evolução temporal das PTAs' },
   { type: 'metas', enabled: false, label: 'Metas Genéticas', description: 'Metas vs valores atuais' },
   { type: 'nexus', enabled: false, label: 'Nexus Predições', description: 'Predições genômicas/pedigree' },
 ];
@@ -144,7 +142,6 @@ export function useGeneralReport() {
       else if (r.type.startsWith('auditoria_')) pages += 1;
       else if (r.type === 'botijao') pages += 2;
       else if (r.type === 'projecao') pages += 3;
-      else if (r.type === 'trends') pages += 2;
       else if (r.type === 'metas') pages += 1;
       else if (r.type === 'nexus') pages += 2;
     });
