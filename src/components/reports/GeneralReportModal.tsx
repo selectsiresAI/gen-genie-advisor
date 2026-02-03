@@ -12,7 +12,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Progress } from '@/components/ui/progress';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -87,7 +86,7 @@ const REPORT_GROUPS = [
   },
   {
     id: 'analysis',
-    title: 'Análises e Projeções',
+    title: 'Outros relatórios',
     types: ['botijao', 'projecao', 'trends', 'metas', 'nexus'] as ReportType[],
   },
 ];
@@ -255,7 +254,11 @@ export default function GeneralReportModal({
             </div>
           ) : (
             <>
-              <ScrollArea className="flex-1 max-h-[50vh] pr-4">
+              {/*
+                Usar scroll nativo aqui (mais “descobrível” que o ScrollArea em telas pequenas)
+                para o usuário perceber que existem mais opções (ex: 7 etapas da Auditoria).
+              */}
+              <div className="flex-1 max-h-[50vh] overflow-y-auto pr-4">
                 <Accordion 
                   type="multiple" 
                   defaultValue={['herd', 'auditoria', 'analysis']}
@@ -266,12 +269,20 @@ export default function GeneralReportModal({
                     const selectedInGroup = groupReports.filter(r => r.enabled).length;
                     const allSelected = groupReports.every(r => r.enabled);
                     const isAuditoria = group.id === 'auditoria';
+                    const isOther = group.id === 'analysis';
 
                     return (
                       <AccordionItem key={group.id} value={group.id} className="border rounded-lg mb-2 px-1">
                         <AccordionTrigger className="hover:no-underline py-3 px-2">
                           <div className="flex items-center gap-3 flex-1">
-                            <span className="font-medium text-left">{group.title}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-left">{group.title}</div>
+                              {isOther && (
+                                <div className="text-xs text-muted-foreground mt-0.5">
+                                  Projeções, Metas, Tendências, Nexus e Botijão
+                                </div>
+                              )}
+                            </div>
                             {selectedInGroup > 0 && (
                               <Badge variant="default" className="text-xs">
                                 {selectedInGroup}/{groupReports.length}
@@ -296,7 +307,14 @@ export default function GeneralReportModal({
                           
                           {/* Lista de relatórios individuais */}
                           <div className="space-y-1">
-                            {groupReports.map(report => (
+                            {/* Dica visual para auditoria em telas pequenas */}
+                            {isAuditoria && groupReports.length > 3 && (
+                              <div className="text-xs text-muted-foreground pb-1">
+                                Role para ver todas as 7 etapas.
+                              </div>
+                            )}
+
+                            {groupReports.map((report, idx) => (
                               <label
                                 key={report.type}
                                 className="flex items-start gap-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer transition-colors"
@@ -309,7 +327,9 @@ export default function GeneralReportModal({
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2">
                                     <span className="text-muted-foreground">{REPORT_ICONS[report.type]}</span>
-                                    <span className="font-medium text-sm">{report.label}</span>
+                                    <span className="font-medium text-sm">
+                                      {isAuditoria ? `Etapa ${idx + 1} — ${report.label.replace(/^Auditoria\s+-\s+/i, '')}` : report.label}
+                                    </span>
                                   </div>
                                   <p className="text-xs text-muted-foreground mt-0.5">
                                     {report.description}
@@ -323,7 +343,7 @@ export default function GeneralReportModal({
                     );
                   })}
                 </Accordion>
-              </ScrollArea>
+              </div>
 
               <Separator />
 
@@ -419,8 +439,9 @@ export default function GeneralReportModal({
       {showRenderer && (
         <div
           ref={containerRef}
-          className="fixed left-[-9999px] top-0 w-[1200px] bg-white"
-          style={{ visibility: 'hidden' }}
+          // Importante: NÃO usar visibility/opacity aqui, senão o html2canvas captura em branco.
+          className="fixed left-[-9999px] top-0 w-[1200px] bg-background"
+          style={{ pointerEvents: 'none' }}
         >
           <ReportSectionRenderer
             farmId={farmId}
