@@ -1,5 +1,15 @@
-import React, { Suspense } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ReportSelection, ReportType } from '@/hooks/useGeneralReport';
+import { useAGFilters } from '@/features/auditoria/store';
+
+// Import actual step components
+import Step1Parentesco from '@/features/auditoria/steps/Step1Parentesco';
+import Step2TopParents from '@/features/auditoria/steps/Step2TopParents';
+import Step3QuartisOverview from '@/features/auditoria/steps/Step3QuartisOverview';
+import Step5Progressao from '@/features/auditoria/steps/Step5Progressao';
+import Step6ProgressCompare from '@/features/auditoria/steps/Step6ProgressCompare';
+import Step7QuartisIndices from '@/features/auditoria/steps/Step7QuartisIndices';
+import Step7Distribuicao from '@/features/auditoria/steps/Step7Distribuicao';
 
 interface ReportSectionRendererProps {
   farmId: string;
@@ -7,98 +17,211 @@ interface ReportSectionRendererProps {
   selectedReports: ReportSelection[];
 }
 
-// Placeholder components for each report type
-// These will be replaced with actual report content
-const SectionPlaceholder = ({ 
+// Section wrapper for PDF capture with consistent styling
+function SectionWrapper({ 
   type, 
   title, 
-  farmName 
+  children 
 }: { 
   type: ReportType; 
-  title: string; 
-  farmName: string;
-}) => (
-  <div 
-    data-report-section={type}
-    className="bg-white p-8 min-h-[600px] flex flex-col"
-  >
-    <div className="border-b-2 border-red-500 pb-2 mb-6">
-      <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
-      <p className="text-sm text-gray-500 mt-1">{farmName}</p>
-    </div>
-    
-    <div className="flex-1 flex items-center justify-center">
-      <div className="text-center text-gray-400">
-        <p className="text-lg">Conteúdo do relatório: {title}</p>
-        <p className="text-sm mt-2">Este é um placeholder - o conteúdo real será carregado dinamicamente</p>
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div 
+      data-report-section={type}
+      className="bg-background p-6 min-h-[600px]"
+      style={{ pageBreakInside: 'avoid' }}
+    >
+      <div className="border-b-2 border-primary pb-2 mb-6">
+        <h2 className="text-2xl font-bold text-foreground">{title}</h2>
+      </div>
+      
+      <div className="report-content">
+        {children}
       </div>
     </div>
-    
-    <div className="mt-auto pt-4 border-t text-xs text-gray-400 text-center">
-      Gerado por ToolSS - Select Sires
+  );
+}
+
+// Placeholder for sections not yet implemented
+function PlaceholderSection({ title, farmName }: { title: string; farmName: string }) {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center min-h-[400px]">
+      <div className="text-center text-muted-foreground">
+        <p className="text-lg font-medium">{title}</p>
+        <p className="text-sm mt-2">{farmName}</p>
+        <p className="text-xs mt-4 opacity-60">
+          Conteúdo será renderizado aqui
+        </p>
+      </div>
     </div>
-  </div>
-);
+  );
+}
 
 // Herd Summary Section
-const HerdSummarySection = ({ farmId, farmName }: { farmId: string; farmName: string }) => (
-  <SectionPlaceholder type="herd_summary" title="Resumo do Rebanho" farmName={farmName} />
-);
+function HerdSummarySection({ farmId, farmName }: { farmId: string; farmName: string }) {
+  return (
+    <SectionWrapper type="herd_summary" title="Resumo do Rebanho">
+      <PlaceholderSection title="Estatísticas do Rebanho" farmName={farmName} />
+    </SectionWrapper>
+  );
+}
 
 // Segmentation Section
-const SegmentationSection = ({ farmId, farmName }: { farmId: string; farmName: string }) => (
-  <SectionPlaceholder type="segmentation" title="Segmentação do Rebanho" farmName={farmName} />
-);
+function SegmentationSection({ farmId, farmName }: { farmId: string; farmName: string }) {
+  return (
+    <SectionWrapper type="segmentation" title="Segmentação do Rebanho">
+      <PlaceholderSection title="Classificação Superior/Intermediário/Inferior" farmName={farmName} />
+    </SectionWrapper>
+  );
+}
 
-// Auditoria Sections
-const AuditoriaStep1Section = ({ farmId, farmName }: { farmId: string; farmName: string }) => (
-  <SectionPlaceholder type="auditoria_step1" title="Auditoria - Análise de Parentesco" farmName={farmName} />
-);
+// Auditoria Step 1 - Parentesco
+function AuditoriaStep1Section({ farmId, farmName }: { farmId: string; farmName: string }) {
+  const setFarmId = useAGFilters(state => state.setFarmId);
+  
+  useEffect(() => {
+    setFarmId(farmId);
+  }, [farmId, setFarmId]);
 
-const AuditoriaStep2Section = ({ farmId, farmName }: { farmId: string; farmName: string }) => (
-  <SectionPlaceholder type="auditoria_step2" title="Auditoria - Top Parents" farmName={farmName} />
-);
+  return (
+    <SectionWrapper type="auditoria_step1" title="Auditoria - Análise de Parentesco">
+      <Step1Parentesco />
+    </SectionWrapper>
+  );
+}
 
-const AuditoriaStep3Section = ({ farmId, farmName }: { farmId: string; farmName: string }) => (
-  <SectionPlaceholder type="auditoria_step3" title="Auditoria - Quartis Overview" farmName={farmName} />
-);
+// Auditoria Step 2 - Top Parents
+function AuditoriaStep2Section({ farmId, farmName }: { farmId: string; farmName: string }) {
+  const setFarmId = useAGFilters(state => state.setFarmId);
+  
+  useEffect(() => {
+    setFarmId(farmId);
+  }, [farmId, setFarmId]);
 
-const AuditoriaStep4Section = ({ farmId, farmName }: { farmId: string; farmName: string }) => (
-  <SectionPlaceholder type="auditoria_step4" title="Auditoria - Progressão Genética" farmName={farmName} />
-);
+  return (
+    <SectionWrapper type="auditoria_step2" title="Auditoria - Top Parents">
+      <Step2TopParents />
+    </SectionWrapper>
+  );
+}
 
-const AuditoriaStep5Section = ({ farmId, farmName }: { farmId: string; farmName: string }) => (
-  <SectionPlaceholder type="auditoria_step5" title="Auditoria - Comparação por Categoria" farmName={farmName} />
-);
+// Auditoria Step 3 - Quartis Overview
+function AuditoriaStep3Section({ farmId, farmName }: { farmId: string; farmName: string }) {
+  const setFarmId = useAGFilters(state => state.setFarmId);
+  
+  useEffect(() => {
+    setFarmId(farmId);
+  }, [farmId, setFarmId]);
 
-const AuditoriaStep6Section = ({ farmId, farmName }: { farmId: string; farmName: string }) => (
-  <SectionPlaceholder type="auditoria_step6" title="Auditoria - Quartis por Índices" farmName={farmName} />
-);
+  return (
+    <SectionWrapper type="auditoria_step3" title="Auditoria - Quartis Overview">
+      <Step3QuartisOverview />
+    </SectionWrapper>
+  );
+}
 
-const AuditoriaStep7Section = ({ farmId, farmName }: { farmId: string; farmName: string }) => (
-  <SectionPlaceholder type="auditoria_step7" title="Auditoria - Distribuição de PTAs" farmName={farmName} />
-);
+// Auditoria Step 4 - Progressão (using Step5Progressao which is the actual progression chart)
+function AuditoriaStep4Section({ farmId, farmName }: { farmId: string; farmName: string }) {
+  const setFarmId = useAGFilters(state => state.setFarmId);
+  
+  useEffect(() => {
+    setFarmId(farmId);
+  }, [farmId, setFarmId]);
 
-// Other Sections
-const BotijaoSection = ({ farmId, farmName }: { farmId: string; farmName: string }) => (
-  <SectionPlaceholder type="botijao" title="Botijão Virtual" farmName={farmName} />
-);
+  return (
+    <SectionWrapper type="auditoria_step4" title="Auditoria - Progressão Genética">
+      <Step5Progressao />
+    </SectionWrapper>
+  );
+}
 
-const ProjecaoSection = ({ farmId, farmName }: { farmId: string; farmName: string }) => (
-  <SectionPlaceholder type="projecao" title="Projeção Genética" farmName={farmName} />
-);
+// Auditoria Step 5 - Comparação (using Step6ProgressCompare)
+function AuditoriaStep5Section({ farmId, farmName }: { farmId: string; farmName: string }) {
+  const setFarmId = useAGFilters(state => state.setFarmId);
+  
+  useEffect(() => {
+    setFarmId(farmId);
+  }, [farmId, setFarmId]);
 
-const TrendsSection = ({ farmId, farmName }: { farmId: string; farmName: string }) => (
-  <SectionPlaceholder type="trends" title="Gráficos de Tendência" farmName={farmName} />
-);
+  return (
+    <SectionWrapper type="auditoria_step5" title="Auditoria - Comparação por Categoria">
+      <Step6ProgressCompare />
+    </SectionWrapper>
+  );
+}
 
-const MetasSection = ({ farmId, farmName }: { farmId: string; farmName: string }) => (
-  <SectionPlaceholder type="metas" title="Metas Genéticas" farmName={farmName} />
-);
+// Auditoria Step 6 - Quartis Índices
+function AuditoriaStep6Section({ farmId, farmName }: { farmId: string; farmName: string }) {
+  const setFarmId = useAGFilters(state => state.setFarmId);
+  
+  useEffect(() => {
+    setFarmId(farmId);
+  }, [farmId, setFarmId]);
 
-const NexusSection = ({ farmId, farmName }: { farmId: string; farmName: string }) => (
-  <SectionPlaceholder type="nexus" title="Nexus - Predições Genéticas" farmName={farmName} />
-);
+  return (
+    <SectionWrapper type="auditoria_step6" title="Auditoria - Quartis por Índices">
+      <Step7QuartisIndices />
+    </SectionWrapper>
+  );
+}
+
+// Auditoria Step 7 - Distribuição
+function AuditoriaStep7Section({ farmId, farmName }: { farmId: string; farmName: string }) {
+  const setFarmId = useAGFilters(state => state.setFarmId);
+  
+  useEffect(() => {
+    setFarmId(farmId);
+  }, [farmId, setFarmId]);
+
+  return (
+    <SectionWrapper type="auditoria_step7" title="Auditoria - Distribuição de PTAs">
+      <Step7Distribuicao />
+    </SectionWrapper>
+  );
+}
+
+// Other Sections (placeholders for now)
+function BotijaoSection({ farmId, farmName }: { farmId: string; farmName: string }) {
+  return (
+    <SectionWrapper type="botijao" title="Botijão Virtual">
+      <PlaceholderSection title="Inventário de Doses" farmName={farmName} />
+    </SectionWrapper>
+  );
+}
+
+function ProjecaoSection({ farmId, farmName }: { farmId: string; farmName: string }) {
+  return (
+    <SectionWrapper type="projecao" title="Projeção Genética">
+      <PlaceholderSection title="Plano de Acasalamento e ROI" farmName={farmName} />
+    </SectionWrapper>
+  );
+}
+
+function TrendsSection({ farmId, farmName }: { farmId: string; farmName: string }) {
+  return (
+    <SectionWrapper type="trends" title="Gráficos de Tendência">
+      <PlaceholderSection title="Evolução Temporal das PTAs" farmName={farmName} />
+    </SectionWrapper>
+  );
+}
+
+function MetasSection({ farmId, farmName }: { farmId: string; farmName: string }) {
+  return (
+    <SectionWrapper type="metas" title="Metas Genéticas">
+      <PlaceholderSection title="Metas vs Valores Atuais" farmName={farmName} />
+    </SectionWrapper>
+  );
+}
+
+function NexusSection({ farmId, farmName }: { farmId: string; farmName: string }) {
+  return (
+    <SectionWrapper type="nexus" title="Nexus - Predições Genéticas">
+      <PlaceholderSection title="Predições Genômicas/Pedigree" farmName={farmName} />
+    </SectionWrapper>
+  );
+}
 
 // Map of report types to their components
 const SECTION_COMPONENTS: Record<ReportType, React.FC<{ farmId: string; farmName: string }>> = {
@@ -123,6 +246,26 @@ export default function ReportSectionRenderer({
   farmName,
   selectedReports,
 }: ReportSectionRendererProps) {
+  const [mounted, setMounted] = useState(false);
+  
+  // Set farmId in the audit store on mount
+  const setFarmId = useAGFilters(state => state.setFarmId);
+  
+  useEffect(() => {
+    setFarmId(farmId);
+    // Give time for data to load
+    const timer = setTimeout(() => setMounted(true), 500);
+    return () => clearTimeout(timer);
+  }, [farmId, setFarmId]);
+
+  if (!mounted) {
+    return (
+      <div className="p-8 text-center">
+        Carregando dados...
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       {selectedReports.map((report) => {
@@ -134,16 +277,11 @@ export default function ReportSectionRenderer({
         }
 
         return (
-          <Suspense 
+          <SectionComponent 
             key={report.type} 
-            fallback={
-              <div data-report-section={report.type} className="p-8 bg-gray-100 animate-pulse">
-                Carregando {report.label}...
-              </div>
-            }
-          >
-            <SectionComponent farmId={farmId} farmName={farmName} />
-          </Suspense>
+            farmId={farmId} 
+            farmName={farmName} 
+          />
         );
       })}
     </div>
