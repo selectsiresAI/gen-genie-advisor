@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Building2, Users, Beef, BarChart3, Plus, LogOut, Zap, ArrowLeft, ArrowLeftRight, TrendingUp, Beaker, Target, FolderOpen, Calculator, Trash2, Sparkles, MessageSquare } from "lucide-react";
+import { Building2, Users, Beef, BarChart3, Plus, LogOut, Zap, ArrowLeft, ArrowLeftRight, TrendingUp, Beaker, Target, FolderOpen, Calculator, Trash2, Sparkles, MessageSquare, FileText } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import CreateFarmModal from './CreateFarmModal';
@@ -29,6 +29,7 @@ import { usePlanStore } from '@/hooks/usePlanStore';
 import { useHerdStore } from '@/hooks/useHerdStore';
 import ConversaoPage from '@/pages/tools/conversao';
 import AuditoriaGeneticaPage from '@/pages/AuditoriaGeneticaPage';
+import GeneralReportModal from '@/components/reports/GeneralReportModal';
 import { StagingMigrationButton } from './StagingMigrationButton';
 import { SatisfactionSurvey } from '@/components/feedback/SatisfactionSurvey';
 import { useActivityTracker } from '@/hooks/useActivityTracker';
@@ -73,6 +74,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   const [totalAnimals, setTotalAnimals] = useState(0);
   const [showSurvey, setShowSurvey] = useState(false);
   const [showMetrics, setShowMetrics] = useState(false);
+  const [showGeneralReportModal, setShowGeneralReportModal] = useState(false);
   const { role, isAdmin, isLoading: roleLoading } = useUserRole();
   const { t } = useTranslation();
   const {
@@ -381,7 +383,16 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                 <h2 className="text-3xl font-bold text-black tracking-tight">{t("dashboard.mainPanel")}</h2>
                 <p className="mt-1 text-sm text-neutral-600">{t("dashboard.selectModule")}</p>
               </div>
-              <p className="text-base italic text-neutral-600">{t("dashboard.ecosystem")}</p>
+              <div className="flex items-center gap-3">
+                <Button 
+                  onClick={() => setShowGeneralReportModal(true)}
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Gerar Relatório Geral
+                </Button>
+                <p className="text-base italic text-neutral-600">{t("dashboard.ecosystem")}</p>
+              </div>
             </header>
 
             <div className="space-y-10">
@@ -399,6 +410,16 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
             </div>
           </div>
         </div>
+
+        {/* General Report Modal */}
+        <GeneralReportModal
+          open={showGeneralReportModal}
+          onOpenChange={setShowGeneralReportModal}
+          farmId={selectedFarm.farm_id}
+          farmName={selectedFarm.farm_name}
+          farmOwner={selectedFarm.owner_name}
+          userName={userProfile?.full_name || user.email || 'Usuário'}
+        />
       </main>;
   }
 
