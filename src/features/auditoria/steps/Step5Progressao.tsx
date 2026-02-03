@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, memo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { RefreshCw } from "lucide-react";
 import {
   CartesianGrid,
@@ -12,7 +13,7 @@ import {
   Line,
   ReferenceLine,
   ResponsiveContainer,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   XAxis,
   YAxis,
 } from "recharts";
@@ -256,7 +257,7 @@ const TraitCard = memo(function TraitCard({
                 tickFormatter={(value) => formatPtaValue(traitKey, value)}
                 allowDecimals
               />
-              <Tooltip
+              <RechartsTooltip
                 formatter={(value: any, name: string) => {
                   if (name === "mean")
                     return [typeof value === "number" ? formatPtaValue(traitKey, value) : value, "Média anual " + traitLabel];
@@ -438,10 +439,26 @@ function Step5ProgressaoContent() {
     return out;
   }, [ptasSelecionadas, females, domainTicks]);
 
+  // Detectar quais PTAs possuem dados no rebanho
+  const availablePtas = useMemo(() => {
+    const available = new Set<string>();
+    for (const pta of PTA_CATALOG) {
+      for (const f of females as any[]) {
+        const v = Number((f as any)?.[pta.key]);
+        if (Number.isFinite(v) && v !== 0) {
+          available.add(pta.key);
+          break;
+        }
+      }
+    }
+    return available;
+  }, [females]);
+
   const labelOf = (key: string) =>
     PTA_CATALOG.find((i) => i.key === key)?.label ?? key.toUpperCase();
 
   const togglePta = (key: string) => {
+    if (!availablePtas.has(key)) return; // Não permitir toggle de PTAs sem dados
     const newList = ptasSelecionadas.includes(key)
       ? ptasSelecionadas.filter((k) => k !== key)
       : [...ptasSelecionadas, key];
@@ -454,16 +471,41 @@ function Step5ProgressaoContent() {
       <Card>
         <CardContent className="pt-4 space-y-4">
           <div className="flex flex-wrap gap-2">
-            {PTA_CATALOG.map((pta) => (
-              <Badge
-                key={pta.key}
-                variant={ptasSelecionadas.includes(pta.key) ? "default" : "outline"}
-                className="cursor-pointer"
-                onClick={() => togglePta(pta.key)}
-              >
-                {pta.label}
-              </Badge>
-            ))}
+            <TooltipProvider delayDuration={200}>
+              {PTA_CATALOG.map((pta) => {
+                const hasData = availablePtas.has(pta.key);
+                const isSelected = ptasSelecionadas.includes(pta.key);
+                
+                if (!hasData) {
+                  return (
+                    <Tooltip key={pta.key}>
+                      <TooltipTrigger asChild>
+                        <Badge
+                          variant="outline"
+                          className="opacity-40 cursor-not-allowed"
+                        >
+                          {pta.label}
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Sem dados disponíveis no rebanho</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                }
+                
+                return (
+                  <Badge
+                    key={pta.key}
+                    variant={isSelected ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => togglePta(pta.key)}
+                  >
+                    {pta.label}
+                  </Badge>
+                );
+              })}
+            </TooltipProvider>
           </div>
           
           <div className="flex gap-6">
