@@ -53,10 +53,102 @@ function validateNumber(value: unknown, min?: number, max?: number): number | nu
 
 function validateDate(value: unknown): string | null {
   if (!value) return null;
-  const dateStr = String(value);
+  const dateStr = String(value).trim();
+  
+  // Handle Excel serial date numbers (e.g., 45678 = days since 1900-01-01)
+  if (/^\d{4,5}$/.test(dateStr)) {
+    const excelSerial = parseInt(dateStr, 10);
+    // Excel epoch: 1899-12-30 (accounting for Excel's leap year bug)
+    const excelEpoch = new Date(1899, 11, 30);
+    const date = new Date(excelEpoch.getTime() + excelSerial * 24 * 60 * 60 * 1000);
+    if (!isNaN(date.getTime())) {
+      return date.toISOString().split('T')[0];
+    }
+  }
+  
+  // Brazilian format: dd/mm/yyyy or dd-mm-yyyy
+  const brMatch = dateStr.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+  if (brMatch) {
+    const [, day, month, year] = brMatch;
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    if (!isNaN(date.getTime())) {
+      return date.toISOString().split('T')[0];
+    }
+  }
+  
+  // Brazilian format with 2-digit year: dd/mm/yy
+  const brMatch2 = dateStr.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2})$/);
+  if (brMatch2) {
+    const [, day, month, yearShort] = brMatch2;
+    const yearNum = parseInt(yearShort);
+    // Assume 00-30 = 2000-2030, 31-99 = 1931-1999
+    const year = yearNum <= 30 ? 2000 + yearNum : 1900 + yearNum;
+    const date = new Date(year, parseInt(month) - 1, parseInt(day));
+    if (!isNaN(date.getTime())) {
+      return date.toISOString().split('T')[0];
+    }
+  }
+  
+  // American format: mm/dd/yyyy (common in some exports)
+  const usMatch = dateStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (usMatch) {
+    const [, month, day, year] = usMatch;
+    // Only use US format if month > 12 or if BR format already failed
+    if (parseInt(month) > 12 || parseInt(day) <= 12) {
+      // Already tried BR, skip US if day could be month
+    } else {
+      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      if (!isNaN(date.getTime())) {
+        return date.toISOString().split('T')[0];
+      }
+    }
+  }
+  
+  // ISO format: yyyy-mm-dd or yyyy/mm/dd
+  const isoMatch = dateStr.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    if (!isNaN(date.getTime())) {
+      return date.toISOString().split('T')[0];
+    }
+  }
+  
+  // Text month formats: "Jan 15, 2024", "15 Jan 2024", "January 15, 2024"
+  const monthNames: Record<string, number> = {
+    'jan': 0, 'janeiro': 0, 'january': 0,
+    'feb': 1, 'fev': 1, 'fevereiro': 1, 'february': 1,
+    'mar': 2, 'março': 2, 'march': 2,
+    'apr': 3, 'abr': 3, 'abril': 3, 'april': 3,
+    'may': 4, 'mai': 4, 'maio': 4,
+    'jun': 5, 'junho': 5, 'june': 5,
+    'jul': 6, 'julho': 6, 'july': 6,
+    'aug': 7, 'ago': 7, 'agosto': 7, 'august': 7,
+    'sep': 8, 'set': 8, 'setembro': 8, 'september': 8,
+    'oct': 9, 'out': 9, 'outubro': 9, 'october': 9,
+    'nov': 10, 'novembro': 10, 'november': 10,
+    'dec': 11, 'dez': 11, 'dezembro': 11, 'december': 11,
+  };
+  
+  const textMatch = dateStr.toLowerCase().match(/(\d{1,2})\s*(?:de\s+)?([a-záêíóú]+)(?:\s*(?:de|,)\s*)?(\d{4})/i);
+  if (textMatch) {
+    const [, day, monthStr, year] = textMatch;
+    const monthNum = monthNames[monthStr.toLowerCase().substring(0, 3)];
+    if (monthNum !== undefined) {
+      const date = new Date(parseInt(year), monthNum, parseInt(day));
+      if (!isNaN(date.getTime())) {
+        return date.toISOString().split('T')[0];
+      }
+    }
+  }
+  
+  // Fallback: try native Date parsing
   const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return null;
-  return date.toISOString().split('T')[0];
+  if (!isNaN(date.getTime())) {
+    return date.toISOString().split('T')[0];
+  }
+  
+  return null;
 }
 
 function validateRecord(record: any, farmId: string): FemaleRecord | null {
