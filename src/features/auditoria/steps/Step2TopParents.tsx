@@ -23,13 +23,30 @@ type AgeSegment =
   | "Secundípara"
   | "Multípara";
 
-type Row = {
+type RawRow = {
   parent_label: string;
   daughters_count: number;
   trait_mean: number | null;
 };
 
+type Row = RawRow & {
+  parent_name: string | null;
+};
+
 const DEFAULT_TRAIT = "hhp_dollar";
+
+async function fetchBullNames(naabCodes: string[]): Promise<Map<string, string>> {
+  if (naabCodes.length === 0) return new Map();
+
+  const { data, error } = await supabase
+    .from("bulls_denorm")
+    .select("code, name")
+    .in("code", naabCodes);
+
+  if (error || !data) return new Map();
+
+  return new Map(data.map((b) => [b.code, b.name]));
+}
 
 export default function Step2TopParents() {
   const { farmId } = useAGFilters();
@@ -47,7 +64,7 @@ export default function Step2TopParents() {
   const [loading, setLoading] = useState(false);
 
   const fetchTop = useCallback(
-    async (role: ParentRole): Promise<Row[]> => {
+    async (role: ParentRole): Promise<RawRow[]> => {
       if (!farmId) return [];
       const { data, error } = await (supabase.rpc as any)("ag_top_parents", {
         p_farm: farmId,
@@ -62,7 +79,7 @@ export default function Step2TopParents() {
         console.error("Failed to load top parents", role, error);
         return [];
       }
-      const arr: Row[] = Array.isArray(data) ? (data as Row[]) : [];
+      const arr: RawRow[] = Array.isArray(data) ? (data as RawRow[]) : [];
       // ORDEM EXIGIDA: maior nº de filhas → menor (independente da RPC)
       return [...arr].sort((a, b) => b.daughters_count - a.daughters_count);
     },
@@ -76,9 +93,27 @@ export default function Step2TopParents() {
       return;
     }
     setLoading(true);
-    const [sire, mgs] = await Promise.all([fetchTop("sire"), fetchTop("mgs")]);
-    setRowsSire(sire);
-    setRowsMgs(mgs);
+    const [sireRaw, mgsRaw] = await Promise.all([fetchTop("sire"), fetchTop("mgs")]);
+
+    // Coletar todos os NAABs únicos
+    const allNaabs = [
+      ...new Set([
+        ...sireRaw.map((r) => r.parent_label),
+        ...mgsRaw.map((r) => r.parent_label),
+      ]),
+    ];
+
+    // Buscar nomes correspondentes
+    const namesMap = await fetchBullNames(allNaabs);
+
+    // Enriquecer dados com nomes
+    const enrichRow = (row: RawRow): Row => ({
+      ...row,
+      parent_name: namesMap.get(row.parent_label) || null,
+    });
+
+    setRowsSire(sireRaw.map(enrichRow));
+    setRowsMgs(mgsRaw.map(enrichRow));
     setLoading(false);
   }, [farmId, fetchTop]);
 
@@ -228,8 +263,13 @@ function RankingList({
               key={`${row.parent_label}-${idx}`}
               className="flex items-center gap-2 text-sm"
             >
-              <div className="w-56 text-right flex-shrink-0">
-                {row.parent_label}
+              <div className="w-64 text-right flex-shrink-0">
+                <span className="font-medium">{row.parent_label}</span>
+                {row.parent_name && (
+                  <span className="text-xs text-muted-foreground ml-1.5">
+                    {row.parent_name}
+                  </span>
+                )}
               </div>
 
               <div className="flex-1 flex items-center gap-2">
