@@ -417,19 +417,85 @@ const calculateMotherAverages = (farm: any, ptaLabels: string[]): Record<string,
 
 // Export utility functions
 export { getFemalesByFarm, normalizeCategoria, countFromCategoria, calculateMotherAverages };
+
+/**
+ * Obtém o valor de uma PTA de um touro, com mapeamento robusto de nomes de campo.
+ * Suporta múltiplos aliases para cada PTA (ex: "HHP$®" → "HHP$" → "hhp_dollar").
+ */
 export const getBullPTAValue = (bull: any, ptaLabel: string): number | null => {
-  let fieldName = LABEL_TO_FIELD[ptaLabel] || ptaLabel;
-  
-  // Special mapping for HHP$® to match Supabase data format
-  if (ptaLabel === "HHP$®") {
-    fieldName = "HHP$"; // Look for HHP$ in the bull data (from Supabase conversion)
+  if (!bull) return null;
+
+  // Lista de possíveis nomes de campo para cada PTA (ordem de prioridade)
+  const fieldAliases: Record<string, string[]> = {
+    "HHP$®": ["HHP$®", "HHP$", "hhp_dollar"],
+    "HHP$": ["HHP$", "HHP$®", "hhp_dollar"],
+    "NM$": ["NM$", "nm_dollar"],
+    "TPI": ["TPI", "tpi"],
+    "CM$": ["CM$", "cm_dollar"],
+    "FM$": ["FM$", "fm_dollar"],
+    "GM$": ["GM$", "gm_dollar"],
+    "PTAM": ["PTAM", "Milk", "ptam"],
+    "PTAF": ["PTAF", "Fat", "ptaf"],
+    "PTAP": ["PTAP", "Protein", "ptap"],
+    "PTAF%": ["PTAF%", "Fat%", "ptaf_pct"],
+    "PTAP%": ["PTAP%", "Protein%", "ptap_pct"],
+    "CFP": ["CFP", "cfp"],
+    "PL": ["PL", "pl"],
+    "DPR": ["DPR", "dpr"],
+    "LIV": ["LIV", "liv"],
+    "H LIV": ["H LIV", "h_liv"],
+    "SCS": ["SCS", "scs"],
+    "MAST": ["MAST", "mast"],
+    "MET": ["MET", "met"],
+    "RP": ["RP", "rp"],
+    "DA": ["DA", "da"],
+    "KET": ["KET", "ket"],
+    "MF": ["MF", "mf"],
+    "PTAT": ["PTAT", "ptat"],
+    "UDC": ["UDC", "udc"],
+    "FLC": ["FLC", "flc"],
+    "SCE": ["SCE", "sce"],
+    "DCE": ["DCE", "dce"],
+    "SSB": ["SSB", "ssb"],
+    "DSB": ["DSB", "dsb"],
+    "CCR": ["CCR", "ccr"],
+    "HCR": ["HCR", "hcr"],
+    "FI": ["FI", "fi"],
+    "GL": ["GL", "gl"],
+    "EFC": ["EFC", "efc"],
+    "BWC": ["BWC", "bwc"],
+    "STA": ["STA", "sta"],
+    "STR": ["STR", "str"],
+    "DFM": ["DFM", "dfm"],
+    "RUA": ["RUA", "rua"],
+    "RLS": ["RLS", "rls"],
+    "RTP": ["RTP", "rtp"],
+    "FTL": ["FTL", "ftl"],
+    "RW": ["RW", "rw"],
+    "RLR": ["RLR", "rlr"],
+    "FTA": ["FTA", "fta"],
+    "FLS": ["FLS", "fls"],
+    "FUA": ["FUA", "fua"],
+    "RUH": ["RUH", "ruh"],
+    "RUW": ["RUW", "ruw"],
+    "UCL": ["UCL", "ucl"],
+    "UDP": ["UDP", "udp"],
+    "FTP": ["FTP", "ftp"],
+    "F SAV": ["F SAV", "f_sav"],
+    "GFI": ["GFI", "gfi"],
+    "RFI": ["RFI", "rfi"],
+  };
+
+  // Obter aliases para este label (ou usar o próprio label como fallback)
+  const aliases = fieldAliases[ptaLabel] || [ptaLabel, LABEL_TO_FIELD[ptaLabel]].filter(Boolean);
+
+  // Tentar cada alias em ordem
+  for (const alias of aliases) {
+    const value = bull[alias];
+    if (typeof value === 'number' && !isNaN(value)) {
+      return value;
+    }
   }
-  
-  const value = bull[fieldName];
-  if (typeof value === 'number' && value !== 0) {
-    console.log(`PTA ${ptaLabel}: ${value} (from bull ${bull.nome || bull.naab})`);
-    return value;
-  }
-  console.log(`PTA ${ptaLabel}: — (field: ${fieldName}, value: ${value}, type: ${typeof value})`);
-  return null; // Return null instead of 0 to show "—"
+
+  return null;
 };
