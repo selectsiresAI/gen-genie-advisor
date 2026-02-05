@@ -229,16 +229,29 @@ const HerdPage: React.FC<HerdPageProps> = ({
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
-  const getAge = (birthDate?: string) => {
-    if (!birthDate) return 'N/A';
+  const getAge = (birthDate?: string): string => {
+    if (!birthDate) return '-';
     const birth = new Date(birthDate);
     const today = new Date();
-    const years = today.getFullYear() - birth.getFullYear();
-    const months = today.getMonth() - birth.getMonth();
-    if (years > 0) {
-      return `${years}a ${months >= 0 ? months : 12 + months}m`;
+    
+    // Calcular diferença total em meses
+    let totalMonths = (today.getFullYear() - birth.getFullYear()) * 12 + (today.getMonth() - birth.getMonth());
+    
+    // Ajustar se o dia do aniversário ainda não passou no mês atual
+    if (today.getDate() < birth.getDate()) {
+      totalMonths--;
     }
-    return `${months >= 0 ? months : 12 + months}m`;
+    
+    // Garantir não negativo
+    if (totalMonths < 0) totalMonths = 0;
+    
+    const years = Math.floor(totalMonths / 12);
+    const months = totalMonths % 12;
+    
+    if (years > 0) {
+      return months > 0 ? `${years}a ${months}m` : `${years}a`;
+    }
+    return `${months}m`;
   };
   const renderPedigreeCell = (code?: string | null, name?: string | null) => {
     if (!code && !name) {
