@@ -1,54 +1,91 @@
 
-
-# Plano: Simplificar Parentesco para Duas Categorias
+# Plano: Adicionar Nome do Touro ao Ranking de Top Parents (Passo 2)
 
 ## Objetivo
-Mostrar apenas se a fazenda informou ou não o ancestral na planilha, removendo a complexidade sobre dados genéticos da plataforma.
+Mostrar o nome do touro ao lado do código NAAB na lista de ranking, facilitando a identificação visual pelos usuários.
 
 ---
 
-## Mudanças
+## Abordagem Escolhida: Buscar nomes no Frontend
 
-### `src/features/auditoria/steps/Step1Parentesco.tsx`
+A RPC `ag_top_parents` retorna `parent_label` (código NAAB). Após receber os dados, faremos uma busca adicional na view `bulls_denorm` para enriquecer cada registro com o nome correspondente.
 
-**Tipos atualizados:**
+### Vantagens
+- Não requer alteração no banco de dados (migrations)
+- Implementação mais rápida
+- Funciona mesmo se a RPC não puder ser modificada
+
+---
+
+## Mudanças no Arquivo
+
+### `src/features/auditoria/steps/Step2TopParents.tsx`
+
+**1. Atualizar tipo `Row` para incluir nome:**
 ```typescript
-type ParentStatus = "Informado" | "Não Informado";
-```
-
-**Mapeamento dos dados recebidos do RPC:**
-- `"Desconhecido"` → `"Não Informado"`
-- `"Incompleto"` → `"Informado"` (fazenda forneceu o NAAB)
-- `"Completo"` → `"Informado"`
-
-**Nova configuração de status:**
-```typescript
-const STATUS_INFO = {
-  "Não Informado": {
-    icon: <AlertTriangle />,
-    color: "text-destructive",
-    description: "O código NAAB do ancestral não foi informado na planilha de importação.",
-    action: "Atualize a planilha de fêmeas incluindo o código NAAB do ancestral e reimporte os dados.",
-  },
-  "Informado": {
-    icon: <CheckCircle2 />,
-    color: "text-emerald-500",
-    description: "O código NAAB do ancestral foi fornecido na planilha de importação.",
-    action: "Nenhuma ação necessária.",
-  },
+type Row = {
+  parent_label: string;
+  parent_name: string | null; // ← Novo campo
+  daughters_count: number;
+  trait_mean: number | null;
 };
 ```
 
-**Consolidação dos dados:**
-- Agrupar "Incompleto" + "Completo" em "Informado"
-- Manter "Desconhecido" como "Não Informado"
+**2. Adicionar função para buscar nomes dos touros:**
+```typescript
+async function fetchBullNames(naabCodes: string[]): Promise<Map<string, string>> {
+  if (naabCodes.length === 0) return new Map();
+  
+  const { data, error } = await supabase
+    .from('bulls_denorm')
+    .select('code, name')
+    .in('code', naabCodes);
+  
+  if (error || !data) return new Map();
+  
+  return new Map(data.map(b => [b.code, b.name]));
+}
+```
 
-**Legenda simplificada:**
-```text
-Como interpretar os dados de parentesco?
+**3. Modificar `fetchData` para enriquecer dados:**
+```typescript
+const fetchData = useCallback(async () => {
+  if (!farmId) { ... }
+  setLoading(true);
+  
+  const [sireRaw, mgsRaw] = await Promise.all([fetchTop("sire"), fetchTop("mgs")]);
+  
+  // Coletar todos os NAABs únicos
+  const allNaabs = [...new Set([
+    ...sireRaw.map(r => r.parent_label),
+    ...mgsRaw.map(r => r.parent_label)
+  ])];
+  
+  // Buscar nomes correspondentes
+  const namesMap = await fetchBullNames(allNaabs);
+  
+  // Enriquecer dados com nomes
+  const enrichRow = (row: RawRow): Row => ({
+    ...row,
+    parent_name: namesMap.get(row.parent_label) || null
+  });
+  
+  setRowsSire(sireRaw.map(enrichRow));
+  setRowsMgs(mgsRaw.map(enrichRow));
+  setLoading(false);
+}, [farmId, fetchTop]);
+```
 
-• Não Informado: O código NAAB do ancestral não consta na planilha de importação.
-• Informado: O código NAAB do ancestral foi fornecido pela fazenda.
+**4. Atualizar `RankingList` para exibir nome:**
+```tsx
+<div className="w-56 text-right flex-shrink-0">
+  <span className="font-medium">{row.parent_label}</span>
+  {row.parent_name && (
+    <span className="text-xs text-muted-foreground ml-1">
+      {row.parent_name}
+    </span>
+  )}
+</div>
 ```
 
 ---
@@ -57,40 +94,31 @@ Como interpretar os dados de parentesco?
 
 | Antes | Depois |
 |-------|--------|
-| Desconhecido (vermelho) | Não Informado (vermelho) |
-| Incompleto (amarelo) | → Agrupa em "Informado" |
-| Completo (verde) | Informado (verde) |
+| `007HO15937` | `007HO15937` ALADDIN |
+| `551HO03797` | `551HO03797` TARRINO |
+| `551HO04034` | `551HO04034` LEGACY |
 
 ---
 
-## Lógica de Consolidação
+## Layout Alternativo (Duas Linhas)
 
-```typescript
-const consolidatedRows = useMemo(() => {
-  const consolidated: Record<ParentRole, { informed: number; notInformed: number }> = {
-    sire: { informed: 0, notInformed: 0 },
-    mgs: { informed: 0, notInformed: 0 },
-    mmgs: { informed: 0, notInformed: 0 },
-  };
-  
-  rows.forEach((row) => {
-    if (row.status === "Desconhecido") {
-      consolidated[row.role].notInformed += row.n;
-    } else {
-      // "Incompleto" ou "Completo" = fazenda informou
-      consolidated[row.role].informed += row.n;
-    }
-  });
-  
-  return consolidated;
-}, [rows]);
+Se o espaço horizontal for limitado:
+```tsx
+<div className="w-56 text-right flex-shrink-0">
+  <div className="font-medium text-sm">{row.parent_label}</div>
+  {row.parent_name && (
+    <div className="text-xs text-muted-foreground truncate">
+      {row.parent_name}
+    </div>
+  )}
+</div>
 ```
 
 ---
 
-## Arquivo Modificado
+## Notas Técnicas
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/features/auditoria/steps/Step1Parentesco.tsx` | Simplificar para 2 categorias, consolidar dados |
-
+- A busca de nomes é feita em uma única query para todos os NAABs (eficiente)
+- Se o touro não existir no banco, apenas o código NAAB será exibido
+- O componente `RankingList` receberá o tipo `Row` atualizado com `parent_name`
+- A largura da coluna pode precisar de ajuste (de `w-56` para `w-64` ou `w-72`)
