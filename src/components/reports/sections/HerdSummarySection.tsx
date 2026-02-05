@@ -91,6 +91,7 @@ function CategoryCountCard({ label, count }: { label: string; count: number }) {
 function KPICard({ stat }: { stat: PtaStats }) {
   const color = getPercentileColor(stat.percentile);
   const chartData = [{ value: stat.percentile, fill: color }];
+  const formattedAvg = formatPtaValue(stat.label, stat.average);
   
   return (
     <Card className="p-3 flex flex-col items-center">
@@ -120,13 +121,10 @@ function KPICard({ stat }: { stat: PtaStats }) {
           </RadialBarChart>
         </ResponsiveContainer>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-sm font-bold" style={{ color }}>{stat.percentile}%</span>
+          <span className="text-xs font-bold" style={{ color }}>{formattedAvg}</span>
         </div>
       </div>
       <p className="text-xs font-medium text-foreground mt-1">{stat.label}</p>
-      <p className="text-xs text-muted-foreground">
-        {formatPtaValue(stat.label, stat.average)}
-      </p>
     </Card>
   );
 }
