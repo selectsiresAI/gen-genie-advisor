@@ -1154,27 +1154,79 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
               naab: bull.code,
               nome: bull.name,
               empresa: bull.company || 'N/A',
-              TPI: bull.tpi || 0,
-              "NM$": bull.nm_dollar || 0,
-              "HHP$": bull.hhp_dollar, // No fallback to 0 since we filtered
-              "FM$": bull.fm_dollar || 0,
-              "GM$": bull.gm_dollar || 0,
-              "CM$": bull.cm_dollar || 0,
-              Milk: bull.ptam || 0,
-              Fat: bull.ptaf || 0,
-              Protein: bull.ptap || 0,
-              "Fat%": bull.ptaf_pct || 0,
-              "Protein%": bull.ptap_pct || 0,
-              PL: bull.pl || 0,
-              DPR: bull.dpr || 0,
-              LIV: bull.liv || 0,
-              SCS: bull.scs || 0,
-              PTAT: bull.ptat || 0,
-              // Add other PTAs as needed...
+              // Índices econômicos
+              TPI: bull.tpi ?? null,
+              "NM$": bull.nm_dollar ?? null,
+              "HHP$": bull.hhp_dollar ?? null,
+              "HHP$®": bull.hhp_dollar ?? null, // Alias para compatibilidade
+              "FM$": bull.fm_dollar ?? null,
+              "GM$": bull.gm_dollar ?? null,
+              "CM$": bull.cm_dollar ?? null,
+              // Produção
+              PTAM: bull.ptam ?? null,
+              Milk: bull.ptam ?? null, // Alias
+              PTAF: bull.ptaf ?? null,
+              Fat: bull.ptaf ?? null, // Alias
+              "PTAF%": bull.ptaf_pct ?? null,
+              "Fat%": bull.ptaf_pct ?? null, // Alias
+              PTAP: bull.ptap ?? null,
+              Protein: bull.ptap ?? null, // Alias
+              "PTAP%": bull.ptap_pct ?? null,
+              "Protein%": bull.ptap_pct ?? null, // Alias
+              CFP: bull.cfp ?? null,
+              // Saúde e Longevidade
+              PL: bull.pl ?? null,
+              DPR: bull.dpr ?? null,
+              LIV: bull.liv ?? null,
+              "H LIV": bull.h_liv ?? null,
+              SCS: bull.scs ?? null,
+              MAST: bull.mast ?? null,
+              MET: bull.met ?? null,
+              RP: bull.rp ?? null,
+              DA: bull.da ?? null,
+              KET: bull.ket ?? null,
+              MF: bull.mf ?? null,
+              // Reprodução
+              CCR: bull.ccr ?? null,
+              HCR: bull.hcr ?? null,
+              FI: bull.fi ?? null,
+              GL: bull.gl ?? null,
+              // Conformação
+              PTAT: bull.ptat ?? null,
+              UDC: bull.udc ?? null,
+              FLC: bull.flc ?? null,
+              BWC: bull.bwc ?? null,
+              // Parto
+              SCE: bull.sce ?? null,
+              DCE: bull.dce ?? null,
+              SSB: bull.ssb ?? null,
+              DSB: bull.dsb ?? null,
+              // Tipo Linear
+              STA: bull.sta ?? null,
+              STR: bull.str ?? null,
+              DFM: bull.dfm ?? null,
+              RUA: bull.rua ?? null,
+              RLS: bull.rls ?? null,
+              RTP: bull.rtp ?? null,
+              FTL: bull.ftl ?? null,
+              RW: bull.rw ?? null,
+              RLR: bull.rlr ?? null,
+              FTA: bull.fta ?? null,
+              FLS: bull.fls ?? null,
+              FUA: bull.fua ?? null,
+              RUH: bull.ruh ?? null,
+              RUW: bull.ruw ?? null,
+              UCL: bull.ucl ?? null,
+              UDP: bull.udp ?? null,
+              FTP: bull.ftp ?? null,
+              // Outros
+              "F SAV": bull.f_sav ?? null,
+              GFI: bull.gfi ?? null,
+              RFI: bull.rfi ?? null,
             }));
           
           console.log(`🐂 Loaded ${convertedBulls.length} bulls from Supabase (filtered: only with HHP$)`);
-          console.log('📋 Sample bulls with HHP$:', convertedBulls.slice(0, 3).map((b: any) => ({ naab: b.naab, nome: b.nome, empresa: b.empresa, hhp: b["HHP$"] })));
+          console.log('📋 Sample bull:', convertedBulls[0]);
           setToolssBulls(convertedBulls);
         }
       } catch (e) {
