@@ -1,10 +1,11 @@
 
-# Plano: Histogramas em Páginas Separadas (Modo Paisagem)
 
-## Objetivo
-Modificar apenas a geração do **Relatório Geral** para que:
-1. Cada gráfico de histograma do Step 7 (Distribuição de PTAs) apareça em uma **página separada**
-2. Esses gráficos sejam sempre gerados no formato **Paisagem**, mesmo se o usuário selecionar Retrato
+# Plano: Correção Completa de Escalas (Eixo Y e Eixo X)
+
+## Problema Central
+Os gráficos de tendência temporal não evidenciam as diferenças entre anos devido a dois fatores:
+1. **Eixo Y muito amplo** — escala fixa que "achata" variações pequenas
+2. **Eixo X inconsistente** — falta de configuração uniforme entre componentes
 
 ---
 
@@ -12,130 +13,209 @@ Modificar apenas a geração do **Relatório Geral** para que:
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/components/reports/sections/AuditoriaStep7Section.tsx` | Adicionar atributo `data-chart-page` em cada `HistogramCard` para identificação individual |
-| `src/lib/pdf/generateGeneralReport.ts` | Lógica para capturar histogramas individualmente e inserir em páginas separadas no modo Paisagem |
+| `src/lib/chart-utils.ts` | Aprimorar algoritmo adaptativo do eixo Y + nova função para eixo X |
+| `src/features/auditoria/steps/Step5Progressao.tsx` | Usar domain adaptativo no YAxis |
+| `src/components/reports/sections/AuditoriaStep5Section.tsx` | Adicionar domain calculado ao YAxis |
+| `src/components/ChartsPage.tsx` | Adicionar domain ao YAxis e padronizar XAxis |
+| `src/components/charts/trends/TrendsChart.tsx` | Adicionar `type="number"` ao XAxis + domain calculado |
 
 ---
 
-## Detalhes Técnicos
+## Parte 1: Melhorias no Eixo Y
 
-### 1. `AuditoriaStep7Section.tsx` — Marcação Individual
+### 1.1 Aprimorar `getAdaptiveYAxisDomain` em `src/lib/chart-utils.ts`
 
-Adicionar um atributo `data-chart-page="histogram"` em cada `HistogramCard` para que o gerador de PDF possa identificar e capturar cada gráfico separadamente:
+Algoritmo mais inteligente baseado no **range dos dados**:
 
-```tsx
-// Antes
-<div className="space-y-6">
-  {series.map((s) => (
-    <HistogramCard key={s.traitKey} series={s} />
-  ))}
-</div>
-
-// Depois
-<div className="space-y-6" data-report-charts="histogram-container">
-  {series.map((s) => (
-    <div key={s.traitKey} data-chart-page="histogram" data-chart-label={s.label}>
-      <HistogramCard series={s} />
-    </div>
-  ))}
-</div>
-```
-
-### 2. `generateGeneralReport.ts` — Lógica Especial para Histogramas
-
-Ao processar o relatório `auditoria_step7`, em vez de capturar a seção inteira:
-1. Buscar todos os elementos com `data-chart-page="histogram"`
-2. Para cada histograma:
-   - Mudar temporariamente a orientação do documento para Paisagem (`'l'`)
-   - Adicionar nova página
-   - Capturar e inserir o gráfico individual
-   - Adicionar título com nome da PTA
-
-**Pseudocódigo:**
 ```typescript
-if (report.type === 'auditoria_step7') {
-  const histogramCards = sectionEl.querySelectorAll('[data-chart-page="histogram"]');
+export function getAdaptiveYAxisDomain(
+  data: Array<any>,
+  valueKey: string
+): [number, number] {
+  // ... extrair valores finitos ...
   
-  for (const [idx, card] of histogramCards.entries()) {
-    // Adicionar página em paisagem
-    doc.addPage('a4', 'l');  // 'l' = landscape
-    currentPage++;
-    
-    // Capturar gráfico individual
-    const canvas = await captureElement(card as HTMLElement, 2);
-    
-    // Calcular dimensões para página paisagem
-    const pageWidth = 297; // A4 landscape width in mm
-    const pageHeight = 210; // A4 landscape height in mm
-    
-    // Inserir título e imagem
-    const chartLabel = card.getAttribute('data-chart-label') || `Histograma ${idx + 1}`;
-    addSectionTitle(doc, `Distribuição - ${chartLabel}`);
-    
-    // Adicionar imagem centralizada
-    doc.addImage(...);
-    
-    // Registrar no índice
-    pageTracker.push({
-      title: `Distribuição - ${chartLabel}`,
-      pageNumber: currentPage,
-    });
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  let range = max - min;
+  
+  // Se range for zero, criar margem mínima
+  if (range === 0) {
+    range = Math.max(Math.abs(max) * 0.02, 0.1);
   }
-  continue; // Pular processamento padrão da seção
+  
+  // Padding proporcional ao range para garantir ~70% de ocupação visual
+  let padding: number;
+  
+  if (range < 0.5) {
+    // PTAs decimais com variação muito pequena (SCS, DPR, etc.)
+    padding = range * 0.3;
+  } else if (range < 5) {
+    // PTAs decimais com variação moderada
+    padding = range * 0.25;
+  } else if (range < 50) {
+    // PTAs intermediárias
+    padding = range * 0.15;
+  } else {
+    // PTAs grandes (NM$, TPI, HHP$, PTAM)
+    padding = range * 0.10;
+  }
+  
+  // Garantir padding mínimo
+  padding = Math.max(padding, range * 0.1);
+  
+  return [min - padding, max + padding];
 }
 ```
 
----
+### 1.2 Remover inclusão forçada do zero
 
-## Comportamento Esperado
+Em `Step5Progressao.tsx`, a função `buildAxisDomain` força inclusão do zero:
+```typescript
+const includeZero = [...finiteValues, 0]; // ← Problema
+```
 
-### Antes
-- Todos os histogramas aparecem em sequência na mesma página
-- Orientação segue a escolha do usuário
-
-### Depois
-- Cada histograma ocupa uma página inteira
-- Todos os histogramas são gerados em **Paisagem**
-- Outras seções respeitam a orientação escolhida pelo usuário
-- Índice lista cada histograma com seu nome de PTA
+Será substituída por `getAdaptiveYAxisDomain` que foca apenas nos dados reais.
 
 ---
 
-## Exemplo Visual no PDF
+## Parte 2: Padronização do Eixo X
 
-```text
-[Página 5 - Paisagem]
-┌─────────────────────────────────────────────────────────────────────────┐
-│ Distribuição - HHP$                                                      │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  ┌────────┬────────┬──────────────┬────────┬────────────┬─────────┐     │
-│  │ Média  │Mediana │Desvio Padrão │  CV%   │ Mín-Máx    │ Q1-Q3   │     │
-│  │2680.92 │2704.00 │   200.21     │ 7.5%   │2025 – 3183 │2568–2828│     │
-│  └────────┴────────┴──────────────┴────────┴────────────┴─────────┘     │
-│                                                                          │
-│  ⊙ Meta ideal: ≥600 (Valor econômico para alta lucratividade)           │
-│                                                                          │
-│     ████████████████████████████████████████████████████████████        │
-│     ██████████████████████████████████████████████████████████████      │
-│     ████████████████████████████████████████████████████████████████    │
-│    ───────────────────────────────────────────────────────────────      │
-│                                                                          │
-│  ○ Próximo da média  ○ Moderado  ○ Distante                             │
-│                                                                          │
-│                                                 Página 5 de 12          │
-└─────────────────────────────────────────────────────────────────────────┘
+### 2.1 Nova função helper para eixo X temporal
 
-[Página 6 - Paisagem]
-┌─────────────────────────────────────────────────────────────────────────┐
-│ Distribuição - TPI                                                       │
-...
+```typescript
+export function getYearAxisConfig(years: number[]): {
+  domain: [number, number];
+  ticks: number[];
+  tickFormatter: (value: number) => string;
+} {
+  if (!years.length) {
+    const currentYear = new Date().getFullYear();
+    return {
+      domain: [currentYear, currentYear],
+      ticks: [currentYear],
+      tickFormatter: (v) => String(Math.round(v)),
+    };
+  }
+  
+  const sorted = [...years].sort((a, b) => a - b);
+  const minYear = sorted[0];
+  const maxYear = sorted[sorted.length - 1];
+  const span = maxYear - minYear;
+  
+  // Gerar ticks: todos os anos se span <= 10, senão intervalos
+  let ticks: number[];
+  if (span <= 10) {
+    // Mostrar todos os anos
+    ticks = [];
+    for (let y = minYear; y <= maxYear; y++) {
+      ticks.push(y);
+    }
+  } else {
+    // Intervalos de 2 ou 5 anos
+    const step = span <= 20 ? 2 : 5;
+    const alignedStart = Math.ceil(minYear / step) * step;
+    ticks = [minYear];
+    for (let y = alignedStart; y <= maxYear; y += step) {
+      if (y !== minYear) ticks.push(y);
+    }
+    if (!ticks.includes(maxYear)) ticks.push(maxYear);
+  }
+  
+  return {
+    domain: [minYear, maxYear],
+    ticks,
+    tickFormatter: (v) => String(Math.round(v)),
+  };
+}
+```
+
+### 2.2 Padronizar XAxis em todos os gráficos
+
+Garantir que todos os gráficos de tendência usem:
+```tsx
+<XAxis
+  type="number"            // Obrigatório para interpolação correta
+  dataKey="year"
+  domain={xAxisConfig.domain}
+  ticks={xAxisConfig.ticks}
+  tickFormatter={(v) => String(Math.round(v))}
+  allowDecimals={false}    // Nunca mostrar 2019.5
+/>
 ```
 
 ---
 
-## Notas Importantes
+## Mudanças por Arquivo
 
-- A mudança é **exclusiva para o Relatório Geral** — não afeta o front-end interativo
-- O jsPDF suporta orientação por página com `doc.addPage('a4', 'l')`
-- Mantém-se compatibilidade com o índice e numeração de páginas
+### `src/lib/chart-utils.ts`
+- Aprimorar `getAdaptiveYAxisDomain` com padding proporcional
+- Adicionar `getYearAxisConfig` para eixo X
+
+### `src/features/auditoria/steps/Step5Progressao.tsx`
+- Remover `buildAxisDomain` (inclui zero forçadamente)
+- Usar `getAdaptiveYAxisDomain` no YAxis
+- Manter XAxis como está (já configurado corretamente)
+
+### `src/components/reports/sections/AuditoriaStep5Section.tsx`
+- Adicionar domain calculado ao YAxis
+- Garantir formatação correta
+
+### `src/components/ChartsPage.tsx`
+- No componente `TraitCard`: adicionar YAxis domain calculado
+- Garantir XAxis com `type="number"`
+
+### `src/components/charts/trends/TrendsChart.tsx`
+- Adicionar `type="number"` ao XAxis
+- Calcular domain e ticks para anos
+- YAxis já usa `getAdaptiveYAxisDomainMultiple` (manter)
+
+---
+
+## Exemplo Visual do Resultado
+
+### Antes (SCS variando de 2.85 a 2.91)
+```text
+Y: 5.0 ┤
+   4.0 ┤
+   3.0 ┤─────────────────────  ← Linha quase plana
+   2.0 ┤
+   1.0 ┤
+   0.0 ┤
+       └───────────────────────
+   X:  2019  2020  2021  2022  2023
+```
+
+### Depois (escala focada nos dados)
+```text
+Y: 2.95 ┤                    ╭──
+   2.92 ┤              ╭────╯
+   2.89 ┤         ╭───╯
+   2.86 ┤    ╭───╯
+   2.83 ┤───╯
+   2.80 ┤
+        └───────────────────────
+   X:   2019  2020  2021  2022  2023
+```
+
+---
+
+## Tabela de Comportamento Esperado
+
+| Característica | Variação | Escala Y Antes | Escala Y Depois |
+|---------------|----------|----------------|-----------------|
+| SCS | 2.85 - 2.91 | 0 - 5 | 2.80 - 2.95 |
+| DPR | 1.2 - 1.8 | 0 - 5 | 1.0 - 2.0 |
+| PL | 3.5 - 4.2 | 0 - 10 | 3.2 - 4.5 |
+| HHP$ | 2650 - 2850 | 0 - 3000 | 2550 - 2950 |
+| TPI | 2800 - 2950 | 0 - 3500 | 2700 - 3050 |
+
+---
+
+## Notas Técnicas
+
+- O zero será visível apenas se os dados passarem por ele (não mais forçado)
+- Z-scores no TrendsChart mantêm 2 casas decimais (convenção estatística)
+- Anos serão sempre inteiros, sem decimais
+- Quando há muitos anos (>10), ticks serão espaçados para evitar sobreposição
+- Alterações afetam frontend interativo E relatórios PDF
+
