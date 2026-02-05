@@ -12,7 +12,7 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
-import { getAdaptiveYAxisDomainMultiple } from '@/lib/chart-utils';
+import { getAdaptiveYAxisDomainMultiple, getYearAxisConfig } from '@/lib/chart-utils';
 
 interface TrendStats {
   mean: number | null;
@@ -155,11 +155,26 @@ export const TrendsChart: React.FC<TrendsChartProps> = ({ data, traits, showTren
     return getAdaptiveYAxisDomainMultiple(data, dataKeys);
   }, [data, traits]);
 
+  // Calcular configuração do eixo X para anos
+  const xAxisConfig = React.useMemo(() => {
+    const years = data.map((d) => d.year).filter((y): y is number => Number.isFinite(y));
+    return getYearAxisConfig(years);
+  }, [data]);
+
   return (
     <ResponsiveContainer width="100%" height={400}>
       <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
         <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-        <XAxis dataKey="year" stroke="#666" fontSize={12} />
+        <XAxis 
+          type="number"
+          dataKey="year" 
+          stroke="#666" 
+          fontSize={12}
+          domain={xAxisConfig.domain}
+          ticks={xAxisConfig.ticks}
+          tickFormatter={xAxisConfig.tickFormatter}
+          allowDecimals={false}
+        />
         <YAxis 
           stroke="#666" 
           fontSize={12} 

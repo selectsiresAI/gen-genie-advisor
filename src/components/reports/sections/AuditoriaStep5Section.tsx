@@ -15,6 +15,7 @@ import {
 import { PTA_CATALOG } from "@/lib/pta";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPtaValue } from "@/utils/ptaFormat";
+import { getAdaptiveYAxisDomainFromValues } from "@/lib/chart-utils";
 
 type SeriesPoint = { year: number; n: number; mean: number };
 
@@ -211,6 +212,7 @@ export default function AuditoriaStep5Section({ farmId }: AuditoriaStep5SectionP
                       allowDecimals={false}
                     />
                     <YAxis
+                      domain={getAdaptiveYAxisDomainFromValues(data.map(d => d.mean))}
                       tickFormatter={(value) => formatPtaValue(key, value)}
                       allowDecimals
                     />
