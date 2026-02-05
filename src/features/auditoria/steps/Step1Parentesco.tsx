@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useAGFilters } from "../store";
-import { Info, AlertTriangle, CheckCircle2, HelpCircle } from "lucide-react";
+import { Info, AlertTriangle, CheckCircle2 } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -13,47 +13,47 @@ import {
 } from "@/components/ui/tooltip";
 
 type ParentRole = "sire" | "mgs" | "mmgs";
-type ParentStatus = "Completo" | "Incompleto" | "Desconhecido";
+type ParentStatus = "Informado" | "Não Informado";
 
-type Row = {
+type RawRow = {
   role: ParentRole;
+  status: "Completo" | "Incompleto" | "Desconhecido";
+  n: number;
+  pct: number;
+};
+
+type ConsolidatedRow = {
   status: ParentStatus;
   n: number;
   pct: number;
 };
 
-type GroupedRows = Record<ParentRole, Row[]>;
+type GroupedRows = Record<ParentRole, ConsolidatedRow[]>;
 
 const STATUS_INFO: Record<ParentStatus, { icon: React.ReactNode; color: string; description: string; action: string }> = {
-  Desconhecido: {
+  "Não Informado": {
     icon: <AlertTriangle className="h-4 w-4" />,
     color: "text-destructive",
-    description: "Ancestral não registrado no banco de dados. O código NAAB do pai/avô não foi informado na planilha de importação.",
+    description: "O código NAAB do ancestral não foi informado na planilha de importação.",
     action: "Atualize a planilha de fêmeas incluindo o código NAAB do ancestral e reimporte os dados.",
   },
-  Incompleto: {
-    icon: <HelpCircle className="h-4 w-4" />,
-    color: "text-amber-500",
-    description: "Ancestral identificado (código NAAB informado), porém seus dados genéticos (PTAs) não constam no banco de touros.",
-    action: "Importe os dados do touro no módulo de Importação de Touros ou solicite ao administrador.",
-  },
-  Completo: {
+  "Informado": {
     icon: <CheckCircle2 className="h-4 w-4" />,
     color: "text-emerald-500",
-    description: "Ancestral identificado e com dados genéticos completos no banco de touros.",
+    description: "O código NAAB do ancestral foi fornecido na planilha de importação.",
     action: "Nenhuma ação necessária.",
   },
 };
 
 export default function Step1Parentesco() {
   const { farmId } = useAGFilters();
-  const [rows, setRows] = useState<Row[]>([]);
+  const [rawRows, setRawRows] = useState<RawRow[]>([]);
 
   useEffect(() => {
     let active = true;
     async function load() {
       if (!farmId) {
-        setRows([]);
+        setRawRows([]);
         return;
       }
       const { data, error } = await (supabase.rpc as any)("ag_parentage_overview", {
@@ -62,10 +62,10 @@ export default function Step1Parentesco() {
       if (!active) return;
       if (error) {
         console.error("Failed to load parentage overview", error);
-        setRows([]);
+        setRawRows([]);
         return;
       }
-      setRows(Array.isArray(data) ? (data as Row[]) : []);
+      setRawRows(Array.isArray(data) ? (data as RawRow[]) : []);
     }
     load();
     return () => {
@@ -74,23 +74,54 @@ export default function Step1Parentesco() {
   }, [farmId]);
 
   const byRole = useMemo(() => {
-    const map: GroupedRows = {
-      sire: [],
-      mgs: [],
-      mmgs: [],
+    // Consolidate: "Desconhecido" -> "Não Informado", "Incompleto"+"Completo" -> "Informado"
+    const consolidated: Record<ParentRole, { informed: number; notInformed: number }> = {
+      sire: { informed: 0, notInformed: 0 },
+      mgs: { informed: 0, notInformed: 0 },
+      mmgs: { informed: 0, notInformed: 0 },
     };
-    rows.forEach((row) => {
-      map[row.role]?.push(row);
-    });
-    return map;
-  }, [rows]);
 
-  const Block = ({ title, items }: { title: string; items?: Row[] }) => {
+    rawRows.forEach((row) => {
+      if (row.status === "Desconhecido") {
+        consolidated[row.role].notInformed += row.n;
+      } else {
+        // "Incompleto" ou "Completo" = fazenda informou
+        consolidated[row.role].informed += row.n;
+      }
+    });
+
+    // Build grouped rows with percentages
+    const map: GroupedRows = { sire: [], mgs: [], mmgs: [] };
+
+    (["sire", "mgs", "mmgs"] as ParentRole[]).forEach((role) => {
+      const total = consolidated[role].informed + consolidated[role].notInformed;
+      if (total > 0) {
+        if (consolidated[role].notInformed > 0) {
+          map[role].push({
+            status: "Não Informado",
+            n: consolidated[role].notInformed,
+            pct: (consolidated[role].notInformed / total) * 100,
+          });
+        }
+        if (consolidated[role].informed > 0) {
+          map[role].push({
+            status: "Informado",
+            n: consolidated[role].informed,
+            pct: (consolidated[role].informed / total) * 100,
+          });
+        }
+      }
+    });
+
+    return map;
+  }, [rawRows]);
+
+  const Block = ({ title, items }: { title: string; items?: ConsolidatedRow[] }) => {
     const total = (items ?? []).reduce((sum, row) => sum + (row.n || 0), 0);
     
-    // Sort items: Desconhecido first, then Incompleto, then Completo
+    // Sort items: Não Informado first, then Informado
     const sortedItems = [...(items ?? [])].sort((a, b) => {
-      const order: Record<ParentStatus, number> = { Desconhecido: 0, Incompleto: 1, Completo: 2 };
+      const order: Record<ParentStatus, number> = { "Não Informado": 0, "Informado": 1 };
       return order[a.status] - order[b.status];
     });
 
@@ -145,11 +176,10 @@ export default function Step1Parentesco() {
           <div className="text-sm">
             <p className="font-medium mb-1">Como interpretar os dados de parentesco?</p>
             <ul className="space-y-1 text-muted-foreground">
-              <li><span className="text-destructive font-medium">Desconhecido:</span> O código NAAB do ancestral não foi informado na planilha de importação das fêmeas.</li>
-              <li><span className="text-amber-500 font-medium">Incompleto:</span> O código NAAB foi informado, mas os dados genéticos do touro não estão no banco de dados.</li>
-              <li><span className="text-emerald-500 font-medium">Completo:</span> Ancestral identificado com todos os dados genéticos disponíveis.</li>
+              <li><span className="text-destructive font-medium">Não Informado:</span> O código NAAB do ancestral não consta na planilha de importação.</li>
+              <li><span className="text-emerald-500 font-medium">Informado:</span> O código NAAB do ancestral foi fornecido pela fazenda.</li>
             </ul>
-            <p className="mt-2 text-xs text-primary">Passe o mouse sobre cada status para ver instruções de como completar os dados.</p>
+            <p className="mt-2 text-xs text-primary">Passe o mouse sobre cada status para mais detalhes.</p>
           </div>
         </div>
       </div>
