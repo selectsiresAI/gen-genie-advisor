@@ -442,6 +442,9 @@ function Step5ProgressaoContent() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {ptasSelecionadas.map((key) => {
+            // Não renderizar gráfico se o trait não possui dados no rebanho
+            if (!availablePtas.has(key)) return null;
+            
             const item = seriesByKey[key];
             if (!item?.series?.length) return null;
             const label = labelOf(key);
