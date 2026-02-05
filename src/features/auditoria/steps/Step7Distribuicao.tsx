@@ -25,6 +25,7 @@ import { Target, ChevronDown, X } from "lucide-react";
 import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
 import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
 import { useRegisterChart } from "@/components/pdf/useRegisterChart";
+ import { formatPtaValue } from "@/utils/ptaFormat";
 
 const DEFAULT_SELECTED: string[] = ["hhp_dollar", "tpi", "nm_dollar", "dpr", "pl", "scs"];
 const BINS = 30;
@@ -176,15 +177,15 @@ function HistogramCard({ series, step }: { series: TraitSeries; step: number }) 
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 text-sm">
             <div className="bg-muted/50 px-2 py-1 rounded">
               <div className="text-xs text-muted-foreground">Média</div>
-              <div className="font-semibold">{stats.mean.toFixed(2)}</div>
+               <div className="font-semibold">{formatPtaValue(series.label, stats.mean)}</div>
             </div>
             <div className="bg-muted/50 px-2 py-1 rounded">
               <div className="text-xs text-muted-foreground">Mediana</div>
-              <div className="font-semibold">{stats.median.toFixed(2)}</div>
+               <div className="font-semibold">{formatPtaValue(series.label, stats.median)}</div>
             </div>
             <div className="bg-muted/50 px-2 py-1 rounded">
               <div className="text-xs text-muted-foreground">Desvio Padrão</div>
-              <div className="font-semibold">{stats.std.toFixed(2)}</div>
+               <div className="font-semibold">{formatPtaValue(series.label, stats.std)}</div>
             </div>
             <div className="bg-muted/50 px-2 py-1 rounded">
               <div className="text-xs text-muted-foreground">CV%</div>
@@ -192,11 +193,11 @@ function HistogramCard({ series, step }: { series: TraitSeries; step: number }) 
             </div>
             <div className="bg-muted/50 px-2 py-1 rounded">
               <div className="text-xs text-muted-foreground">Mín - Máx</div>
-              <div className="font-semibold text-xs">{stats.min.toFixed(1)} – {stats.max.toFixed(1)}</div>
+               <div className="font-semibold text-xs">{formatPtaValue(series.label, stats.min)} – {formatPtaValue(series.label, stats.max)}</div>
             </div>
             <div className="bg-muted/50 px-2 py-1 rounded">
               <div className="text-xs text-muted-foreground">Q1 - Q3</div>
-              <div className="font-semibold text-xs">{stats.q1.toFixed(1)} – {stats.q3.toFixed(1)}</div>
+               <div className="font-semibold text-xs">{formatPtaValue(series.label, stats.q1)} – {formatPtaValue(series.label, stats.q3)}</div>
             </div>
           </div>
 

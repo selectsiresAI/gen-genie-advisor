@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { getAutomaticCategory } from "@/utils/femaleCategories";
+ import { formatPtaValue } from "@/utils/ptaFormat";
 import {
   RadarChart,
   PolarGrid,
@@ -86,8 +87,8 @@ function RadarTooltip(props: any) {
   return (
     <div className="rounded border bg-background px-3 py-2 text-xs shadow-sm">
       <div className="font-medium mb-1">{label}</div>
-      <div>{groupA}: {p?.rawA == null ? "-" : Number(p.rawA).toFixed(2)}</div>
-      <div>{groupB}: {p?.rawB == null ? "-" : Number(p.rawB).toFixed(2)}</div>
+       <div>{groupA}: {p?.rawA == null ? "-" : formatPtaValue(label, p.rawA)}</div>
+       <div>{groupB}: {p?.rawB == null ? "-" : formatPtaValue(label, p.rawB)}</div>
     </div>
   );
 }
@@ -337,7 +338,7 @@ export default function AuditoriaStep6Section({ farmId }: AuditoriaStep6SectionP
                             isChange ? (isPos ? "text-green-600" : "text-red-600") : ""
                           }`}
                         >
-                          {val == null ? "-" : Number(val).toFixed(2)}
+                           {val == null ? "-" : formatPtaValue(PTA_LABELS[t] ?? t, val)}
                         </td>
                       );
                     })}

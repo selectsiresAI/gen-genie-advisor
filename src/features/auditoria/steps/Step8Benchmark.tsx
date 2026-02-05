@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAGFilters } from "@/features/auditoria/store";
 import { PTA_CATALOG } from "@/lib/pta";
+ import { formatPtaValue } from "@/utils/ptaFormat";
 
 type TopPct = 10 | 5 | 1;
 
@@ -214,7 +215,7 @@ export default function Step8GeneticBenchmark() {
                       ({r.herd.n_top}/{r.herd.n_total})
                     </span>
                   </span>
-                  <strong>{r.herd.mean_top != null ? r.herd.mean_top.toFixed(2) : "—"}</strong>
+                   <strong>{r.herd.mean_top != null ? formatPtaValue(label, r.herd.mean_top) : "—"}</strong>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>
@@ -223,7 +224,7 @@ export default function Step8GeneticBenchmark() {
                       ({r.global.n_top}/{r.global.n_total})
                     </span>
                   </span>
-                  <strong>{r.global.mean_top != null ? r.global.mean_top.toFixed(2) : "—"}</strong>
+                   <strong>{r.global.mean_top != null ? formatPtaValue(label, r.global.mean_top) : "—"}</strong>
                 </div>
               </CardContent>
             </Card>
