@@ -263,13 +263,13 @@ function RankingList({
               key={`${row.parent_label}-${idx}`}
               className="flex items-center gap-2 text-sm"
             >
-              <div className="w-64 text-right flex-shrink-0">
-                <span className="font-medium">{row.parent_label}</span>
+              <div className="w-64 flex-shrink-0 flex items-center justify-end gap-2">
                 {row.parent_name && (
-                  <span className="text-xs text-muted-foreground ml-1.5">
+                  <span className="text-xs text-muted-foreground truncate">
                     {row.parent_name}
                   </span>
                 )}
+                <span className="font-medium tabular-nums">{row.parent_label}</span>
               </div>
 
               <div className="flex-1 flex items-center gap-2">
