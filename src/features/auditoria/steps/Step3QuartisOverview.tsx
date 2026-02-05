@@ -12,6 +12,7 @@ import { PTA_CATALOG } from "@/lib/pta";
 import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
 import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
 import { useRegisterChart } from "@/components/pdf/useRegisterChart";
+ import { formatPtaValue } from "@/utils/ptaFormat";
 
 type Row = {
   trait_key: string;
@@ -253,9 +254,9 @@ function Step3QuartisOverviewContent() {
                       <td className="py-2 pr-3">{label}</td>
                       <td className="py-2 pr-3">{r.n_total}</td>
                       <td className="py-2 pr-3">{r.top_n}</td>
-                      <td className="py-2 pr-3">{r.top_mean != null ? r.top_mean.toFixed(2) : "—"}</td>
+                       <td className="py-2 pr-3">{r.top_mean != null ? formatPtaValue(label, r.top_mean) : "—"}</td>
                       <td className="py-2 pr-3">{r.bottom_n}</td>
-                      <td className="py-2 pr-3">{r.bottom_mean != null ? r.bottom_mean.toFixed(2) : "—"}</td>
+                       <td className="py-2 pr-3">{r.bottom_mean != null ? formatPtaValue(label, r.bottom_mean) : "—"}</td>
                     </tr>
                   );
                 })}

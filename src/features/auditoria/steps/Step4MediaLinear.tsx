@@ -379,7 +379,7 @@ function Step4MediaLinearContent() {
                 type="number"
                 domain={axisConfig.domain}
                 ticks={axisConfig.ticks}
-                tickFormatter={(value) => Number(value).toFixed(2)}
+                 tickFormatter={(value) => Number(value).toFixed(2)}
                 allowDecimals
               />
               <YAxis dataKey="trait" type="category" width={90} />
@@ -390,7 +390,7 @@ function Step4MediaLinearContent() {
                 }}
               />
               <Bar dataKey="avgValue" fill="hsl(var(--muted))">
-                <LabelList dataKey="avgValue" position="right" formatter={(val: number) => val.toFixed(2)} />
+                 <LabelList dataKey="avgValue" position="right" formatter={(val: any) => Number(val).toFixed(2)} />
                 {chartData.map((entry, index) => (
                   <Cell
                     key={`cell-${index}`}

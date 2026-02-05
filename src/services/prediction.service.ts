@@ -100,7 +100,9 @@ export interface BullSummary {
 
 export type PredictionResult = Record<PredictionTraitKey, number | null>;
 
-const toTwoDecimals = (value: number) => Math.round(value * 100) / 100;
+ import { formatPtaValue } from '@/utils/ptaFormat';
+ 
+ const toTwoDecimals = (value: number) => Math.round(value * 100) / 100;
 
 export function mapBullRecord(record: BullsDenormSelection | null): BullSummary | null {
   if (!record || !record.code) {
@@ -161,18 +163,16 @@ export function calculatePedigreePrediction({
   return result;
 }
 
-export function formatPredictionValue(value: number | null | undefined): string {
-  if (value == null) {
-    return '—';
-  }
-
-  return value.toFixed(2);
-}
-
-export function formatBullValue(value: number | null | undefined): string {
-  if (value == null) {
-    return '—';
-  }
-
-  return value.toFixed(2);
-}
+ export function formatPredictionValue(traitKey: string, value: number | null | undefined): string {
+   if (value == null) {
+     return '—';
+   }
+   return formatPtaValue(traitKey, value);
+ }
+ 
+ export function formatBullValue(traitKey: string, value: number | null | undefined): string {
+   if (value == null) {
+     return '—';
+   }
+   return formatPtaValue(traitKey, value);
+ }

@@ -45,12 +45,13 @@ interface TrendsChartProps {
   formatValue: (traitKey: string, value: number | null | undefined) => string;
 }
 
-const formatZScore = (value: number | null | undefined) => {
-  if (value === null || value === undefined || Number.isNaN(value)) {
-    return '—';
-  }
-  return value.toFixed(2);
-};
+ // Z-scores always use 2 decimals (statistical convention)
+ const formatZScore = (value: number | null | undefined) => {
+   if (value === null || value === undefined || Number.isNaN(value)) {
+     return '—';
+   }
+   return value.toFixed(2);
+ };
 
 const buildTooltipContent = (
   props: TooltipProps<number, string>,

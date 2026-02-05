@@ -16,6 +16,7 @@ import { useAGFilters } from "../store";
 import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
 import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
 import { useRegisterChart } from "@/components/pdf/useRegisterChart";
+ import { formatPtaValue } from "@/utils/ptaFormat";
 
 // Traits otimizados para carregamento rápido - apenas os mais relevantes
 const CORE_PTA_COLUMNS = [
@@ -272,7 +273,7 @@ function Step7QuartisIndicesContent() {
                               isDiff && isPositive ? "text-green-600" : isDiff && val && val < 0 ? "text-red-600" : ""
                             }`}
                           >
-                            {val != null ? Math.round(val) : "-"}
+                             {val != null ? formatPtaValue(t.replace("_dollar", "$").toUpperCase(), val) : "-"}
                           </td>
                         );
                       })}
