@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { HelpButton } from "@/components/help/HelpButton";
 import { HelpHint } from "@/components/help/HelpHint";
 import { formatPtaValue } from "@/utils/ptaFormat";
+import { getAdaptiveYAxisDomainFromValues } from "@/lib/chart-utils";
 
 import {
   fetchFemalesDenormByFarm,
@@ -770,6 +771,16 @@ function TraitCard({
   const stats = useMemo(() => descriptiveStats(data.map(d => d.mean)), [data]);
   const h2 = H2[trait] ?? 0.30;
 
+  // Domínio adaptativo do eixo Y
+  const yDomain = useMemo(() => {
+    const allValues = [
+      ...data.map(d => d.mean),
+      ...(showTrend && trendLine.length ? trendLine.map(t => t.trend) : []),
+      ...(showFarmMean ? [farmMean] : []),
+    ].filter((v): v is number => Number.isFinite(v));
+    return getAdaptiveYAxisDomainFromValues(allValues);
+  }, [data, showTrend, showFarmMean, farmMean, trendLine]);
+
   return (
     <div className="rounded-2xl shadow overflow-hidden bg-white">
       {/* Header tarja preta com tendência geral */}
@@ -789,7 +800,7 @@ function TraitCard({
             </defs>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="year" type="number" domain={[domainTicks[0], domainTicks[domainTicks.length - 1]]} ticks={domainTicks} tickMargin={6} />
-            <YAxis tickMargin={6} />
+            <YAxis domain={yDomain} tickMargin={6} />
             <Tooltip
               content={({ active, payload, label }) => {
                 if (!active || !payload || !payload.length) return null;
