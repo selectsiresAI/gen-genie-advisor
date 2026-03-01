@@ -1,124 +1,140 @@
 
-# Plano: Adicionar Nome do Touro ao Ranking de Top Parents (Passo 2)
 
-## Objetivo
-Mostrar o nome do touro ao lado do código NAAB na lista de ranking, facilitando a identificação visual pelos usuários.
+# Plano: Corrigir 6 Erros e 8 Warnings de Seguranca
 
----
+## Resumo dos Problemas Encontrados
 
-## Abordagem Escolhida: Buscar nomes no Frontend
+### ERROS (6)
+1. **admin_temp_passwords** - View sem `security_invoker`, expoe senhas temporarias
+2. **ag_pta_tables_no_rls** - Views/tabelas de analytics sem protecao RLS
+3. **password_reset_log** - Tabela de log de senhas sem RLS
+4. **Security Definer Views** (2 instancias no linter) - Views sem `security_invoker=on`
+5. **jspdf vulnerabilidade critica** - Dependencia com CVE conhecida
+6. **function_search_path_mutable** - Ja ignorado (funcoes C de extensao fuzzystrmatch)
 
-A RPC `ag_top_parents` retorna `parent_label` (código NAAB). Após receber os dados, faremos uma busca adicional na view `bulls_denorm` para enriquecer cada registro com o nome correspondente.
-
-### Vantagens
-- Não requer alteração no banco de dados (migrations)
-- Implementação mais rápida
-- Funciona mesmo se a RPC não puder ser modificada
-
----
-
-## Mudanças no Arquivo
-
-### `src/features/auditoria/steps/Step2TopParents.tsx`
-
-**1. Atualizar tipo `Row` para incluir nome:**
-```typescript
-type Row = {
-  parent_label: string;
-  parent_name: string | null; // ← Novo campo
-  daughters_count: number;
-  trait_mean: number | null;
-};
-```
-
-**2. Adicionar função para buscar nomes dos touros:**
-```typescript
-async function fetchBullNames(naabCodes: string[]): Promise<Map<string, string>> {
-  if (naabCodes.length === 0) return new Map();
-  
-  const { data, error } = await supabase
-    .from('bulls_denorm')
-    .select('code, name')
-    .in('code', naabCodes);
-  
-  if (error || !data) return new Map();
-  
-  return new Map(data.map(b => [b.code, b.name]));
-}
-```
-
-**3. Modificar `fetchData` para enriquecer dados:**
-```typescript
-const fetchData = useCallback(async () => {
-  if (!farmId) { ... }
-  setLoading(true);
-  
-  const [sireRaw, mgsRaw] = await Promise.all([fetchTop("sire"), fetchTop("mgs")]);
-  
-  // Coletar todos os NAABs únicos
-  const allNaabs = [...new Set([
-    ...sireRaw.map(r => r.parent_label),
-    ...mgsRaw.map(r => r.parent_label)
-  ])];
-  
-  // Buscar nomes correspondentes
-  const namesMap = await fetchBullNames(allNaabs);
-  
-  // Enriquecer dados com nomes
-  const enrichRow = (row: RawRow): Row => ({
-    ...row,
-    parent_name: namesMap.get(row.parent_label) || null
-  });
-  
-  setRowsSire(sireRaw.map(enrichRow));
-  setRowsMgs(mgsRaw.map(enrichRow));
-  setLoading(false);
-}, [farmId, fetchTop]);
-```
-
-**4. Atualizar `RankingList` para exibir nome:**
-```tsx
-<div className="w-56 text-right flex-shrink-0">
-  <span className="font-medium">{row.parent_label}</span>
-  {row.parent_name && (
-    <span className="text-xs text-muted-foreground ml-1">
-      {row.parent_name}
-    </span>
-  )}
-</div>
-```
+### WARNINGS (8 - nao ignorados)
+1. **admin_role_on_profiles** - is_admin no profiles (remediacao dificil, adiar)
+2. **console_logs_sensitive_data** - console.error expoe dados sensiveis
+3. **genetic_records_no_delete_policy** - Falta DELETE policy
+4. **RLS Policy Always True** (3 instancias) - INSERT com `WITH CHECK (true)` em clients, satisfaction_surveys, support_tickets
+5. **RLS Enabled No Policy** - Tabela(s) com RLS ativado mas sem policies
 
 ---
 
-## Resultado Visual
+## Etapa 1: Migration SQL - Corrigir Views e RLS
 
-| Antes | Depois |
-|-------|--------|
-| `007HO15937` | `007HO15937` ALADDIN |
-| `551HO03797` | `551HO03797` TARRINO |
-| `551HO04034` | `551HO04034` LEGACY |
+Uma unica migration para:
 
----
+### 1.1 Converter views para SECURITY INVOKER
+Views sem `security_invoker=on`:
+- `admin_temp_passwords`
+- `ag_pta_media_anual`
+- `ag_pta_ponderada_anual`
+- `farm_technicians`
+- `females_public_by_farm_view`
+- `user_engagement_metrics`
+- `v_map_orders`
 
-## Layout Alternativo (Duas Linhas)
+```sql
+ALTER VIEW admin_temp_passwords SET (security_invoker = on);
+ALTER VIEW ag_pta_media_anual SET (security_invoker = on);
+ALTER VIEW ag_pta_ponderada_anual SET (security_invoker = on);
+ALTER VIEW farm_technicians SET (security_invoker = on);
+ALTER VIEW females_public_by_farm_view SET (security_invoker = on);
+ALTER VIEW user_engagement_metrics SET (security_invoker = on);
+ALTER VIEW v_map_orders SET (security_invoker = on);
+```
 
-Se o espaço horizontal for limitado:
-```tsx
-<div className="w-56 text-right flex-shrink-0">
-  <div className="font-medium text-sm">{row.parent_label}</div>
-  {row.parent_name && (
-    <div className="text-xs text-muted-foreground truncate">
-      {row.parent_name}
-    </div>
-  )}
-</div>
+### 1.2 Ativar RLS em tabelas expostas
+
+```sql
+-- password_reset_log - apenas admins podem ler
+ALTER TABLE password_reset_log ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "admin_read_reset_log" ON password_reset_log
+  FOR SELECT USING (public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "admin_insert_reset_log" ON password_reset_log
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+-- audit_step3_pta_yearly - farm membership
+ALTER TABLE audit_step3_pta_yearly ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "farm_members_read" ON audit_step3_pta_yearly
+  FOR SELECT USING (public.is_farm_member(farm_id));
+CREATE POLICY "farm_editors_write" ON audit_step3_pta_yearly
+  FOR INSERT WITH CHECK (public.is_farm_member(farm_id));
+CREATE POLICY "farm_editors_update" ON audit_step3_pta_yearly
+  FOR UPDATE USING (public.is_farm_member(farm_id));
+```
+
+### 1.3 Adicionar DELETE policy em genetic_records
+
+```sql
+CREATE POLICY "genrec_delete" ON genetic_records
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM user_farms uf
+      WHERE uf.user_id = auth.uid()
+        AND uf.farm_id = genetic_records.herd_id
+        AND uf.role IN ('owner', 'editor')
+    )
+  );
+```
+
+### 1.4 Corrigir INSERT policies com `WITH CHECK (true)`
+
+```sql
+-- clients: restringir insert a usuarios autenticados (ja esta, mas precisa check)
+DROP POLICY "clients_insert_any" ON clients;
+CREATE POLICY "clients_insert_authenticated" ON clients
+  FOR INSERT TO authenticated
+  WITH CHECK (true);
+-- Nota: clients nao tem user_id, entao manter true mas restringir ao role authenticated
+
+-- satisfaction_surveys: remover policy duplicada permissiva
+DROP POLICY "Users can create satisfaction surveys" ON satisfaction_surveys;
+-- Manter apenas "Usuarios podem criar avaliacoes" que ja tem check correto
+
+-- support_tickets: restringir insert
+DROP POLICY "tickets_insert_policy" ON support_tickets;
+CREATE POLICY "tickets_insert_authenticated" ON support_tickets
+  FOR INSERT TO authenticated
+  WITH CHECK (user_id = auth.uid() OR user_id IS NULL);
+```
+
+### 1.5 Corrigir funcoes com search_path incluindo 'auth'
+
+As 4 funcoes (`can_access_farm`, `is_farm_editor`, `is_farm_member`, `is_farm_owner`) ja tem `SET search_path TO 'public', 'auth'`. O linter exige apenas `public`. Porem, precisam de `auth` para `auth.uid()`. Vamos alterar para usar apenas `public` e qualificar as chamadas:
+
+```sql
+ALTER FUNCTION can_access_farm(uuid) SET search_path = public;
+ALTER FUNCTION is_farm_editor(uuid) SET search_path = public;
+ALTER FUNCTION is_farm_member(uuid) SET search_path = public;
+ALTER FUNCTION is_farm_owner(uuid) SET search_path = public;
 ```
 
 ---
 
-## Notas Técnicas
+## Etapa 2: Atualizar jspdf
 
-- A busca de nomes é feita em uma única query para todos os NAABs (eficiente)
-- Se o touro não existir no banco, apenas o código NAAB será exibido
-- O componente `RankingList` receberá o tipo `Row` atualizado com `parent_name`
-- A largura da coluna pode precisar de ajuste (de `w-56` para `w-64` ou `w-72`)
+Atualizar `jspdf` para a versao mais recente que corrige a vulnerabilidade de Path Traversal (GHSA-f8cm-6447-x5h2).
+
+---
+
+## Etapa 3: Reduzir console.error em producao
+
+No `AuthPage.tsx`, substituir `console.error` detalhado por mensagens genericas em producao.
+
+---
+
+## Etapa 4: Atualizar findings de seguranca
+
+Marcar como resolvidos os findings corrigidos e atualizar os que nao podem ser corrigidos neste momento (como `admin_role_on_profiles`).
+
+---
+
+## Impacto
+
+- **Views**: Passarao a usar as permissoes do usuario que consulta (nao do criador da view)
+- **Tabelas**: password_reset_log e audit_step3_pta_yearly terao acesso restrito
+- **Funcionalidade**: Nenhuma quebra esperada, pois as views ja sao acessadas via funcoes RPC que verificam permissoes
+- **Console**: Menos dados sensiveis expostos no navegador
+
