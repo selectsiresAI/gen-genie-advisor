@@ -23,7 +23,7 @@ import FemaleUploadModal from './FemaleUploadModal';
 import SegmentationPage from './SegmentationPage';
 import { HelpButton } from '@/components/help/HelpButton';
 import { HelpHint } from '@/components/help/HelpHint';
-import HomeHintDialog from '@/features/welcome/HomeHintDialog';
+
 import HomeTourAnchors from "@/features/tutorial/anchors/HomeTourAnchors";
 import { usePlanStore } from '@/hooks/usePlanStore';
 import { useHerdStore } from '@/hooks/useHerdStore';
@@ -687,7 +687,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   }
   return <div className="min-h-screen bg-background relative">
       <HomeTourAnchors />
-      <HomeHintDialog userId={user.id} />
+      
       <HelpButton context="dashboard" />
 
       
@@ -921,7 +921,7 @@ Select Sires do Brasil</p>
       
       <HelpButton />
       <SatisfactionSurvey forceVisible={showSurvey} onClose={() => setShowSurvey(false)} />
-      <HomeHintDialog userId={user?.id} />
+      
     </div>;
 };
 export default MainDashboard;
