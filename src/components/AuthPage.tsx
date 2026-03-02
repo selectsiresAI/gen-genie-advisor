@@ -72,7 +72,7 @@ const AuthPage: React.FC<AuthPageProps> = ({
         onAuthSuccess();
       }
     } catch (error: any) {
-      console.error('Erro no login:', error);
+      console.error('Authentication error occurred');
       setError(error.message || 'Erro ao fazer login');
       toast({
         title: "Erro no login",
@@ -136,7 +136,7 @@ const AuthPage: React.FC<AuthPageProps> = ({
         setActiveTab('login');
       }
     } catch (error: any) {
-      console.error('Erro no registro:', error);
+      console.error('Registration error occurred');
       setError(error.message || 'Erro ao criar conta');
       toast({
         title: "Erro ao criar conta",
@@ -171,7 +171,7 @@ const AuthPage: React.FC<AuthPageProps> = ({
       setIsForgotPassword(false);
       setResetEmail('');
     } catch (error: any) {
-      console.error('Erro ao enviar e-mail:', error);
+      console.error('Password reset error occurred');
       setError(error.message || 'Erro ao enviar e-mail de recuperação');
       toast({
         title: "Erro ao enviar e-mail",
