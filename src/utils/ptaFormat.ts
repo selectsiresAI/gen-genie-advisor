@@ -71,7 +71,7 @@ const INTEGER_PTA_NAMES = [
 
 // Normalização para evitar problemas com espaço, $ e %
 function normalizePtaKey(name: string): string {
-  return name.replace(/[\s$%]/g, "").toUpperCase();
+  return name.replace(/[\s$%®™©]/g, "").toUpperCase();
 }
 
 const DECIMAL_PTA_SET = new Set(DECIMAL_PTA_NAMES.map(normalizePtaKey));
