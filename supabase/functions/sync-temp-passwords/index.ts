@@ -12,10 +12,12 @@ serve(async (req) => {
   }
 
   try {
-    // Verificar autenticação
+    // Verificar autenticação via JWT
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('Não autenticado');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Criar cliente com service role key (admin)
@@ -29,6 +31,29 @@ serve(async (req) => {
         }
       }
     );
+
+    // Validar token e verificar role admin
+    const anonClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid token' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const userId = claimsData.claims.sub;
+
+    // Verificar se é admin
+    const { data: isAdmin } = await supabaseAdmin.rpc('has_role', { _user_id: userId, _role: 'admin' });
+    if (!isAdmin) {
+      return new Response(JSON.stringify({ success: false, error: 'Admin access required' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Buscar profiles com senhas temporárias
     const { data: profiles, error: profilesError } = await supabaseAdmin
