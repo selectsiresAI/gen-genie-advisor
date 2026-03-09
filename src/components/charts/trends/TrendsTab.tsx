@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TrendsChart, type ChartRow, type TraitSeriesMeta } from './TrendsChart';
+import { formatPtaValue } from '@/utils/ptaFormat';
 
 interface TrendStats {
   mean: number | null;
@@ -35,20 +36,6 @@ interface TrendsTabProps {
   showTrendLine: boolean;
   colors: string[];
 }
-
-const MONETARY_TRAITS = new Set(['hhp_dollar', 'nm_dollar', 'cm_dollar', 'fm_dollar', 'gm_dollar']);
-
-const numberFormatter = new Intl.NumberFormat('pt-BR', {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-const currencyFormatter = new Intl.NumberFormat('pt-BR', {
-  style: 'currency',
-  currency: 'USD',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
 
 const TRAIT_COLUMN_ALIASES: Record<string, string> = {
   'HHP$': 'hhp_dollar',
@@ -130,10 +117,7 @@ const formatValue = (traitKey: string, value: number | null | undefined) => {
   if (value === null || value === undefined || Number.isNaN(value)) {
     return '—';
   }
-  if (MONETARY_TRAITS.has(traitKey)) {
-    return currencyFormatter.format(value);
-  }
-  return numberFormatter.format(value);
+  return formatPtaValue(traitKey, value);
 };
 
 const TrendsChartLazy = React.lazy(() => import('./TrendsChart').then((module) => ({ default: module.TrendsChart })));

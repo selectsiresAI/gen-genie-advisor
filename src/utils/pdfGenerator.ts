@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { formatPtaValue } from '@/utils/ptaFormat';
 
 export const generateSegmentationPDF = async (data: {
   farmName: string;
@@ -279,9 +280,9 @@ export const generateGeneticProjectionPDF = async (data: {
     const avgTPI = data.results.reduce((sum: number, r: any) => sum + (r.projectedTPI || 0), 0) / data.results.length;
     const avgNM = data.results.reduce((sum: number, r: any) => sum + (r.projectedNM || 0), 0) / data.results.length;
     
-    pdf.text(`TPI médio projetado: ${avgTPI.toFixed(1)}`, 25, yPosition);
+    pdf.text(`TPI médio projetado: ${formatPtaValue('TPI', avgTPI)}`, 25, yPosition);
     yPosition += 6;
-    pdf.text(`NM$ médio projetado: ${avgNM.toFixed(1)}`, 25, yPosition);
+    pdf.text(`NM$ médio projetado: ${formatPtaValue('NM$', avgNM)}`, 25, yPosition);
   }
 
   return pdf;

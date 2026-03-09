@@ -250,11 +250,7 @@ const NUM = (v: number, digits = 0) =>
     maximumFractionDigits: digits 
   }).format(isFinite(v) ? Math.round(v * Math.pow(10, digits)) / Math.pow(10, digits) : 0);
 
-const PTA_NUM = (v: number) => 
-  new Intl.NumberFormat("pt-BR", { 
-    minimumFractionDigits: 1, 
-    maximumFractionDigits: 1 
-  }).format(isFinite(v) ? Math.round(v * 10) / 10 : 0);
+// PTA_NUM removed — use formatPtaValue(ptaLabel, value) instead
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
@@ -1594,10 +1590,7 @@ function PageResults({ st }: { st: AppState }) {
     if (isIm5Selected) {
       return BRL(value);
     }
-    if (roiLabelUsed.includes("$")) {
-      return `$${value.toFixed(2)}`;
-    }
-    return PTA_NUM(value);
+    return formatPtaValue(roiLabelUsed, value);
   };
 
   const hasChartData = calc.byBull.length > 0 && calc.byBull.some((r) => r.bezerrasTotais > 0 || r.valorTotal > 0);
@@ -1674,7 +1667,7 @@ function PageResults({ st }: { st: AppState }) {
               label: (ctx: any) => {
                 const ptaLabel = planStore.selectedPTAList[ctx.dataIndex];
                 const realValue = calc.byBull[ctx.datasetIndex]?.ptaPond[ptaLabel] || 0;
-                return `${ctx.dataset.label}: ${PTA_NUM(realValue)}`;
+                return `${ctx.dataset.label}: ${formatPtaValue(ptaLabel, realValue)}`;
               },
             },
           },
@@ -1752,7 +1745,7 @@ function PageResults({ st }: { st: AppState }) {
           {planStore.selectedPTAList.map((ptaLabel) => (
             <div key={ptaLabel} style={{ background: COLORS.white, border: `1px dashed ${COLORS.gray}`, borderRadius: 10, padding: 10 }}>
               <div style={{ fontSize: 12, color: COLORS.black }}>PTA média geral – {ptaLabel}</div>
-              <div style={{ fontSize: 22, fontWeight: 800 }}>{PTA_NUM(calc.ptaPondGeral[ptaLabel] || 0)}</div>
+              <div style={{ fontSize: 22, fontWeight: 800 }}>{formatPtaValue(ptaLabel, calc.ptaPondGeral[ptaLabel] || 0)}</div>
             </div>
           ))}
         </div>
@@ -1813,7 +1806,7 @@ function PageResults({ st }: { st: AppState }) {
                       <td style={{ textAlign: "right", padding: 6 }}>{BRL(r.valorTotal)}</td>
                       <td style={{ textAlign: "right", padding: 6 }}>{NUM(r.bezerrasTotais, 0)}</td>
                       {planStore.selectedPTAList.map((ptaLabel) => (
-                        <td key={ptaLabel} style={{ textAlign: "right", padding: 6 }}>{PTA_NUM(r.ptaPond[ptaLabel] || 0)}</td>
+                        <td key={ptaLabel} style={{ textAlign: "right", padding: 6 }}>{formatPtaValue(ptaLabel, r.ptaPond[ptaLabel] || 0)}</td>
                       ))}
                       <td style={{ textAlign: "right", padding: 6 }}>{BRL(r.custoPorBezerra)}</td>
                       <td style={{ 

@@ -748,8 +748,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
       return '-';
     }
     if (key === 'hhp_dollar') {
-      const numericValue = Number(rawValue);
-      return Number.isNaN(numericValue) ? rawValue : numericValue.toFixed(0);
+      return formatPtaValue('HHP$', rawValue);
     }
     return rawValue as React.ReactNode;
   };
