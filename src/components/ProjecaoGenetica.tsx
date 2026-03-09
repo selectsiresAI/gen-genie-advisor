@@ -18,7 +18,6 @@ import {
 } from "@/providers/PlanObjectiveContext";
 import { PlanStepper } from "@/components/plano-genetico/PlanStepper";
 import { EmptyChartPlaceholder } from "@/components/plano-genetico/EmptyChartPlaceholder";
-import PageComparacaoRapida from "@/components/plano-genetico/PageComparacaoRapida";
 
 /**
  * Projeção Genética MVP – Select Sires (Frontend Only, Single File)
@@ -2194,7 +2193,6 @@ function Sidebar({ current, onChange, onLoadTest, onClear }: { current: string; 
       <div style={{ fontWeight: 900, color: COLORS.black, marginBottom: 8, fontSize: 18 }}>Projeção Genética MVP</div>
       {item("plano", "🧬 Plano Genético")}
       {item("touros", "🐂 Entradas dos Touros")}
-      {item("comparacao", "⚡ Comparação Rápida")}
       {item("resultados", "📊 Resultados & Gráficos")}
       {item("pdf", "📄 Exportar PDF")}
       <div style={{ marginTop: "auto", display: "grid", gap: 8 }}>
@@ -2210,14 +2208,13 @@ const PAGE_TO_STEP: Record<string, number> = {
   touros: 1,
   resultados: 2,
   pdf: 2,
-  comparacao: -1,
 };
 
 const STEP_TO_PAGE = ["plano", "touros", "resultados"] as const;
 
 export default function ProjecaoGenetica() {
   const { state, setState, loadTestData, clearAll } = useAppState();
-  const [page, setPage] = useState<"plano" | "touros" | "comparacao" | "resultados" | "pdf">("plano");
+  const [page, setPage] = useState<"plano" | "touros" | "resultados" | "pdf">("plano");
 
   const initialObjectiveChoice = useMemo(() => objectiveFromLabel(state.farm.objective), [state.farm.objective]);
 
@@ -2252,8 +2249,7 @@ export default function ProjecaoGenetica() {
           )}
           {page === "plano" && <PagePlano st={state} setSt={setState} />}
           {page === "touros" && <PageBulls st={state} setSt={setState} onGoToResults={() => setPage("resultados")} />}
-          {page === "comparacao" && <PageComparacaoRapida />}
-          {page === "resultados" && <PageResults st={state} />}
+{page === "resultados" && <PageResults st={state} />}
           {page === "pdf" && <PageExport st={state} />}
         </main>
       </div>
