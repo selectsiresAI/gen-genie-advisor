@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import EstruturalPopulacional from "./EstruturalPopulacional";
 import PTAMothersTable from "./PTAMothersTable";
-import { BullSelector } from "@/components/BullSelector";
+import { BullSelector, getBullFieldValue } from "@/components/BullSelector";
 import { IM5Configurator, type IM5Config } from "@/components/plano-genetico/IM5Configurator";
 import { IM5Results, type IM5Row } from "@/components/plano-genetico/IM5Results";
 import { usePlanBulls } from "@/hooks/usePlanBulls";
@@ -1126,112 +1126,8 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
 
 function PageBulls({ st, setSt, onGoToResults }: { st: AppState; setSt: React.Dispatch<React.SetStateAction<AppState>>; onGoToResults?: () => void }) {
   const planStore = usePlanStore();
-  const [toolssBulls, setToolssBulls] = useState<any[]>([]);
-  
-  useEffect(() => {
-    const loadBullsFromSupabase = async () => {
-      try {
-        const { data: bulls, error } = await supabase
-          .rpc('get_bulls_denorm')
-          .order('tpi', { ascending: false })
-          .limit(100); // Limit to avoid too many bulls
-        
-        if (error) {
-          console.error('Erro ao carregar touros:', error);
-          return;
-        }
-        
-        if (bulls && bulls.length > 0) {
-          // Convert Supabase bulls to ToolSS format for compatibility
-          // Filter out bulls without HHP$ as requested by user
-          const convertedBulls = bulls
-            .filter((bull: any) => bull.hhp_dollar && bull.hhp_dollar !== null)
-            .map((bull: any) => ({
-              naab: bull.code,
-              nome: bull.name,
-              empresa: bull.company || 'N/A',
-              // Índices econômicos
-              TPI: bull.tpi ?? null,
-              "NM$": bull.nm_dollar ?? null,
-              "HHP$": bull.hhp_dollar ?? null,
-              "HHP$®": bull.hhp_dollar ?? null, // Alias para compatibilidade
-              "FM$": bull.fm_dollar ?? null,
-              "GM$": bull.gm_dollar ?? null,
-              "CM$": bull.cm_dollar ?? null,
-              // Produção
-              PTAM: bull.ptam ?? null,
-              Milk: bull.ptam ?? null, // Alias
-              PTAF: bull.ptaf ?? null,
-              Fat: bull.ptaf ?? null, // Alias
-              "PTAF%": bull.ptaf_pct ?? null,
-              "Fat%": bull.ptaf_pct ?? null, // Alias
-              PTAP: bull.ptap ?? null,
-              Protein: bull.ptap ?? null, // Alias
-              "PTAP%": bull.ptap_pct ?? null,
-              "Protein%": bull.ptap_pct ?? null, // Alias
-              CFP: bull.cfp ?? null,
-              // Saúde e Longevidade
-              PL: bull.pl ?? null,
-              DPR: bull.dpr ?? null,
-              LIV: bull.liv ?? null,
-              "H LIV": bull.h_liv ?? null,
-              SCS: bull.scs ?? null,
-              MAST: bull.mast ?? null,
-              MET: bull.met ?? null,
-              RP: bull.rp ?? null,
-              DA: bull.da ?? null,
-              KET: bull.ket ?? null,
-              MF: bull.mf ?? null,
-              // Reprodução
-              CCR: bull.ccr ?? null,
-              HCR: bull.hcr ?? null,
-              FI: bull.fi ?? null,
-              GL: bull.gl ?? null,
-              // Conformação
-              PTAT: bull.ptat ?? null,
-              UDC: bull.udc ?? null,
-              FLC: bull.flc ?? null,
-              BWC: bull.bwc ?? null,
-              // Parto
-              SCE: bull.sce ?? null,
-              DCE: bull.dce ?? null,
-              SSB: bull.ssb ?? null,
-              DSB: bull.dsb ?? null,
-              // Tipo Linear
-              STA: bull.sta ?? null,
-              STR: bull.str ?? null,
-              DFM: bull.dfm ?? null,
-              RUA: bull.rua ?? null,
-              RLS: bull.rls ?? null,
-              RTP: bull.rtp ?? null,
-              FTL: bull.ftl ?? null,
-              RW: bull.rw ?? null,
-              RLR: bull.rlr ?? null,
-              FTA: bull.fta ?? null,
-              FLS: bull.fls ?? null,
-              FUA: bull.fua ?? null,
-              RUH: bull.ruh ?? null,
-              RUW: bull.ruw ?? null,
-              UCL: bull.ucl ?? null,
-              UDP: bull.udp ?? null,
-              FTP: bull.ftp ?? null,
-              // Outros
-              "F SAV": bull.f_sav ?? null,
-              GFI: bull.gfi ?? null,
-              RFI: bull.rfi ?? null,
-            }));
-          
-          setToolssBulls(convertedBulls);
-        }
-      } catch (e) {
-        console.error("Erro ao carregar touros do Supabase:", e);
-      }
-    };
-    
-    loadBullsFromSupabase();
-  }, []);
 
-  // Inicializa touros se necessário - sem loops
+  // Inicializa touros se necessário
   useEffect(() => {
     if (st.bulls.length < st.numberOfBulls) {
       const newBulls = [];
@@ -1240,7 +1136,7 @@ function PageBulls({ st, setSt, onGoToResults }: { st: AppState; setSt: React.Di
         planStore.selectedPTAList.forEach(ptaLabel => {
           defaultPTA[ptaLabel] = 0;
         });
-        
+
         newBulls.push({
           id: `bull${i + 1}`,
           name: "",
@@ -1248,7 +1144,7 @@ function PageBulls({ st, setSt, onGoToResults }: { st: AppState; setSt: React.Di
           empresa: "",
           semen: "Sexado" as SemenType,
           pricePerDose: 0,
-          doses: { novilhas: 0, primiparas: 0, secundiparas: 0, multiparous: 0 },
+          doses: { novilhas: 0, primiparas: 0, secundiparas: 0, multiparas: 0 },
           pta: defaultPTA,
         });
       }
@@ -1256,7 +1152,7 @@ function PageBulls({ st, setSt, onGoToResults }: { st: AppState; setSt: React.Di
         setSt(s => ({ ...s, bulls: [...s.bulls, ...newBulls] }));
       }
     }
-  }, [st.numberOfBulls, st.bulls.length, planStore.selectedPTAList.length]); // Stable dependency
+  }, [st.numberOfBulls, st.bulls.length, planStore.selectedPTAList.length]);
 
   return (
     <div>
@@ -1265,8 +1161,8 @@ function PageBulls({ st, setSt, onGoToResults }: { st: AppState; setSt: React.Di
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
           <div>
             <Label>Número de touros para análise (1-5)</Label>
-            <Select 
-              value={st.numberOfBulls} 
+            <Select
+              value={st.numberOfBulls}
               onChange={(v) => setSt(s => ({ ...s, numberOfBulls: parseInt(v) }))}
               options={[
                 { value: "1", label: "1 touro" },
@@ -1288,81 +1184,72 @@ function PageBulls({ st, setSt, onGoToResults }: { st: AppState; setSt: React.Di
       {/* Configuração de cada touro */}
       {st.bulls.slice(0, st.numberOfBulls).map((b, idx) => (
         <Section key={b.id} title={`Touro ${idx + 1}`}>
-          {/* Seleção do touro usando BullSelector */}
-          {toolssBulls.length > 0 && (
-            <div style={{ marginBottom: 12 }}>
-              <BullSelector 
-                label={`Selecionar Touro ${idx + 1}`}
-                placeholder="Digite o código NAAB ou selecione da lista"
-                value={b.naab ? {
-                  id: b.naab,
-                  code: b.naab,
-                  name: b.name || "",
-                  company: b.empresa || ""
-                } : null}
-                onChange={(bull) => {
-                  if (!bull) {
-                    setSt(s => ({ 
-                      ...s, 
-                      bulls: s.bulls.map((bullItem, i) => 
-                        i === idx ? {
-                          ...bullItem,
-                          name: "",
-                          naab: "",
-                          empresa: "",
-                          pta: Object.fromEntries(planStore.selectedPTAList.map(pta => [pta, 0]))
-                        } : bullItem
-                      )
-                    }));
-                  } else {
-                    const selectedBull = toolssBulls.find(toolsBull => toolsBull.naab === bull.code);
-                    if (selectedBull) {
-                      const updatedPTA: Record<string, number | null> = {};
-                      planStore.selectedPTAList.forEach(ptaLabel => {
-                        // Use getBullPTAValue function to get the value with proper mapping
-                        const value = getBullPTAValue(selectedBull, ptaLabel);
-                        updatedPTA[ptaLabel] = value;
-                      });
-                      
-                      setSt(s => ({ 
-                        ...s, 
-                        bulls: s.bulls.map((bullItem, i) => 
-                          i === idx ? {
-                            ...bullItem,
-                            name: selectedBull.nome || "",
-                            naab: selectedBull.naab || "",
-                            empresa: selectedBull.empresa || "",
-                            pta: updatedPTA
-                          } : bullItem
-                        )
-                      }));
-                      
-                    } else {
-                    }
-                  }
-                }}
-                showPTAs={true}
-              />
-              {b.naab && (
-                <div style={{ marginTop: 4, fontSize: 11, color: "#16a34a" }}>
-                  ✅ PTAs carregadas automaticamente para as {planStore.selectedPTAList.length} características selecionadas
-                </div>
-              )}
-            </div>
-          )}
+          {/* Seleção do touro — campo único com autocomplete */}
+          <div style={{ marginBottom: 12 }}>
+            <BullSelector
+              label={`Selecionar Touro ${idx + 1}`}
+              value={b.naab ? {
+                id: b.naab,
+                code: b.naab,
+                name: b.name || "",
+                company: b.empresa || ""
+              } : null}
+              onChange={(bull) => {
+                if (!bull) {
+                  // Limpar touro
+                  setSt(s => ({
+                    ...s,
+                    bulls: s.bulls.map((bullItem, i) =>
+                      i === idx ? {
+                        ...bullItem,
+                        name: "",
+                        naab: "",
+                        empresa: "",
+                        pta: Object.fromEntries(planStore.selectedPTAList.map(pta => [pta, 0]))
+                      } : bullItem
+                    )
+                  }));
+                } else {
+                  // Preencher todos os campos automaticamente
+                  const updatedPTA: Record<string, number> = {};
+                  planStore.selectedPTAList.forEach(ptaLabel => {
+                    updatedPTA[ptaLabel] = getBullFieldValue(bull, ptaLabel);
+                  });
+
+                  setSt(s => ({
+                    ...s,
+                    bulls: s.bulls.map((bullItem, i) =>
+                      i === idx ? {
+                        ...bullItem,
+                        name: bull.name || "",
+                        naab: bull.code || "",
+                        empresa: bull.company || "",
+                        pta: updatedPTA
+                      } : bullItem
+                    )
+                  }));
+                }
+              }}
+            />
+            {b.naab && Object.values(b.pta).some(v => v !== null && v !== 0) && (
+              <div style={{ marginTop: 4, fontSize: 11, color: "#16a34a" }}>
+                ✅ PTAs carregadas automaticamente para as {planStore.selectedPTAList.length} características selecionadas
+              </div>
+            )}
+          </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 12, marginBottom: 8 }}>
             <div>
               <Label>Nome do Touro</Label>
-              <Input value={b.name} onChange={(v) => setSt((s) => ({ ...s, bulls: s.bulls.map((bb, i) => (i === idx ? { ...bb, name: v } : bb)) }))} placeholder="Digite o nome" />
+              <Input value={b.name} disabled={!!b.naab} onChange={(v) => setSt((s) => ({ ...s, bulls: s.bulls.map((bb, i) => (i === idx ? { ...bb, name: v } : bb)) }))} placeholder="Preenchido ao selecionar touro" />
             </div>
             <div>
               <Label>NAAB</Label>
-              <Input value={b.naab} onChange={(v) => setSt((s) => ({ ...s, bulls: s.bulls.map((bb, i) => (i === idx ? { ...bb, naab: v } : bb)) }))} placeholder="NAAB" />
+              <Input value={b.naab} disabled={!!b.naab} onChange={(v) => setSt((s) => ({ ...s, bulls: s.bulls.map((bb, i) => (i === idx ? { ...bb, naab: v } : bb)) }))} placeholder="NAAB" />
             </div>
             <div>
               <Label>Empresa</Label>
-              <Input value={b.empresa || ""} onChange={(v) => setSt((s) => ({ ...s, bulls: s.bulls.map((bb, i) => (i === idx ? { ...bb, empresa: v } : bb)) }))} placeholder="Empresa" />
+              <Input value={b.empresa || ""} disabled={!!b.naab} onChange={(v) => setSt((s) => ({ ...s, bulls: s.bulls.map((bb, i) => (i === idx ? { ...bb, empresa: v } : bb)) }))} placeholder="Empresa" />
             </div>
           </div>
 

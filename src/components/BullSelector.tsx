@@ -1,25 +1,86 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Search, X } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { normalizeNaabCode } from '@/utils/bullNormalization';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Search, X, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+
+const BULL_SELECT_FIELDS =
+  "id, code, name, company, hhp_dollar, tpi, nm_dollar, cm_dollar, fm_dollar, gm_dollar, f_sav, ptam, cfp, ptaf, ptaf_pct, ptap, ptap_pct, pl, dpr, liv, scs, mast, met, rp, da, ket, mf, ptat, udc, flc, sce, dce, ssb, dsb, h_liv, ccr, hcr, fi, bwc, sta, str, dfm, rua, rls, rtp, ftl, rw, rlr, fta, fls, fua, ruh, ruw, ucl, udp, ftp, rfi, gfi, gl, beta_casein, kappa_casein, pedigree";
+
+/** Maps PTA display labels to database column names */
+export const BULL_FIELD_MAP: Record<string, string> = {
+  "HHP$": "hhp_dollar",
+  "HHP$®": "hhp_dollar",
+  TPI: "tpi",
+  "NM$": "nm_dollar",
+  "CM$": "cm_dollar",
+  "FM$": "fm_dollar",
+  "GM$": "gm_dollar",
+  "F SAV": "f_sav",
+  PTAM: "ptam",
+  Milk: "ptam",
+  CFP: "cfp",
+  PTAF: "ptaf",
+  Fat: "ptaf",
+  "PTAF%": "ptaf_pct",
+  "Fat%": "ptaf_pct",
+  PTAP: "ptap",
+  Protein: "ptap",
+  "PTAP%": "ptap_pct",
+  "Protein%": "ptap_pct",
+  PL: "pl",
+  DPR: "dpr",
+  LIV: "liv",
+  SCS: "scs",
+  MAST: "mast",
+  MET: "met",
+  RP: "rp",
+  DA: "da",
+  KET: "ket",
+  MF: "mf",
+  PTAT: "ptat",
+  UDC: "udc",
+  FLC: "flc",
+  SCE: "sce",
+  DCE: "dce",
+  SSB: "ssb",
+  DSB: "dsb",
+  "H LIV": "h_liv",
+  CCR: "ccr",
+  HCR: "hcr",
+  FI: "fi",
+  BWC: "bwc",
+  STA: "sta",
+  STR: "str",
+  DFM: "dfm",
+  RUA: "rua",
+  RLS: "rls",
+  RTP: "rtp",
+  FTL: "ftl",
+  RW: "rw",
+  RLR: "rlr",
+  FTA: "fta",
+  FLS: "fls",
+  FUA: "fua",
+  RUH: "ruh",
+  RUW: "ruw",
+  UCL: "ucl",
+  UDP: "udp",
+  FTP: "ftp",
+  RFI: "rfi",
+  GFI: "gfi",
+  GL: "gl",
+  "Beta Caseína": "beta_casein",
+  "Kappa Caseína": "kappa_casein",
+};
 
 export interface BullSearchResult {
   id: string;
   code: string;
   name: string;
   company?: string;
-  ptas?: any;
-  hhp_dollar?: number | null;
-  tpi?: number | null;
-  nm_dollar?: number | null;
+  [key: string]: any;
 }
 
 interface BullSelectorProps {
@@ -32,325 +93,232 @@ interface BullSelectorProps {
   className?: string;
 }
 
-export function BullSelector({ 
-  label = "Selecionar Touro", 
-  placeholder = "Digite o código NAAB ou selecione da lista",
+export function BullSelector({
+  label = "Selecionar Touro",
+  placeholder = "Digite o nome ou código NAAB do touro...",
   value,
   onChange,
   disabled = false,
-  showPTAs = false,
-  className = ""
+  className = "",
 }: BullSelectorProps) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [naabInput, setNaabInput] = useState("");
-  const [bulls, setBulls] = useState<BullSearchResult[]>([]);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<BullSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchMode, setSearchMode] = useState<'dropdown' | 'naab'>('dropdown');
   const [isOpen, setIsOpen] = useState(false);
-  const [naabValidation, setNaabValidation] = useState<{
-    isValid: boolean;
-    message: string;
-    bull?: BullSearchResult;
-  } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
-  // Load bulls from database
+  // Close dropdown on click outside
   useEffect(() => {
-    const loadBulls = async () => {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .rpc('get_bulls_denorm')
-          .order('tpi', { ascending: false })
-          .limit(200);
-
-        if (error) {
-          console.error('Erro ao carregar touros:', error);
-          return;
-        }
-
-        const convertedBulls: BullSearchResult[] = (data || []).map((bull: any) => ({
-          id: bull.id,
-          code: bull.code,
-          name: bull.name,
-          company: bull.company,
-          ptas: bull.ptas,
-          hhp_dollar: bull.hhp_dollar,
-          tpi: bull.tpi,
-          nm_dollar: bull.nm_dollar
-        }));
-
-        setBulls(convertedBulls);
-      } catch (error) {
-        console.error('Erro ao carregar touros:', error);
-      } finally {
-        setLoading(false);
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
       }
     };
-
-    loadBulls();
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Filter bulls based on search term
-  const filteredBulls = useMemo(() => {
-    if (!searchTerm) return bulls.slice(0, 50); // Show first 50 by default
-    
-    const normalizedSearch = normalizeNaabCode(searchTerm);
-    
-    return bulls.filter(bull => {
-      const nameMatch = bull.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const companyMatch = bull.company && bull.company.toLowerCase().includes(searchTerm.toLowerCase());
-      const codeMatch = normalizedSearch && normalizeNaabCode(bull.code)?.includes(normalizedSearch);
-      
-      return nameMatch || companyMatch || codeMatch;
-    }).slice(0, 50);
-  }, [bulls, searchTerm]);
-
-  // Validate NAAB code
-  const validateNaab = async (naab: string) => {
-    if (!naab.trim()) {
-      setNaabValidation(null);
+  const searchBulls = useCallback(async (term: string) => {
+    if (term.length < 2) {
+      setResults([]);
+      setIsOpen(false);
       return;
     }
 
+    setLoading(true);
     try {
-      setLoading(true);
       const { data, error } = await supabase
-        .rpc('validate_naab', { naab: naab.trim() });
+        .from("bulls")
+        .select(BULL_SELECT_FIELDS)
+        .or(`code.ilike.%${term}%,name.ilike.%${term}%`)
+        .order("tpi", { ascending: false })
+        .limit(20);
 
       if (error) {
-        console.error('Erro ao validar NAAB:', error);
-        setNaabValidation({
-          isValid: false,
-          message: 'Erro ao validar código NAAB'
-        });
-        return;
+        console.error("Erro na busca de touros:", error);
+        setResults([]);
+      } else {
+        setResults(data || []);
       }
-
-      if (data && data.length > 0) {
-        const result = data[0];
-        
-        if (result.is_valid && result.bull_id) {
-          // Find the bull in our local data
-          const bull = bulls.find(b => b.id === result.bull_id);
-          if (bull) {
-            setNaabValidation({
-              isValid: true,
-              message: 'Código NAAB válido',
-              bull
-            });
-          } else {
-            setNaabValidation({
-              isValid: false,
-              message: 'Touro não encontrado'
-            });
-          }
-        } else {
-          setNaabValidation({
-            isValid: false,
-            message: result.message || 'Código NAAB não encontrado'
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao validar NAAB:', error);
-      setNaabValidation({
-        isValid: false,
-        message: 'Erro ao validar código NAAB'
-      });
+      setIsOpen(true);
+    } catch (err) {
+      console.error("Erro na busca de touros:", err);
+      setResults([]);
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setQuery(val);
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => searchBulls(val), 300);
   };
 
-  // Handle NAAB input change with debounce
-  useEffect(() => {
-    if (searchMode !== 'naab') return;
-    
-    const timer = setTimeout(() => {
-      validateNaab(naabInput);
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [naabInput, searchMode, bulls]);
-
-  const handleSelectBull = (bull: BullSearchResult) => {
+  const handleSelect = (bull: BullSearchResult) => {
     onChange(bull);
+    setQuery("");
+    setResults([]);
     setIsOpen(false);
-    setSearchTerm("");
   };
 
-  const handleNaabSubmit = () => {
-    if (naabValidation && naabValidation.isValid && naabValidation.bull) {
-      onChange(naabValidation.bull);
-      setNaabInput("");
-      setNaabValidation(null);
-    }
-  };
-
-  const clearSelection = () => {
+  const handleClear = () => {
     onChange(null);
-    setSearchTerm("");
-    setNaabInput("");
-    setNaabValidation(null);
+    setQuery("");
+    setResults([]);
+    setIsOpen(false);
+    inputRef.current?.focus();
   };
+
+  const highlightMatch = (text: string, term: string) => {
+    if (!term || term.length < 2) return text;
+    const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
+    const parts = text.split(regex);
+    return parts.map((part, i) =>
+      regex.test(part) ? (
+        <mark key={i} style={{ background: "#fef08a", padding: 0, borderRadius: 2 }}>
+          {part}
+        </mark>
+      ) : (
+        part
+      )
+    );
+  };
+
+  const displayValue = value ? `${value.code} — ${value.name}` : "";
 
   return (
-    <div className={`space-y-4 ${className}`}>
-      <div className="space-y-2">
-        <Label>{label}</Label>
-        
-        {/* Mode selector */}
-        <div className="flex gap-2 mb-3">
-          <Button
-            type="button"
-            variant={searchMode === 'dropdown' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setSearchMode('dropdown')}
-          >
-            Lista de Touros
-          </Button>
-          <Button
-            type="button"
-            variant={searchMode === 'naab' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setSearchMode('naab')}
-          >
-            Buscar por NAAB
-          </Button>
+    <div className={`space-y-2 ${className}`} ref={containerRef}>
+      {label && <Label>{label}</Label>}
+
+      <div style={{ position: "relative" }}>
+        {/* Search input or selected display */}
+        <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+          <Search
+            style={{
+              position: "absolute",
+              left: 10,
+              width: 16,
+              height: 16,
+              color: "#9ca3af",
+              pointerEvents: "none",
+            }}
+          />
+          <Input
+            ref={inputRef}
+            value={value ? displayValue : query}
+            onChange={value ? undefined : handleInputChange}
+            onFocus={() => {
+              if (!value && query.length >= 2) setIsOpen(true);
+            }}
+            readOnly={!!value}
+            disabled={disabled}
+            placeholder={placeholder}
+            style={{
+              paddingLeft: 34,
+              paddingRight: value ? 40 : loading ? 40 : 12,
+              background: value ? "#f0fdf4" : undefined,
+              cursor: value ? "default" : undefined,
+            }}
+          />
+          {loading && !value && (
+            <Loader2
+              style={{
+                position: "absolute",
+                right: 10,
+                width: 16,
+                height: 16,
+                color: "#9ca3af",
+                animation: "spin 1s linear infinite",
+              }}
+            />
+          )}
+          {value && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={handleClear}
+              disabled={disabled}
+              style={{ position: "absolute", right: 2, width: 32, height: 32 }}
+            >
+              <X style={{ width: 16, height: 16 }} />
+            </Button>
+          )}
         </div>
 
-        {/* Current selection display */}
-        {value && (
-          <Card>
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium">{value.code} - {value.name}</div>
-                  {value.company && (
-                    <div className="text-sm text-muted-foreground">{value.company}</div>
-                  )}
-                  {showPTAs && (
-                    <div className="flex gap-2 mt-2">
-                      {value.hhp_dollar && (
-                        <Badge variant="secondary">HHP$: {value.hhp_dollar}</Badge>
-                      )}
-                      {value.tpi && (
-                        <Badge variant="secondary">TPI: {value.tpi}</Badge>
-                      )}
-                      {value.nm_dollar && (
-                        <Badge variant="secondary">NM$: {value.nm_dollar}</Badge>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearSelection}
-                  disabled={disabled}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Dropdown mode */}
-        {searchMode === 'dropdown' && !value && (
-          <Popover open={isOpen} onOpenChange={setIsOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                role="combobox"
-                aria-expanded={isOpen}
-                className="w-full justify-start text-left font-normal"
-                disabled={disabled || loading}
+        {/* Dropdown results */}
+        {isOpen && !value && (
+          <div
+            style={{
+              position: "absolute",
+              top: "100%",
+              left: 0,
+              right: 0,
+              zIndex: 50,
+              marginTop: 4,
+              maxHeight: 320,
+              overflowY: "auto",
+              background: "#fff",
+              border: "1px solid #D9D9D9",
+              borderRadius: 10,
+              boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+            }}
+          >
+            {results.length === 0 && !loading && query.length >= 2 && (
+              <div
+                style={{
+                  padding: "16px",
+                  textAlign: "center",
+                  color: "#6b7280",
+                  fontSize: 13,
+                }}
               >
-                <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-                {loading ? "Carregando..." : placeholder}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[400px] p-0" align="start" side="bottom">
-              <Command>
-                <CommandInput
-                  placeholder="Buscar touro..."
-                  value={searchTerm}
-                  onValueChange={setSearchTerm}
-                />
-                <CommandList>
-                  <CommandEmpty>Nenhum touro encontrado.</CommandEmpty>
-                  <CommandGroup>
-                    {filteredBulls.map((bull) => (
-                      <CommandItem
-                        key={bull.id}
-                        value={`${bull.code} ${bull.name} ${bull.company || ''}`}
-                        onSelect={() => handleSelectBull(bull)}
-                        className="cursor-pointer"
-                      >
-                        <div className="flex flex-col">
-                          <div className="font-medium">
-                            {bull.code} - {bull.name}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {bull.company || "Sem empresa"}
-                            {showPTAs && bull.tpi && (
-                              <span className="ml-2">TPI: {bull.tpi}</span>
-                            )}
-                          </div>
-                        </div>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        )}
-
-        {/* NAAB input mode */}
-        {searchMode === 'naab' && !value && (
-          <div className="space-y-3">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Digite o código NAAB (ex: 200HO12345)"
-                value={naabInput}
-                onChange={(e) => setNaabInput(e.target.value)}
-                disabled={disabled}
-                className="flex-1"
-              />
-              <Button
-                type="button"
-                onClick={handleNaabSubmit}
-                disabled={!naabValidation?.isValid || loading}
-              >
-                Selecionar
-              </Button>
-            </div>
-            
-            {/* NAAB validation feedback */}
-            {naabValidation && (
-              <div className={`text-sm p-2 rounded ${
-                naabValidation.isValid 
-                  ? 'bg-green-50 text-green-700 border border-green-200' 
-                  : 'bg-red-50 text-red-700 border border-red-200'
-              }`}>
-                {naabValidation.message}
-                {naabValidation.isValid && naabValidation.bull && (
-                  <div className="mt-1 font-medium">
-                    {naabValidation.bull.code} - {naabValidation.bull.name}
-                    {naabValidation.bull.company && (
-                      <span className="text-xs ml-2">({naabValidation.bull.company})</span>
-                    )}
-                  </div>
-                )}
+                Nenhum touro encontrado para "{query}"
               </div>
             )}
+            {results.map((bull) => (
+              <div
+                key={bull.id}
+                onClick={() => handleSelect(bull)}
+                style={{
+                  padding: "10px 14px",
+                  cursor: "pointer",
+                  borderBottom: "1px solid #f3f4f6",
+                  transition: "background 0.1s",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#f9fafb")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              >
+                <div style={{ fontWeight: 600, fontSize: 13 }}>
+                  {highlightMatch(bull.code, query)} — {highlightMatch(bull.name, query)}
+                </div>
+                <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>
+                  {bull.company || "Sem empresa"}
+                  {bull.tpi != null && (
+                    <span style={{ marginLeft: 8, color: "#3b82f6" }}>TPI: {bull.tpi}</span>
+                  )}
+                  {bull.hhp_dollar != null && (
+                    <span style={{ marginLeft: 8, color: "#16a34a" }}>HHP$: {bull.hhp_dollar}</span>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
     </div>
   );
+}
+
+/** Extract a PTA value from a raw bull database row using the label-to-field map */
+export function getBullFieldValue(bull: Record<string, any>, ptaLabel: string): number {
+  const fieldName = BULL_FIELD_MAP[ptaLabel] ?? ptaLabel.toLowerCase();
+  const val = bull[fieldName];
+  if (val === null || val === undefined) return 0;
+  return typeof val === "number" ? val : parseFloat(val) || 0;
 }
