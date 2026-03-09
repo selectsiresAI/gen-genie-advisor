@@ -263,11 +263,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
     if (rawValue === null || rawValue === undefined || rawValue === '') {
       return '-';
     }
-    if (key === 'hhp_dollar') {
-      const numericValue = Number(rawValue);
-      return Number.isNaN(numericValue) ? rawValue : numericValue.toFixed(0);
-    }
-    return rawValue as React.ReactNode;
+    return formatPtaValue(key, rawValue as number | string);
   };
   const handleSelectFemale = (femaleId: string) => {
     setSelectedFemales(prev => prev.includes(femaleId) ? prev.filter(id => id !== femaleId) : [...prev, femaleId]);
