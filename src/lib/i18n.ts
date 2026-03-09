@@ -195,7 +195,27 @@ const translations = {
     "nexus2.batch.toast.noResultsToSend": "Não há resultados calculados para enviar.",
     "nexus2.batch.toast.sendSuccess": "Resultados enviados para o rebanho!",
     "nexus2.batch.toast.sendSuccessDescription": "{{count}} fêmea{{plural}} atualizada{{plural}} com sucesso.",
-    "nexus2.batch.toast.sendError": "Erro ao enviar para o rebanho."
+    "nexus2.batch.toast.sendError": "Erro ao enviar para o rebanho.",
+
+    // Share Farm
+    "share.button": "Compartilhar",
+    "share.title": "Compartilhar Fazenda",
+    "share.description": "Convide usuários para acessar",
+    "share.emailLabel": "Email do usuário",
+    "share.emailPlaceholder": "email@exemplo.com",
+    "share.roleLabel": "Permissão",
+    "share.invite": "Convidar",
+    "share.currentMembers": "Membros atuais",
+    "share.pendingInvites": "Convites pendentes",
+    "share.emailRequired": "Digite um email.",
+    "share.alreadyMember": "Este usuário já tem acesso a esta fazenda.",
+    "share.alreadyInvited": "Já existe um convite pendente para este email.",
+    "share.accessGranted": "Acesso concedido com sucesso!",
+    "share.inviteSent": "Convite enviado! O acesso será concedido quando o usuário se cadastrar.",
+    "share.removed": "foi removido da fazenda.",
+    "share.inviteRevoked": "Convite revogado.",
+    "share.error": "Erro ao compartilhar fazenda.",
+    "share.roleOwner": "Proprietário"
   },
   "en-US": {
     // Auth Page
@@ -393,7 +413,27 @@ const translations = {
     "nexus2.batch.toast.noResultsToSend": "No calculated results to send.",
     "nexus2.batch.toast.sendSuccess": "Results sent to herd!",
     "nexus2.batch.toast.sendSuccessDescription": "{{count}} female{{plural}} updated successfully.",
-    "nexus2.batch.toast.sendError": "Error sending to herd."
+    "nexus2.batch.toast.sendError": "Error sending to herd.",
+
+    // Share Farm
+    "share.button": "Share",
+    "share.title": "Share Farm",
+    "share.description": "Invite users to access",
+    "share.emailLabel": "User email",
+    "share.emailPlaceholder": "email@example.com",
+    "share.roleLabel": "Permission",
+    "share.invite": "Invite",
+    "share.currentMembers": "Current members",
+    "share.pendingInvites": "Pending invites",
+    "share.emailRequired": "Enter an email.",
+    "share.alreadyMember": "This user already has access to this farm.",
+    "share.alreadyInvited": "There is already a pending invite for this email.",
+    "share.accessGranted": "Access granted successfully!",
+    "share.inviteSent": "Invite sent! Access will be granted when the user signs up.",
+    "share.removed": "was removed from the farm.",
+    "share.inviteRevoked": "Invite revoked.",
+    "share.error": "Error sharing farm.",
+    "share.roleOwner": "Owner"
   }
 } as const;
 

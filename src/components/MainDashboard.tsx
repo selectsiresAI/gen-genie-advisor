@@ -38,6 +38,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { useTranslation } from '@/hooks/useTranslation';
 import UserSupportTickets from '@/components/support/UserSupportTickets';
+import { ShareFarmDialog } from '@/components/ShareFarmDialog';
 
 interface MainDashboardProps {
   user: User;
@@ -364,9 +365,16 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">{t("dashboard.selectedFarm")}</p>
-              <h1 className="text-xl font-semibold text-neutral-900">{selectedFarm.farm_name}</h1>
+            <div className="flex items-center gap-3">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">{t("dashboard.selectedFarm")}</p>
+                <h1 className="text-xl font-semibold text-neutral-900">{selectedFarm.farm_name}</h1>
+              </div>
+              <ShareFarmDialog
+                farmId={selectedFarm.farm_id}
+                farmName={selectedFarm.farm_name}
+                myRole={selectedFarm.my_role}
+              />
             </div>
           </div>
         </div>
