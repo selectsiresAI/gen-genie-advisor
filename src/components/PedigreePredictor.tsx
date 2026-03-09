@@ -115,15 +115,12 @@ interface ToolSSClient {
 // Function to clear localStorage and force reload
 // Função para limpar cache antigo (não mais necessária com Supabase)
 const clearAndReloadData = () => {
-  console.log('🧹 Cache não é mais necessário - usando Supabase diretamente');
   alert('Agora usando dados direto do Supabase! Dados sempre atualizados.');
 };
 
 // Função de busca de touro via Supabase bulls_denorm
 const fetchBullFromDatabase = async (naab: string): Promise<Bull | null> => {
   const cleanNaab = naab.toUpperCase().trim();
-  
-  console.log(`🔍 Procurando touro com NAAB: "${cleanNaab}" no Supabase`);
   
   try {
     const { data, error } = await supabase
@@ -132,12 +129,10 @@ const fetchBullFromDatabase = async (naab: string): Promise<Bull | null> => {
       .single();
 
     if (error) {
-      console.log(`❌ Touro não encontrado: ${cleanNaab}`);
       return null;
     }
 
     if (data) {
-      console.log(`✅ Touro encontrado: ${(data as any).name}`);
       
       // Converter dados do Supabase para o formato Bull
       const bullData = data as any;
@@ -247,9 +242,7 @@ const PedigreePredictor: React.FC = () => {
   } = usePedigreeStore();
 
   // Remove carregamento do localStorage - usando Supabase diretamente
-  useEffect(() => {
-    console.log('🔄 PedigreePredictor usando dados direto do Supabase');
-  }, []);
+  // Using Supabase directly - no localStorage loading needed
 
   // Handle NAAB input changes with automatic PTA loading (PROCV functionality)
   const handleNaabChange = async (naabType: 'sireNaab' | 'mgsNaab' | 'mmgsNaab', value: string) => {
@@ -363,9 +356,6 @@ const PedigreePredictor: React.FC = () => {
       const jsonData = utils.sheet_to_json(worksheet) as any[];
       const jsonDataWithoutHeaders = utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
       
-      console.log(`🔄 Processando ${jsonData.length} linhas do arquivo em lote`);
-      console.log('📋 Primeiras linhas dos dados:', jsonDataWithoutHeaders.slice(0, 3));
-      
       const results: BatchResult[] = [];
       
       for (let i = 0; i < jsonData.length; i++) {
@@ -387,8 +377,6 @@ const PedigreePredictor: React.FC = () => {
         input.naabAvoMaterno = input.naabAvoMaterno?.toString().trim() || '';
         input.naabBisavoMaterno = input.naabBisavoMaterno?.toString().trim() || '';
 
-        console.log(`📋 Processando linha: ${input.nome} - Pai: ${input.naabPai}`);
-
         const pedigreeData = {
           sireNaab: input.naabPai,
           mgsNaab: input.naabAvoMaterno,
@@ -405,36 +393,28 @@ const PedigreePredictor: React.FC = () => {
           
           // Fetch missing bulls from Supabase
           if (!sire && input.naabPai) {
-            console.log(`🔍 Buscando pai ${input.naabPai} no Supabase...`);
             sire = await fetchBullFromDatabase(input.naabPai);
             if (sire) {
               setBullCache(input.naabPai, sire);
-              console.log(`✅ Pai encontrado: ${sire.name}`);
             }
           }
-          
+
           if (!mgs && input.naabAvoMaterno) {
-            console.log(`🔍 Buscando avô materno ${input.naabAvoMaterno} no Supabase...`);
             mgs = await fetchBullFromDatabase(input.naabAvoMaterno);
             if (mgs) {
               setBullCache(input.naabAvoMaterno, mgs);
-              console.log(`✅ Avô materno encontrado: ${mgs.name}`);
             }
           }
-          
+
           if (!mmgs && input.naabBisavoMaterno) {
-            console.log(`🔍 Buscando bisavô materno ${input.naabBisavoMaterno} no Supabase...`);
             mmgs = await fetchBullFromDatabase(input.naabBisavoMaterno);
             if (mmgs) {
               setBullCache(input.naabBisavoMaterno, mmgs);
-              console.log(`✅ Bisavô materno encontrado: ${mmgs.name}`);
             }
           }
           
           if (sire) {
             const predictedPTAs = predictFromPedigree(sire, mgs, mmgs);
-            
-            console.log(`✅ Predição gerada para ${input.nome}`);
             
             results.push({
               ...input,
@@ -442,7 +422,6 @@ const PedigreePredictor: React.FC = () => {
               predictedPTAs
             });
           } else {
-            console.log(`❌ Pai não encontrado para ${input.nome}`);
             results.push({
               ...input,
               status: 'error',
@@ -450,7 +429,6 @@ const PedigreePredictor: React.FC = () => {
             });
           }
         } else {
-          console.log(`❌ Erros de validação para ${input.nome}: ${errors.join(', ')}`);
           results.push({
             ...input,
             status: 'error',

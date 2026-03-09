@@ -53,8 +53,6 @@ export const useFileStore = create<FileStore>()(
         set((state) => ({
           reports: [...state.reports, newReport]
         }));
-        
-        console.log('📄 Relatório salvo:', newReport.name, 'com blob:', !!report.fileBlob);
       },
       
       removeReport: (id) => {

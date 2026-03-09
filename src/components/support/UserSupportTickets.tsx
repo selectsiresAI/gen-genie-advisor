@@ -73,7 +73,7 @@ const formatDate = (date: string) => {
   try {
     return format(new Date(date), "PPPp", { locale: ptBR });
   } catch (error) {
-    console.warn("Could not format date", date, error);
+    // Could not format date
     return date;
   }
 };

@@ -79,7 +79,7 @@ export function AdminDashboard() {
       const { data: ticketStats, error: statsError } = await supabase.rpc("admin_ticket_stats");
 
       if (statsError) {
-        console.warn("Função admin_ticket_stats indisponível. Recuando para agregações client-side.", statsError);
+        // admin_ticket_stats unavailable, falling back to client-side aggregation
       }
 
       const statsResult: TicketStats | null = ticketStats
@@ -160,7 +160,7 @@ export function AdminDashboard() {
 
       setStorageFiles(data ?? []);
     } catch (error: any) {
-      console.warn("Erro ao carregar arquivos do bucket administrativo", error);
+      // Error loading files from admin bucket
       setStorageError(error?.message ?? "Não foi possível acessar o bucket informado.");
       setStorageFiles([]);
     } finally {
@@ -224,7 +224,7 @@ export function AdminDashboard() {
       setEdgeResult(JSON.stringify(data, null, 2));
       toast.success("Função Edge executada com sucesso");
     } catch (error: any) {
-      console.warn("Função edge opcional indisponível", error);
+      // Optional edge function unavailable
       setEdgeResult(error?.message ?? "Não foi possível executar a função configurada");
     } finally {
       setEdgeLoading(false);
@@ -263,7 +263,7 @@ export function AdminDashboard() {
       setNoteSubject("");
       setNoteContent("");
     } catch (error: any) {
-      console.warn("Tabela opcional admin_notes indisponível", error);
+      // Optional admin_notes table unavailable
       setNoteError(error?.message ?? "Não foi possível registrar o comunicado. Verifique se a tabela admin_notes existe.");
     } finally {
       setNoteLoading(false);

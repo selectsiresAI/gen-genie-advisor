@@ -480,8 +480,6 @@ const generateComprehensiveFemales = (): Female[] => {
 };
 
 const seedFemales: Female[] = generateComprehensiveFemales();
-console.log(`🎯 Geradas ${seedFemales.length} fêmeas para teste com dados completos`);
-console.log(`📋 Exemplo da primeira fêmea:`, seedFemales[0]);
 // Função para gerar banco de touros simulado com 150 touros de 7 empresas
 const generateBullsDatabase = (): Bull[] => {
   const companies = [
@@ -630,10 +628,6 @@ const generateBullsDatabase = (): Bull[] => {
     }
   }
 
-  console.log(`🐂 Gerados ${bulls.length} touros de ${companies.length} empresas`);
-  console.log(`📊 Distribuição por empresa:`, companies.map(c => `${c.name}: ${c.count}`).join(', '));
-  console.log(`📋 Exemplo do primeiro touro:`, bulls[0]);
-  
   return bulls;
 };
 
@@ -697,7 +691,6 @@ function loadClients(): Client[] {
     if (!client1160 || !client1160.farms[0] || 
         client1160.farms[0].females.length < 500 || 
         client1160.farms[0].bulls.length < 150) {
-      console.log("🔄 Forcing reload of seed data with 500 females and 150 bulls...");
       return seedClients;
     }
     return loaded;
@@ -899,7 +892,6 @@ export default function ToolSSApp() {
   const farm = useMemo(() => selectedClient?.farms.find(f => f.id === selectedFarmId) ?? null, [selectedClient, selectedFarmId]);
   useEffect(() => {
     const data = loadClients();
-    console.log(`📊 Carregando dados: Cliente 1160 tem ${data.find(c => c.id === 1160)?.farms[0]?.females.length || 0} fêmeas`);
     setClients(data);
   }, []);
   useEffect(() => {
@@ -1413,7 +1405,6 @@ function HerdPage({
     if (selectedFemales.size === 0) return;
     if (confirm(`Excluir ${selectedFemales.size} fêmea(s) selecionada(s)?`)) {
       // This would need to be connected to actual data management
-      console.log("Delete selected females:", Array.from(selectedFemales));
       setSelectedFemales(new Set());
     }
   };

@@ -86,10 +86,6 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   } = useHerdStore();
   const { trackFeature } = useActivityTracker(user);
   
-  // Debug admin status
-  useEffect(() => {
-    console.log('🎯 MainDashboard - Admin Status:', { isAdmin, roleLoading, userId: user?.id });
-  }, [isAdmin, roleLoading, user?.id]);
   useEffect(() => {
     loadUserData();
   }, []);
@@ -210,7 +206,6 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
     // Automatically load herd data when entering farm
     setSelectedHerdId(farm.farm_id);
     await refreshFromSupabase(farm.farm_id);
-    console.log('🏠 Entrando na fazenda e carregando rebanho automaticamente:', farm.farm_name);
   };
   const handleBackToDashboard = () => {
     if (currentView === 'farm' || !selectedFarm) {
@@ -549,7 +544,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                 try {
                   // farmForSegmentation.females = JSON.parse(storedFemales);
                 } catch (e) {
-                  console.warn('Could not parse stored females data');
+                  // Could not parse stored females data
                 }
               } else {
                 // No data found - using database instead

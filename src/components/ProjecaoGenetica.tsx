@@ -338,7 +338,7 @@ function useAppState() {
         } as AppState;
       }
     } catch (error) {
-      console.warn('Failed to load state from localStorage:', error);
+      // Failed to load state from localStorage
     }
     
     // Default state if loading fails
@@ -409,10 +409,8 @@ function useAppState() {
       
       localStorage.setItem(LS_KEY, JSON.stringify(persistedState));
     } catch (error) {
-      console.warn('Failed to save state to localStorage:', error);
       // Clear old data if quota exceeded
       if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-        console.log('Clearing old localStorage data to free space...');
         // Clear old keys
         const keysToRemove = ['projGen_MVP_state_v1', 'toolss_old_data'];
         keysToRemove.forEach(key => {
@@ -429,7 +427,7 @@ function useAppState() {
           };
           localStorage.setItem(LS_KEY, JSON.stringify(minimalState));
         } catch (e) {
-          console.warn('Could not save even minimal state');
+          // Could not save even minimal state
         }
       }
     }
@@ -439,7 +437,7 @@ function useAppState() {
   useEffect(() => {
     // No longer loading from localStorage since we're using Supabase directly
     // State will be managed by individual components that need bull data
-    console.log('🔄 ProjecaoGenetica usando dados direto do Supabase');
+    // Using Supabase directly
   }, []);
 
   // Auto-load herd data on page load - prioritize useHerdStore (from HerdPage)
@@ -452,7 +450,6 @@ function useAppState() {
         // Priority: 1) useHerdStore (from entering farm), 2) usePlanStore (manual selection)
         const farmId = selectedHerdId || selectedFarmId;
         if (farmId) {
-          console.log('🔄 Carregando rebanho automaticamente:', farmId);
           const populationStructure = calculatePopulationStructure(farmId);
           
           // Get farm data for calculating mother averages
@@ -480,10 +477,9 @@ function useAppState() {
             autoCalculatePopulation: true
           }));
           
-          console.log('✅ Rebanho carregado automaticamente');
           toast.success('Rebanho carregado automaticamente');
         } else {
-          console.log('⚠️ Nenhuma fazenda selecionada para carregar automaticamente');
+          // No farm selected for auto-loading
         }
       } catch (error) {
         console.error('❌ Erro ao carregar rebanho:', error);
@@ -814,7 +810,7 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
   
   useEffect(() => {
     // No longer loading from localStorage - using Supabase directly
-    console.log('🔄 PagePlano usando dados direto do Supabase');
+    // Using Supabase directly
   }, [planStore.selectedFarmId]);
   
   // ÚNICO efeito anti-loop para população (Item 4)
@@ -837,7 +833,6 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
     const changed = !curr || curr.heifers !== next.heifers || curr.primiparous !== next.primiparous ||
                     curr.secundiparous !== next.secundiparous || curr.multiparous !== next.multiparous || curr.total !== next.total;
     if (changed) {
-      console.log('Population structure updated:', next);
       planStore.setPopulationCounts(next);
     }
   }, [planStore.populationMode, planStore.selectedFarmId]);
@@ -1133,8 +1128,6 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
   useEffect(() => {
     const loadBullsFromSupabase = async () => {
       try {
-        console.log('🔍 Carregando touros do Supabase...');
-        
         const { data: bulls, error } = await supabase
           .rpc('get_bulls_denorm')
           .order('tpi', { ascending: false })
@@ -1225,12 +1218,10 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
               RFI: bull.rfi ?? null,
             }));
           
-          console.log(`🐂 Loaded ${convertedBulls.length} bulls from Supabase (filtered: only with HHP$)`);
-          console.log('📋 Sample bull:', convertedBulls[0]);
           setToolssBulls(convertedBulls);
         }
       } catch (e) {
-        console.warn("Erro ao carregar touros do Supabase:", e);
+        console.error("Erro ao carregar touros do Supabase:", e);
       }
     };
     
@@ -1307,11 +1298,7 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
                   company: b.empresa || ""
                 } : null}
                 onChange={(bull) => {
-                  console.log(`🔄 Touro ${idx + 1}: selecionado bull =`, bull);
-                  
                   if (!bull) {
-                    // Limpa o touro
-                    console.log(`🧹 Limpando dados do Touro ${idx + 1}`);
                     setSt(s => ({ 
                       ...s, 
                       bulls: s.bulls.map((bullItem, i) => 
@@ -1327,18 +1314,12 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
                   } else {
                     const selectedBull = toolssBulls.find(toolsBull => toolsBull.naab === bull.code);
                     if (selectedBull) {
-                      console.log(`✅ Touro encontrado: ${selectedBull.nome} (${selectedBull.empresa})`);
-                      
                       const updatedPTA: Record<string, number | null> = {};
                       planStore.selectedPTAList.forEach(ptaLabel => {
                         // Use getBullPTAValue function to get the value with proper mapping
                         const value = getBullPTAValue(selectedBull, ptaLabel);
                         updatedPTA[ptaLabel] = value;
-                        console.log(`🔍 Bull ${selectedBull.naab}: ${ptaLabel} = ${value} (from field: ${ptaLabel === "HHP$®" ? "HHP$" : ptaLabel})`);
                       });
-                      
-                      console.log('📊 PTAs carregadas:', planStore.selectedPTAList.map(k => `${k}:${updatedPTA[k] === null ? '—' : updatedPTA[k]}`));
-                      console.log('🐂 Selected Bull raw data:', selectedBull);
                       
                       setSt(s => ({ 
                         ...s, 
@@ -1353,10 +1334,7 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
                         )
                       }));
                       
-                      // Show success toast
-                      console.log(`✅ Touro ${idx + 1} configurado: ${selectedBull.nome} - ${selectedBull.naab}`);
                     } else {
-                      console.log(`❌ Touro com código ${bull.code} não encontrado na lista`);
                     }
                   }
                 }}

@@ -238,7 +238,7 @@ export async function generateGeneralReport(
 
   const selectedReports = reports.filter(r => r.enabled);
   if (selectedReports.length === 0) {
-    console.warn('No reports selected');
+    // No reports selected
     return null;
   }
 
@@ -281,7 +281,7 @@ export async function generateGeneralReport(
     const sectionEl = containerRef.querySelector(`[data-report-section="${report.type}"]`) as HTMLElement;
     
     if (!sectionEl) {
-      console.warn(`Section not found for report: ${report.type}`);
+      // Section not found for this report type
       continue;
     }
 

@@ -243,7 +243,7 @@ export default function ReportSectionRenderer({
         const SectionComponent = SECTION_COMPONENTS[report.type];
         
         if (!SectionComponent) {
-          console.warn(`No component found for report type: ${report.type}`);
+          // No component found for this report type
           return null;
         }
 

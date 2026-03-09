@@ -70,12 +70,6 @@ function Step7QuartisIndicesContent() {
   const chartTitle = "Quartis — Índices (A vs B)";
   useRegisterChart("step7-quartis-indices", 7, chartTitle, cardRef);
 
-  useEffect(() => {
-    if (farmId) {
-      console.log(`Índices A vs B carregados para farmId: ${farmId}`);
-    }
-  }, [farmId]);
-
   // Determina quais traits usar baseado no modo
   const activeTraits = showAllTraits ? ALL_PTA_COLUMNS : CORE_PTA_COLUMNS;
 
@@ -96,18 +90,13 @@ function Step7QuartisIndicesContent() {
     setLoadingProgress("Calculando percentis...");
     
     try {
-      const startTime = Date.now();
-      
       const { data, error } = await (supabase.rpc as any)("ag_quartis_indices_compare", {
         p_farm: farmId,
         p_index_a: indexA,
         p_index_b: indexB,
         p_traits: activeTraits,
       });
-      
-      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-      console.log(`Quartis indices loaded in ${elapsed}s`);
-      
+
       if (error) {
         console.error("Failed to load quartis indices", error);
         setErrorMsg(error.message?.includes("timeout") 

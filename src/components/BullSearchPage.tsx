@@ -259,7 +259,6 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
         const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         fileToUpload = new File([csvBlob], importFile.name.replace(/\.xlsx?$/i, '.csv'), { type: 'text/csv' });
         
-        console.log('📊 Headers mapeados:', { originalHeaders, mappedHeaders });
       }
 
       const { response: uploadResponse, url: uploadUrl } = await attemptImportBullsFetch(
@@ -555,7 +554,6 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
   const loadBulls = async () => {
     try {
       setLoading(true);
-      console.log('🐂 Carregando banco completo de touros...');
       const {
         data,
         error
@@ -566,8 +564,6 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
         console.error('Error from RPC get_bulls_denorm:', error);
         throw error;
       }
-      console.log(`✅ ${data?.length || 0} touros carregados do banco`);
-
       // Transform data to match expected format
       const transformedBulls: Bull[] = (data || []).map(bull => ({
         id: bull.id || bull.code,
@@ -653,7 +649,6 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
       });
       
       const deduplicatedBulls = Array.from(uniqueBullsMap.values());
-      console.log(`🔍 Removidas ${transformedBulls.length - deduplicatedBulls.length} duplicatas`);
       setBulls(deduplicatedBulls);
 
       // Extract unique companies from loaded bulls

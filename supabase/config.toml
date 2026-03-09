@@ -1,25 +1,25 @@
 project_id = "gzvweejdtycxzxrjplpc"
 
 [functions.upload-females]
-verify_jwt = false
+verify_jwt = true
 
 [functions.import-bulls]
-verify_jwt = false
+verify_jwt = true
 
 [functions.migrate-staging]
-verify_jwt = false
+verify_jwt = true
 
 [functions.sync-temp-passwords]
-verify_jwt = false
+verify_jwt = true
 
 [functions.import-farm-technicians]
-verify_jwt = false
+verify_jwt = true
 
 [functions."import-females"]
 verify_jwt = true
 
 [functions."import-females".cors]
-allowed_origins = ["https://toolss-ssb.lovable.app", "https://*.vercel.app", "http://localhost:3000"]
+allowed_origins = ["https://toolss-ssb.lovable.app", "http://localhost:3000"]
 allowed_headers = ["authorization", "content-type"]
 methods = ["POST", "OPTIONS"]
 

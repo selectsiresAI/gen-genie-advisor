@@ -1,8 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export async function importTechniciansFromCSV(csvContent: string) {
-  console.log("Starting technician import...");
-  
   const { data, error } = await supabase.functions.invoke('import-farm-technicians', {
     body: { csvText: csvContent }
   });
@@ -12,7 +10,6 @@ export async function importTechniciansFromCSV(csvContent: string) {
     throw error;
   }
 
-  console.log("Import result:", data);
   return data;
 }
 

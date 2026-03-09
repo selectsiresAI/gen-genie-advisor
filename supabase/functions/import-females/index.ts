@@ -1,17 +1,26 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, content-type",
-};
+const ALLOWED_ORIGINS = [
+  'https://toolss-ssb.lovable.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+];
 
-function jsonResponse(body: Record<string, unknown>, status = 200) {
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get('Origin') || '';
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+}
+
+function jsonResponse(req: Request, body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
-      ...corsHeaders,
+      ...getCorsHeaders(req),
       "Content-Type": "application/json",
     },
   });
@@ -327,7 +336,7 @@ function parseCSV(csvContent: string): any[] {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, { status: 204, headers: getCorsHeaders(req) });
   }
 
   const url = new URL(req.url);
@@ -335,13 +344,13 @@ Deno.serve(async (req) => {
   const action = segments[segments.length - 1];
 
   if (req.method !== "POST") {
-    return jsonResponse({ error: "Method not allowed" }, 405);
+    return jsonResponse(req, { error: "Method not allowed" }, 405);
   }
 
   const authHeader = req.headers.get("authorization");
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return jsonResponse({ error: "Missing authorization header" }, 401);
+    return jsonResponse(req, { error: "Missing authorization header" }, 401);
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -350,7 +359,7 @@ Deno.serve(async (req) => {
 
   if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
     console.error("Missing Supabase environment variables");
-    return jsonResponse({ error: "Server configuration error" }, 500);
+    return jsonResponse(req, { error: "Server configuration error" }, 500);
   }
 
   // Create client with user's token for auth validation
@@ -366,7 +375,7 @@ Deno.serve(async (req) => {
 
   if (authError || !user) {
     console.error("Auth error", authError);
-    return jsonResponse({ error: "Unauthorized" }, 401);
+    return jsonResponse(req, { error: "Unauthorized" }, 401);
   }
 
   // Create service role client for privileged operations
@@ -381,11 +390,11 @@ Deno.serve(async (req) => {
       const farmIdParam = formData.get("farm_id");
 
       if (!file || !(file instanceof File)) {
-        return jsonResponse({ error: "Arquivo inválido" }, 400);
+        return jsonResponse(req, { error: "Arquivo inválido" }, 400);
       }
 
       if (!farmIdParam) {
-        return jsonResponse({ error: "farm_id é obrigatório" }, 400);
+        return jsonResponse(req, { error: "farm_id é obrigatório" }, 400);
       }
 
       const farmId = String(farmIdParam);
@@ -399,7 +408,7 @@ Deno.serve(async (req) => {
         .single();
 
       if (!farmAccess) {
-        return jsonResponse({ error: 'Permissão negada: acesso insuficiente à fazenda' }, 403);
+        return jsonResponse(req, { error: 'Permissão negada: acesso insuficiente à fazenda' }, 403);
       }
 
       // Read and parse CSV
@@ -407,11 +416,11 @@ Deno.serve(async (req) => {
       const parsedRecords = parseCSV(csvContent);
 
       if (parsedRecords.length === 0) {
-        return jsonResponse({ error: "Arquivo CSV vazio ou inválido" }, 400);
+        return jsonResponse(req, { error: "Arquivo CSV vazio ou inválido" }, 400);
       }
 
       if (parsedRecords.length > 5000) {
-        return jsonResponse({ error: "Muitos registros. Máximo 5000 por upload." }, 413);
+        return jsonResponse(req, { error: "Muitos registros. Máximo 5000 por upload." }, 413);
       }
 
       console.log(`Processing ${parsedRecords.length} records for farm ${farmId}`);
@@ -484,7 +493,7 @@ Deno.serve(async (req) => {
 
       const importBatchId = crypto.randomUUID();
 
-      return jsonResponse({
+      return jsonResponse(req, {
         import_batch_id: importBatchId,
         success: true,
         inserted,
@@ -495,7 +504,7 @@ Deno.serve(async (req) => {
       });
     } catch (error) {
       console.error("Upload handler error", error);
-      return jsonResponse({ error: "Erro ao processar upload", message: String(error) }, 500);
+      return jsonResponse(req, { error: "Erro ao processar upload", message: String(error) }, 500);
     }
   }
 
@@ -504,17 +513,17 @@ Deno.serve(async (req) => {
       const { import_batch_id: importBatchId, farm_id: farmId } = await req.json();
 
       if (!importBatchId) {
-        return jsonResponse({ error: "import_batch_id é obrigatório" }, 400);
+        return jsonResponse(req, { error: "import_batch_id é obrigatório" }, 400);
       }
 
       console.log(`Commit confirmado para batch ${importBatchId}`);
 
-      return jsonResponse({ status: "completed", import_batch_id: importBatchId });
+      return jsonResponse(req, { status: "completed", import_batch_id: importBatchId });
     } catch (error) {
       console.error("Commit handler error", error);
-      return jsonResponse({ error: "Erro ao processar commit" }, 500);
+      return jsonResponse(req, { error: "Erro ao processar commit" }, 500);
     }
   }
 
-  return jsonResponse({ error: "Not found" }, 404);
+  return jsonResponse(req, { error: "Not found" }, 404);
 });

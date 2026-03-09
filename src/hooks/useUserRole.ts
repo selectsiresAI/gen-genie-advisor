@@ -22,8 +22,6 @@ export function useUserRole() {
         return;
       }
 
-      console.log("🔍 Verificando role para usuário:", user.id);
-
       // Verificar admin usando RPC SECURITY DEFINER
       const { data: isAdmin, error: adminError } = await supabase
         .rpc("has_role_v2", { _user_id: user.id, _role: "admin" });
@@ -32,8 +30,6 @@ export function useUserRole() {
         console.error("Erro ao buscar role:", adminError);
         throw adminError;
       }
-
-      console.log("✅ Resultado has_role_v2 (admin):", isAdmin);
 
       if (isAdmin) {
         setRole("admin");

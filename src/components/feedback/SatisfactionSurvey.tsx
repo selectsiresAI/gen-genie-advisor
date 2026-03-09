@@ -89,9 +89,6 @@ export function SatisfactionSurvey({ forceVisible = false, onClose }: Satisfacti
       const threeDays = 3 * 24 * 60 * 60 * 1000;
       const timeSinceLastShown = now - parseInt(lastShown);
       if (timeSinceLastShown < threeDays) {
-        console.log('[SatisfactionSurvey] Too soon for 2nd attempt:', {
-          timeRemaining: `${Math.ceil((threeDays - timeSinceLastShown) / 1000 / 60 / 60)} horas`
-        });
         return;
       }
       showDelay = SURVEY_DELAY;
@@ -100,24 +97,12 @@ export function SatisfactionSurvey({ forceVisible = false, onClose }: Satisfacti
       const sevenDays = 7 * 24 * 60 * 60 * 1000;
       const timeSinceLastShown = now - parseInt(lastShown);
       if (timeSinceLastShown < sevenDays) {
-        console.log('[SatisfactionSurvey] Too soon for next attempt:', {
-          timeRemaining: `${Math.ceil((sevenDays - timeSinceLastShown) / 1000 / 60 / 60)} horas`
-        });
         return;
       }
       showDelay = SURVEY_DELAY;
     }
 
-    // Debug log
-    console.log('[SatisfactionSurvey] Scheduled to show in:', {
-      dismissals,
-      lastShown: lastShown ? new Date(parseInt(lastShown)).toLocaleString() : 'nunca',
-      showDelay: `${showDelay / 1000} segundos`,
-      isDev: import.meta.env.DEV
-    });
-
     const timer = setTimeout(() => {
-      console.log('[SatisfactionSurvey] Showing banner now');
       setVisible(true);
     }, showDelay);
     

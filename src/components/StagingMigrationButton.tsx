@@ -34,7 +34,6 @@ export function StagingMigrationButton() {
           const refreshResult = await supabase.auth.getSession();
           if (refreshResult.data?.session) {
             token = refreshResult.data.session.access_token;
-            console.log('🔄 Token renovado');
           }
         }
         
@@ -56,8 +55,6 @@ export function StagingMigrationButton() {
         }
 
         const data = await response.json();
-        console.log('📊 Batch processed:', data);
-        
         totalInserted += data.inserted || 0;
         totalUpdated += data.updated || 0;
         totalInvalid += data.invalid || 0;
@@ -65,7 +62,6 @@ export function StagingMigrationButton() {
 
         // Se batch teve 100% de inválidos, parar para evitar loop infinito
         if (data.invalid > 0 && data.inserted === 0 && data.updated === 0) {
-          console.warn('⚠️ Batch completamente inválido, interrompendo...');
           toast({
             title: 'Problema detectado',
             description: `${totalInvalid} registros inválidos. Verifique o formato do CSV.`,

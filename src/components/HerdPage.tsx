@@ -139,10 +139,6 @@ const HerdPage: React.FC<HerdPageProps> = ({
         }
       });
       const completeRows = rows.filter(isCompleteFemaleRow) as Female[];
-      if (rows.length !== completeRows.length) {
-        console.warn('[HerdPage] Ignored female rows missing id, name, farm_id or created_at:', rows.length - completeRows.length);
-      }
-      console.log(`[HerdPage] Loaded ${completeRows.length} females from females_denorm`);
       setFemales(completeRows);
     } catch (error) {
       console.error('Error loading females:', error);

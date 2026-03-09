@@ -1,9 +1,19 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+const ALLOWED_ORIGINS = [
+  'https://toolss-ssb.lovable.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+];
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get('Origin') || '';
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+}
 
 interface ParsedCSVRow {
   [key: string]: string;
@@ -539,7 +549,7 @@ function parseCSV(text: string): { headers: string[]; rows: ParsedCSVRow[] } {
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getCorsHeaders(req) });
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -550,7 +560,7 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get('Authorization');
   if (!authHeader?.startsWith('Bearer ')) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 401, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 
@@ -563,7 +573,7 @@ Deno.serve(async (req) => {
   const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
   if (claimsError || !claimsData?.claims?.sub) {
     return new Response(JSON.stringify({ error: 'Invalid token' }), {
-      status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 401, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 
@@ -571,7 +581,7 @@ Deno.serve(async (req) => {
   const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: claimsData.claims.sub, _role: 'admin' });
   if (!isAdmin) {
     return new Response(JSON.stringify({ error: 'Admin access required' }), {
-      status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 403, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 
@@ -590,14 +600,14 @@ Deno.serve(async (req) => {
       if (!file) {
         return new Response(
           JSON.stringify({ error: 'Nenhum arquivo enviado' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
       if (!userId) {
         return new Response(
           JSON.stringify({ error: 'user_id é obrigatório' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -605,7 +615,7 @@ Deno.serve(async (req) => {
       if (file.size > 10 * 1024 * 1024) {
         return new Response(
           JSON.stringify({ error: 'Arquivo muito grande (máximo 10MB)' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -665,7 +675,7 @@ Deno.serve(async (req) => {
           invalid: 0,
           message: '✅ CSV carregado. Use "Migrar Touros" para processar os registros.'
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -696,7 +706,7 @@ Deno.serve(async (req) => {
             invalid: 0,
             remaining: 0
           }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -891,7 +901,7 @@ Deno.serve(async (req) => {
             ? `✅ Batch processado! ${remainingCount} registros restantes. Chame novamente para continuar.`
             : '✅ Migração completa! Todos os touros foram processados.'
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
@@ -906,7 +916,7 @@ Deno.serve(async (req) => {
       if (!import_batch_id || !uploader_user_id) {
         return new Response(
           JSON.stringify({ error: 'import_batch_id e uploader_user_id são obrigatórios' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 400, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -924,7 +934,7 @@ Deno.serve(async (req) => {
       if (!stagingData || stagingData.length === 0) {
         return new Response(
           JSON.stringify({ error: 'Nenhum dado encontrado no staging para este batch' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 404, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
         );
       }
 
@@ -1050,14 +1060,14 @@ Deno.serve(async (req) => {
           invalid,
           message: 'Importação concluída com sucesso'
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
       );
     }
 
     // Endpoint não encontrado
     return new Response(
       JSON.stringify({ error: 'Endpoint não encontrado. Use /upload ou /commit' }),
-      { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 404, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
@@ -1067,7 +1077,7 @@ Deno.serve(async (req) => {
         error: error instanceof Error ? error.message : 'Erro desconhecido',
         details: error instanceof Error ? error.stack : undefined
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
     );
   }
 });

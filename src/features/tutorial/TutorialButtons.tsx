@@ -14,10 +14,8 @@ export function TutorialButtons({
       <Button
         size="sm"
         onClick={async () => {
-          console.log("[TutorialButtons] Button clicked!", { slug });
           try {
             await t.start(slug);
-            console.log("[TutorialButtons] Start completed", { isActive: t.isActive, step: t.step });
           } catch (error) {
             console.error("[TutorialButtons] Error starting tutorial:", error);
           }

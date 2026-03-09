@@ -132,7 +132,7 @@ export default function ImportFemalesUploader({ farmId, onSuccess }: Props) {
       try {
         payload = await response.json();
       } catch (parseError) {
-        console.warn('Falha ao interpretar resposta do upload', parseError);
+        // Failed to parse upload response
       }
 
       const batchId = payload?.import_batch_id;
@@ -170,7 +170,7 @@ export default function ImportFemalesUploader({ farmId, onSuccess }: Props) {
 
         if (!commitResponse.ok) {
           const commitText = await commitResponse.text().catch(() => '');
-          console.warn('Commit falhou', commitResponse.status, commitText);
+          console.error('Commit falhou', commitResponse.status, commitText);
         }
       }
 

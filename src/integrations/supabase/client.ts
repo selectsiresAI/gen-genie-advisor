@@ -31,7 +31,7 @@ const decodeJwtPayload = (token?: string | null): Record<string, any> | undefine
       return JSON.parse(decoded);
     }
   } catch (error) {
-    console.warn("Não foi possível decodificar o payload do token Supabase", error);
+    // Could not decode Supabase token payload
   }
 
   return undefined;
@@ -63,7 +63,7 @@ const deriveHostsFromSupabaseConfig = () => {
       hosts.push(host);
     }
   } catch (error) {
-    console.warn("Não foi possível interpretar o supabaseUrl fornecido", error);
+    // Could not parse provided supabaseUrl
   }
 
   const projectRef = getProjectRefFromAnonKey(supabaseAnonKey);

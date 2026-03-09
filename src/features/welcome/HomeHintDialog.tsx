@@ -37,7 +37,7 @@ export default function HomeHintDialog({ userId = null }: HomeHintDialogProps) {
       const dismissed = localStorage.getItem(key) === "true";
       if (!dismissed) setOpen(true);
     } catch (error) {
-      console.warn("HomeHintDialog: unable to access localStorage", error);
+      // Unable to access localStorage
     }
   }, [key]);
 
@@ -46,7 +46,7 @@ export default function HomeHintDialog({ userId = null }: HomeHintDialogProps) {
       try {
         localStorage.setItem(key, "true");
       } catch (error) {
-        console.warn("HomeHintDialog: unable to persist preference", error);
+        // Unable to persist preference
       }
     }
     setOpen(false);

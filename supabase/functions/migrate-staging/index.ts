@@ -1,9 +1,19 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+const ALLOWED_ORIGINS = [
+  'https://toolss-ssb.lovable.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+];
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get('Origin') || '';
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+}
 
 // Helper: Normalizar texto para matching
 function normalizeText(text: string): string {
@@ -27,7 +37,7 @@ function parseBirthDate(dateStr: string | null): string | null {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getCorsHeaders(req) });
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -38,7 +48,7 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get('Authorization');
   if (!authHeader?.startsWith('Bearer ')) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 401, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 
@@ -51,7 +61,7 @@ Deno.serve(async (req) => {
   const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
   if (claimsError || !claimsData?.claims?.sub) {
     return new Response(JSON.stringify({ error: 'Invalid token' }), {
-      status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 401, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
   const currentUserId = claimsData.claims.sub;
@@ -60,7 +70,7 @@ Deno.serve(async (req) => {
   const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: currentUserId, _role: 'admin' });
   if (!isAdmin) {
     return new Response(JSON.stringify({ error: 'Admin access required' }), {
-      status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 403, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
     });
   }
 
@@ -657,7 +667,7 @@ Deno.serve(async (req) => {
         log_id: logId,
         message: 'Migration completed successfully',
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
@@ -684,7 +694,7 @@ Deno.serve(async (req) => {
         error: error instanceof Error ? error.message : 'Unknown error',
         details: error instanceof Error ? error.stack : undefined,
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
     );
   }
 });

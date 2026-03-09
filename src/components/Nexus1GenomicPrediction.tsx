@@ -89,7 +89,6 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
   // F11 × B: HHP 232,50 · TPI 1720,50 · NM 255,75 · PTAM 1069,50 · PTAF 23,25
   const calculateGenomicPrediction = (femalePTA: number, bullPTA: number): number => {
     const result = (femalePTA + bullPTA) / 2 * 0.93;
-    console.log(`Predição: Fêmea PTA=${femalePTA}, Touro PTA=${bullPTA}, Resultado=${result.toFixed(2)}`);
     return result;
   };
 
@@ -225,7 +224,6 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
           validBullIds.forEach((bullId, index) => {
             const bull = bullsToUse.find(b => b['ID Fazenda'] === bullId || b['Nome'] === bullId);
             if (!bull) {
-              console.warn(`Touro ${bullId} não encontrado`);
               return;
             }
             const predictions: Record<string, number> = {};
@@ -248,16 +246,13 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
         } else {
           // Usar touros da busca
           const convertedBulls = convertSelectedBulls();
-          console.log('Touros convertidos para cálculo:', convertedBulls);
           convertedBulls.forEach((bull, index) => {
-            console.log(`Calculando predições para fêmea ${female['Nome']} x touro ${bull['Nome']}`);
             const predictions: Record<string, number> = {};
 
             // Calcular predições para cada PTA
             PTA_COLUMNS.forEach(pta => {
               const femalePTA = parseFloat(female[pta]) || 0;
               const bullPTA = parseFloat(bull[pta]) || 0;
-              console.log(`${pta}: Fêmea=${femalePTA}, Touro=${bullPTA}`);
               if (!isNaN(femalePTA) && !isNaN(bullPTA)) {
                 predictions[pta] = calculateGenomicPrediction(femalePTA, bullPTA);
               }
@@ -329,7 +324,6 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
     try {
       // Buscar touros utilizando a função centralizada de busca no Supabase
       const data = await searchBulls(naabSearch.trim(), 20);
-      console.log('Touros encontrados no banco:', data);
       setSearchResults(data);
       if (!data || data.length === 0) {
         toast({
@@ -365,7 +359,6 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
       });
       return;
     }
-    console.log('Adicionando touro à seleção:', bull);
     setSelectedBullsFromSearch(prev => [...prev, bull]);
     toast({
       title: 'Touro adicionado',
@@ -380,7 +373,6 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
 
   // Converter touros selecionados para formato esperado
   const convertSelectedBulls = () => {
-    console.log('Convertendo touros selecionados:', selectedBullsFromSearch);
     return selectedBullsFromSearch.map(bull => {
       const converted = {
         'ID Fazenda': bull.code,
@@ -439,7 +431,6 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
         'FTP': bull.ftp || 0,
         'RFI': bull.rfi || 0
       };
-      console.log(`Touro convertido: ${bull.name} - TPI: ${converted.TPI}, NM$: ${converted['NM$']}`);
       return converted;
     });
   };

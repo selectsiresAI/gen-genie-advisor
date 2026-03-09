@@ -163,13 +163,6 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
 
       const completeRows = rows.filter(isCompleteFemaleRow);
 
-      if (rows.length !== completeRows.length) {
-        console.warn(
-          '[ChartsPage] Ignored female rows missing id, name, farm_id or created_at:',
-          rows.length - completeRows.length
-        );
-      }
-
       setFemales(completeRows);
     } catch (error) {
       console.error('Error loading females data:', error);

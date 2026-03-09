@@ -162,8 +162,7 @@ export default function Step8GeneticBenchmark() {
       .select("farm_id")
       .eq("farm_id", farmId)
       .limit(1);
-    console.log("[DEBUG Step8] farmId=", farmId, { data, error });
-    alert(error ? `Erro: ${error.message}` : `OK: retornou ${data?.length ?? 0} linha(s). Veja o console.`);
+    alert(error ? `Erro: ${error.message}` : `OK: retornou ${data?.length ?? 0} linha(s).`);
   }
 
   return (

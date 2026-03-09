@@ -34,8 +34,6 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   // Fallback: se não houver tenant (ex.: Home), usamos userId como "tenant efetivo"
   const effectiveTenantId = tenantId ?? userId ?? null;
 
-  console.log("[TutorialProvider] Render:", { hasSession: !!session, userId, tenantId, effectiveTenantId });
-
   const [active, setActive] = useState(false);
   const [slug, setSlug] = useState<string | null>(null);
   const [steps, setSteps] = useState<TutorialStep[]>([]);
@@ -43,40 +41,30 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
 
   const start = useCallback(async (s: string) => {
     try {
-      console.log("[tutorial] start called", { slug: s, userId, effectiveTenantId });
-
       if (!userId || !effectiveTenantId) {
-        console.error("[tutorial] ❌ Não foi possível iniciar: usuário não autenticado");
+        console.error("[tutorial] Não foi possível iniciar: usuário não autenticado");
         return;
       }
 
       const enabled = await tutorialsEnabled();
       if (!enabled) {
-        console.log("[tutorial] tutorials disabled");
         return;
       }
 
-      console.log("[tutorial] ✓ Enabled, fetching tutorial...");
       const { steps } = await fetchTutorial(s);
-      console.log("[tutorial] fetched steps", { slug: s, count: steps?.length ?? 0, steps });
       if (!steps?.length) {
-        console.log("[tutorial] ❌ no steps found");
         return;
       }
 
-      console.log("[tutorial] ✓ Steps found, getting progress...");
       const progress = await getOrInitProgress({ userId, tenantId: effectiveTenantId, slug: s });
       const startAt = progress.is_completed ? 0 : progress.current_step ?? 0;
-      console.log("[tutorial] progress", { startAt, progress });
 
-      console.log("[tutorial] ✓ Setting state to activate tutorial...");
       setSteps(steps);
       setIdx(Math.min(startAt, steps.length - 1));
       setSlug(s);
       setActive(true);
-      console.log("[tutorial] ✅ Tutorial activated!");
     } catch (error) {
-      console.error("[tutorial] ❌ Error starting tutorial:", error);
+      console.error("[tutorial] Error starting tutorial:", error);
     }
   }, [userId, effectiveTenantId]);
 
@@ -96,8 +84,6 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
 
   const ctx = useMemo<Ctx>(() => ({ start, reset, isActive: active, step: idx }), [start, reset, active, idx]);
   const step = steps[idx];
-
-  console.log("[TutorialProvider] Current state:", { active, hasStep: !!step, slug, stepIndex: idx, stepsCount: steps.length });
 
   return (
     <TutorialCtx.Provider value={ctx}>

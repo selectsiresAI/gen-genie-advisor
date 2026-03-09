@@ -125,7 +125,6 @@ export const usePlanStore = create<PlanState>()(
       setSelectedFarmId: (farmId) => {
         const current = get().selectedFarmId;
         if (current !== farmId) {
-          console.log('selectedFarmId=', farmId, '(from UI)');
           set({ selectedFarmId: farmId });
         }
       },
@@ -134,8 +133,6 @@ export const usePlanStore = create<PlanState>()(
         const current = get().selectedPTAList;
         const newLabels = labels.slice(0, 5); // max 5
         if (JSON.stringify(current) !== JSON.stringify(newLabels)) {
-          console.log('selectedPTAList=', newLabels);
-          console.log('ptaHeaders=', newLabels.map(label => ({ label, key: LABEL_TO_FIELD[label] || label })));
           set({ selectedPTAList: newLabels });
         }
       },
@@ -143,7 +140,6 @@ export const usePlanStore = create<PlanState>()(
       setPopulationMode: (mode) => {
         const current = get().populationMode;
         if (current !== mode) {
-          console.log('populationMode=', mode);
           set({ populationMode: mode });
         }
       },
@@ -151,7 +147,6 @@ export const usePlanStore = create<PlanState>()(
       setPopulationCounts: (counts) => {
         const current = get().populationCounts;
         if (JSON.stringify(current) !== JSON.stringify(counts)) {
-          console.log('populationCounts=', counts, '(auto-calculated)');
           set({ populationCounts: counts });
         }
       },
@@ -179,56 +174,46 @@ export const usePlanStore = create<PlanState>()(
 
 // Front-end data source functions (ordered by priority)
 function getFemalesByFarm(farmId: string): any[] {
-  console.log('🔍 getFemalesByFarm called with farmId:', farmId);
-  
   // Priority 1: window.Rebanho?.femalesByFarm?.[selectedFarmId]
   const rebanhoCache = (window as any).Rebanho?.femalesByFarm?.[farmId];
   if (Array.isArray(rebanhoCache)) {
-    console.log('✅ Found data in window.Rebanho, count:', rebanhoCache.length);
     return rebanhoCache;
   }
-  
+
   // Priority 2: window.ToolSS?.cache?.femalesByFarm?.[selectedFarmId]
   const toolssCache = (window as any).ToolSS?.cache?.femalesByFarm?.[farmId];
   if (Array.isArray(toolssCache)) {
-    console.log('✅ Found data in window.ToolSS, count:', toolssCache.length);
     return toolssCache;
   }
-  
+
   // Priority 3: JSON.parse(localStorage.getItem("toolss.femalesByFarm")||"{}")[selectedFarmId]
   try {
     const map = JSON.parse(localStorage.getItem("toolss.femalesByFarm") || "{}");
     if (Array.isArray(map?.[farmId])) {
-      console.log('✅ Found data in localStorage toolss.femalesByFarm, count:', map[farmId].length);
       return map[farmId];
     }
   } catch (e) {
-    console.warn('Error parsing toolss.femalesByFarm from localStorage:', e);
+    // Error parsing toolss.femalesByFarm from localStorage
   }
-  
+
   // Priority 4: Check ToolSSApp data format (toolss_clients_v2_with_500_females)
   try {
     const toolssData = localStorage.getItem("toolss_clients_v2_with_500_females");
     if (toolssData) {
       const clients = JSON.parse(toolssData);
-      console.log('🔍 Found ToolSSApp data, clients count:', clients.length);
-      
       for (const client of clients) {
         if (client.farms) {
           const farm = client.farms.find((f: any) => f.id === farmId);
           if (farm && Array.isArray(farm.females)) {
-            console.log('✅ Found farm data in ToolSSApp, females count:', farm.females.length);
-            console.log('📋 Sample female:', farm.females[0]);
             return farm.females;
           }
         }
       }
     }
   } catch (e) {
-    console.warn('Error parsing ToolSSApp data from localStorage:', e);
+    // Error parsing ToolSSApp data from localStorage
   }
-  
-  console.log('❌ No females found for farmId:', farmId);
+
   return [];
 }
 
@@ -315,16 +300,6 @@ function countFromCategoria(list: any[]): PopulationCounts {
     }
   }
   
-  // Log for debugging
-  console.log('🔍 Population count details:', {
-    total: list.length,
-    heifers,
-    primiparous,
-    secundiparous,
-    multiparous,
-    missingCategoriaCount
-  });
-  
   const total = heifers + primiparous + secundiparous + multiparous;
   return { heifers, primiparous, secundiparous, multiparous, total };
 }
@@ -355,29 +330,15 @@ export const CATEGORY_DEFINITIONS = {
 
 // Calculate population structure from farm data using categoria (coluna H)
 export const calculatePopulationStructure = (farmId: string): PopulationCounts => {
-  console.log('calculatePopulationStructure called for farmId:', farmId);
-  
   // Item 1: obter lista de fêmeas das fontes front-end
   const females = getFemalesByFarm(farmId);
-  
+
   if (!Array.isArray(females) || females.length === 0) {
-    console.log('No females found in any data source for farm:', farmId);
     return { heifers: 0, primiparous: 0, secundiparous: 0, multiparous: 0, total: 0 };
   }
-  
-  console.log('Total females found:', females.length);
-  
-  // Log sample data to verify category format
-  console.log('Sample females (first 3):', females.slice(0, 3).map((f: any) => ({
-    nome: f.nome || f[0] || 'N/A',
-    categoria: f?.Categoria ?? f?.categoria ?? f?.[7] ?? 'N/A',
-    rawRow: Array.isArray(f) ? `Array[${f.length}]` : 'Object'
-  })));
-  
+
   // Item 3: usar contagem por categoria (coluna H)
   const counts = countFromCategoria(females);
-  console.log('Category counts from coluna H:', counts);
-  
   return counts;
 };
 

@@ -38,9 +38,7 @@ const useSupabase = (): SupabaseClient => {
     if (!url || !key) {
       // Mostra no console para facilitar debug caso falte env
       // e reusa o client compartilhado configurado em @/integrations.
-      console.warn(
-        "VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY ausentes no .env; reutilizando o client padrão"
-      );
+      // VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY missing; reusing shared client
       return sharedSupabaseClient;
     }
 

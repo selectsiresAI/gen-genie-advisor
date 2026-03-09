@@ -217,22 +217,6 @@ export const TrendsTab: React.FC<TrendsTabProps> = ({
         setRpcData(sanitized);
         setLoadState('success');
 
-        if (import.meta.env.DEV) {
-          const years = sanitized
-            .flatMap((row) => parseYearly(row.yearly).map((point) => point.year))
-            .filter((year, index, arr) => arr.indexOf(year) === index)
-            .sort((a, b) => a - b);
-          const seriesSizes = sanitized.map((row) => ({
-            trait: row.column_name,
-            points: parseYearly(row.yearly).length,
-          }));
-          console.log('[TrendsTab] RPC carregado', {
-            farmId,
-            traits: normalizedTraits,
-            years,
-            seriesSizes,
-          });
-        }
       } catch (error) {
         if (isCancelled) return;
         console.error('Erro ao carregar tendências', error);
@@ -343,17 +327,6 @@ export const TrendsTab: React.FC<TrendsTabProps> = ({
   React.useEffect(() => {
     if (!import.meta.env.DEV) return;
     if (loadState !== 'success') return;
-    const years = prepared.chartRows.map((row) => row.year);
-    const seriesSizes = prepared.traitSeries.map((series) => ({
-      trait: series.key,
-      points: Object.values(series.meanByYear).filter((value) => value !== null).length,
-    }));
-    console.log('[TrendsTab] séries preparadas', {
-      farmId,
-      traits: normalizedTraits,
-      years,
-      seriesSizes,
-    });
   }, [loadState, prepared, farmId, normalizedTraits]);
 
   const handleRetry = React.useCallback(() => {

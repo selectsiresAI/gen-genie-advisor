@@ -369,9 +369,6 @@ export default function SegmentationPage({
     try {
       const rows = await fetchFemalesDenormByFarm(farm.farm_id);
       const data = rows.filter(isCompleteFemaleRow) as Female[];
-      if (rows.length !== data.length) {
-        console.warn('[SegmentationPage] Ignored female rows missing id, name, farm_id or created_at:', rows.length - data.length);
-      }
       if (!data || !data.length) {
         setAnimals([]);
         return;
@@ -1004,7 +1001,6 @@ export default function SegmentationPage({
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      console.log('Relatório salvo na Pasta de Arquivos');
     } catch (error) {
       console.error('Erro ao salvar relatório:', error);
     }
