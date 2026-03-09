@@ -94,6 +94,7 @@ const AppContent = () => {
             )
           }
         />
+        <Route path="/reset-password" element={<ResetPasswordPage />}
         <Route
           path="/admin/*"
           element={
