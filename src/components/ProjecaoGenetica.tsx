@@ -16,6 +16,9 @@ import {
   usePlanObjective,
   type ObjectiveChoice,
 } from "@/providers/PlanObjectiveContext";
+import { PlanStepper } from "@/components/plano-genetico/PlanStepper";
+import { EmptyChartPlaceholder } from "@/components/plano-genetico/EmptyChartPlaceholder";
+import PageComparacaoRapida from "@/components/plano-genetico/PageComparacaoRapida";
 
 /**
  * Projeção Genética MVP – Select Sires (Frontend Only, Single File)
@@ -315,9 +318,9 @@ function useAppState() {
           },
           structure: { total: 0, novilhas: 0, primiparas: 0, secundiparas: 0, multiparas: 0 },
           repro: {
-            service: { novilhas: 0, primiparas: 0, secundiparas: 0, multiparas: 0 },
-            conception: { novilhas: 0, primiparas: 0, secundiparas: 0, multiparas: 0 },
-            preex: { novilhas: 0, primiparas: 0, secundiparas: 0, multiparas: 0 },
+            service: { novilhas: 65, primiparas: 60, secundiparas: 60, multiparas: 55 },
+            conception: { novilhas: 55, primiparas: 37.5, secundiparas: 32.5, multiparas: 30.5 },
+            preex: { novilhas: 35, primiparas: 22.5, secundiparas: 20, multiparas: 17.5 },
           },
           mothers: {
             values: {
@@ -352,9 +355,9 @@ function useAppState() {
       },
       structure: { total: 0, novilhas: 0, primiparas: 0, secundiparas: 0, multiparas: 0 },
       repro: {
-        service: { novilhas: 0, primiparas: 0, secundiparas: 0, multiparas: 0 },
-        conception: { novilhas: 0, primiparas: 0, secundiparas: 0, multiparas: 0 },
-        preex: { novilhas: 0, primiparas: 0, secundiparas: 0, multiparas: 0 },
+        service: { novilhas: 65, primiparas: 60, secundiparas: 60, multiparas: 55 },
+        conception: { novilhas: 55, primiparas: 37.5, secundiparas: 32.5, multiparas: 30.5 },
+        preex: { novilhas: 35, primiparas: 22.5, secundiparas: 20, multiparas: 17.5 },
       },
       mothers: {
         values: {
@@ -1055,7 +1058,7 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
                   }));
                 }}
               >
-                📋 Incluir dados de referência
+                📋 Restaurar padrões
               </Button>
             </div>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
@@ -1121,7 +1124,7 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
   );
 }
 
-function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.SetStateAction<AppState>> }) {
+function PageBulls({ st, setSt, onGoToResults }: { st: AppState; setSt: React.Dispatch<React.SetStateAction<AppState>>; onGoToResults?: () => void }) {
   const planStore = usePlanStore();
   const [toolssBulls, setToolssBulls] = useState<any[]>([]);
   
@@ -1427,6 +1430,17 @@ function PageBulls({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
           </div>
         </Section>
       ))}
+
+      {/* Botão "Ir para Resultados" quando há touro configurado */}
+      {onGoToResults && st.bulls.slice(0, st.numberOfBulls).some((b) =>
+        CATEGORIES.some(({ key }) => (b.doses[key] || 0) > 0)
+      ) && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+          <Button onClick={onGoToResults}>
+            Ir para Resultados →
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1700,6 +1714,8 @@ function PageResults({ st }: { st: AppState }) {
     return PTA_NUM(value);
   };
 
+  const hasChartData = calc.byBull.length > 0 && calc.byBull.some((r) => r.bezerrasTotais > 0 || r.valorTotal > 0);
+
   const mountCharts = () => {
     // Destroy previous
     [barRef, pieRef, radarRef, lineRef].forEach((r) => {
@@ -1708,6 +1724,8 @@ function PageResults({ st }: { st: AppState }) {
         r.current = null;
       }
     });
+
+    if (!hasChartData) return;
 
     const labelsBulls = calc.byBull.map((r) => r.bull.name || `Touro ${r.bull.id}`);
 
@@ -1731,58 +1749,104 @@ function PageResults({ st }: { st: AppState }) {
       options: { responsive: true },
     });
 
-    // 3) Radar: PTAs médias das filhas (ponderadas) – PTAs selecionadas
+    // 3) Radar: PTAs médias das filhas — normalized 0-1 scale
     const radarLabels = planStore.selectedPTAList.map((ptaLabel) => `PTA ${ptaLabel}`);
-    const radarDatasets = calc.byBull.map((r) => ({ 
-      label: r.bull.name || `Touro ${r.bull.id}`, 
-      data: planStore.selectedPTAList.map((ptaLabel) => r.ptaPond[ptaLabel] || 0) 
+    // Build raw values per PTA across all bulls for min/max normalization
+    const rawRadarValues: Record<string, number[]> = {};
+    planStore.selectedPTAList.forEach((ptaLabel) => {
+      rawRadarValues[ptaLabel] = calc.byBull.map((r) => r.ptaPond[ptaLabel] || 0);
+    });
+    const radarMin: Record<string, number> = {};
+    const radarMax: Record<string, number> = {};
+    planStore.selectedPTAList.forEach((ptaLabel) => {
+      const vals = rawRadarValues[ptaLabel];
+      radarMin[ptaLabel] = Math.min(...vals);
+      radarMax[ptaLabel] = Math.max(...vals);
+    });
+    const normalize = (ptaLabel: string, value: number) => {
+      const min = radarMin[ptaLabel];
+      const max = radarMax[ptaLabel];
+      if (max === min) return 0.5;
+      return (value - min) / (max - min);
+    };
+    const radarDatasets = calc.byBull.map((r) => ({
+      label: r.bull.name || `Touro ${r.bull.id}`,
+      data: planStore.selectedPTAList.map((ptaLabel) => normalize(ptaLabel, r.ptaPond[ptaLabel] || 0)),
     }));
     radarRef.current = createChart("chart-radar", {
       type: "radar",
       data: { labels: radarLabels, datasets: radarDatasets },
-      options: { responsive: true, elements: { line: { borderWidth: 2 } } },
+      options: {
+        responsive: true,
+        elements: { line: { borderWidth: 2 } },
+        scales: {
+          r: { min: 0, max: 1, ticks: { display: false } },
+        },
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: (ctx: any) => {
+                const ptaLabel = planStore.selectedPTAList[ctx.dataIndex];
+                const realValue = calc.byBull[ctx.datasetIndex]?.ptaPond[ptaLabel] || 0;
+                return `${ctx.dataset.label}: ${PTA_NUM(realValue)}`;
+              },
+            },
+          },
+        },
+      },
     });
 
-    // 4) Barras: ROI por touro
+    // 4) Barras: ROI por touro with zero baseline
     const roiData = calc.byBull.map((r) => r.roi);
-    const roiColors = calc.byBull.map((r) => r.roi >= 0 ? '#16a34a' : '#dc2626');
+    const roiColors = calc.byBull.map((r) => (r.roi >= 0 ? "#16a34a" : "#dc2626"));
     lineRef.current = createChart("chart-line", {
       type: "bar",
       data: {
         labels: labelsBulls,
-        datasets: [{
-          label: calc.roiIndexLabel ? `ROI (R$) — Índice ${calc.roiIndexLabel}` : "ROI (R$)",
-          data: roiData,
-          backgroundColor: roiColors,
-          borderColor: roiColors,
-          borderWidth: 1
-        }]
+        datasets: [
+          {
+            label: calc.roiIndexLabel ? `ROI (R$) — Índice ${calc.roiIndexLabel}` : "ROI (R$)",
+            data: roiData,
+            backgroundColor: roiColors,
+            borderColor: roiColors,
+            borderWidth: 1,
+          },
+        ],
       },
       options: {
         responsive: true,
         plugins: {
-          legend: { display: false }
+          legend: { display: false },
+          annotation: {
+            annotations: {
+              zeroLine: { type: "line", yMin: 0, yMax: 0, borderColor: "#1C1C1C", borderWidth: 1, borderDash: [4, 4] },
+            },
+          },
         },
         scales: {
           y: {
-            beginAtZero: true,
-            title: {
-              display: true,
-              text: 'ROI (R$)'
-            }
-          }
-        }
+            title: { display: true, text: "ROI (R$)" },
+          },
+        },
       },
     });
   };
 
   useEffect(() => {
-    if (ready.chart) {
-      // Delay leve para garantir canvas presente
-      setTimeout(mountCharts, 50);
+    if (ready.chart && hasChartData) {
+      const timer = setTimeout(mountCharts, 50);
+      return () => {
+        clearTimeout(timer);
+        [barRef, pieRef, radarRef, lineRef].forEach((r) => {
+          if (r.current) {
+            try { r.current.destroy(); } catch {}
+            r.current = null;
+          }
+        });
+      };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready.chart, JSON.stringify(calc)]);
+  }, [ready.chart, hasChartData, JSON.stringify(calc)]);
 
   const missingCrit = calc.byBull.some((r) => r.bezerrasTotais === 0 && r.valorTotal === 0);
 
@@ -1889,25 +1953,36 @@ function PageResults({ st }: { st: AppState }) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <div>
               <h4 style={{ marginBottom: 6 }}>Barras (Bezerras por categoria x Touro)</h4>
-              <ChartCanvas id="chart-bar" />
+              {hasChartData ? <ChartCanvas id="chart-bar" /> : <EmptyChartPlaceholder label="Configure os touros e doses na etapa anterior para visualizar este gráfico" />}
             </div>
             <div>
               <h4 style={{ marginBottom: 6 }}>Pizza (Participação de bezerras por Touro)</h4>
-              <ChartCanvas id="chart-pie" />
+              {hasChartData ? <ChartCanvas id="chart-pie" /> : <EmptyChartPlaceholder label="Configure os touros e doses na etapa anterior para visualizar este gráfico" />}
             </div>
             <div>
               <h4 style={{ marginBottom: 6 }}>Radar (PTAs médias das filhas)</h4>
-              <ChartCanvas id="chart-radar" />
+              {hasChartData ? <ChartCanvas id="chart-radar" /> : <EmptyChartPlaceholder label="Configure os touros e doses na etapa anterior para visualizar este gráfico" />}
             </div>
             <div>
               <h4 style={{ marginBottom: 6 }}>Barras (ROI por touro)</h4>
-              <ChartCanvas id="chart-line" />
+              {hasChartData ? <ChartCanvas id="chart-line" /> : <EmptyChartPlaceholder label="Configure os touros e doses na etapa anterior para visualizar este gráfico" />}
             </div>
           </div>
         )}
         {missingCrit && (
-          <div style={{ marginTop: 8, color: COLORS.red, fontWeight: 700 }}>
-            Preencha todos os campos obrigatórios para visualizar os resultados.
+          <div style={{ marginTop: 12, background: "#fff7ed", border: "1px solid #f59e0b", borderRadius: 10, padding: 12 }}>
+            <div style={{ fontWeight: 700, marginBottom: 6, color: COLORS.red }}>Dados incompletos:</div>
+            <ul style={{ margin: 0, paddingLeft: 20, fontSize: 13 }}>
+              {calc.byBull.map((r, i) => {
+                const issues: string[] = [];
+                if (r.bezerrasTotais === 0) issues.push("sem bezerras (verifique doses e premissas)");
+                if (r.valorTotal === 0) issues.push("sem doses configuradas");
+                if (!r.bull.name) issues.push("sem nome");
+                return issues.length > 0 ? (
+                  <li key={r.bull.id}>Touro {i + 1} ({r.bull.name || r.bull.id}): {issues.join(", ")}</li>
+                ) : null;
+              })}
+            </ul>
           </div>
         )}
       </Section>
@@ -2232,6 +2307,7 @@ function Sidebar({ current, onChange, onLoadTest, onClear }: { current: string; 
       <div style={{ fontWeight: 900, color: COLORS.black, marginBottom: 8, fontSize: 18 }}>Projeção Genética MVP</div>
       {item("plano", "🧬 Plano Genético")}
       {item("touros", "🐂 Entradas dos Touros")}
+      {item("comparacao", "⚡ Comparação Rápida")}
       {item("resultados", "📊 Resultados & Gráficos")}
       {item("pdf", "📄 Exportar PDF")}
       <div style={{ marginTop: "auto", display: "grid", gap: 8 }}>
@@ -2242,9 +2318,19 @@ function Sidebar({ current, onChange, onLoadTest, onClear }: { current: string; 
   );
 }
 
+const PAGE_TO_STEP: Record<string, number> = {
+  plano: 0,
+  touros: 1,
+  resultados: 2,
+  pdf: 2,
+  comparacao: -1,
+};
+
+const STEP_TO_PAGE = ["plano", "touros", "resultados"] as const;
+
 export default function ProjecaoGenetica() {
   const { state, setState, loadTestData, clearAll } = useAppState();
-  const [page, setPage] = useState<"plano" | "touros" | "resultados" | "pdf">("plano");
+  const [page, setPage] = useState<"plano" | "touros" | "comparacao" | "resultados" | "pdf">("plano");
 
   const initialObjectiveChoice = useMemo(() => objectiveFromLabel(state.farm.objective), [state.farm.objective]);
 
@@ -2264,13 +2350,22 @@ export default function ProjecaoGenetica() {
     [setState]
   );
 
+  const currentStep = PAGE_TO_STEP[page] ?? -1;
+
   return (
     <PlanObjectiveProvider initialObjective={initialObjectiveChoice} onObjectiveChange={handleObjectiveChange}>
       <div style={{ display: "flex", minHeight: "100vh", background: "#FAFAFA", color: COLORS.black }}>
         <Sidebar current={page} onChange={(p) => setPage(p as any)} onLoadTest={loadTestData} onClear={clearAll} />
         <main style={{ flex: 1, padding: 16, maxWidth: 1400, margin: "0 auto" }}>
+          {currentStep >= 0 && (
+            <PlanStepper
+              currentStep={currentStep}
+              onStepClick={(step) => setPage(STEP_TO_PAGE[step] as any)}
+            />
+          )}
           {page === "plano" && <PagePlano st={state} setSt={setState} />}
-          {page === "touros" && <PageBulls st={state} setSt={setState} />}
+          {page === "touros" && <PageBulls st={state} setSt={setState} onGoToResults={() => setPage("resultados")} />}
+          {page === "comparacao" && <PageComparacaoRapida />}
           {page === "resultados" && <PageResults st={state} />}
           {page === "pdf" && <PageExport st={state} />}
         </main>
