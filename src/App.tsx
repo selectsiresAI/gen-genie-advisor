@@ -16,6 +16,7 @@ import { AdminLayout } from "@/pages/admin/AdminLayout";
 import { AdminDashboard } from "@/pages/admin/AdminDashboard";
 import { SupportTicketsPage } from "@/pages/admin/SupportTicketsPage";
 import BullsImportPage from "@/pages/BullsImportPage";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import GlossaryManager from "@/pages/admin/GlossaryManager";
 import TranslationBatch from "@/pages/admin/TranslationBatch";
 import I18nDashboard from "@/pages/admin/I18nDashboard";
@@ -93,6 +94,7 @@ const AppContent = () => {
             )
           }
         />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route
           path="/admin/*"
           element={
