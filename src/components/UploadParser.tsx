@@ -1,39 +1,41 @@
 import React, { useState } from 'react';
+import * as XLSX from 'xlsx';
 import { supabase } from '@/integrations/supabase/client';
 import { processNormalizedRowsInBatchesMultiColumn, NormalizedRow } from '@/utils/importProcessing';
+import { normalizeRowHeaders } from '@/utils/headerNormalizer';
 
 export function UploadParser() {
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState<string | null>(null);
 
-  // parseFile genérica: adapta seu CSV rows para NormalizedRow[]
+  // parseFile genérica: adapta CSV/XLSX/XLS/XLSM rows para NormalizedRow[]
   async function parseFile(file: File, importBatchId?: string, uploaderUserId?: string) {
     setStatus('parsing');
     setProgress(5);
 
-    // exemplo simples de leitura CSV (ajuste se usa papaparse ou outro lib)
-    const text = await file.text();
-    // supondo CSV com header; converta para linhas/objetos - este é um parse muito básico
-    const lines = text.split(/\r?\n/).filter(Boolean);
-    if (lines.length < 2) {
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: 'array' });
+    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+    const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet);
+
+    if (jsonData.length === 0) {
       setStatus('empty');
       return;
     }
-    const headers = lines[0].split(',').map(h => h.trim());
-    const rows: NormalizedRow[] = lines.slice(1).map((ln, idx) => {
-      const cols = ln.split(',');
-      const obj: any = { row_number: idx + 1, import_batch_id: importBatchId, uploader_user_id: uploaderUserId, raw_line: ln };
-      headers.forEach((h, i) => {
-        obj[h] = cols[i]?.trim();
+
+    const rows: NormalizedRow[] = jsonData.map((row, idx) => {
+      const normalized = normalizeRowHeaders(row);
+      const obj: any = { row_number: idx + 1, import_batch_id: importBatchId, uploader_user_id: uploaderUserId, raw_line: JSON.stringify(row) };
+      Object.entries(normalized).forEach(([key, value]) => {
+        obj[key] = typeof value === 'string' ? value.trim() : value;
       });
-      // normalize common NAAB headers to fields used by processor
-      // ajuste aliases conforme seu CSV
-      obj.sire_naab = obj.sire_naab ?? obj.sire ?? obj['sire naab'] ?? obj['sire_naab'] ?? obj['sireNaab'];
-      obj.mgs_naab = obj.mgs_naab ?? obj.mgs ?? obj['mgs naab'] ?? obj['mgs_naab'];
-      obj.mmgs_naab = obj.mmgs_naab ?? obj.mmgs ?? obj['mmgs naab'] ?? obj['mmgs_naab'];
+      // Map canonical keys to snake_case fields used by processor
+      obj.sire_naab = obj.sire_naab ?? obj.naabPai ?? obj.sire;
+      obj.mgs_naab = obj.mgs_naab ?? obj.naabAvoMaterno ?? obj.mgs;
+      obj.mmgs_naab = obj.mmgs_naab ?? obj.naabBisavoMaterno ?? obj.mmgs;
 
       // also provide fallback naab field if CSV only has one column
-      obj.naab = obj.naab ?? obj.sire_naab ?? obj.mgs_naab ?? obj.mmgs_naab;
+      obj.naab = obj.naab ?? obj.Naab ?? obj.sire_naab ?? obj.mgs_naab ?? obj.mmgs_naab;
 
       return obj as NormalizedRow;
     });

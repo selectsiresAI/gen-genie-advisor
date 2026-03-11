@@ -157,7 +157,7 @@ export function BullsExcelImporter() {
       <div className="space-y-4">
         <input
           type="file"
-          accept=".xlsx,.xls"
+          accept=".xlsx,.xls,.xlsm,.csv"
           onChange={handleFileUpload}
           disabled={importing}
           className="block w-full text-sm"

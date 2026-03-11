@@ -14,6 +14,7 @@ import NexusApp from "./NexusApp";
 import PlanoApp from "./PlanoApp";
 import BotijaoVirtualPage from "./BotijaoVirtual";
 import { formatPtaValue } from "@/utils/ptaFormat";
+import { normalizeRowHeaders } from "@/utils/headerNormalizer";
 
 /**
  * ToolSS — MVP interativo (Lovable-ready)
@@ -310,14 +311,53 @@ function toCSV(rows: any[], filename = "export.csv") {
   document.body.removeChild(link);
 }
 function parseCSV(text: string) {
+  // Detect delimiter: semicolon or comma
+  const firstLine = text.trim().split(/\r?\n/)[0] || '';
+  const delimiter = (firstLine.split(';').length > firstLine.split(',').length) ? ';' : ',';
+
   const lines = text.trim().split(/\r?\n/);
-  const headers = lines[0].split(",").map(h => h.trim());
-  return lines.slice(1).map(line => {
-    const cols = line.split(",").map(x => x.trim());
+  const headers = lines[0].split(delimiter).map(h => h.trim().replace(/^["']|["']$/g, ''));
+  return lines.slice(1).filter(line => line.trim()).map(line => {
+    const cols = parseCSVLine(line, delimiter);
     const obj: any = {};
-    headers.forEach((h, i) => obj[h] = cols[i]);
+    headers.forEach((h, i) => obj[h] = cols[i]?.trim() ?? '');
     return obj;
   });
+}
+
+function parseCSVLine(line: string, delimiter: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"' && line[i + 1] === '"') { current += '"'; i++; }
+      else if (ch === '"') { inQuotes = false; }
+      else { current += ch; }
+    } else {
+      if (ch === '"') { inQuotes = true; }
+      else if (ch === delimiter) { result.push(current); current = ''; }
+      else { current += ch; }
+    }
+  }
+  result.push(current);
+  return result;
+}
+
+async function parseSpreadsheetFile(file: File): Promise<any[]> {
+  const XLSX = await import('xlsx');
+  const isCSV = file.name.toLowerCase().endsWith('.csv');
+
+  if (isCSV) {
+    const text = await file.text();
+    return parseCSV(text);
+  }
+
+  const buffer = await file.arrayBuffer();
+  const workbook = XLSX.read(buffer, { type: 'array' });
+  const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(worksheet);
 }
 function zscale(values: number[]) {
   const mean = values.reduce((a, b) => a + b, 0) / Math.max(values.length, 1);
@@ -994,21 +1034,21 @@ export default function ToolSSApp() {
   const handleUpload = async (e: any, type: "females" | "bulls") => {
     const file = e.target.files?.[0];
     if (!file || !farm || !selectedClient) return;
-    const text = await file.text();
-    const rows = parseCSV(text);
+    const rawRows = await parseSpreadsheetFile(file);
+    const rows = rawRows.map(normalizeRowHeaders);
     if (type === "bulls") {
       const bulls: Bull[] = rows.map((r: any) => ({
-        naab: r.Naab || r.NAAB || r.naab || "",
-        nome: r.Nome || r.Name || r.nome || "",
-        pedigree: r.Pedigree || r.pedigree || "",
-        TPI: Number(r.TPI || r.tpi || 0),
-        ["NM$"]: Number(r["NM$"] || r.NM || r.nm || 0),
-        Milk: Number(r.Milk || r.Leite || 0),
-        Fat: Number(r.Fat || r.Gordura || 0),
-        Protein: Number(r.Protein || r.Proteina || r.Proteína || 0),
-        SCS: Number(r.SCS || r.CCS || 0),
-        PTAT: Number(r.PTAT || r.Tipo || 0),
-        empresa: r.Empresa || r.empresa || "SelectSires",
+        naab: r.Naab || r.Naab || "",
+        nome: r.Nome || "",
+        pedigree: r.Pedigree || "",
+        TPI: Number(r.TPI || 0),
+        ["NM$"]: Number(r["NM$"] || 0),
+        Milk: Number(r.Milk || r.PTAM || 0),
+        Fat: Number(r.Fat || r.PTAF || 0),
+        Protein: Number(r.Protein || r.PTAP || 0),
+        SCS: Number(r.SCS || 0),
+        PTAT: Number(r.PTAT || 0),
+        empresa: r.Empresa || "SelectSires",
         disponibilidade: "Disponível"
       }));
       const newClients = clients.map(c => c.id !== selectedClient.id ? c : {
@@ -1021,26 +1061,26 @@ export default function ToolSSApp() {
       setClients(newClients);
     } else {
       const females: Female[] = rows.map((r: any, i: number) => {
-        const nascimento = r.Nascimento || r.Birth || "2023-01-01";
-        const ordemParto = Number(r["Ordem de Parto"] || r["Ordem Parto"] || r.OrdemParto || 0);
-        
+        const nascimento = r.dataNascimento || r.Nascimento || "2023-01-01";
+        const ordemParto = Number(r.OrdemParto || 0);
+
         return {
           id: r.id || `CSVF${Date.now()}${i}`,
-          brinco: r.Brinco || r.brinco || r.Tag || "",
+          brinco: r.Brinco || "",
           nascimento,
           ordemParto,
           categoria: categorizeAnimal(nascimento, ordemParto),
-          naabPai: r.NaabPai || r.naabPai || r.SireNaab || "",
-          nomePai: r.NomePai || r.nomePai || r.Sire || "",
+          naabPai: r.naabPai || "",
+          nomePai: r.NomePai || "",
           TPI: Number(r.TPI || 0),
-          ["NM$"]: Number(r["NM$"] || r.NM || 0),
-          Milk: Number(r.Milk || r.Leite || 0),
-          Fat: Number(r.Fat || r.Gordura || 0),
-          Protein: Number(r.Protein || r.Proteina || r.Proteína || 0),
+          ["NM$"]: Number(r["NM$"] || 0),
+          Milk: Number(r.Milk || r.PTAM || 0),
+          Fat: Number(r.Fat || r.PTAF || 0),
+          Protein: Number(r.Protein || r.PTAP || 0),
           DPR: Number(r.DPR || 0),
-          SCS: Number(r.SCS || r.CCS || 2.9),
+          SCS: Number(r.SCS || 2.9),
           PTAT: Number(r.PTAT || 0.4),
-          year: Number(r.Ano || r.Year || new Date(nascimento).getFullYear())
+          year: Number(r.Ano || new Date(nascimento).getFullYear())
         };
       });
       const newClients = clients.map(c => c.id !== selectedClient.id ? c : {
@@ -1431,10 +1471,10 @@ function HerdPage({
           <label className="cursor-pointer">
             <Button variant="outline" asChild>
               <span>
-                <Upload size={16} className="mr-2" /> Importar fêmeas (CSV)
+                <Upload size={16} className="mr-2" /> Importar fêmeas (CSV/Excel)
               </span>
             </Button>
-            <input type="file" accept=".csv" onChange={onUpload} className="hidden" />
+            <input type="file" accept=".csv,.xlsx,.xls,.xlsm" onChange={onUpload} className="hidden" />
           </label>
           <Button onClick={onExport}>
             <Download size={16} className="mr-2" /> Exportar
@@ -2008,10 +2048,10 @@ function BullsPage({
           <label className="cursor-pointer">
             <Button variant="outline" asChild>
               <span>
-                <Upload size={16} className="mr-2" /> Importar touros (CSV)
+                <Upload size={16} className="mr-2" /> Importar touros (CSV/Excel)
               </span>
             </Button>
-            <input type="file" accept=".csv" onChange={onUpload} className="hidden" />
+            <input type="file" accept=".csv,.xlsx,.xls,.xlsm" onChange={onUpload} className="hidden" />
           </label>
           <Button onClick={onExport}>
             <Download size={16} className="mr-2" /> Exportar

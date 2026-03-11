@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Upload, Download, Calculator, ArrowLeft, Users, Target, Database, FileUp, Search, Plus, X, ChevronRight, ChevronLeft } from 'lucide-react';
 import { read, utils, writeFileXLSX } from 'xlsx';
 import { supabase } from '@/integrations/supabase/client';
+import { normalizeAllRows } from '@/utils/headerNormalizer';
 import { useHerdStore } from '@/hooks/useHerdStore';
 import { HelpButton } from '@/components/help/HelpButton';
 import { HelpHint } from '@/components/help/HelpHint';
@@ -94,42 +95,11 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
 
   // Parse de arquivos
   const parseFile = useCallback(async (file: File): Promise<any[]> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = e => {
-        try {
-          let data: any[];
-          if (file.name.toLowerCase().endsWith('.xlsx')) {
-            const wb = read(new Uint8Array(e.target?.result as ArrayBuffer), {
-              type: 'array'
-            });
-            const ws = wb.Sheets[wb.SheetNames[0]];
-            data = utils.sheet_to_json(ws);
-          } else if (file.name.toLowerCase().endsWith('.csv')) {
-            const text = e.target?.result as string;
-            const lines = text.split(/\r?\n/).filter(l => l.trim());
-            const headers = lines[0].split(',').map(h => h.trim());
-            data = lines.slice(1).map(line => {
-              const values = line.split(',').map(v => v.trim());
-              const obj: any = {};
-              headers.forEach((h, i) => obj[h] = values[i] || '');
-              return obj;
-            });
-          } else {
-            reject(new Error('Formato não suportado. Use .xlsx ou .csv'));
-            return;
-          }
-          resolve(data);
-        } catch (error) {
-          reject(new Error('Erro ao processar arquivo'));
-        }
-      };
-      if (file.name.toLowerCase().endsWith('.xlsx')) {
-        reader.readAsArrayBuffer(file);
-      } else {
-        reader.readAsText(file);
-      }
-    });
+    const buffer = await file.arrayBuffer();
+    const wb = read(new Uint8Array(buffer), { type: 'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rawRows = utils.sheet_to_json(ws) as Record<string, any>[];
+    return normalizeAllRows(rawRows);
   }, []);
 
   // Upload de fêmeas
@@ -769,8 +739,8 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
 
             {dataSource === 'upload' ? <div className="space-y-4">
               <div>
-                <Label htmlFor="female-upload">Carregar arquivo (.xlsx, .csv)</Label>
-                <Input id="female-upload" type="file" accept=".xlsx,.csv" onChange={handleFemaleUpload} className="mt-1" />
+                <Label htmlFor="female-upload">Carregar arquivo (.xlsx, .xls, .xlsm, .csv)</Label>
+                <Input id="female-upload" type="file" accept=".xlsx,.xls,.xlsm,.csv" onChange={handleFemaleUpload} className="mt-1" />
               </div>
               <p className="text-sm text-muted-foreground">
                 Arquivo deve conter as colunas: ID Fazenda, Nome e todos os PTAs necessários
@@ -892,8 +862,8 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
 
             {bullSource === 'upload' ? <div className="space-y-4">
                 <div>
-                  <Label htmlFor="bull-upload">Carregar arquivo (.xlsx, .csv)</Label>
-                  <Input id="bull-upload" type="file" accept=".xlsx,.csv" onChange={handleBullUpload} className="mt-1" />
+                  <Label htmlFor="bull-upload">Carregar arquivo (.xlsx, .xls, .xlsm, .csv)</Label>
+                  <Input id="bull-upload" type="file" accept=".xlsx,.xls,.xlsm,.csv" onChange={handleBullUpload} className="mt-1" />
                 </div>
                 {bulls.length > 0 && <Badge variant="secondary">
                     {bulls.length} touros carregados

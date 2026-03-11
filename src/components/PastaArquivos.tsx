@@ -46,7 +46,8 @@ export default function PastaArquivosPage({
           // Documentos
           'application/pdf', 
           'application/vnd.ms-excel', 
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'application/vnd.ms-excel.sheet.macroEnabled.12',
           'text/csv', 
           'application/msword', 
           'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
@@ -225,7 +226,7 @@ export default function PastaArquivosPage({
         </div>
 
         {/* Input de upload (hidden) */}
-        <input ref={fileInputRef} type="file" multiple accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.webp,.svg,.mp4,.webm,.mov,.avi,.mpeg" onChange={handleFileUpload} style={{
+        <input ref={fileInputRef} type="file" multiple accept=".pdf,.xlsx,.xls,.xlsm,.csv,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.webp,.svg,.mp4,.webm,.mov,.avi,.mpeg" onChange={handleFileUpload} style={{
         display: 'none'
       }} />
 
@@ -372,7 +373,7 @@ export default function PastaArquivosPage({
                 <h4 className="font-medium mb-3">Arquivos Upload Manual</h4>
                 <ul className="space-y-1 text-sm text-muted-foreground">
                   <li>• PDF (.pdf)</li>
-                  <li>• Excel (.xlsx, .xls)</li>
+                  <li>• Excel (.xlsx, .xls, .xlsm)</li>
                   <li>• CSV (.csv)</li>
                   <li>• Word (.doc, .docx)</li>
                   <li>• Texto (.txt)</li>

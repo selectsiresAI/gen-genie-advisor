@@ -201,7 +201,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
 
       // Se for XLSX, converter para CSV e aplicar mapeamento de legendas
       let fileToUpload = importFile;
-      const isXlsx = importFile.name.toLowerCase().endsWith('.xlsx') || importFile.name.toLowerCase().endsWith('.xls');
+      const isXlsx = /\.(xlsx|xls|xlsm)$/i.test(importFile.name);
       
       if (isXlsx) {
         const XLSX = await import('xlsx');
@@ -257,7 +257,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
         
         const csvContent = csvLines.join('\n');
         const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        fileToUpload = new File([csvBlob], importFile.name.replace(/\.xlsx?$/i, '.csv'), { type: 'text/csv' });
+        fileToUpload = new File([csvBlob], importFile.name.replace(/\.(xlsx|xls|xlsm)$/i, '.csv'), { type: 'text/csv' });
         
       }
 
@@ -936,7 +936,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
                       <label className="text-sm font-medium">Arquivo CSV ou XLSX</label>
                       <Input 
                         type="file" 
-                        accept=".csv,.xlsx,.xls"
+                        accept=".csv,.xlsx,.xls,.xlsm"
                         onChange={(e) => setImportFile(e.target.files?.[0] || null)}
                         disabled={importing}
                       />

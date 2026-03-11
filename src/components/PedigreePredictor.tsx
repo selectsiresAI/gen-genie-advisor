@@ -21,6 +21,7 @@ import {
 import { Calculator, Upload, Download } from 'lucide-react';
 import { read, utils, writeFileXLSX } from 'xlsx';
 import { supabase } from '@/integrations/supabase/client';
+import { normalizeRowHeaders } from '@/utils/headerNormalizer';
 
 type BatchResultColumn = {
   header: string;
@@ -352,24 +353,21 @@ const PedigreePredictor: React.FC = () => {
       const workbook = read(data);
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
       
-      // Get both header-based and position-based data
+      // Get header-based data and normalize headers
       const jsonData = utils.sheet_to_json(worksheet) as any[];
-      const jsonDataWithoutHeaders = utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
-      
+
       const results: BatchResult[] = [];
-      
+
       for (let i = 0; i < jsonData.length; i++) {
-        const row = jsonData[i];
-        const rowArray = jsonDataWithoutHeaders[i + 1]; // +1 because first row is headers
-        
-        // Try multiple ways to get the data
+        const row = normalizeRowHeaders(jsonData[i]);
+
         const input: BatchInput = {
-          idFazenda: row.idFazenda || row['idFazenda'] || (rowArray ? rowArray[0] : '') || '',
-          nome: row.Nome || row.nome || row['Nome'] || (rowArray ? rowArray[1] : '') || '',
-          dataNascimento: row.dataNascimento || row['dataNascimento'] || (rowArray ? rowArray[2] : '') || '',
-          naabPai: row.naabPai || row['naabPai'] || (rowArray ? rowArray[3] : '') || '',
-          naabAvoMaterno: row.naabAvoMaterno || row['naabAvoMaterno'] || (rowArray ? rowArray[4] : '') || '',
-          naabBisavoMaterno: row.naabBisavoMaterno || row['naabBisavoMaterno'] || (rowArray ? rowArray[5] : '') || ''
+          idFazenda: row.idFazenda || '',
+          nome: row.Nome || '',
+          dataNascimento: row.dataNascimento || '',
+          naabPai: row.naabPai || '',
+          naabAvoMaterno: row.naabAvoMaterno || '',
+          naabBisavoMaterno: row.naabBisavoMaterno || ''
         };
         
         // Clean up NAAB codes (remove any extra spaces and ensure they're valid)
@@ -636,11 +634,11 @@ const PedigreePredictor: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="batch-file">Arquivo Excel (.xlsx)</Label>
+                <Label htmlFor="batch-file">Arquivo Excel ou CSV (.xlsx, .xls, .xlsm, .csv)</Label>
                 <Input
                   id="batch-file"
                   type="file"
-                  accept=".xlsx,.xls"
+                  accept=".xlsx,.xls,.xlsm,.csv"
                   onChange={handleFileUpload}
                 />
                 <p className="text-sm text-muted-foreground">

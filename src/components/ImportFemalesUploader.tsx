@@ -66,13 +66,13 @@ export default function ImportFemalesUploader({ farmId, onSuccess }: Props) {
 
     const csv = XLSX.utils.sheet_to_csv(worksheet);
     const blob = new Blob([csv], { type: 'text/csv' });
-    const newName = file.name.replace(/\.(xlsx|xls)$/i, '.csv');
+    const newName = file.name.replace(/\.(xlsx|xls|xlsm)$/i, '.csv');
     return new File([blob], newName, { type: 'text/csv' });
   }
 
   async function handleSubmit() {
     if (!fileRef.current) {
-      toastError('Selecione um arquivo .xlsx ou .csv.');
+      toastError('Selecione um arquivo .xlsx, .xls, .xlsm ou .csv.');
       return;
     }
 
@@ -93,10 +93,10 @@ export default function ImportFemalesUploader({ farmId, onSuccess }: Props) {
 
       let uploadFile = fileRef.current;
 
-      if (/\.(xlsx|xls)$/i.test(uploadFile.name)) {
+      if (/\.(xlsx|xls|xlsm)$/i.test(uploadFile.name)) {
         uploadFile = await convertXlsxToCsv(uploadFile);
       } else if (!/\.csv$/i.test(uploadFile.name)) {
-        toastError('Formato inválido. Use .xlsx ou .csv.');
+        toastError('Formato inválido. Use .xlsx, .xls, .xlsm ou .csv.');
         setLoading(false);
         return;
       }
@@ -196,12 +196,12 @@ export default function ImportFemalesUploader({ farmId, onSuccess }: Props) {
   return (
     <div className="space-y-3">
       <Label className="text-sm">
-        Modelos aceitos: .xlsx ou .csv. A planilha deve conter ao menos a coluna <b>identifier</b>.
+        Modelos aceitos: .xlsx, .xls, .xlsm ou .csv. A planilha deve conter ao menos a coluna <b>identifier</b>.
       </Label>
       <Input
         ref={inputRef}
         type="file"
-        accept=".xlsx,.xls,.csv"
+        accept=".xlsx,.xls,.xlsm,.csv"
         onChange={onFileChange}
         disabled={loading}
       />

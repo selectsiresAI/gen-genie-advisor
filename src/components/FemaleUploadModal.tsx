@@ -86,7 +86,7 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
           </div>
 
           <div className="text-xs text-muted-foreground">
-            <strong>Formatos aceitos:</strong> CSV, Excel (.xlsx, .xls)<br />
+            <strong>Formatos aceitos:</strong> CSV, Excel (.xlsx, .xls, .xlsm)<br />
             <strong>Tamanho máximo:</strong> 10MB<br />
             <strong>Codificação:</strong> UTF-8 (recomendado)
           </div>

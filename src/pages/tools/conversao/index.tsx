@@ -430,7 +430,7 @@ const ConversaoPage: React.FC = () => {
     
     XLSX.utils.book_append_sheet(workbook, sheet, "Padronizado");
 
-    const baseName = dataFileName ? dataFileName.replace(/\.(xlsx|csv)$/i, "") : "dados";
+    const baseName = dataFileName ? dataFileName.replace(/\.(xlsx|xls|xlsm|csv)$/i, "") : "dados";
     const fileName = `${baseName}_padronizado.xlsx`;
     XLSX.writeFile(workbook, fileName);
 
@@ -464,7 +464,7 @@ const ConversaoPage: React.FC = () => {
           title="1. Modelo padrão ✨"
           description="Use nosso modelo ToolSS com todas as PTAs ou envie o seu."
           onFileSelected={handleModelUpload}
-          accept=".xlsx,.xls,.csv"
+          accept=".xlsx,.xls,.xlsm,.csv"
           fileName={modelFileName}
           hideDefaultButton
           inputId="model-file-input"
@@ -548,7 +548,7 @@ const ConversaoPage: React.FC = () => {
           title="2. Banco de nomenclaturas ✨"
           description="Use nossas +500 nomenclaturas ou adicione as suas."
           onFileSelected={handleLegendUpload}
-          accept=".xlsx,.xls,.csv"
+          accept=".xlsx,.xls,.xlsm,.csv"
           fileName={legendFileName}
           hideDefaultButton
           inputId="legend-file-input"
@@ -632,7 +632,7 @@ const ConversaoPage: React.FC = () => {
           title="3. Arquivo de dados"
           description="CSV ou Excel com os dados a padronizar."
           onFileSelected={handleDataUpload}
-          accept=".xlsx,.xls,.csv"
+          accept=".xlsx,.xls,.xlsm,.csv"
           fileName={dataFileName}
           helper={
             dataRows.length > 0 ? (
