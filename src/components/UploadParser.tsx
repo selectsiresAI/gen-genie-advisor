@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import * as XLSX from 'xlsx';
 import { supabase } from '@/integrations/supabase/client';
 import { processNormalizedRowsInBatchesMultiColumn, NormalizedRow } from '@/utils/importProcessing';
-import { normalizeRowHeaders } from '@/utils/headerNormalizer';
+import { parseUniversalSpreadsheet } from '@/utils/headerNormalizer';
 
 export function UploadParser() {
   const [progress, setProgress] = useState(0);
@@ -13,10 +12,7 @@ export function UploadParser() {
     setStatus('parsing');
     setProgress(5);
 
-    const buffer = await file.arrayBuffer();
-    const workbook = XLSX.read(buffer, { type: 'array' });
-    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet);
+    const jsonData = await parseUniversalSpreadsheet(file);
 
     if (jsonData.length === 0) {
       setStatus('empty');
@@ -24,9 +20,8 @@ export function UploadParser() {
     }
 
     const rows: NormalizedRow[] = jsonData.map((row, idx) => {
-      const normalized = normalizeRowHeaders(row);
       const obj: any = { row_number: idx + 1, import_batch_id: importBatchId, uploader_user_id: uploaderUserId, raw_line: JSON.stringify(row) };
-      Object.entries(normalized).forEach(([key, value]) => {
+      Object.entries(row).forEach(([key, value]) => {
         obj[key] = typeof value === 'string' ? value.trim() : value;
       });
       // Map canonical keys to snake_case fields used by processor

@@ -19,9 +19,9 @@ import {
   BatchResult
 } from '@/hooks/usePedigreeStore';
 import { Calculator, Upload, Download } from 'lucide-react';
-import { read, utils, writeFileXLSX } from 'xlsx';
+import { utils, writeFileXLSX } from 'xlsx';
 import { supabase } from '@/integrations/supabase/client';
-import { normalizeRowHeaders } from '@/utils/headerNormalizer';
+import { parseUniversalSpreadsheet } from '@/utils/headerNormalizer';
 
 type BatchResultColumn = {
   header: string;
@@ -349,17 +349,12 @@ const PedigreePredictor: React.FC = () => {
     setIsProcessing(true);
     
     try {
-      const data = await batchFile.arrayBuffer();
-      const workbook = read(data);
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      
-      // Get header-based data and normalize headers
-      const jsonData = utils.sheet_to_json(worksheet) as any[];
+      const jsonData = await parseUniversalSpreadsheet(batchFile);
 
       const results: BatchResult[] = [];
 
       for (let i = 0; i < jsonData.length; i++) {
-        const row = normalizeRowHeaders(jsonData[i]);
+        const row = jsonData[i];
 
         const input: BatchInput = {
           idFazenda: row.idFazenda || '',

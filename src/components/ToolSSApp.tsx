@@ -14,7 +14,7 @@ import NexusApp from "./NexusApp";
 import PlanoApp from "./PlanoApp";
 import BotijaoVirtualPage from "./BotijaoVirtual";
 import { formatPtaValue } from "@/utils/ptaFormat";
-import { normalizeRowHeaders } from "@/utils/headerNormalizer";
+import { parseUniversalSpreadsheet } from "@/utils/headerNormalizer";
 
 /**
  * ToolSS — MVP interativo (Lovable-ready)
@@ -311,53 +311,14 @@ function toCSV(rows: any[], filename = "export.csv") {
   document.body.removeChild(link);
 }
 function parseCSV(text: string) {
-  // Detect delimiter: semicolon or comma
-  const firstLine = text.trim().split(/\r?\n/)[0] || '';
-  const delimiter = (firstLine.split(';').length > firstLine.split(',').length) ? ';' : ',';
-
   const lines = text.trim().split(/\r?\n/);
-  const headers = lines[0].split(delimiter).map(h => h.trim().replace(/^["']|["']$/g, ''));
-  return lines.slice(1).filter(line => line.trim()).map(line => {
-    const cols = parseCSVLine(line, delimiter);
+  const headers = lines[0].split(",").map(h => h.trim());
+  return lines.slice(1).map(line => {
+    const cols = line.split(",").map(x => x.trim());
     const obj: any = {};
-    headers.forEach((h, i) => obj[h] = cols[i]?.trim() ?? '');
+    headers.forEach((h, i) => obj[h] = cols[i]);
     return obj;
   });
-}
-
-function parseCSVLine(line: string, delimiter: string): string[] {
-  const result: string[] = [];
-  let current = '';
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (inQuotes) {
-      if (ch === '"' && line[i + 1] === '"') { current += '"'; i++; }
-      else if (ch === '"') { inQuotes = false; }
-      else { current += ch; }
-    } else {
-      if (ch === '"') { inQuotes = true; }
-      else if (ch === delimiter) { result.push(current); current = ''; }
-      else { current += ch; }
-    }
-  }
-  result.push(current);
-  return result;
-}
-
-async function parseSpreadsheetFile(file: File): Promise<any[]> {
-  const XLSX = await import('xlsx');
-  const isCSV = file.name.toLowerCase().endsWith('.csv');
-
-  if (isCSV) {
-    const text = await file.text();
-    return parseCSV(text);
-  }
-
-  const buffer = await file.arrayBuffer();
-  const workbook = XLSX.read(buffer, { type: 'array' });
-  const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-  return XLSX.utils.sheet_to_json(worksheet);
 }
 function zscale(values: number[]) {
   const mean = values.reduce((a, b) => a + b, 0) / Math.max(values.length, 1);
@@ -1034,8 +995,7 @@ export default function ToolSSApp() {
   const handleUpload = async (e: any, type: "females" | "bulls") => {
     const file = e.target.files?.[0];
     if (!file || !farm || !selectedClient) return;
-    const rawRows = await parseSpreadsheetFile(file);
-    const rows = rawRows.map(normalizeRowHeaders);
+    const rows = await parseUniversalSpreadsheet(file);
     if (type === "bulls") {
       const bulls: Bull[] = rows.map((r: any) => ({
         naab: r.Naab || r.Naab || "",

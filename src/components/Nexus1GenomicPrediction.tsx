@@ -10,9 +10,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, Download, Calculator, ArrowLeft, Users, Target, Database, FileUp, Search, Plus, X, ChevronRight, ChevronLeft } from 'lucide-react';
-import { read, utils, writeFileXLSX } from 'xlsx';
+import { utils, writeFileXLSX } from 'xlsx';
 import { supabase } from '@/integrations/supabase/client';
-import { normalizeAllRows } from '@/utils/headerNormalizer';
+import { parseUniversalSpreadsheet } from '@/utils/headerNormalizer';
 import { useHerdStore } from '@/hooks/useHerdStore';
 import { HelpButton } from '@/components/help/HelpButton';
 import { HelpHint } from '@/components/help/HelpHint';
@@ -95,11 +95,7 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
 
   // Parse de arquivos
   const parseFile = useCallback(async (file: File): Promise<any[]> => {
-    const buffer = await file.arrayBuffer();
-    const wb = read(new Uint8Array(buffer), { type: 'array' });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rawRows = utils.sheet_to_json(ws) as Record<string, any>[];
-    return normalizeAllRows(rawRows);
+    return parseUniversalSpreadsheet(file);
   }, []);
 
   // Upload de fêmeas

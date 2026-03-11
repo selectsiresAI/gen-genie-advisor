@@ -3,7 +3,14 @@
  *
  * O usuário pode enviar "Id Fazenda", "ID_Fazenda", "id fazenda", "idFazenda" etc.
  * Esta utilidade converte qualquer variação para a chave canônica esperada pelo sistema.
+ *
+ * Também fornece `parseUniversalSpreadsheet()` que lida com:
+ *  - CSV com delimitador `;` ou `,` (auto-detectado)
+ *  - Encoding ISO-8859-1 / Windows-1252 (auto-detectado)
+ *  - XLSX / XLS / XLSM via xlsx library
+ *  - Normalização automática dos cabeçalhos
  */
+import * as XLSX from 'xlsx';
 
 // Remove acentos, espaços extras, underscores, hifens e converte para minúscula
 function normalize(s: string): string {
@@ -177,4 +184,107 @@ export function normalizeRowHeaders<T extends Record<string, any>>(row: T): Reco
  */
 export function normalizeAllRows(rows: Record<string, any>[]): Record<string, any>[] {
   return rows.map(normalizeRowHeaders);
+}
+
+// ─── Detecção de encoding ────────────────────────────────────────────────────
+
+/**
+ * Verifica se um ArrayBuffer contém bytes > 127 que não são UTF-8 válido.
+ * Se sim, re-decodifica como Windows-1252 (latin1).
+ */
+function decodeText(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+
+  // Tenta UTF-8 primeiro
+  const utf8 = new TextDecoder('utf-8', { fatal: true });
+  try {
+    return utf8.decode(bytes);
+  } catch {
+    // Fallback para Windows-1252 (cobre ISO-8859-1 + chars extras)
+    const latin = new TextDecoder('windows-1252');
+    return latin.decode(bytes);
+  }
+}
+
+// ─── CSV parser robusto ──────────────────────────────────────────────────────
+
+function detectDelimiter(firstLine: string): string {
+  const semicolons = (firstLine.match(/;/g) || []).length;
+  const commas = (firstLine.match(/,/g) || []).length;
+  const tabs = (firstLine.match(/\t/g) || []).length;
+  if (tabs > semicolons && tabs > commas) return '\t';
+  if (semicolons > commas) return ';';
+  return ',';
+}
+
+function splitCSVLine(line: string, delimiter: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"' && line[i + 1] === '"') { current += '"'; i++; }
+      else if (ch === '"') { inQuotes = false; }
+      else { current += ch; }
+    } else {
+      if (ch === '"') { inQuotes = true; }
+      else if (ch === delimiter) { result.push(current); current = ''; }
+      else { current += ch; }
+    }
+  }
+  result.push(current);
+  return result;
+}
+
+function parseCSVText(text: string): Record<string, any>[] {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return [];
+
+  const delimiter = detectDelimiter(lines[0]);
+  const headers = splitCSVLine(lines[0], delimiter).map(h => h.trim().replace(/^["']|["']$/g, ''));
+
+  return lines.slice(1).map(line => {
+    const cols = splitCSVLine(line, delimiter);
+    const obj: Record<string, any> = {};
+    headers.forEach((h, i) => {
+      if (h) obj[h] = cols[i]?.trim() ?? '';
+    });
+    return obj;
+  });
+}
+
+// ─── Parser universal ────────────────────────────────────────────────────────
+
+function isCSVFile(fileName: string): boolean {
+  return /\.(csv|tsv|txt)$/i.test(fileName);
+}
+
+/**
+ * Lê qualquer arquivo de planilha (CSV, XLSX, XLS, XLSM) e retorna
+ * um array de objetos com cabeçalhos já normalizados.
+ *
+ * Resolve automaticamente:
+ *  - Encoding (UTF-8 / ISO-8859-1 / Windows-1252)
+ *  - Delimitador CSV (; ou , ou tab)
+ *  - Mapeamento de cabeçalhos via banco de aliases
+ */
+export async function parseUniversalSpreadsheet(file: File): Promise<Record<string, any>[]> {
+  const buffer = await file.arrayBuffer();
+
+  let rawRows: Record<string, any>[];
+
+  if (isCSVFile(file.name)) {
+    // CSV: decodifica texto com detecção de encoding e parse manual
+    const text = decodeText(buffer);
+    rawRows = parseCSVText(text);
+  } else {
+    // XLSX / XLS / XLSM: usa a biblioteca xlsx
+    const workbook = XLSX.read(buffer, { type: 'array' });
+    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+    rawRows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet);
+  }
+
+  // Normaliza cabeçalhos
+  return rawRows.map(normalizeRowHeaders);
 }
