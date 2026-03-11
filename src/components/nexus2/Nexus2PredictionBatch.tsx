@@ -21,8 +21,7 @@ import {
 } from '@/services/prediction.service';
 import { read, utils, writeFileXLSX, SSF } from 'xlsx';
 
-const ACCEPTED_EXTENSIONS = '.csv,.xlsx,.xls';
-const REQUIRED_HEADERS = ['naab_pai', 'naab_avo_materno', 'naab_bisavo_materno'] as const;
+const ACCEPTED_EXTENSIONS = '.csv,.xlsx,.xls,.xlsm';
 
 const normalizeNaab = (value: string) => {
   // Remove espaços, hífens e converte para uppercase
@@ -361,10 +360,30 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
 
   const parseFile = async (file: File) => {
     const extension = file.name.split('.').pop()?.toLowerCase();
-    const workbook =
-      extension === 'csv'
-        ? read(await file.text(), { type: 'string' })
-        : read(await file.arrayBuffer(), { type: 'array' });
+    let workbook;
+
+    if (extension === 'csv' || extension === 'tsv' || extension === 'txt') {
+      // CSV: detectar encoding e delimitador automaticamente
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      let text: string;
+      try {
+        text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+      } catch {
+        text = new TextDecoder('windows-1252').decode(bytes);
+      }
+      // Detectar delimitador
+      const firstLine = text.split(/\r?\n/)[0] || '';
+      const semis = (firstLine.match(/;/g) || []).length;
+      const commas = (firstLine.match(/,/g) || []).length;
+      const tabs = (firstLine.match(/\t/g) || []).length;
+      let fs = ',';
+      if (tabs > semis && tabs > commas) fs = '\t';
+      else if (semis > commas) fs = ';';
+      workbook = read(text, { type: 'string', FS: fs });
+    } else {
+      workbook = read(await file.arrayBuffer(), { type: 'array' });
+    }
 
     if (!workbook.SheetNames.length) {
       throw new Error('emptyWorkbook');
@@ -382,11 +401,6 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
     }
 
     const header = headerRows[0]?.map((value) => normalizeHeaderName(value)) ?? [];
-    const missingHeaders = REQUIRED_HEADERS.filter((column) => !header.includes(column));
-
-    if (missingHeaders.length) {
-      throw new Error('invalidHeader');
-    }
 
     const findHeaderIndex = (candidates: string[]) => {
       for (const candidate of candidates) {
@@ -401,12 +415,14 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
 
     const indexMap = {
       idFazenda: findHeaderIndex([
-        'id_fazenda', 'idfazenda', 'id fazenda', 'ID_FAZENDA', 'ID FAZENDA', 
-        'id_farm', 'idfarm', 'farm_id', 'farmid'
+        'id_fazenda', 'idfazenda', 'id fazenda', 'ID_FAZENDA', 'ID FAZENDA',
+        'id_farm', 'idfarm', 'farm_id', 'farmid',
+        'codigo_fazenda', 'cod_fazenda'
       ]),
       nome: findHeaderIndex([
-        'nome', 'name', 'NOME', 'NAME', 
-        'animal_name', 'animalname', 'nome_animal', 'nomeanimal'
+        'nome', 'name', 'NOME', 'NAME',
+        'animal_name', 'animalname', 'nome_animal', 'nomeanimal',
+        'nome_femea', 'nome_touro'
       ]),
       dataNascimento: findHeaderIndex([
         'data_de_nascimento', 'data_nascimento', 'datanascimento',
@@ -414,7 +430,8 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
         'data de nascimento', 'DATA DE NASCIMENTO',
         'birth_date', 'birthdate', 'BIRTH_DATE', 'BIRTHDATE',
         'birth date', 'BIRTH DATE',
-        'data_nasc', 'datanasc', 'dt_nasc', 'dtnasc'
+        'data_nasc', 'datanasc', 'dt_nasc', 'dtnasc',
+        'nascimento', 'dob'
       ]),
       naabPai: findHeaderIndex([
         'naab_pai', 'naabpai', 'NAAB_PAI', 'NAABPAI',
@@ -422,27 +439,43 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
         'sire_naab', 'sirenaab', 'SIRE_NAAB', 'SIRENAAB',
         'sire naab', 'SIRE NAAB',
         'pai_naab', 'painaab', 'PAI_NAAB', 'PAINAAB',
+        'pai', 'sire',
+        'naab_do_pai', 'naab_sire',
         'codigo_pai', 'codigopai', 'cod_pai', 'codpai'
       ]),
       naabAvoMaterno: findHeaderIndex([
         'naab_avo_materno', 'naabavomaterno', 'NAAB_AVO_MATERNO', 'NAABAVOMATERNO',
         'naab avo materno', 'NAAB AVO MATERNO', 'Naab_Avo_Materno', 'Naab Avo Materno',
+        'naab_avo', 'naabavo', 'NAAB_AVO', 'naab avo', 'NAAB AVO',
+        'avo', 'avo_mat', 'avo_materno',
         'mgs_naab', 'mgsnaab', 'MGS_NAAB', 'MGSNAAB',
-        'mgs naab', 'MGS NAAB',
-        'avo_materno_naab', 'avomaternónaab', 'AVO_MATERNO_NAAB',
-        'avo materno', 'AVO MATERNO', 'AvôMaterno',
+        'mgs naab', 'MGS NAAB', 'mgs',
+        'avo_materno_naab', 'AVO_MATERNO_NAAB',
+        'avo materno', 'AVO MATERNO',
+        'naab_do_avo_materno',
+        'maternal_grandsire', 'mat_grandsire',
         'codigo_avo_materno', 'codigoavomaterno', 'cod_avo_mat', 'codavomat'
       ]),
       naabBisavoMaterno: findHeaderIndex([
         'naab_bisavo_materno', 'naabbisavomaterno', 'NAAB_BISAVO_MATERNO', 'NAABBISAVOMATERNO',
         'naab bisavo materno', 'NAAB BISAVO MATERNO', 'Naab_Bisavo_Materno', 'Naab Bisavo Materno',
+        'naab_bis', 'naabbis', 'NAAB_BIS', 'naab bis', 'NAAB BIS',
+        'naab_bisavo', 'naabbisavo', 'NAAB_BISAVO', 'naab bisavo', 'NAAB BISAVO',
+        'bis', 'bisavo', 'bisavo_materno', 'bisavo_mat',
         'mmgs_naab', 'mmgsnaab', 'MMGS_NAAB', 'MMGSNAAB',
-        'mmgs naab', 'MMGS NAAB',
-        'bisavo_materno_naab', 'bisavomaternónaab', 'BISAVO_MATERNO_NAAB',
-        'bisavo materno', 'BISAVO MATERNO', 'BisavôMaterno',
+        'mmgs naab', 'MMGS NAAB', 'mmgs',
+        'bisavo_materno_naab', 'BISAVO_MATERNO_NAAB',
+        'bisavo materno', 'BISAVO MATERNO',
+        'naab_do_bisavo_materno',
+        'maternal_great_grandsire',
         'codigo_bisavo_materno', 'codigobisavomaterno', 'cod_bisavo_mat', 'codbisavomat'
       ])
     };
+
+    // Validar que pelo menos a coluna do pai foi encontrada
+    if (indexMap.naabPai === -1) {
+      throw new Error('invalidHeader');
+    }
 
     const dataRows = headerRows.slice(1);
 
