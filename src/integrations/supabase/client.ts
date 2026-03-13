@@ -48,9 +48,9 @@ const envSupabaseAnonKey = ((import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || im
   | string
   | undefined)?.trim();
 
-export const supabaseUrl = envSupabaseUrl ?? "https://gzvweejdtycxzxrjplpc.supabase.co";
+export const supabaseUrl = envSupabaseUrl ?? "https://odactdxpecpiyiyaqfgi.supabase.co";
 export const supabaseAnonKey = envSupabaseAnonKey ??
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6dndlZWpkdHljeHp4cmpwbHBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg1NDgzMDIsImV4cCI6MjA3NDEyNDMwMn0.-1zb66szqJj5jf5rIrU8H3EzQb9p-5X91G3ZePnX9FQ";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kYWN0ZHhwZWNwaXlpeWFxZmdpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMjQ4MTYsImV4cCI6MjA4ODkwMDgxNn0.1Ybzv5-oqg1yHu2W1vBRDHN23tj0YzN_AbwBJyKcrpY";
 
 const IMPORT_BULLS_ENV_BASE = sanitizeUrl(import.meta.env.VITE_SUPABASE_IMPORT_BULLS_URL as string | undefined);
 
