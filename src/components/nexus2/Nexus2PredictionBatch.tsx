@@ -255,7 +255,7 @@ const buildResultInsertRows = (rows: BatchRow[], farmId: string): FemaleInsert[]
       const identifier = row.nome?.trim() || row.idFazenda?.trim() || `predicao-${row.lineNumber}`;
 
       const insertRecord: FemaleInsert = {
-        client_id: farmId,
+        farm_id: farmId,
         name,
         identifier,
         fonte: 'Predição',
