@@ -1,0 +1,1 @@
+ALTER VIEW public.ssgen_client_results SET (security_invoker = true);
