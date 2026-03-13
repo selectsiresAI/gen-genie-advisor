@@ -1,7 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
-export type BullsDenormRow = Database['public']['Views']['bulls_denorm']['Row'];
+export type BullsDenormRow = Database['public']['Tables']['bulls']['Row'];
 
 const SELECT_COLUMNS = [
   'id',

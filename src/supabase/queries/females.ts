@@ -2,17 +2,12 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import type { PostgrestError } from "@supabase/supabase-js";
 
-// CRÍTICO: females_denorm é uma VIEW que pode retornar campos nullable
-// mesmo que a tabela base tenha valores. Nunca exija created_at como obrigatório aqui!
-export type FemaleDenormRow = Database["public"]["Views"]["females_denorm"]["Row"];
+export type FemaleDenormRow = Database["public"]["Tables"]["females"]["Row"];
 
-// IMPORTANTE: CompleteFemaleDenormRow valida APENAS os campos essenciais
-// para operações de UI. Campos como created_at, updated_at podem ser null
-// na view mesmo que existam na tabela base females.
 export type CompleteFemaleDenormRow = FemaleDenormRow & {
   id: string;
   name: string;
-  farm_id: string;
+  client_id: string;
 };
 
 export interface FetchFemalesDenormOptions {
