@@ -41,7 +41,7 @@ export const useActivityTracker = (user: User | null) => {
           .single();
 
         if (data && !error) {
-          sessionRef.current.sessionId = data.id;
+          sessionRef.current.sessionId = (data as any).id;
         }
       } catch (error) {
         // Falha silenciosa - não quebrar o app
