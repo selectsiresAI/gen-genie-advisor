@@ -217,15 +217,38 @@ function parseCSV(csvContent: string): any[] {
   // System-managed fields that should be completely ignored
   const forbiddenFields = ['id', 'farm_id', 'ptas', 'created_at', 'updated_at'];
 
-  // Column name mapping for different CSV formats
+  // Column name mapping: CSV header (lowercase) → DB column name
   const columnMapping: Record<string, string> = {
+    // Dollar indices
     'hhp$': 'hhp_dollar',
     'nm$': 'nm_dollar',
     'cm$': 'cm_dollar',
     'fm$': 'fm_dollar',
     'gm$': 'gm_dollar',
-    'ptaf%': 'ptaf_pct',
-    'ptap%': 'ptap_pct',
+    // Production PTAs
+    'ptam': 'pta_milk',
+    'ptaf': 'pta_fat',
+    'ptaf%': 'pta_fat_pct',
+    'ptap': 'pta_protein',
+    'ptap%': 'pta_protein_pct',
+    // Health/fertility PTAs
+    'scs': 'pta_scs',
+    'pl': 'pta_pl',
+    'dpr': 'pta_dpr',
+    'liv': 'pta_livability',
+    'ccr': 'pta_ccr',
+    'hcr': 'pta_hcr',
+    // Type/conformation
+    'ptat': 'pta_ptat',
+    'udc': 'pta_udc',
+    'flc': 'pta_flc',
+    'str': 'str_num',
+    'mf': 'mf_num',
+    'bd': 'pta_bdc',
+    // Calving
+    'sce': 'pta_sce',
+    'dce': 'pta_sire_sce',
+    // Spaces / special chars
     'h liv': 'h_liv',
     'f sav': 'f_sav',
     'beta-casein': 'beta_casein',
