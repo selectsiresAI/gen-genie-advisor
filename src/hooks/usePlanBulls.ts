@@ -34,7 +34,7 @@ export function usePlanBulls(planId?: string) {
       setLoading(true);
       setError(null);
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("plan_bulls_view")
         .select(
           `

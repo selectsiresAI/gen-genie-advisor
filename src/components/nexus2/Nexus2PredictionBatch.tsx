@@ -597,7 +597,7 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
                   });
                   
                   if (match) {
-                    record = { id: match.bull_id, ...match };
+                    record = { id: match.bull_id, ...match } as any;
                   }
                 }
               }

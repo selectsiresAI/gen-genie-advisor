@@ -249,7 +249,7 @@ export function AdminDashboard() {
         throw new Error("Usuário não autenticado");
       }
 
-      const { error } = await supabase.from("admin_notes").insert({
+      const { error } = await (supabase as any).from("admin_notes").insert({
         subject: noteSubject.trim(),
         content: noteContent.trim(),
         created_by: user.id

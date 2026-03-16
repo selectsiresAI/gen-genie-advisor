@@ -258,7 +258,7 @@ export function UserSupportTickets({ userId, userName }: UserSupportTicketsProps
 
     const { data, error } = await supabase
       .from("support_tickets")
-      .insert([payload])
+      .insert([payload] as any)
       .select("id");
 
     if (error) {

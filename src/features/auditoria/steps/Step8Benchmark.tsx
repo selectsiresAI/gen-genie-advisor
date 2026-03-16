@@ -162,7 +162,7 @@ export default function Step8GeneticBenchmark() {
       .select("farm_id")
       .eq("farm_id", farmId)
       .limit(1);
-    alert(error ? `Erro: ${error.message}` : `OK: retornou ${data?.length ?? 0} linha(s).`);
+    alert(error ? `Erro: ${(error as any).message}` : `OK: retornou ${data?.length ?? 0} linha(s).`);
   }
 
   return (

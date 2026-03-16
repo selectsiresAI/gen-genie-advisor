@@ -155,7 +155,7 @@ export function ShareFarmDialog({ farmId, farmName, myRole }: ShareFarmDialogPro
             invited_by: userId,
             invited_email: trimmedEmail,
             role,
-          });
+          } as any);
 
         if (inviteError) throw inviteError;
 

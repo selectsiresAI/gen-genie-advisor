@@ -44,7 +44,7 @@ export function IM5Results({
     const out: IM5Row[] = [];
 
     for (const b of bulls) {
-      const { data, error } = await supabase.rpc("ag_im5_bull_value", {
+      const { data, error } = await supabase.rpc("ag_im5_bull_value" as any, {
         p_farm_id: farmId,
         p_bull_id: b.id,
         p_traits: config.traits,
