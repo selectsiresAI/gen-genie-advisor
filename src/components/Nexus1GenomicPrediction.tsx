@@ -516,7 +516,7 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
             rfi,
             gfi
           )
-        `).in('class', selectedClassifications as ('donor' | 'inter' | 'recipient')[]).eq('farm_id', currentFarmId);
+        `) as any).in('class', selectedClassifications).eq('farm_id', currentFarmId);
       if (error) throw error;
       if (!data || data.length === 0) {
         toast({

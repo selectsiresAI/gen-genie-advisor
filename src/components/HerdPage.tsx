@@ -288,7 +288,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
         const chunk = idsToDelete.slice(i, i + chunkSize);
         const {
           error
-        } = await supabase.from('females').delete().in('id', chunk).eq('farm_id', farm.farm_id);
+        } = await (supabase.from('females').delete().in('id', chunk) as any).eq('farm_id', farm.farm_id);
         if (error) {
           throw error;
         }

@@ -140,7 +140,7 @@ export function BullSelector({
         console.error("Erro na busca de touros:", error);
         setResults([]);
       } else {
-        setResults(data || []);
+        setResults((data as any) || []);
       }
       setIsOpen(true);
     } catch (err) {
