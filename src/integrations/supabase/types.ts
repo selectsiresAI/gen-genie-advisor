@@ -2410,6 +2410,26 @@ export type Database = {
       }
     }
     Functions: {
+      calculate_hhp_dollar: {
+        Args: {
+          p_ccr: number
+          p_dfm: number
+          p_dpr: number
+          p_ftl: number
+          p_liv: number
+          p_mast: number
+          p_pl: number
+          p_ptaf: number
+          p_ptap: number
+          p_rfi: number
+          p_rtp: number
+          p_ruw: number
+          p_scs: number
+          p_sta: number
+          p_udp: number
+        }
+        Returns: number
+      }
       get_bull_by_naab: { Args: { naab: string }; Returns: Json }
       search_bulls: {
         Args: { limit_count?: number; q: string }
