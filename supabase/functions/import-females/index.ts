@@ -326,7 +326,7 @@ function parseCSV(csvContent: string): any[] {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: getCorsHeaders(req) });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   const url = new URL(req.url);
