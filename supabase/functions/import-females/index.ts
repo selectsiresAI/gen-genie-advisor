@@ -177,15 +177,15 @@ function validateRecord(record: any, farmId: string): FemaleRecord | null {
     fonte: sanitizeString(record.fonte)?.substring(0, 100) || undefined,
   };
 
-  // PTA numeric fields
+  // PTA numeric fields — must match actual DB column names in `females` table
   const ptaFields = [
     'hhp_dollar', 'tpi', 'nm_dollar', 'cm_dollar', 'fm_dollar', 'gm_dollar',
-    'f_sav', 'ptam', 'cfp', 'ptaf', 'ptaf_pct', 'ptap', 'ptap_pct',
-    'pl', 'dpr', 'liv', 'scs', 'mast', 'met', 'rp', 'da', 'ket', 'mf',
-    'ptat', 'udc', 'flc', 'sce', 'dce', 'ssb', 'dsb', 'h_liv', 'ccr', 'hcr',
-    'fi', 'gl', 'efc', 'bwc', 'sta', 'str', 'dfm', 'rua', 'rls', 'rtp',
-    'ftl', 'rw', 'rlr', 'fta', 'fls', 'fua', 'ruh', 'ruw', 'ucl', 'udp',
-    'ftp', 'rfi', 'gfi'
+    'f_sav', 'pta_milk', 'cfp', 'pta_fat', 'pta_fat_pct', 'pta_protein', 'pta_protein_pct',
+    'pta_pl', 'pta_dpr', 'pta_livability', 'pta_scs', 'mast', 'met', 'rp', 'da', 'ket', 'mf_num',
+    'pta_ptat', 'pta_udc', 'pta_flc', 'pta_sce', 'pta_sire_sce', 'ssb', 'dsb', 'h_liv',
+    'pta_ccr', 'pta_hcr', 'fi', 'gl', 'efc', 'bwc', 'sta', 'str_num', 'dfm', 'rua',
+    'rls', 'rtp', 'ftl', 'rw', 'rlr', 'fta', 'fls', 'fua', 'ruh', 'ruw', 'ucl', 'udp',
+    'ftp', 'rfi', 'gfi', 'pta_bdc'
   ];
 
   ptaFields.forEach(field => {
@@ -217,15 +217,38 @@ function parseCSV(csvContent: string): any[] {
   // System-managed fields that should be completely ignored
   const forbiddenFields = ['id', 'farm_id', 'ptas', 'created_at', 'updated_at'];
 
-  // Column name mapping for different CSV formats
+  // Column name mapping: CSV header (lowercase) → DB column name
   const columnMapping: Record<string, string> = {
+    // Dollar indices
     'hhp$': 'hhp_dollar',
     'nm$': 'nm_dollar',
     'cm$': 'cm_dollar',
     'fm$': 'fm_dollar',
     'gm$': 'gm_dollar',
-    'ptaf%': 'ptaf_pct',
-    'ptap%': 'ptap_pct',
+    // Production PTAs
+    'ptam': 'pta_milk',
+    'ptaf': 'pta_fat',
+    'ptaf%': 'pta_fat_pct',
+    'ptap': 'pta_protein',
+    'ptap%': 'pta_protein_pct',
+    // Health/fertility PTAs
+    'scs': 'pta_scs',
+    'pl': 'pta_pl',
+    'dpr': 'pta_dpr',
+    'liv': 'pta_livability',
+    'ccr': 'pta_ccr',
+    'hcr': 'pta_hcr',
+    // Type/conformation
+    'ptat': 'pta_ptat',
+    'udc': 'pta_udc',
+    'flc': 'pta_flc',
+    'str': 'str_num',
+    'mf': 'mf_num',
+    'bd': 'pta_bdc',
+    // Calving
+    'sce': 'pta_sce',
+    'dce': 'pta_sire_sce',
+    // Spaces / special chars
     'h liv': 'h_liv',
     'f sav': 'f_sav',
     'beta-casein': 'beta_casein',
