@@ -18,7 +18,7 @@ function jsonResponse(_req: Request, body: Record<string, unknown>, status = 200
 
 // Validation schema for female records
 interface FemaleRecord {
-  farm_id: string;
+  client_id: string;
   name: string;
   identifier?: string;
   cdcb_id?: string;
@@ -162,7 +162,7 @@ function validateRecord(record: any, farmId: string): FemaleRecord | null {
   }
 
   const validated: FemaleRecord = {
-    farm_id: farmId,
+    client_id: farmId,
     name,
     identifier: sanitizeString(record.identifier)?.substring(0, 100) || undefined,
     cdcb_id: sanitizeString(record.cdcb_id)?.substring(0, 50) || undefined,
@@ -464,7 +464,7 @@ Deno.serve(async (req) => {
         const { data, error: insertError, count } = await supabase
           .from('females')
           .upsert(batch, {
-            onConflict: 'farm_id,identifier',
+            onConflict: 'client_id,identifier',
             ignoreDuplicates: false
           })
           .select('id', { count: 'exact' });
