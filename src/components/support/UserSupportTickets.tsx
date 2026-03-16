@@ -191,7 +191,7 @@ export function UserSupportTickets({ userId, userName }: UserSupportTicketsProps
     setResponsesLoading(true);
 
     const { data, error } = await (supabase
-      .from("support_ticket_responses") as any)
+      .from("support_ticket_responses" as any) as any)
       .select("id, responder_id, message, created_at")
       .eq("ticket_id", ticketId)
       .eq("is_internal", false)
