@@ -62,8 +62,8 @@ export const useActivityTracker = (user: User | null) => {
     // Atualizar no banco
     const updateSession = async () => {
       try {
-        await supabase
-          .from('user_activity_tracking')
+        await (supabase
+          .from('user_activity_tracking' as any) as any)
           .update({
             pages_visited: Array.from(sessionRef.current.pagesVisited),
             updated_at: new Date().toISOString(),
