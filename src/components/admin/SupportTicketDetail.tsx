@@ -67,7 +67,7 @@ export function SupportTicketDetail({ ticket, onClose }: SupportTicketDetailProp
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setResponses(data || []);
+      setResponses((data as any) || []);
     } catch (error) {
       console.error('Error loading responses:', error);
       toast.error('Erro ao carregar respostas');

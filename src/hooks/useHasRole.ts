@@ -74,7 +74,7 @@ export function useHasRole(role: string, options: UseHasRoleOptions = {}): HasRo
         return false;
       }
 
-      const { data, error } = await supabase.rpc(functionName, {
+      const { data, error } = await supabase.rpc(functionName as any, {
         _user_id: user.id,
         _role: role
       });

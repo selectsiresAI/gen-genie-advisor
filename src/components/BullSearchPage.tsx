@@ -107,7 +107,7 @@ interface BullSearchPageProps {
   onGoToBotijao?: () => void;
 }
 
-const IMPORT_BULLS_UPLOAD_URLS = getImportBullsFunctionUrlCandidates('/upload');
+const IMPORT_BULLS_UPLOAD_URLS = getImportBullsFunctionUrlCandidates().map(u => u + '/upload');
 const PRIMARY_IMPORT_BULLS_UPLOAD_URL = IMPORT_BULLS_UPLOAD_URLS[0];
 
 type ImportBullsOperation = 'upload';
@@ -575,9 +575,9 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
         sire_naab: bull.sire_naab,
         mgs_naab: bull.mgs_naab,
         mmgs_naab: bull.mmgs_naab,
-        sire_name: bull.sire_name,
-        mgs_name: bull.mgs_name,
-        mmgs_name: bull.mmgs_name,
+        sire_name: (bull as any).sire_name,
+        mgs_name: (bull as any).mgs_name,
+        mmgs_name: (bull as any).mmgs_name,
         hhp_dollar: bull.hhp_dollar,
         tpi: bull.tpi,
         nm_dollar: bull.nm_dollar,

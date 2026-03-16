@@ -53,7 +53,7 @@ async function fetchAllPaginated(
     const from = page * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
 
-    let query = supabase
+    let query = (supabase as any)
       .from(table)
       .select(selectCols)
       .range(from, to);
@@ -160,9 +160,9 @@ export default function Step8GeneticBenchmark() {
     const { data, error } = await supabase
       .from("females_denorm")
       .select("farm_id")
-      .eq("farm_id", farmId)
+      .eq("farm_id", farmId as string)
       .limit(1);
-    alert(error ? `Erro: ${error.message}` : `OK: retornou ${data?.length ?? 0} linha(s).`);
+    alert(error ? `Erro: ${(error as any).message}` : `OK: retornou ${data?.length ?? 0} linha(s).`);
   }
 
   return (

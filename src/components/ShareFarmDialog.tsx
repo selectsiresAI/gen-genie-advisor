@@ -137,7 +137,7 @@ export function ShareFarmDialog({ farmId, farmName, myRole }: ShareFarmDialogPro
         // User exists — add directly to user_farms
         const { error: insertError } = await supabase
           .from("user_farms")
-          .insert({ user_id: profile.id, farm_id: farmId, role });
+          .insert({ user_id: profile.id, farm_id: farmId, role } as any);
 
         if (insertError) throw insertError;
 
@@ -155,7 +155,7 @@ export function ShareFarmDialog({ farmId, farmName, myRole }: ShareFarmDialogPro
             invited_by: userId,
             invited_email: trimmedEmail,
             role,
-          });
+          } as any);
 
         if (inviteError) throw inviteError;
 

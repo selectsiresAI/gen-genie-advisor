@@ -76,7 +76,7 @@ export function AdminDashboard() {
     try {
       setLoading(true);
 
-      const { data: ticketStats, error: statsError } = await supabase.rpc("admin_ticket_stats");
+      const { data: ticketStats, error: statsError } = await supabase.rpc("admin_ticket_stats" as any);
 
       if (statsError) {
         // admin_ticket_stats unavailable, falling back to client-side aggregation
@@ -85,7 +85,7 @@ export function AdminDashboard() {
       const statsResult: TicketStats | null = ticketStats
         ? Array.isArray(ticketStats)
           ? normalizeTicketStats((ticketStats[0] ?? {}) as Record<string, any>)
-          : normalizeTicketStats(ticketStats as Record<string, any>)
+          : normalizeTicketStats(ticketStats as unknown as Record<string, any>)
         : null;
 
       if (!statsResult) {
@@ -249,7 +249,7 @@ export function AdminDashboard() {
         throw new Error("Usuário não autenticado");
       }
 
-      const { error } = await supabase.from("admin_notes").insert({
+      const { error } = await (supabase as any).from("admin_notes").insert({
         subject: noteSubject.trim(),
         content: noteContent.trim(),
         created_by: user.id

@@ -58,7 +58,7 @@ export function IM5Configurator({
   useEffect(() => {
     async function loadEV() {
       if (!farmId) return;
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("app.economic_values")
         .select("trait,value_per_unit")
         .eq("farm_id", farmId)
