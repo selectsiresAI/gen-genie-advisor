@@ -61,8 +61,8 @@ export function ShareFarmDialog({ farmId, farmName, myRole }: ShareFarmDialogPro
   async function loadMembers() {
     setLoadingMembers(true);
     try {
-      const { data, error } = await supabase
-        .from("user_farms")
+      const { data, error } = await (supabase
+        .from("user_farms") as any)
         .select("id, user_id, role, profiles:user_id(email, full_name)")
         .eq("farm_id", farmId);
 
