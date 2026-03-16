@@ -393,7 +393,7 @@ Deno.serve(async (req) => {
       const { data: farmAccess } = await supabase
         .from('user_farms')
         .select('role')
-        .eq('farm_id', farmId)
+        .eq('client_id', farmId)
         .eq('user_id', user.id)
         .single();
 
