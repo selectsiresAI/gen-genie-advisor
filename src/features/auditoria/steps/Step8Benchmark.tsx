@@ -53,7 +53,7 @@ async function fetchAllPaginated(
     const from = page * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
 
-    let query = supabase
+    let query = (supabase as any)
       .from(table)
       .select(selectCols)
       .range(from, to);
