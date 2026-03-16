@@ -2431,6 +2431,19 @@ export type Database = {
         Returns: number
       }
       get_bull_by_naab: { Args: { naab: string }; Returns: Json }
+      my_farms: {
+        Args: never
+        Returns: {
+          created_at: string
+          farm_id: string
+          farm_name: string
+          is_default: boolean
+          my_role: string
+          owner_name: string
+          selected_bulls: number
+          total_females: number
+        }[]
+      }
       search_bulls: {
         Args: { limit_count?: number; q: string }
         Returns: Json[]
