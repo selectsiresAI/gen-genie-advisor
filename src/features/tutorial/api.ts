@@ -26,8 +26,8 @@ export async function getOrInitProgress(params: {
 }) {
   const { userId, tenantId, slug } = params;
 
-  const { data: existing, error: e0 } = await supabase
-    .from("tutorial_user_progress")
+  const { data: existing, error: e0 } = await (supabase
+    .from("tutorial_user_progress" as any) as any)
     .select("*")
     .eq("user_id", userId)
     .eq("tenant_id", tenantId)
