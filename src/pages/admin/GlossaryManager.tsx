@@ -40,14 +40,14 @@ export default function GlossaryManager() {
   const { data: terms, isLoading, refetch } = useQuery({
     queryKey: ['glossary_manager'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('technical_glossary')
+      const { data, error } = await (supabase
+        .from('technical_glossary' as any) as any)
         .select('*')
         .order('category')
         .order('term_key');
 
       if (error) throw error;
-      return data as GlossaryTerm[];
+      return data as unknown as GlossaryTerm[];
     },
   });
 
