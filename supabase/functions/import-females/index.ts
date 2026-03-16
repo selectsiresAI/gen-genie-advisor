@@ -163,6 +163,7 @@ function validateRecord(record: any, farmId: string): FemaleRecord | null {
 
   const validated: FemaleRecord = {
     farm_id: farmId,
+    client_id: farmId,
     name,
     identifier: sanitizeString(record.identifier)?.substring(0, 100) || undefined,
     cdcb_id: sanitizeString(record.cdcb_id)?.substring(0, 50) || undefined,
