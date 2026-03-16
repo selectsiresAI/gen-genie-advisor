@@ -31,8 +31,8 @@ export const useActivityTracker = (user: User | null) => {
 
     const startSession = async () => {
       try {
-        const { data, error } = await supabase
-          .from('user_activity_tracking')
+        const { data, error } = await (supabase
+          .from('user_activity_tracking' as any) as any)
           .insert({
             user_id: user.id,
             session_start: new Date().toISOString(),
