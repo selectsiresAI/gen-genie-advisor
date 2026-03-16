@@ -2,21 +2,21 @@ import { supabase } from "@/integrations/supabase/client";
 import type { TutorialDef, TutorialStep } from "./types";
 
 export async function fetchTutorial(slug: string) {
-  const { data: def, error: e1 } = await supabase
-    .from("tutorial_defs")
+  const { data: def, error: e1 } = await (supabase
+    .from("tutorial_defs" as any) as any)
     .select("*")
     .eq("slug", slug)
     .single();
   if (e1) throw e1;
 
-  const { data: steps, error: e2 } = await supabase
-    .from("tutorial_steps")
+  const { data: steps, error: e2 } = await (supabase
+    .from("tutorial_steps" as any) as any)
     .select("*")
     .eq("tutorial_slug", slug)
     .order("step_order", { ascending: true });
   if (e2) throw e2;
 
-  return { def: def as TutorialDef, steps: (steps ?? []) as TutorialStep[] };
+  return { def: def as unknown as TutorialDef, steps: (steps ?? []) as unknown as TutorialStep[] };
 }
 
 export async function getOrInitProgress(params: {
