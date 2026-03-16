@@ -88,8 +88,8 @@ export const useActivityTracker = (user: User | null) => {
       const sessionTime = Math.floor((Date.now() - sessionRef.current.startTime) / 1000);
 
       try {
-        await supabase
-          .from('user_activity_tracking')
+        await (supabase
+          .from('user_activity_tracking' as any) as any)
           .update({
             session_end: new Date().toISOString(),
             total_session_time_seconds: sessionTime,
