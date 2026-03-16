@@ -915,7 +915,7 @@ export default function SegmentationPage({
     setLoading(true);
     try {
       // Primeiro, limpar segmentações antigas desta fazenda
-      await supabase.from('female_segmentations').delete().eq('farm_id', farm.farm_id);
+      await (supabase.from('female_segmentations') as any).delete().eq('farm_id', farm.farm_id);
 
       // Preparar dados para inserção
       const segmentationData = segmentedAnimals.filter(animal => animal.Classification).map(animal => ({
