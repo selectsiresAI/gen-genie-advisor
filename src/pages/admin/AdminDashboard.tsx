@@ -85,7 +85,7 @@ export function AdminDashboard() {
       const statsResult: TicketStats | null = ticketStats
         ? Array.isArray(ticketStats)
           ? normalizeTicketStats((ticketStats[0] ?? {}) as Record<string, any>)
-          : normalizeTicketStats(ticketStats as Record<string, any>)
+          : normalizeTicketStats(ticketStats as unknown as Record<string, any>)
         : null;
 
       if (!statsResult) {
