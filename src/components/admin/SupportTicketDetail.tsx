@@ -58,7 +58,7 @@ export function SupportTicketDetail({ ticket, onClose }: SupportTicketDetailProp
     try {
       setLoadingResponses(true);
       const { data, error } = await (supabase
-        .from('support_ticket_responses') as any)
+        .from('support_ticket_responses' as any) as any)
         .select(`
           *,
           responder:profiles!responder_id(full_name)
