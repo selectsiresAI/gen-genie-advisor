@@ -19,6 +19,7 @@ function jsonResponse(_req: Request, body: Record<string, unknown>, status = 200
 // Validation schema for female records
 interface FemaleRecord {
   farm_id: string;
+  client_id: string;
   name: string;
   identifier?: string;
   cdcb_id?: string;
