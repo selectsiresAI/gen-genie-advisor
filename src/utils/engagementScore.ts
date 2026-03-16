@@ -9,8 +9,8 @@ interface EngagementMetrics {
 
 export const calculateEngagementScore = async (userId: string): Promise<number> => {
   // Buscar todas as sessões do usuário
-  const { data: sessions, error } = await supabase
-    .from('user_activity_tracking')
+  const { data: sessions, error } = await (supabase
+    .from('user_activity_tracking' as any) as any)
     .select('*')
     .eq('user_id', userId);
 

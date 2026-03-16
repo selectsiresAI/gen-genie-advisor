@@ -41,7 +41,7 @@ export function UserEngagementMetrics() {
       setLoading(true);
       
       const { data, error } = await (supabase
-        .from('user_engagement_metrics') as any)
+        .from('user_engagement_metrics' as any) as any)
         .select('*')
         .order('last_activity', { ascending: false, nullsFirst: false });
 

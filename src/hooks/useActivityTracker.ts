@@ -118,8 +118,8 @@ export const useActivityTracker = (user: User | null) => {
     sessionRef.current.featuresUsed.add(featureName);
 
     try {
-      await supabase
-        .from('user_activity_tracking')
+      await (supabase
+        .from('user_activity_tracking' as any) as any)
         .update({
           features_used: Array.from(sessionRef.current.featuresUsed),
           updated_at: new Date().toISOString(),

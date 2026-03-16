@@ -53,8 +53,8 @@ export default function GlossaryManager() {
 
   const updateTermMutation = useMutation({
     mutationFn: async (term: GlossaryTerm) => {
-      const { error } = await supabase
-        .from('technical_glossary')
+      const { error } = await (supabase
+        .from('technical_glossary' as any) as any)
         .update({
           en_us: term.en_us,
           description: term.description,

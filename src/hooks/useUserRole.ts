@@ -38,7 +38,7 @@ export function useUserRole() {
 
       // Verificar moderator
       const { data: isModerator } = await supabase
-        .rpc("has_role_v2", { _user_id: user.id, _role: "moderator" });
+        .rpc("has_role_v2", { _user_id: user.id, _role: "moderator" as any });
 
       if (isModerator) {
         setRole("moderator");

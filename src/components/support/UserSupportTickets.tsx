@@ -333,7 +333,7 @@ export function UserSupportTickets({ userId, userName }: UserSupportTicketsProps
     }
 
     const { error } = await (supabase
-      .from("support_ticket_responses") as any)
+      .from("support_ticket_responses" as any) as any)
       .insert([{ ticket_id: selectedTicketId, responder_id: sessionUserId, message: replyMessage.trim(), is_internal: false }]);
 
     if (error) {
