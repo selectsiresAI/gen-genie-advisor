@@ -76,7 +76,7 @@ export function AdminDashboard() {
     try {
       setLoading(true);
 
-      const { data: ticketStats, error: statsError } = await supabase.rpc("admin_ticket_stats");
+      const { data: ticketStats, error: statsError } = await supabase.rpc("admin_ticket_stats" as any);
 
       if (statsError) {
         // admin_ticket_stats unavailable, falling back to client-side aggregation
