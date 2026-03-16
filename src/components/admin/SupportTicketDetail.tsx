@@ -57,8 +57,8 @@ export function SupportTicketDetail({ ticket, onClose }: SupportTicketDetailProp
   const loadResponses = async () => {
     try {
       setLoadingResponses(true);
-      const { data, error } = await supabase
-        .from('support_ticket_responses')
+      const { data, error } = await (supabase
+        .from('support_ticket_responses') as any)
         .select(`
           *,
           responder:profiles!responder_id(full_name)
