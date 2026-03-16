@@ -20,14 +20,14 @@ export function useGlossary() {
   const { data: terms, isLoading, error } = useQuery({
     queryKey: ['technical_glossary'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('technical_glossary')
+      const { data, error } = await (supabase
+        .from('technical_glossary' as any) as any)
         .select('*')
         .order('category', { ascending: true })
         .order('term_key', { ascending: true });
 
       if (error) throw error;
-      return data as GlossaryTerm[];
+      return data as unknown as GlossaryTerm[];
     },
     staleTime: 1000 * 60 * 60, // 1 hour cache
   });

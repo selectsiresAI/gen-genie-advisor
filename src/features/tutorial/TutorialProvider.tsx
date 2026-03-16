@@ -57,7 +57,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
       }
 
       const progress = await getOrInitProgress({ userId, tenantId: effectiveTenantId, slug: s });
-      const startAt = progress.is_completed ? 0 : progress.current_step ?? 0;
+      const startAt = (progress as any).is_completed ? 0 : (progress as any).current_step ?? 0;
 
       setSteps(steps);
       setIdx(Math.min(startAt, steps.length - 1));

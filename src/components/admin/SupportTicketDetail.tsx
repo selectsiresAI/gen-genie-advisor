@@ -57,8 +57,8 @@ export function SupportTicketDetail({ ticket, onClose }: SupportTicketDetailProp
   const loadResponses = async () => {
     try {
       setLoadingResponses(true);
-      const { data, error } = await supabase
-        .from('support_ticket_responses')
+      const { data, error } = await (supabase
+        .from('support_ticket_responses' as any) as any)
         .select(`
           *,
           responder:profiles!responder_id(full_name)
@@ -87,8 +87,8 @@ export function SupportTicketDetail({ ticket, onClose }: SupportTicketDetailProp
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
-      const { error } = await supabase
-        .from('support_ticket_responses')
+      const { error } = await (supabase
+        .from('support_ticket_responses' as any) as any)
         .insert({
           ticket_id: ticket.id,
           responder_id: user.id,

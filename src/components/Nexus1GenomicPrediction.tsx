@@ -450,7 +450,7 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
       const {
         data,
         error
-      } = await supabase.from('female_segmentations').select(`
+      } = await (supabase.from('female_segmentations') as any).select(`
           *,
           females (
             id,
@@ -516,7 +516,7 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
             rfi,
             gfi
           )
-        `).in('class', selectedClassifications as ('donor' | 'inter' | 'recipient')[]).eq('farm_id', currentFarmId);
+        `).in('class', selectedClassifications).eq('farm_id', currentFarmId);
       if (error) throw error;
       if (!data || data.length === 0) {
         toast({

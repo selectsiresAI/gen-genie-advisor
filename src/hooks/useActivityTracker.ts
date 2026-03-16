@@ -31,8 +31,8 @@ export const useActivityTracker = (user: User | null) => {
 
     const startSession = async () => {
       try {
-        const { data, error } = await supabase
-          .from('user_activity_tracking')
+        const { data, error } = await (supabase
+          .from('user_activity_tracking' as any) as any)
           .insert({
             user_id: user.id,
             session_start: new Date().toISOString(),
@@ -41,7 +41,7 @@ export const useActivityTracker = (user: User | null) => {
           .single();
 
         if (data && !error) {
-          sessionRef.current.sessionId = data.id;
+          sessionRef.current.sessionId = (data as any).id;
         }
       } catch (error) {
         // Falha silenciosa - não quebrar o app
@@ -62,8 +62,8 @@ export const useActivityTracker = (user: User | null) => {
     // Atualizar no banco
     const updateSession = async () => {
       try {
-        await supabase
-          .from('user_activity_tracking')
+        await (supabase
+          .from('user_activity_tracking' as any) as any)
           .update({
             pages_visited: Array.from(sessionRef.current.pagesVisited),
             updated_at: new Date().toISOString(),
@@ -88,8 +88,8 @@ export const useActivityTracker = (user: User | null) => {
       const sessionTime = Math.floor((Date.now() - sessionRef.current.startTime) / 1000);
 
       try {
-        await supabase
-          .from('user_activity_tracking')
+        await (supabase
+          .from('user_activity_tracking' as any) as any)
           .update({
             session_end: new Date().toISOString(),
             total_session_time_seconds: sessionTime,
@@ -118,8 +118,8 @@ export const useActivityTracker = (user: User | null) => {
     sessionRef.current.featuresUsed.add(featureName);
 
     try {
-      await supabase
-        .from('user_activity_tracking')
+      await (supabase
+        .from('user_activity_tracking' as any) as any)
         .update({
           features_used: Array.from(sessionRef.current.featuresUsed),
           updated_at: new Date().toISOString(),

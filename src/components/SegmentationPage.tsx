@@ -915,7 +915,7 @@ export default function SegmentationPage({
     setLoading(true);
     try {
       // Primeiro, limpar segmentações antigas desta fazenda
-      await supabase.from('female_segmentations').delete().eq('farm_id', farm.farm_id);
+      await (supabase.from('female_segmentations') as any).delete().eq('farm_id', farm.farm_id);
 
       // Preparar dados para inserção
       const segmentationData = segmentedAnimals.filter(animal => animal.Classification).map(animal => ({
@@ -942,7 +942,7 @@ export default function SegmentationPage({
       // Inserir novos dados de segmentação
       const {
         error
-      } = await supabase.from('female_segmentations').insert(segmentationData);
+      } = await (supabase.from('female_segmentations') as any).insert(segmentationData);
       if (error) throw error;
       alert(`Segmentação salva! ${segmentationData.length} fêmeas classificadas foram salvas no banco de dados.`);
     } catch (error: any) {

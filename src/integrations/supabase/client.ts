@@ -15,3 +15,11 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
   }
 });
+
+// ── Custom exports (keep after regeneration) ──
+export const supabaseUrl = SUPABASE_URL;
+export const supabaseAnonKey = SUPABASE_PUBLISHABLE_KEY;
+
+export function getImportBullsFunctionUrlCandidates() {
+  return [`${SUPABASE_URL}/functions/v1/import-bulls`];
+}

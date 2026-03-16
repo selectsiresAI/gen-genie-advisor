@@ -61,8 +61,8 @@ export function ShareFarmDialog({ farmId, farmName, myRole }: ShareFarmDialogPro
   async function loadMembers() {
     setLoadingMembers(true);
     try {
-      const { data, error } = await supabase
-        .from("user_farms")
+      const { data, error } = await (supabase
+        .from("user_farms") as any)
         .select("id, user_id, role, profiles:user_id(email, full_name)")
         .eq("farm_id", farmId);
 
@@ -86,8 +86,8 @@ export function ShareFarmDialog({ farmId, farmName, myRole }: ShareFarmDialogPro
 
   async function loadPendingInvites() {
     try {
-      const { data, error } = await supabase
-        .from("farm_invites")
+      const { data, error } = await (supabase
+        .from("farm_invites") as any)
         .select("id, invited_email, role, created_at")
         .eq("farm_id", farmId)
         .eq("status", "pending");
