@@ -38,7 +38,7 @@ export function StagingMigrationButton() {
         }
         
         const response = await fetch(
-          `https://gzvweejdtycxzxrjplpc.supabase.co/functions/v1/import-bulls/auto-commit`,
+          `https://odactdxpecpiyiyaqfgi.supabase.co/functions/v1/import-bulls/auto-commit`,
           {
             method: 'POST',
             headers: {
