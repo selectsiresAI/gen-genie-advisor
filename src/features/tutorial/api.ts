@@ -36,8 +36,8 @@ export async function getOrInitProgress(params: {
   if (e0) throw e0;
   if (existing) return existing;
 
-  const { data, error } = await supabase
-    .from("tutorial_user_progress")
+  const { data, error } = await (supabase
+    .from("tutorial_user_progress" as any) as any)
     .insert({
       user_id: userId,
       tenant_id: tenantId,
