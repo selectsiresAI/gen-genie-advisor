@@ -160,7 +160,7 @@ export default function Step8GeneticBenchmark() {
     const { data, error } = await supabase
       .from("females_denorm")
       .select("farm_id")
-      .eq("farm_id", farmId)
+      .eq("farm_id", farmId as string)
       .limit(1);
     alert(error ? `Erro: ${(error as any).message}` : `OK: retornou ${data?.length ?? 0} linha(s).`);
   }

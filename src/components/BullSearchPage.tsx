@@ -107,7 +107,7 @@ interface BullSearchPageProps {
   onGoToBotijao?: () => void;
 }
 
-const IMPORT_BULLS_UPLOAD_URLS = getImportBullsFunctionUrlCandidates('/upload');
+const IMPORT_BULLS_UPLOAD_URLS = getImportBullsFunctionUrlCandidates().map(u => u + '/upload');
 const PRIMARY_IMPORT_BULLS_UPLOAD_URL = IMPORT_BULLS_UPLOAD_URLS[0];
 
 type ImportBullsOperation = 'upload';
