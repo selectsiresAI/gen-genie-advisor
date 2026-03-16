@@ -465,7 +465,7 @@ Deno.serve(async (req) => {
         const { data, error: insertError, count } = await supabase
           .from('females')
           .upsert(batch, {
-            onConflict: 'farm_id,identifier',
+            onConflict: 'client_id,identifier',
             ignoreDuplicates: false
           })
           .select('id', { count: 'exact' });
