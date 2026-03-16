@@ -88,7 +88,7 @@ export function SupportTicketDetail({ ticket, onClose }: SupportTicketDetailProp
       if (!user) throw new Error('Usuário não autenticado');
 
       const { error } = await (supabase
-        .from('support_ticket_responses') as any)
+        .from('support_ticket_responses' as any) as any)
         .insert({
           ticket_id: ticket.id,
           responder_id: user.id,
