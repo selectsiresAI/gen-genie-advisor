@@ -942,7 +942,7 @@ export default function SegmentationPage({
       // Inserir novos dados de segmentação
       const {
         error
-      } = await supabase.from('female_segmentations').insert(segmentationData);
+      } = await (supabase.from('female_segmentations') as any).insert(segmentationData);
       if (error) throw error;
       alert(`Segmentação salva! ${segmentationData.length} fêmeas classificadas foram salvas no banco de dados.`);
     } catch (error: any) {

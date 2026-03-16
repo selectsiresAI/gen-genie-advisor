@@ -60,8 +60,8 @@ export async function updateProgress(params: {
   isCompleted?: boolean;
 }) {
   const { userId, tenantId, slug, currentStep, isCompleted = false } = params;
-  const { error } = await supabase
-    .from("tutorial_user_progress")
+  const { error } = await (supabase
+    .from("tutorial_user_progress" as any) as any)
     .update({
       current_step: currentStep,
       is_completed: isCompleted,

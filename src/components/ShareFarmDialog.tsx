@@ -86,8 +86,8 @@ export function ShareFarmDialog({ farmId, farmName, myRole }: ShareFarmDialogPro
 
   async function loadPendingInvites() {
     try {
-      const { data, error } = await supabase
-        .from("farm_invites")
+      const { data, error } = await (supabase
+        .from("farm_invites") as any)
         .select("id, invited_email, role, created_at")
         .eq("farm_id", farmId)
         .eq("status", "pending");
