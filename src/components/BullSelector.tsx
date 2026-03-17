@@ -132,11 +132,12 @@ export function BullSelector({
 
     setLoading(true);
     try {
+      const escaped = term.replace(/[%_]/g, m => `\\${m}`);
       const { data, error } = await supabase
-        .from("bulls")
+        .from(BULL_DENORM_TABLE)
         .select(BULL_SELECT_FIELDS)
-        .or(`code.ilike.%${term}%,name.ilike.%${term}%`)
-        .order("tpi", { ascending: false })
+        .or(`code.ilike.%${escaped}%,name.ilike.%${escaped}%`)
+        .order("tpi", { ascending: false, nullsFirst: false })
         .limit(20);
 
       if (error) {
