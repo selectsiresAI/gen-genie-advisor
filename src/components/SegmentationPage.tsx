@@ -1691,8 +1691,8 @@ export default function SegmentationPage({
                 </div>}
             </div>
           </div>
-          {loading ? <div className="text-sm text-foreground">Carregando…</div> : <ScrollArea className="h-[600px] w-full rounded-md border border-border">
-              <div className="min-w-max pb-4">
+          {loading ? <div className="text-sm text-foreground">Carregando…</div> : <div className="h-[600px] w-full rounded-md border border-border overflow-auto">
+              <div className="min-w-max">
                 <table className="w-full text-sm border-collapse">
                   <thead className="sticky top-0 z-20">
                     <tr className="border-b border-border bg-muted text-foreground">
