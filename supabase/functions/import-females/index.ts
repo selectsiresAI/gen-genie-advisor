@@ -16,7 +16,6 @@ function jsonResponse(_req: Request, body: Record<string, unknown>, status = 200
   });
 }
 
-// Validation schema for female records
 interface FemaleRecord {
   client_id: string;
   name: string;
@@ -41,7 +40,6 @@ function sanitizeString(value: unknown): string {
 
 function validateNumber(value: unknown, min?: number, max?: number): number | null {
   if (value === null || value === undefined || value === '') return null;
-  // Replace comma with dot for Brazilian decimal format (0,02 -> 0.02)
   const numStr = typeof value === 'number' ? String(value) : String(value).replace(',', '.');
   const num = parseFloat(numStr);
   if (isNaN(num)) return null;
@@ -53,113 +51,53 @@ function validateNumber(value: unknown, min?: number, max?: number): number | nu
 function validateDate(value: unknown): string | null {
   if (!value) return null;
   const dateStr = String(value).trim();
-  
-  // Handle Excel serial date numbers (e.g., 45678 = days since 1900-01-01)
+
   if (/^\d{4,5}$/.test(dateStr)) {
     const excelSerial = parseInt(dateStr, 10);
-    // Excel epoch: 1899-12-30 (accounting for Excel's leap year bug)
     const excelEpoch = new Date(1899, 11, 30);
     const date = new Date(excelEpoch.getTime() + excelSerial * 24 * 60 * 60 * 1000);
     if (!isNaN(date.getTime())) {
       return date.toISOString().split('T')[0];
     }
   }
-  
-  // Brazilian format: dd/mm/yyyy or dd-mm-yyyy
-  const brMatch = dateStr.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
-  if (brMatch) {
-    const [, day, month, year] = brMatch;
-    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-    if (!isNaN(date.getTime())) {
-      return date.toISOString().split('T')[0];
-    }
-  }
-  
-  // Brazilian format with 2-digit year: dd/mm/yy
-  const brMatch2 = dateStr.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2})$/);
-  if (brMatch2) {
-    const [, day, month, yearShort] = brMatch2;
-    const yearNum = parseInt(yearShort);
-    // Assume 00-30 = 2000-2030, 31-99 = 1931-1999
-    const year = yearNum <= 30 ? 2000 + yearNum : 1900 + yearNum;
-    const date = new Date(year, parseInt(month) - 1, parseInt(day));
-    if (!isNaN(date.getTime())) {
-      return date.toISOString().split('T')[0];
-    }
-  }
-  
-  // American format: mm/dd/yyyy (common in some exports)
-  const usMatch = dateStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-  if (usMatch) {
-    const [, month, day, year] = usMatch;
-    // Only use US format if month > 12 or if BR format already failed
-    if (parseInt(month) > 12 || parseInt(day) <= 12) {
-      // Already tried BR, skip US if day could be month
-    } else {
-      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      if (!isNaN(date.getTime())) {
-        return date.toISOString().split('T')[0];
-      }
-    }
-  }
-  
-  // ISO format: yyyy-mm-dd or yyyy/mm/dd
-  const isoMatch = dateStr.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+
+  const isoMatch = dateStr.match(/^(\d{4})[\-\/](\d{1,2})[\-\/](\d{1,2})$/);
   if (isoMatch) {
-    const [, year, month, day] = isoMatch;
-    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    const date = new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]));
     if (!isNaN(date.getTime())) {
       return date.toISOString().split('T')[0];
     }
   }
-  
-  // Text month formats: "Jan 15, 2024", "15 Jan 2024", "January 15, 2024"
-  const monthNames: Record<string, number> = {
-    'jan': 0, 'janeiro': 0, 'january': 0,
-    'feb': 1, 'fev': 1, 'fevereiro': 1, 'february': 1,
-    'mar': 2, 'março': 2, 'march': 2,
-    'apr': 3, 'abr': 3, 'abril': 3, 'april': 3,
-    'may': 4, 'mai': 4, 'maio': 4,
-    'jun': 5, 'junho': 5, 'june': 5,
-    'jul': 6, 'julho': 6, 'july': 6,
-    'aug': 7, 'ago': 7, 'agosto': 7, 'august': 7,
-    'sep': 8, 'set': 8, 'setembro': 8, 'september': 8,
-    'oct': 9, 'out': 9, 'outubro': 9, 'october': 9,
-    'nov': 10, 'novembro': 10, 'november': 10,
-    'dec': 11, 'dez': 11, 'dezembro': 11, 'december': 11,
-  };
-  
-  const textMatch = dateStr.toLowerCase().match(/(\d{1,2})\s*(?:de\s+)?([a-záêíóú]+)(?:\s*(?:de|,)\s*)?(\d{4})/i);
-  if (textMatch) {
-    const [, day, monthStr, year] = textMatch;
-    const monthNum = monthNames[monthStr.toLowerCase().substring(0, 3)];
-    if (monthNum !== undefined) {
-      const date = new Date(parseInt(year), monthNum, parseInt(day));
-      if (!isNaN(date.getTime())) {
-        return date.toISOString().split('T')[0];
-      }
+
+  const slashMatch = dateStr.match(/^(\d{1,2})[\-\/.](\\d{1,2})[\-\/.](\\d{2,4})$/);
+  if (slashMatch) {
+    var a = parseInt(slashMatch[1], 10);
+    var b = parseInt(slashMatch[2], 10);
+    var c = parseInt(slashMatch[3], 10);
+    if (c < 100) c = c <= 30 ? 2000 + c : 1900 + c;
+    var day2: number, month2: number;
+    if (a > 12) { day2 = a; month2 = b; }
+    else if (b > 12) { day2 = b; month2 = a; }
+    else { day2 = a; month2 = b; }
+    const date = new Date(c, month2 - 1, day2);
+    if (!isNaN(date.getTime())) {
+      return date.toISOString().split('T')[0];
     }
   }
-  
-  // Fallback: try native Date parsing
+
   const date = new Date(dateStr);
   if (!isNaN(date.getTime())) {
     return date.toISOString().split('T')[0];
   }
-  
   return null;
 }
 
 function validateRecord(record: any, farmId: string): FemaleRecord | null {
-  // Try to get name from 'name' or 'identifier' field
   let name = sanitizeString(record.name);
   if (!name && record.identifier) {
     name = sanitizeString(record.identifier);
   }
-  
-  if (!name || name.length === 0 || name.length > 200) {
-    return null;
-  }
+  if (!name || name.length === 0 || name.length > 200) return null;
 
   const validated: FemaleRecord = {
     client_id: farmId,
@@ -177,7 +115,6 @@ function validateRecord(record: any, farmId: string): FemaleRecord | null {
     fonte: sanitizeString(record.fonte)?.substring(0, 100) || undefined,
   };
 
-  // PTA numeric fields — must match actual DB column names in `females` table
   const ptaFields = [
     'hhp_dollar', 'tpi', 'nm_dollar', 'cm_dollar', 'fm_dollar', 'gm_dollar',
     'f_sav', 'pta_milk', 'cfp', 'pta_fat', 'pta_fat_pct', 'pta_protein', 'pta_protein_pct',
@@ -188,7 +125,7 @@ function validateRecord(record: any, farmId: string): FemaleRecord | null {
     'ftp', 'rfi', 'gfi', 'pta_bdc'
   ];
 
-  ptaFields.forEach(field => {
+  ptaFields.forEach(function(field) {
     const value = validateNumber(record[field], -10000, 10000);
     if (value !== null) {
       validated[field] = value;
@@ -199,87 +136,72 @@ function validateRecord(record: any, farmId: string): FemaleRecord | null {
 }
 
 function parseCSV(csvContent: string): any[] {
-  // Remove BOM if present
   let content = csvContent;
   if (content.charCodeAt(0) === 0xFEFF) {
     content = content.slice(1);
   }
-  
+
   const lines = content.trim().split('\n');
   if (lines.length < 2) return [];
 
-  // Detect delimiter (comma or semicolon)
   const firstLine = lines[0];
   const delimiter = firstLine.includes(';') ? ';' : ',';
-  
-  console.log(`Detected CSV delimiter: '${delimiter}'`);
 
-  // System-managed fields that should be completely ignored
-  const forbiddenFields = ['id', 'farm_id', 'ptas', 'created_at', 'updated_at'];
+  console.log("Detected CSV delimiter: '" + delimiter + "'");
 
-  // Column name mapping: CSV header (lowercase) → DB column name
+  const forbiddenFields = ['id', 'farm_id', 'client_id', 'ptas', 'created_at', 'updated_at', 'deleted_at'];
+
   const columnMapping: Record<string, string> = {
-    // Dollar indices
     'hhp$': 'hhp_dollar',
     'nm$': 'nm_dollar',
     'cm$': 'cm_dollar',
     'fm$': 'fm_dollar',
     'gm$': 'gm_dollar',
-    // Production PTAs
     'ptam': 'pta_milk',
     'ptaf': 'pta_fat',
     'ptaf%': 'pta_fat_pct',
     'ptap': 'pta_protein',
     'ptap%': 'pta_protein_pct',
-    // Health/fertility PTAs
     'scs': 'pta_scs',
     'pl': 'pta_pl',
     'dpr': 'pta_dpr',
     'liv': 'pta_livability',
     'ccr': 'pta_ccr',
     'hcr': 'pta_hcr',
-    // Type/conformation
     'ptat': 'pta_ptat',
     'udc': 'pta_udc',
     'flc': 'pta_flc',
     'str': 'str_num',
     'mf': 'mf_num',
     'bd': 'pta_bdc',
-    // Calving
     'sce': 'pta_sce',
     'dce': 'pta_sire_sce',
-    // Spaces / special chars
     'h liv': 'h_liv',
     'f sav': 'f_sav',
     'beta-casein': 'beta_casein',
     'kappa-casein': 'kappa_casein',
     'fonte': 'fonte',
+    'tw': 'rw',
   };
 
-  // Parse header row
   const headerLine = lines[0];
   const allHeaders: string[] = [];
-  const headerIndices: number[] = []; // Track which columns to keep
+  const headerIndices: number[] = [];
   let currentField = '';
   let inQuotes = false;
   let columnIndex = 0;
 
   for (let i = 0; i < headerLine.length; i++) {
     const char = headerLine[i];
-    
     if (char === '"') {
       inQuotes = !inQuotes;
     } else if (char === delimiter && !inQuotes) {
       let normalized = currentField.trim().toLowerCase().replace(/\ufeff/g, '');
-      // Apply column mapping if exists
       normalized = columnMapping[normalized] || normalized;
-      
-      // Only include if not a forbidden field
       if (!forbiddenFields.includes(normalized)) {
         allHeaders.push(normalized);
         headerIndices.push(columnIndex);
       }
-      
       currentField = '';
       columnIndex++;
     } else {
@@ -289,16 +211,14 @@ function parseCSV(csvContent: string): any[] {
   if (currentField) {
     let normalized = currentField.trim().toLowerCase().replace(/\ufeff/g, '');
     normalized = columnMapping[normalized] || normalized;
-    
     if (!forbiddenFields.includes(normalized)) {
       allHeaders.push(normalized);
       headerIndices.push(columnIndex);
     }
   }
 
-  console.log(`Parsed ${allHeaders.length} headers (filtered):`, allHeaders.slice(0, 15));
+  console.log("Parsed " + allHeaders.length + " headers");
 
-  // Parse data rows
   const records: any[] = [];
 
   for (let lineIndex = 1; lineIndex < lines.length; lineIndex++) {
@@ -311,7 +231,6 @@ function parseCSV(csvContent: string): any[] {
 
     for (let i = 0; i < line.length; i++) {
       const char = line[i];
-      
       if (char === '"') {
         inQuotes = !inQuotes;
       } else if (char === delimiter && !inQuotes) {
@@ -328,8 +247,7 @@ function parseCSV(csvContent: string): any[] {
     const record: any = {};
     let hasData = false;
 
-    // Only process columns that we kept from headers
-    allHeaders.forEach((header, index) => {
+    allHeaders.forEach(function(header, index) {
       const columnIdx = headerIndices[index];
       const value = allValues[columnIdx]?.trim().replace(/^"|"$/g, '');
       if (value && value !== '') {
@@ -343,7 +261,7 @@ function parseCSV(csvContent: string): any[] {
     }
   }
 
-  console.log(`Parsed ${records.length} records from CSV`);
+  console.log("Parsed " + records.length + " records from CSV");
   return records;
 }
 
@@ -361,7 +279,6 @@ Deno.serve(async (req) => {
   }
 
   const authHeader = req.headers.get("authorization");
-
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return jsonResponse(req, { error: "Missing authorization header" }, 401);
   }
@@ -375,23 +292,19 @@ Deno.serve(async (req) => {
     return jsonResponse(req, { error: "Server configuration error" }, 500);
   }
 
-  // Create client with user's token for auth validation
   const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
     global: { headers: { Authorization: authHeader } },
     auth: { persistSession: false },
   });
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabaseClient.auth.getUser();
+  const { data: authData, error: authError } = await supabaseClient.auth.getUser();
+  var user = authData?.user;
 
   if (authError || !user) {
     console.error("Auth error", authError);
     return jsonResponse(req, { error: "Unauthorized" }, 401);
   }
 
-  // Create service role client for privileged operations
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false },
   });
@@ -403,16 +316,14 @@ Deno.serve(async (req) => {
       const farmIdParam = formData.get("farm_id");
 
       if (!file || !(file instanceof File)) {
-        return jsonResponse(req, { error: "Arquivo inválido" }, 400);
+        return jsonResponse(req, { error: "Arquivo invalido" }, 400);
       }
-
       if (!farmIdParam) {
-        return jsonResponse(req, { error: "farm_id é obrigatório" }, 400);
+        return jsonResponse(req, { error: "farm_id obrigatorio" }, 400);
       }
 
       const farmId = String(farmIdParam);
 
-      // Check farm access - any user with farm access can import
       const { data: farmAccess } = await supabase
         .from('user_farms')
         .select('role')
@@ -421,95 +332,94 @@ Deno.serve(async (req) => {
         .single();
 
       if (!farmAccess) {
-        return jsonResponse(req, { error: 'Permissão negada: acesso insuficiente à fazenda' }, 403);
+        return jsonResponse(req, { error: 'Permissao negada' }, 403);
       }
 
-      // Read and parse CSV
       const csvContent = await file.text();
       const parsedRecords = parseCSV(csvContent);
 
       if (parsedRecords.length === 0) {
-        return jsonResponse(req, { error: "Arquivo CSV vazio ou inválido" }, 400);
+        return jsonResponse(req, { error: "Arquivo CSV vazio ou invalido" }, 400);
       }
-
       if (parsedRecords.length > 5000) {
-        return jsonResponse(req, { error: "Muitos registros. Máximo 5000 por upload." }, 413);
+        return jsonResponse(req, { error: "Maximo 5000 registros por upload" }, 413);
       }
 
-      console.log(`Processing ${parsedRecords.length} records for farm ${farmId}`);
+      console.log("Processing " + parsedRecords.length + " records for farm " + farmId);
 
-      // Validate and sanitize records
       const validatedRecords: FemaleRecord[] = [];
       const errors: { row: number; error: string }[] = [];
 
-      parsedRecords.forEach((record, index) => {
+      parsedRecords.forEach(function(record, index) {
         const validated = validateRecord(record, farmId);
         if (validated) {
           validatedRecords.push(validated);
         } else {
-          errors.push({ row: index + 1, error: 'Campos obrigatórios inválidos ou ausentes' });
+          errors.push({ row: index + 1, error: 'Invalid or missing required fields' });
         }
       });
 
-      // Detect and remove duplicates within the upload batch
-      // Keep the last occurrence of each duplicate (by identifier or name)
       const uniqueRecordsMap = new Map<string, FemaleRecord>();
       let duplicatesRemoved = 0;
 
-      validatedRecords.forEach((record) => {
-        // Use identifier if available, otherwise use name as unique key
+      validatedRecords.forEach(function(record) {
         const uniqueKey = record.identifier || record.name;
-        
-        if (uniqueRecordsMap.has(uniqueKey)) {
-          duplicatesRemoved++;
-        }
-        
-        // Always keep the latest occurrence (this will overwrite previous duplicates)
+        if (uniqueRecordsMap.has(uniqueKey)) duplicatesRemoved++;
         uniqueRecordsMap.set(uniqueKey, record);
       });
 
       const uniqueRecords = Array.from(uniqueRecordsMap.values());
+      if (duplicatesRemoved > 0) console.log("Removed " + duplicatesRemoved + " duplicates");
+      console.log("Processing " + uniqueRecords.length + " unique records");
 
-      if (duplicatesRemoved > 0) {
-        console.log(`Removidas ${duplicatesRemoved} duplicatas do arquivo antes da inserção`);
-      }
-
-      console.log(`Processando ${uniqueRecords.length} registros únicos (${duplicatesRemoved} duplicatas removidas)`);
-
-      // Insert unique records in batches with UPSERT logic
-      const batchSize = 500;
+      // RPC approach: handles partial unique index that .upsert() cannot
+      const batchSize = 200;
       let inserted = 0;
       const insertErrors: any[] = [];
 
       for (let i = 0; i < uniqueRecords.length; i += batchSize) {
         const batch = uniqueRecords.slice(i, i + batchSize);
-        
-        const { data, error: insertError, count } = await supabase
-          .from('females')
-          .upsert(batch, {
-            onConflict: 'client_id,identifier',
-            ignoreDuplicates: false
-          })
-          .select('id', { count: 'exact' });
+        const batchData = batch.map(function(rec) {
+          const copy: any = {};
+          var keys = Object.keys(rec);
+          for (var k = 0; k < keys.length; k++) {
+            if (keys[k] !== 'client_id') copy[keys[k]] = rec[keys[k]];
+          }
+          return copy;
+        });
 
-        if (insertError) {
-          console.error('Insert error:', insertError);
-          insertErrors.push(insertError);
+        const { data, error: rpcError } = await supabase.rpc('import_females_json', {
+          p_client_id: farmId,
+          p_data: batchData,
+        });
+
+        if (rpcError) {
+          console.error('RPC batch error (offset ' + i + '):', rpcError);
+          insertErrors.push(rpcError);
         } else {
-          // Count is the number of rows affected
-          const affected = count || batch.length;
-          inserted += affected;
+          var count = typeof data === 'number' ? data : batch.length;
+          inserted += count;
+          console.log('RPC batch ' + (i / batchSize) + ': ' + count + ' rows');
         }
       }
 
-      console.log(`Upload concluído: ${inserted} registros processados (inseridos/atualizados), ${errors.length} erros de validação, ${insertErrors.length} erros de inserção, ${duplicatesRemoved} duplicatas removidas`);
+      console.log("Upload done: " + inserted + " inserted, " + errors.length + " validation, " + insertErrors.length + " insert errors");
 
-      const importBatchId = crypto.randomUUID();
+      if (inserted === 0 && insertErrors.length > 0) {
+        return jsonResponse(req, {
+          success: false,
+          error: 'Database write failed',
+          insert_errors: insertErrors.length,
+          details: insertErrors.slice(0, 5),
+        }, 500);
+      }
+
+      var importBatchId = crypto.randomUUID();
 
       return jsonResponse(req, {
         import_batch_id: importBatchId,
         success: true,
-        inserted,
+        inserted: inserted,
         validation_errors: errors.length,
         insert_errors: insertErrors.length,
         duplicates_removed: duplicatesRemoved,
@@ -523,18 +433,16 @@ Deno.serve(async (req) => {
 
   if (action === "commit") {
     try {
-      const { import_batch_id: importBatchId, farm_id: farmId } = await req.json();
-
-      if (!importBatchId) {
-        return jsonResponse(req, { error: "import_batch_id é obrigatório" }, 400);
+      const body = await req.json();
+      var batchId = body.import_batch_id;
+      if (!batchId) {
+        return jsonResponse(req, { error: "import_batch_id required" }, 400);
       }
-
-      console.log(`Commit confirmado para batch ${importBatchId}`);
-
-      return jsonResponse(req, { status: "completed", import_batch_id: importBatchId });
+      console.log("Commit confirmed for batch " + batchId);
+      return jsonResponse(req, { status: "completed", import_batch_id: batchId });
     } catch (error) {
       console.error("Commit handler error", error);
-      return jsonResponse(req, { error: "Erro ao processar commit" }, 500);
+      return jsonResponse(req, { error: "Commit error" }, 500);
     }
   }
 
