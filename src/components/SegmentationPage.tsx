@@ -915,12 +915,12 @@ export default function SegmentationPage({
     setLoading(true);
     try {
       // Primeiro, limpar segmentações antigas desta fazenda
-      await (supabase.from('female_segmentations') as any).delete().eq('farm_id', farm.farm_id);
+      await (supabase.from('female_segmentations') as any).delete().eq('client_id', farm.farm_id);
 
       // Preparar dados para inserção
       const segmentationData = segmentedAnimals.filter(animal => animal.Classification).map(animal => ({
         female_id: animal.id,
-        farm_id: farm.farm_id,
+        client_id: farm.farm_id,
         class: (animal.Classification === 'Superior' ? 'donor' : animal.Classification === 'Intermediário' ? 'inter' : 'recipient') as 'donor' | 'inter' | 'recipient',
         score: animal.CustomScore || 0,
         parameters: {

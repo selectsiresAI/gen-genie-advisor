@@ -259,7 +259,7 @@ export default function SegmentationSectionContent({ farmId, farmName }: Segment
         const { data: segmentations, error: segError } = await supabase
           .from('female_segmentations')
           .select('female_id, class, parameters')
-          .eq('farm_id', farmId);
+          .eq('client_id', farmId);
 
         if (segError) throw segError;
 
