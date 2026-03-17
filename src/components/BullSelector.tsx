@@ -5,8 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
+/** View bulls_denorm — single source of truth for all bull lookups */
+const BULL_DENORM_TABLE = "bulls_denorm" as const;
+
 const BULL_SELECT_FIELDS =
-  "id, code, name, company, hhp_dollar, tpi, nm_dollar, cm_dollar, fm_dollar, gm_dollar, f_sav, ptam, cfp, ptaf, ptaf_pct, ptap, ptap_pct, pl, dpr, liv, scs, mast, met, rp, da, ket, mf, ptat, udc, flc, sce, dce, ssb, dsb, h_liv, ccr, hcr, fi, bwc, sta, str, dfm, rua, rls, rtp, ftl, rw, rlr, fta, fls, fua, ruh, ruw, ucl, udp, ftp, rfi, gfi, gl, beta_casein, kappa_casein, pedigree";
+  "id, code, name, company, hhp_dollar, tpi, nm_dollar, cm_dollar, fm_dollar, gm_dollar, f_sav, ptam, cfp, ptaf, ptaf_pct, ptap, ptap_pct, pl, dpr, liv, scs, mast, met, rp, da, ket, mf, ptat, udc, flc, sce, dce, ssb, dsb, h_liv, ccr, hcr, fi, bwc, sta, str, dfm, rua, rls, rtp, ftl, rw, rlr, fta, fls, fua, ruh, ruw, ucl, udp, ftp, rfi, gfi, beta_casein, kappa_casein, sire_naab, mgs_naab, mmgs_naab, birth_date, registration";
 
 /** Maps PTA display labels to database column names */
 export const BULL_FIELD_MAP: Record<string, string> = {
@@ -70,7 +73,7 @@ export const BULL_FIELD_MAP: Record<string, string> = {
   FTP: "ftp",
   RFI: "rfi",
   GFI: "gfi",
-  GL: "gl",
+  
   "Beta Caseína": "beta_casein",
   "Kappa Caseína": "kappa_casein",
 };
@@ -129,11 +132,12 @@ export function BullSelector({
 
     setLoading(true);
     try {
+      const escaped = term.replace(/[%_]/g, m => `\\${m}`);
       const { data, error } = await supabase
-        .from("bulls")
+        .from(BULL_DENORM_TABLE)
         .select(BULL_SELECT_FIELDS)
-        .or(`code.ilike.%${term}%,name.ilike.%${term}%`)
-        .order("tpi", { ascending: false })
+        .or(`code.ilike.%${escaped}%,name.ilike.%${escaped}%`)
+        .order("tpi", { ascending: false, nullsFirst: false })
         .limit(20);
 
       if (error) {
