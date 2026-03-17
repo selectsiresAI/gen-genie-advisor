@@ -73,7 +73,7 @@ export const BULL_FIELD_MAP: Record<string, string> = {
   FTP: "ftp",
   RFI: "rfi",
   GFI: "gfi",
-  GL: "gl",
+  
   "Beta Caseína": "beta_casein",
   "Kappa Caseína": "kappa_casein",
 };
