@@ -554,16 +554,29 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
   const loadBulls = async () => {
     try {
       setLoading(true);
-      const {
-        data,
-        error
-      } = await supabase.rpc('get_bulls_denorm').order('tpi', {
-        ascending: false
-      });
-      if (error) {
-        console.error('Error from RPC get_bulls_denorm:', error);
-        throw error;
+      // Fetch all bulls in pages of 10000 to bypass PostgREST 1000-row default
+      let allData: any[] = [];
+      const pageSize = 10000;
+      let from = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const { data: page, error } = await supabase
+          .rpc('get_bulls_denorm')
+          .order('tpi', { ascending: false })
+          .range(from, from + pageSize - 1);
+        if (error) {
+          console.error('Error from RPC get_bulls_denorm:', error);
+          throw error;
+        }
+        if (page && page.length > 0) {
+          allData = allData.concat(page);
+          from += pageSize;
+          hasMore = page.length === pageSize;
+        } else {
+          hasMore = false;
+        }
       }
+      const data = allData;
       // Transform data to match expected format
       const transformedBulls: Bull[] = (data || []).map(bull => ({
         id: bull.id || bull.code,
