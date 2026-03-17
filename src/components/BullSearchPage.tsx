@@ -556,7 +556,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
       setLoading(true);
       // Fetch all bulls in pages to load full catalog
       let allData: any[] = [];
-      const pageSize = 10000;
+      const pageSize = 1000;
       let from = 0;
       let hasMore = true;
       while (hasMore) {
