@@ -837,7 +837,8 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
             <HelpHint content="Importe touros, ajuste pesos e selecione candidatos ideais para o rebanho" />
           </div>
           <div className="ml-auto flex items-center gap-3">
-            <Badge variant="outline">{rankedBulls.length} touros disponíveis</Badge>
+            <Badge variant="secondary">{bulls.length} touros no banco</Badge>
+            <Badge variant="outline">{rankedBulls.length} exibidos</Badge>
           </div>
         </div>
       </div>
