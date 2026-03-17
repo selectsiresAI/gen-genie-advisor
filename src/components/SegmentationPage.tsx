@@ -3,7 +3,7 @@ import { Download, Settings, Filter, Check, X, RefreshCw, ArrowLeft, TrendingUp,
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { HelpButton } from '@/components/help/HelpButton';
@@ -1691,8 +1691,8 @@ export default function SegmentationPage({
                 </div>}
             </div>
           </div>
-          {loading ? <div className="text-sm text-foreground">Carregando…</div> : <ScrollArea className="h-[600px] w-full rounded-md border border-border">
-              <div className="min-w-max pb-4">
+          {loading ? <div className="text-sm text-foreground">Carregando…</div> : <div className="h-[600px] w-full rounded-md border border-border overflow-auto">
+              <div className="min-w-max">
                 <table className="w-full text-sm border-collapse">
                   <thead className="sticky top-0 z-20">
                     <tr className="border-b border-border bg-muted text-foreground">
@@ -1764,7 +1764,7 @@ export default function SegmentationPage({
                   </tbody>
                 </table>
               </div>
-            </ScrollArea>}
+            </div>}
         </div>
 
         <div className="pb-8 text-center text-xs text-foreground">MVP demonstrativo — dados seguros via RLS</div>
