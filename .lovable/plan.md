@@ -1,47 +1,31 @@
 
 
-## Revisao das PTAs com duas casas decimais
+## Problema
 
-### Problema encontrado
+A tabela `bulls` tem 44.062 registros e a view `bulls_denorm` retorna todos eles. Porém, o frontend mostra apenas 998 porque usa `supabase.rpc('get_bulls_denorm')` com `.range()`. O PostgREST aplica um limite padrão de 1.000 linhas nas chamadas RPC, e o `.range()` nem sempre funciona corretamente com RPCs (diferente de queries diretas a views/tabelas).
 
-A lista `DECIMAL_PTA_NAMES` em `src/utils/ptaFormat.ts` esta desatualizada em relacao aos labels reais usados no sistema (`animalMetrics.ts` e `usePTAStore.ts`). Isso faz com que algumas PTAs nao sejam formatadas com 2 casas decimais como deveriam.
+## Solução
 
-### Inconsistencias identificadas
+Trocar a chamada de `supabase.rpc('get_bulls_denorm')` por `supabase.from('bulls_denorm')` no `BullSearchPage.tsx`. Queries diretas a views respeitam o `.range()` corretamente, permitindo a paginação real.
 
-| PTA | Situacao |
-|-----|----------|
-| LIV | Falta na lista decimal - precisa adicionar |
-| PTAT | Falta na lista decimal (existe "PTA Tipo" que nao bate apos normalizacao) |
-| EFC | Falta na lista decimal - precisa adicionar |
-| FUA | Na lista como "FA" mas label real e "FUA" - precisa corrigir |
-| RUW | Falta na lista decimal - precisa adicionar |
-| UDP | Na lista como "UD" mas label real e "UDP" - precisa corrigir |
-| BD | Na lista decimal mas nao existe em animalMetrics (campo obsoleto?) |
-| TW | Na lista decimal mas nao existe em animalMetrics (campo obsoleto?) |
+### Alteração em `src/components/BullSearchPage.tsx`
 
-### Plano de implementacao
+Na função `loadBulls`, substituir:
+```typescript
+const { data: page, error } = await supabase
+  .rpc('get_bulls_denorm')
+  .order('tpi', { ascending: false })
+  .range(from, from + pageSize - 1);
+```
 
-**Arquivo**: `src/utils/ptaFormat.ts`
+Por:
+```typescript
+const { data: page, error } = await supabase
+  .from('bulls_denorm')
+  .select('*')
+  .order('tpi', { ascending: false })
+  .range(from, from + pageSize - 1);
+```
 
-1. **Adicionar PTAs faltantes** a `DECIMAL_PTA_NAMES`:
-   - `LIV`
-   - `PTAT`
-   - `EFC`
-   - `RUW`
-
-2. **Corrigir labels desatualizados**:
-   - `"FA"` -> manter `"FA"` e adicionar tambem `"FUA"`
-   - `"UD"` -> manter `"UD"` e adicionar tambem `"UDP"`
-   - `"PTA Tipo"` -> manter e adicionar tambem `"PTAT"`
-
-3. **Manter campos legados** (`BD`, `TW`) na lista para compatibilidade retroativa com dados antigos
-
-### Detalhes tecnicos
-
-A normalizacao `normalizePtaKey` remove espacos, `$` e `%` e converte para uppercase. Portanto:
-- "PTA Tipo" normaliza para "PTATIPO" - nao bate com "PTAT" que normaliza para "PTAT"
-- "FA" normaliza para "FA" - nao bate com "FUA"
-- "UD" normaliza para "UD" - nao bate com "UDP"
-
-A correcao e simples: adicionar os aliases corretos na lista `DECIMAL_PTA_NAMES`.
+Isso é a única mudança necessária. A view `bulls_denorm` já mapeia os nomes de colunas para o formato esperado pelo frontend, e as RLS policies da tabela base `bulls` permitem leitura para usuários autenticados.
 
