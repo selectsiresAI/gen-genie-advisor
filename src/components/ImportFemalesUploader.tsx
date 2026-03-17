@@ -141,19 +141,18 @@ export default function ImportFemalesUploader({ farmId, onSuccess }: Props) {
       const insertErrors = payload?.insert_errors || 0;
       const duplicatesRemoved = payload?.duplicates_removed || 0;
 
-      // Build message parts
-      const messageParts: string[] = [];
-      if (inserted > 0) messageParts.push(`${inserted} inseridos`);
-      if (validationErrors > 0) messageParts.push(`${validationErrors} erros de validação`);
-      if (insertErrors > 0) messageParts.push(`${insertErrors} erros de inserção`);
-      if (duplicatesRemoved > 0) messageParts.push(`${duplicatesRemoved} duplicatas removidas`);
+      // Build summary message
+      const summaryParts: string[] = [];
+      summaryParts.push(`${inserted} fêmeas importadas`);
+      if (duplicatesRemoved > 0) summaryParts.push(`${duplicatesRemoved} duplicatas removidas`);
+      if (validationErrors > 0) summaryParts.push(`${validationErrors} linhas ignoradas (dados incompletos)`);
 
-      if (insertErrors > 0 || validationErrors > 0) {
-        toastError(`Processamento concluído com avisos: ${messageParts.join(', ')}.`);
-      } else if (duplicatesRemoved > 0) {
-        toastSuccess(`Upload concluído! ${messageParts.join(', ')}.`);
+      if (insertErrors > 0 && inserted === 0) {
+        toastError(`Falha no upload: ${insertErrors} erros de inserção.`);
+      } else if (insertErrors > 0) {
+        toastInfo(`Upload parcial: ${summaryParts.join(', ')}. ${insertErrors} erros de inserção.`);
       } else {
-        toastSuccess(`Upload concluído! ${inserted} fêmeas importadas com sucesso.`);
+        toastSuccess(`Upload concluído! ${summaryParts.join(', ')}.`);
       }
 
       // Commit the batch
