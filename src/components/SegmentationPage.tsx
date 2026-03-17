@@ -1764,7 +1764,7 @@ export default function SegmentationPage({
                   </tbody>
                 </table>
               </div>
-            </ScrollArea>}
+            </div>}
         </div>
 
         <div className="pb-8 text-center text-xs text-foreground">MVP demonstrativo — dados seguros via RLS</div>
