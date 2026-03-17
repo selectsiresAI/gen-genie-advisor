@@ -4343,6 +4343,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      import_females_json: {
+        Args: { p_client_id: string; p_data: Json }
+        Returns: number
+      }
       is_admin: { Args: never; Returns: boolean }
       is_farm_editor: { Args: { farm_uuid: string }; Returns: boolean }
       is_farm_member:
