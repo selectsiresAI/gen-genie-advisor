@@ -4343,6 +4343,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      import_bulls_json: { Args: { p_data: Json }; Returns: number }
       import_females_json: {
         Args: { p_client_id: string; p_data: Json }
         Returns: number
