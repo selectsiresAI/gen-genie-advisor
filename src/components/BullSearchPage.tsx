@@ -554,18 +554,19 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
   const loadBulls = async () => {
     try {
       setLoading(true);
-      // Fetch all bulls in pages of 10000 to bypass PostgREST 1000-row default
+      // Fetch all bulls in pages to load full catalog
       let allData: any[] = [];
       const pageSize = 10000;
       let from = 0;
       let hasMore = true;
       while (hasMore) {
         const { data: page, error } = await supabase
-          .rpc('get_bulls_denorm')
+          .from('bulls_denorm')
+          .select('*')
           .order('tpi', { ascending: false })
           .range(from, from + pageSize - 1);
         if (error) {
-          console.error('Error from RPC get_bulls_denorm:', error);
+          console.error('Error fetching bulls_denorm:', error);
           throw error;
         }
         if (page && page.length > 0) {
