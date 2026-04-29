@@ -64,7 +64,7 @@ export function ShareFarmDialog({ farmId, farmName, myRole }: ShareFarmDialogPro
       const { data, error } = await (supabase
         .from("user_farms") as any)
         .select("id, user_id, role, profiles:user_id(email, full_name)")
-        .eq("farm_id", farmId);
+        .eq("client_id", farmId);
 
       if (error) throw error;
 
@@ -89,7 +89,7 @@ export function ShareFarmDialog({ farmId, farmName, myRole }: ShareFarmDialogPro
       const { data, error } = await (supabase
         .from("farm_invites") as any)
         .select("id, invited_email, role, created_at")
-        .eq("farm_id", farmId)
+        .eq("client_id", farmId)
         .eq("status", "pending");
 
       if (error) throw error;
@@ -137,7 +137,7 @@ export function ShareFarmDialog({ farmId, farmName, myRole }: ShareFarmDialogPro
         // User exists — add directly to user_farms
         const { error: insertError } = await supabase
           .from("user_farms")
-          .insert({ user_id: profile.id, farm_id: farmId, role } as any);
+          .insert({ user_id: profile.id, client_id: farmId, role } as any);
 
         if (insertError) throw insertError;
 
@@ -151,7 +151,7 @@ export function ShareFarmDialog({ farmId, farmName, myRole }: ShareFarmDialogPro
         const { error: inviteError } = await supabase
           .from("farm_invites")
           .insert({
-            farm_id: farmId,
+            client_id: farmId,
             invited_by: userId,
             invited_email: trimmedEmail,
             role,
