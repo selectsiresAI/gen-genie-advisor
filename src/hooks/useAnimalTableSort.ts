@@ -29,23 +29,36 @@ function parseNumericValue(value: unknown): number | null {
     return null;
   }
 
-  const timestamp = Date.parse(stringValue);
-  if (!Number.isNaN(timestamp)) {
-    return timestamp;
+  // Try numeric parse first (US format: comma = thousands, dot = decimal)
+  // so we don't misinterpret strings like "3,167" as a date.
+  const cleaned = stringValue.replace(/\s+/g, '').replace(/[^0-9.,-]/g, '');
+  if (cleaned && /[0-9]/.test(cleaned)) {
+    let normalized = cleaned;
+    const hasDot = cleaned.includes('.');
+    const hasComma = cleaned.includes(',');
+    if (hasComma && hasDot) {
+      // Assume comma = thousands, dot = decimal
+      normalized = cleaned.replace(/,/g, '');
+    } else if (hasComma) {
+      const parts = cleaned.split(',');
+      const looksLikeThousands = parts.length > 1 && parts.slice(1).every(p => /^\d{3}$/.test(p));
+      normalized = looksLikeThousands ? cleaned.replace(/,/g, '') : cleaned.replace(',', '.');
+    }
+    const parsed = Number(normalized);
+    if (!Number.isNaN(parsed)) {
+      return parsed;
+    }
   }
 
-  const normalized = stringValue
-    .replace(/\s+/g, '')
-    .replace(/[^0-9.,-]/g, '')
-    .replace(/(,)(?=.*[,.])/g, '')
-    .replace(',', '.');
-
-  if (!normalized) {
-    return null;
+  // Fallback: try parsing as date only when string contains date separators
+  if (/[\/\-]/.test(stringValue)) {
+    const timestamp = Date.parse(stringValue);
+    if (!Number.isNaN(timestamp)) {
+      return timestamp;
+    }
   }
 
-  const parsed = Number(normalized);
-  return Number.isNaN(parsed) ? null : parsed;
+  return null;
 }
 
 function normalizeString(value: unknown): string {
