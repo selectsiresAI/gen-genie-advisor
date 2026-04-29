@@ -1,4 +1,5 @@
 // src/utils/ptaFormat.ts
+import { parseNum } from "@/lib/number";
 
 // 🔹 PTAs que DEVEM ficar com DUAS CASAS decimais
 const DECIMAL_PTA_NAMES = [
@@ -151,7 +152,7 @@ export function formatPtaValue(
 ): string {
   if (value === null || value === undefined || value === "") return "-";
 
-  const num = Number(value);
+  const num = parseNum(value);
   if (Number.isNaN(num)) return String(value);
 
   const key = normalizePtaKey(fieldName);

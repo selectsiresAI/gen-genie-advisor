@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { RefreshCw } from "lucide-react";
 import { useAGFilters } from "@/features/auditoria/store";
 import { PTA_CATALOG } from "@/lib/pta";
+import { parseNum } from "@/lib/number";
 import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
 import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
 import { useRegisterChart } from "@/components/pdf/useRegisterChart";
@@ -113,7 +114,7 @@ function Step3QuartisOverviewContent() {
 
       for (const trait of sanitized) {
         const values = (data ?? [])
-          .map((r: any) => (r?.[trait] == null ? undefined : Number(r?.[trait])))
+          .map((r: any) => (r?.[trait] == null ? undefined : parseNum(r?.[trait])))
           .filter((v: number | undefined): v is number => Number.isFinite(v as number));
 
         const n_total = values.length;

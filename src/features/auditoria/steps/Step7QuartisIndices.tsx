@@ -16,7 +16,8 @@ import { useAGFilters } from "../store";
 import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
 import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
 import { useRegisterChart } from "@/components/pdf/useRegisterChart";
- import { formatPtaValue } from "@/utils/ptaFormat";
+import { formatPtaValue } from "@/utils/ptaFormat";
+import { parseNum } from "@/lib/number";
 
 // Traits otimizados para carregamento rápido - apenas os mais relevantes
 const CORE_PTA_COLUMNS = [
@@ -73,45 +74,113 @@ function Step7QuartisIndicesContent() {
   // Determina quais traits usar baseado no modo
   const activeTraits = showAllTraits ? ALL_PTA_COLUMNS : CORE_PTA_COLUMNS;
 
+  // Busca paginada para obter todos os animais
+  async function fetchAllAnimals(fId: string, columns: string[], signal?: AbortSignal): Promise<any[]> {
+    const PAGE_SIZE = 1000;
+    const allRows: any[] = [];
+    let page = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
+      const { data, error } = await supabase
+        .from("females_denorm")
+        .select(["farm_id", ...columns].join(","))
+        .eq("farm_id", fId)
+        .range(from, to);
+
+      if (error) throw new Error(error.message);
+      const pageData = Array.isArray(data) ? data : [];
+      allRows.push(...pageData);
+      hasMore = pageData.length === PAGE_SIZE;
+      page += 1;
+    }
+    return allRows;
+  }
+
+  function meanOf(v: number[]) {
+    if (!v.length) return 0;
+    return v.reduce((a, b) => a + b, 0) / v.length;
+  }
+
   const load = useCallback(async () => {
     if (!farmId) {
       setRows([]);
       return;
     }
-    
+
     // Cancelar requisição anterior se existir
     if (abortRef.current) {
       abortRef.current.abort();
     }
     abortRef.current = new AbortController();
-    
+    const signal = abortRef.current.signal;
+
     setLoading(true);
     setErrorMsg(null);
-    setLoadingProgress("Calculando percentis...");
-    
-    try {
-      const { data, error } = await (supabase.rpc as any)("ag_quartis_indices_compare", {
-        p_farm: farmId,
-        p_index_a: indexA,
-        p_index_b: indexB,
-        p_traits: activeTraits,
-      });
+    setLoadingProgress("Buscando dados do rebanho...");
 
-      if (error) {
-        console.error("Failed to load quartis indices", error);
-        setErrorMsg(error.message?.includes("timeout") 
-          ? "Consulta demorou demais. Tente com menos traits." 
-          : `Erro: ${error.message}`);
+    try {
+      // Buscar dados incluindo os índices para ranking
+      const columnsNeeded = [...new Set([...activeTraits, indexA, indexB])];
+      const data = await fetchAllAnimals(String(farmId), columnsNeeded, signal);
+
+      if (!data.length) {
+        setErrorMsg("Sem dados para esta fazenda.");
         setRows([]);
-        setLoading(false);
         return;
       }
-      
-      setRows(Array.isArray(data) ? (data as Row[]) : []);
+
+      setLoadingProgress("Calculando quartis...");
+
+      const result: Row[] = [];
+
+      // Para cada índice (A e B), ranquear animais e calcular médias top/bottom 25%
+      for (const [indexLabel, indexCol] of [["IndexA", indexA], ["IndexB", indexB]] as const) {
+        // Filtrar animais com valor válido no índice
+        const withIndex = data
+          .map((r: any) => ({ ...r, _indexVal: parseNum(r?.[indexCol]) }))
+          .filter((r: any) => Number.isFinite(r._indexVal));
+
+        const n = withIndex.length;
+        if (n === 0) continue;
+        const groupSize = Math.min(n, Math.max(1, Math.round(0.25 * n)));
+
+        // Ordenar pelo índice
+        const sortedDesc = [...withIndex].sort((a, b) => b._indexVal - a._indexVal);
+        const top25 = sortedDesc.slice(0, groupSize);
+        const bottom25 = sortedDesc.slice(-groupSize);
+
+        // Para cada trait, calcular a média dos top/bottom 25%
+        for (const trait of activeTraits) {
+          const topVals = top25.map((r: any) => parseNum(r?.[trait])).filter(Number.isFinite);
+          const bottomVals = bottom25.map((r: any) => parseNum(r?.[trait])).filter(Number.isFinite);
+
+          result.push({
+            index_label: indexLabel,
+            group_label: "Top25",
+            trait_key: trait,
+            mean_value: meanOf(topVals),
+            n: topVals.length,
+          });
+          result.push({
+            index_label: indexLabel,
+            group_label: "Bottom25",
+            trait_key: trait,
+            mean_value: meanOf(bottomVals),
+            n: bottomVals.length,
+          });
+        }
+      }
+
+      setRows(result);
     } catch (err: any) {
       if (err.name !== 'AbortError') {
         console.error("Error loading quartis indices", err);
-        setErrorMsg("Erro ao carregar dados. Tente novamente.");
+        setErrorMsg(`Erro: ${err.message || "Tente novamente."}`);
       }
     } finally {
       setLoading(false);

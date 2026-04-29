@@ -1,10 +1,11 @@
 import { create } from 'zustand';
 import { supabase } from '@/integrations/supabase/client';
 import { calculateCategoryCounts } from '@/utils/femaleCategories';
+import { parseNum } from '@/lib/number';
 
-// Helper function for defensive number parsing
+// Helper function for defensive number parsing (tolerant to comma-formatted numbers)
 function getInt(map: Record<string, number | undefined | null>, key: string): number {
-  const n = Number(map?.[key]);
+  const n = parseNum(map?.[key]);
   return Number.isFinite(n) ? n : 0;
 }
 
