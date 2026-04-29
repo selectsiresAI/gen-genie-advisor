@@ -105,7 +105,7 @@ function validateDate(value: unknown): string | null {
     var day2: number, month2: number;
     if (a > 12) { day2 = a; month2 = b; }
     else if (b > 12) { day2 = b; month2 = a; }
-    else { day2 = a; month2 = b; }
+    else { /* ambiguous → assume US format MM/DD/YY */ day2 = b; month2 = a; }
     const date = new Date(c, month2 - 1, day2);
     if (!isNaN(date.getTime())) {
       return date.toISOString().split('T')[0];
