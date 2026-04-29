@@ -271,7 +271,7 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
       }
     });
     const sorted = Array.from(years).sort((a, b) => a - b);
-    return sorted.length ? sorted : [new Date().getFullYear()];
+    return sorted;
   }, [females]);
 
 

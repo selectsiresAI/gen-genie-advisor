@@ -307,7 +307,7 @@ function Step5ProgressaoContent() {
       const y = getYearFromBirth((f as any)?.birth_date);
       if (Number.isFinite(y)) years.add(y as number);
     }
-    if (years.size === 0) return [new Date().getFullYear()];
+    if (years.size === 0) return [];
     
     const sortedYears = Array.from(years).sort((a, b) => a - b);
     const minYear = sortedYears[0];

@@ -64,7 +64,8 @@ export default function ImportFemalesUploader({ farmId, onSuccess }: Props) {
       throw new Error('Planilha sem coluna obrigatória: "identifier".');
     }
 
-    const csv = XLSX.utils.sheet_to_csv(worksheet);
+    // Force date columns to ISO format (YYYY-MM-DD) so the edge function can parse them
+    const csv = XLSX.utils.sheet_to_csv(worksheet, { dateNF: 'yyyy-mm-dd' });
     const blob = new Blob([csv], { type: 'text/csv' });
     const newName = file.name.replace(/\.(xlsx|xls|xlsm)$/i, '.csv');
     return new File([blob], newName, { type: 'text/csv' });

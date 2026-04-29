@@ -70,10 +70,50 @@ function validateNumber(value: unknown, min?: number, max?: number): number | nu
 
 function validateDate(value: unknown): string | null {
   if (!value) return null;
-  const dateStr = String(value);
+  const dateStr = String(value).trim();
+
+  // Excel serial number (e.g. 45858)
+  if (/^\d{4,5}$/.test(dateStr)) {
+    const excelSerial = parseInt(dateStr, 10);
+    const excelEpoch = new Date(1899, 11, 30);
+    const date = new Date(excelEpoch.getTime() + excelSerial * 24 * 60 * 60 * 1000);
+    if (!isNaN(date.getTime())) {
+      return date.toISOString().split('T')[0];
+    }
+  }
+
+  // ISO format: YYYY-MM-DD or YYYY/MM/DD
+  const isoMatch = dateStr.match(/^(\d{4})[\-\/](\d{1,2})[\-\/](\d{1,2})$/);
+  if (isoMatch) {
+    const date = new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]));
+    if (!isNaN(date.getTime())) {
+      return date.toISOString().split('T')[0];
+    }
+  }
+
+  // M/D/YY or D/M/YYYY (slash, dash, dot separated)
+  const slashMatch = dateStr.match(/^(\d{1,2})[\-\/.](\d{1,2})[\-\/.](\d{2,4})$/);
+  if (slashMatch) {
+    let a = parseInt(slashMatch[1], 10);
+    let b = parseInt(slashMatch[2], 10);
+    let c = parseInt(slashMatch[3], 10);
+    if (c < 100) c = c <= 30 ? 2000 + c : 1900 + c;
+    let day: number, month: number;
+    if (a > 12) { day = a; month = b; }
+    else if (b > 12) { day = b; month = a; }
+    else { day = b; month = a; } // assume M/D format
+    const date = new Date(c, month - 1, day);
+    if (!isNaN(date.getTime())) {
+      return date.toISOString().split('T')[0];
+    }
+  }
+
+  // Generic fallback
   const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return null;
-  return date.toISOString().split('T')[0];
+  if (!isNaN(date.getTime())) {
+    return date.toISOString().split('T')[0];
+  }
+  return null;
 }
 
 function validateRecord(record: any, farmId: string): FemaleRecord | null {

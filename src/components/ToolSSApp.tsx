@@ -15,6 +15,7 @@ import PlanoApp from "./PlanoApp";
 import BotijaoVirtualPage from "./BotijaoVirtual";
 import { formatPtaValue } from "@/utils/ptaFormat";
 import { parseUniversalSpreadsheet } from "@/utils/headerNormalizer";
+import { parseNum } from "@/lib/number";
 
 /**
  * ToolSS — MVP interativo (Lovable-ready)
@@ -950,7 +951,9 @@ export default function ToolSSApp() {
       Protein: number;
     }> = {};
     rows.forEach(r => {
-      const y = r.year || new Date(r.nascimento).getFullYear();
+      const parsed = r.nascimento ? new Date(r.nascimento).getFullYear() : NaN;
+      const y = r.year || (Number.isFinite(parsed) ? parsed : 0);
+      if (!y) return; // skip rows without valid year
       if (!map[y]) map[y] = {
         year: y,
         TPI: 0,
@@ -1021,26 +1024,27 @@ export default function ToolSSApp() {
       setClients(newClients);
     } else {
       const females: Female[] = rows.map((r: any, i: number) => {
-        const nascimento = r.dataNascimento || r.Nascimento || "2023-01-01";
-        const ordemParto = Number(r.OrdemParto || 0);
+        const nascimento = r.dataNascimento || r.Nascimento || "";
+        const ordemParto = parseNum(r.OrdemParto) || 0;
+        const birthYear = nascimento ? new Date(nascimento).getFullYear() : NaN;
 
         return {
           id: r.id || `CSVF${Date.now()}${i}`,
           brinco: r.Brinco || "",
-          nascimento,
+          nascimento: nascimento || "2023-01-01",
           ordemParto,
-          categoria: categorizeAnimal(nascimento, ordemParto),
+          categoria: nascimento ? categorizeAnimal(nascimento, ordemParto) : "Sem Categoria",
           naabPai: r.naabPai || "",
           nomePai: r.NomePai || "",
-          TPI: Number(r.TPI || 0),
-          ["NM$"]: Number(r["NM$"] || 0),
-          Milk: Number(r.Milk || r.PTAM || 0),
-          Fat: Number(r.Fat || r.PTAF || 0),
-          Protein: Number(r.Protein || r.PTAP || 0),
-          DPR: Number(r.DPR || 0),
-          SCS: Number(r.SCS || 2.9),
-          PTAT: Number(r.PTAT || 0.4),
-          year: Number(r.Ano || new Date(nascimento).getFullYear())
+          TPI: parseNum(r.TPI) || 0,
+          ["NM$"]: parseNum(r["NM$"]) || 0,
+          Milk: parseNum(r.Milk || r.PTAM) || 0,
+          Fat: parseNum(r.Fat || r.PTAF) || 0,
+          Protein: parseNum(r.Protein || r.PTAP) || 0,
+          DPR: parseNum(r.DPR) || 0,
+          SCS: parseNum(r.SCS) || 2.9,
+          PTAT: parseNum(r.PTAT) || 0.4,
+          year: parseNum(r.Ano) || (Number.isFinite(birthYear) ? birthYear : 0)
         };
       });
       const newClients = clients.map(c => c.id !== selectedClient.id ? c : {

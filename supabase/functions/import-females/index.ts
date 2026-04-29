@@ -69,7 +69,7 @@ function validateDate(value: unknown): string | null {
     }
   }
 
-  const slashMatch = dateStr.match(/^(\d{1,2})[\-\/.](\\d{1,2})[\-\/.](\\d{2,4})$/);
+  const slashMatch = dateStr.match(/^(\d{1,2})[\-\/.](\d{1,2})[\-\/.](\d{2,4})$/);
   if (slashMatch) {
     var a = parseInt(slashMatch[1], 10);
     var b = parseInt(slashMatch[2], 10);
