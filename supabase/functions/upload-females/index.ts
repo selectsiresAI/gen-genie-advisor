@@ -61,7 +61,31 @@ function sanitizeString(value: unknown): string {
 
 function validateNumber(value: unknown, min?: number, max?: number): number | null {
   if (value === null || value === undefined || value === '') return null;
-  const num = typeof value === 'number' ? value : parseFloat(String(value));
+  if (typeof value === 'number') {
+    if (isNaN(value)) return null;
+    if (min !== undefined && value < min) return null;
+    if (max !== undefined && value > max) return null;
+    return value;
+  }
+  let s = String(value).trim();
+  if (s === '' || s === '-' || s === '--') return null;
+  const hasComma = s.includes(',');
+  const hasDot = s.includes('.');
+  if (hasComma && hasDot) {
+    if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else {
+      s = s.replace(/,/g, '');
+    }
+  } else if (hasComma) {
+    const parts = s.split(',');
+    if (parts.length === 2 && /^\d{3}$/.test(parts[1])) {
+      s = s.replace(/,/g, '');
+    } else {
+      s = s.replace(',', '.');
+    }
+  }
+  const num = parseFloat(s);
   if (isNaN(num)) return null;
   if (min !== undefined && num < min) return null;
   if (max !== undefined && num > max) return null;

@@ -40,8 +40,35 @@ function sanitizeString(value: unknown): string {
 
 function validateNumber(value: unknown, min?: number, max?: number): number | null {
   if (value === null || value === undefined || value === '') return null;
-  const numStr = typeof value === 'number' ? String(value) : String(value).replace(',', '.');
-  const num = parseFloat(numStr);
+  if (typeof value === 'number') {
+    if (isNaN(value)) return null;
+    if (min !== undefined && value < min) return null;
+    if (max !== undefined && value > max) return null;
+    return value;
+  }
+  // String parsing: detect US format (comma=thousands, dot=decimal) vs BR (dot=thousands, comma=decimal)
+  let s = String(value).trim();
+  if (s === '' || s === '-' || s === '--') return null;
+  const hasComma = s.includes(',');
+  const hasDot = s.includes('.');
+  if (hasComma && hasDot) {
+    // Use the rightmost separator as decimal
+    if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else {
+      s = s.replace(/,/g, '');
+    }
+  } else if (hasComma) {
+    // Ambiguous: "3,167" could be US thousands (3167) or BR decimal (3.167).
+    // Heuristic: if exactly 3 digits after the comma and no other comma, assume US thousands.
+    const parts = s.split(',');
+    if (parts.length === 2 && /^\d{3}$/.test(parts[1])) {
+      s = s.replace(/,/g, '');
+    } else {
+      s = s.replace(',', '.');
+    }
+  }
+  const num = parseFloat(s);
   if (isNaN(num)) return null;
   if (min !== undefined && num < min) return null;
   if (max !== undefined && num > max) return null;
@@ -78,7 +105,7 @@ function validateDate(value: unknown): string | null {
     var day2: number, month2: number;
     if (a > 12) { day2 = a; month2 = b; }
     else if (b > 12) { day2 = b; month2 = a; }
-    else { day2 = a; month2 = b; }
+    else { /* ambiguous → assume US format MM/DD/YY */ day2 = b; month2 = a; }
     const date = new Date(c, month2 - 1, day2);
     if (!isNaN(date.getTime())) {
       return date.toISOString().split('T')[0];
