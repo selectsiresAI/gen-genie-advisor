@@ -456,7 +456,7 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
             id,
             name,
             identifier,
-            farm_id,
+            client_id,
             birth_date,
             parity_order,
             hhp_dollar,
@@ -516,7 +516,7 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
             rfi,
             gfi
           )
-        `).in('class', selectedClassifications).eq('farm_id', currentFarmId);
+        `).in('class', selectedClassifications).eq('client_id', currentFarmId);
       if (error) throw error;
       if (!data || data.length === 0) {
         toast({
@@ -528,8 +528,8 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
         return;
       }
       const sanitizedSegmentations = (data ?? []).filter(segmentation => {
-        const segmentationFarmMatches = segmentation?.farm_id === currentFarmId;
-        const femaleFarmMatches = segmentation?.females?.farm_id ? segmentation.females.farm_id === currentFarmId : true;
+        const segmentationFarmMatches = segmentation?.client_id === currentFarmId;
+        const femaleFarmMatches = segmentation?.females?.client_id ? segmentation.females.client_id === currentFarmId : true;
         return segmentationFarmMatches && femaleFarmMatches;
       });
       if (sanitizedSegmentations.length === 0) {
