@@ -493,7 +493,7 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
 
       // Filtrar por categoria usando a função centralizada
       const filteredFemales = sanitizedSegmentations.filter(segmentation => {
-        const femaleData = segmentation.females;
+        const femaleData = femalesById.get(segmentation.female_id);
         if (!femaleData) return false;
         const category = getAutomaticCategory(femaleData.birth_date, femaleData.parity_order);
         const categoryLower = category.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -502,7 +502,7 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
 
       // Converter para formato esperado pelo Nexus
       const convertedFemales = filteredFemales.map(segmentation => {
-        const femaleData = segmentation.females;
+        const femaleData = femalesById.get(segmentation.female_id)!;
         return {
           'ID Fazenda': femaleData.identifier || femaleData.name,
           'Nome': femaleData.name,
