@@ -18,6 +18,7 @@ import { HelpButton } from '@/components/help/HelpButton';
 import { HelpHint } from '@/components/help/HelpHint';
 import { getAutomaticCategory } from '@/utils/femaleCategories';
 import { formatPtaValue } from '@/utils/ptaFormat';
+import { fetchFemalesDenormByFarm } from '@/supabase/queries/females';
 
 import { searchBulls } from '@/supabase/queries/bulls';
 import type { BullsDenormSelection } from '@/supabase/queries/bulls';
@@ -446,77 +447,10 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
     }
     setLoadingDatabase(true);
     try {
-      // Buscar fêmeas com segmentação através de join
-      const {
-        data,
-        error
-      } = await (supabase.from('female_segmentations') as any).select(`
-          *,
-          females (
-            id,
-            name,
-            identifier,
-            client_id,
-            birth_date,
-            parity_order,
-            hhp_dollar,
-            tpi,
-            nm_dollar,
-            cm_dollar,
-            fm_dollar,
-            gm_dollar,
-            f_sav,
-            ptam,
-            cfp,
-            ptaf,
-            ptaf_pct,
-            ptap,
-            ptap_pct,
-            pl,
-            dpr,
-            liv,
-            scs,
-            mast,
-            met,
-            rp,
-            da,
-            ket,
-            mf,
-            ptat,
-            udc,
-            flc,
-            sce,
-            dce,
-            ssb,
-            dsb,
-            h_liv,
-            ccr,
-            hcr,
-            fi,
-            gl,
-            efc,
-            bwc,
-            sta,
-            str,
-            dfm,
-            rua,
-            rls,
-            rtp,
-            ftl,
-            rw,
-            rlr,
-            fta,
-            fls,
-            fua,
-            ruh,
-            ruw,
-            ucl,
-            udp,
-            ftp,
-            rfi,
-            gfi
-          )
-        `).in('class', selectedClassifications).eq('client_id', currentFarmId);
+      const { data, error } = await (supabase.from('female_segmentations') as any)
+        .select('female_id, client_id, class')
+        .in('class', selectedClassifications)
+        .eq('client_id', currentFarmId);
       if (error) throw error;
       if (!data || data.length === 0) {
         toast({
@@ -527,9 +461,18 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
         setFemales([]);
         return;
       }
+      const farmFemales = await fetchFemalesDenormByFarm(currentFarmId, {
+        select: 'id,name,identifier,farm_id,client_id,birth_date,parity_order,hhp_dollar,tpi,nm_dollar,cm_dollar,fm_dollar,gm_dollar,f_sav,ptam,cfp,ptaf,ptaf_pct,ptap,ptap_pct,pl,dpr,liv,scs,mast,met,rp,da,ket,mf,ptat,udc,flc,sce,dce,ssb,dsb,h_liv,ccr,hcr,fi,gl,efc,bwc,sta,str,dfm,rua,rls,rtp,ftl,rw,rlr,fta,fls,fua,ruh,ruw,ucl,udp,ftp,rfi',
+      });
+      const femalesById = new Map(
+        farmFemales
+          .filter(female => female.id)
+          .map(female => [female.id, female])
+      );
       const sanitizedSegmentations = (data ?? []).filter(segmentation => {
         const segmentationFarmMatches = segmentation?.client_id === currentFarmId;
-        const femaleFarmMatches = segmentation?.females?.client_id ? segmentation.females.client_id === currentFarmId : true;
+        const femaleData = femalesById.get(segmentation?.female_id);
+        const femaleFarmMatches = femaleData ? (femaleData.farm_id === currentFarmId || femaleData.client_id === currentFarmId) : false;
         return segmentationFarmMatches && femaleFarmMatches;
       });
       if (sanitizedSegmentations.length === 0) {
