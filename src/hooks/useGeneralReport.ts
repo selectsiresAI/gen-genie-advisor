@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 
-export type ReportType = 
+export type ReportType =
   | 'herd_summary'
   | 'segmentation'
   | 'auditoria_step1'
@@ -9,11 +9,9 @@ export type ReportType =
   | 'auditoria_step4'
   | 'auditoria_step5'
   | 'auditoria_step6'
-  | 'auditoria_step7'
-  | 'botijao'
-  | 'projecao'
-  | 'metas'
-  | 'nexus';
+  | 'auditoria_step7';
+
+export interface ReportSelection {
 
 export interface ReportSelection {
   type: ReportType;
