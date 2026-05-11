@@ -58,11 +58,6 @@ const REPORT_ICONS: Record<string, React.ReactNode> = {
   auditoria_step5: <TrendingUp className="h-4 w-4" />,
   auditoria_step6: <BarChart3 className="h-4 w-4" />,
   auditoria_step7: <BarChart3 className="h-4 w-4" />,
-  botijao: <Package className="h-4 w-4" />,
-  projecao: <Target className="h-4 w-4" />,
-  trends: <TrendingUp className="h-4 w-4" />,
-  metas: <Target className="h-4 w-4" />,
-  nexus: <Beaker className="h-4 w-4" />,
 };
 
 const REPORT_GROUPS = [
@@ -76,18 +71,13 @@ const REPORT_GROUPS = [
     title: 'Auditoria Genética (7 Etapas)',
     types: [
       'auditoria_step1',
-      'auditoria_step2', 
+      'auditoria_step2',
       'auditoria_step3',
       'auditoria_step4',
       'auditoria_step5',
       'auditoria_step6',
       'auditoria_step7',
     ] as ReportType[],
-  },
-  {
-    id: 'analysis',
-    title: 'Outros relatórios',
-    types: ['botijao', 'projecao', 'trends', 'metas', 'nexus'] as ReportType[],
   },
 ];
 
