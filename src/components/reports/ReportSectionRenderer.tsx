@@ -162,39 +162,6 @@ function AuditoriaStep7SectionWrapper({ farmId, farmName }: { farmId: string; fa
   );
 }
 
-// Other Sections (placeholders for now)
-function BotijaoSection({ farmId, farmName }: { farmId: string; farmName: string }) {
-  return (
-    <SectionWrapper type="botijao" title="Botijão Virtual">
-      <PlaceholderSection title="Inventário de Doses" farmName={farmName} />
-    </SectionWrapper>
-  );
-}
-
-function ProjecaoSection({ farmId, farmName }: { farmId: string; farmName: string }) {
-  return (
-    <SectionWrapper type="projecao" title="Projeção Genética">
-      <PlaceholderSection title="Plano de Acasalamento e ROI" farmName={farmName} />
-    </SectionWrapper>
-  );
-}
-
-function MetasSection({ farmId, farmName }: { farmId: string; farmName: string }) {
-  return (
-    <SectionWrapper type="metas" title="Metas Genéticas">
-      <PlaceholderSection title="Metas vs Valores Atuais" farmName={farmName} />
-    </SectionWrapper>
-  );
-}
-
-function NexusSection({ farmId, farmName }: { farmId: string; farmName: string }) {
-  return (
-    <SectionWrapper type="nexus" title="Nexus - Predições Genéticas">
-      <PlaceholderSection title="Predições Genômicas/Pedigree" farmName={farmName} />
-    </SectionWrapper>
-  );
-}
-
 // Map of report types to their components
 const SECTION_COMPONENTS: Record<ReportType, React.FC<{ farmId: string; farmName: string }>> = {
   herd_summary: HerdSummarySection,
@@ -206,10 +173,6 @@ const SECTION_COMPONENTS: Record<ReportType, React.FC<{ farmId: string; farmName
   auditoria_step5: AuditoriaStep5SectionWrapper,
   auditoria_step6: AuditoriaStep6SectionWrapper,
   auditoria_step7: AuditoriaStep7SectionWrapper,
-  botijao: BotijaoSection,
-  projecao: ProjecaoSection,
-  metas: MetasSection,
-  nexus: NexusSection,
 };
 
 export default function ReportSectionRenderer({
