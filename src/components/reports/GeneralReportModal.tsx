@@ -26,10 +26,7 @@ import {
   Settings2, 
   Loader2,
   BarChart3,
-  Target,
-  Beaker,
   TrendingUp,
-  Package,
   Users,
   PieChart
 } from 'lucide-react';
@@ -58,11 +55,6 @@ const REPORT_ICONS: Record<string, React.ReactNode> = {
   auditoria_step5: <TrendingUp className="h-4 w-4" />,
   auditoria_step6: <BarChart3 className="h-4 w-4" />,
   auditoria_step7: <BarChart3 className="h-4 w-4" />,
-  botijao: <Package className="h-4 w-4" />,
-  projecao: <Target className="h-4 w-4" />,
-  trends: <TrendingUp className="h-4 w-4" />,
-  metas: <Target className="h-4 w-4" />,
-  nexus: <Beaker className="h-4 w-4" />,
 };
 
 const REPORT_GROUPS = [
@@ -76,18 +68,13 @@ const REPORT_GROUPS = [
     title: 'Auditoria Genética (7 Etapas)',
     types: [
       'auditoria_step1',
-      'auditoria_step2', 
+      'auditoria_step2',
       'auditoria_step3',
       'auditoria_step4',
       'auditoria_step5',
       'auditoria_step6',
       'auditoria_step7',
     ] as ReportType[],
-  },
-  {
-    id: 'analysis',
-    title: 'Outros relatórios',
-    types: ['botijao', 'projecao', 'trends', 'metas', 'nexus'] as ReportType[],
   },
 ];
 
@@ -106,7 +93,6 @@ export default function GeneralReportModal({
     progress,
     progressMessage,
     toggleReport,
-    toggleAllAuditoria,
     updateConfig,
     setProgress,
     setGenerating,
@@ -119,21 +105,6 @@ export default function GeneralReportModal({
   const containerRef = useRef<HTMLDivElement>(null);
   const { addReport } = useFileStore();
   const { toast } = useToast();
-
-  const handleSelectAllAuditoria = () => {
-    const auditoriaReports = reports.filter(r => r.type.startsWith('auditoria_'));
-    const allSelected = auditoriaReports.every(r => r.enabled);
-    toggleAllAuditoria(!allSelected);
-  };
-
-  const handleSelectAllGroup = (groupTypes: ReportType[]) => {
-    const groupReports = reports.filter(r => groupTypes.includes(r.type));
-    const allSelected = groupReports.every(r => r.enabled);
-    groupReports.forEach(r => {
-      if (allSelected && r.enabled) toggleReport(r.type);
-      if (!allSelected && !r.enabled) toggleReport(r.type);
-    });
-  };
 
   const handleGenerate = useCallback(async () => {
     const selectedReports = getSelectedReports();
@@ -254,22 +225,16 @@ export default function GeneralReportModal({
             </div>
           ) : (
             <>
-              {/*
-                Usar scroll nativo aqui (mais “descobrível” que o ScrollArea em telas pequenas)
-                para o usuário perceber que existem mais opções (ex: 7 etapas da Auditoria).
-              */}
               <div className="flex-1 max-h-[50vh] overflow-y-auto pr-4">
                 <Accordion 
                   type="multiple" 
-                  defaultValue={['herd', 'auditoria', 'analysis']}
+                  defaultValue={['herd', 'auditoria']}
                   className="w-full"
                 >
                   {REPORT_GROUPS.map(group => {
                     const groupReports = reports.filter(r => group.types.includes(r.type));
                     const selectedInGroup = groupReports.filter(r => r.enabled).length;
-                    const allSelected = groupReports.every(r => r.enabled);
                     const isAuditoria = group.id === 'auditoria';
-                    const isOther = group.id === 'analysis';
 
                     return (
                       <AccordionItem key={group.id} value={group.id} className="border rounded-lg mb-2 px-1">
@@ -277,11 +242,6 @@ export default function GeneralReportModal({
                           <div className="flex items-center gap-3 flex-1">
                             <div className="flex-1 min-w-0">
                               <div className="font-medium text-left">{group.title}</div>
-                              {isOther && (
-                                <div className="text-xs text-muted-foreground mt-0.5">
-                                  Projeções, Metas, Tendências, Nexus e Botijão
-                                </div>
-                              )}
                             </div>
                             {selectedInGroup > 0 && (
                               <Badge variant="default" className="text-xs">
@@ -291,23 +251,7 @@ export default function GeneralReportModal({
                           </div>
                         </AccordionTrigger>
                         <AccordionContent className="pt-2 pb-4 px-2">
-                          {/* Botão Selecionar Todos */}
-                          <div className="flex items-center justify-between pb-3 mb-3 border-b">
-                            <span className="text-sm text-muted-foreground">
-                              {isAuditoria ? 'Selecionar todas as etapas' : 'Selecionar todos'}
-                            </span>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => isAuditoria ? handleSelectAllAuditoria() : handleSelectAllGroup(group.types)}
-                            >
-                              {allSelected ? 'Desmarcar Todos' : 'Marcar Todos'}
-                            </Button>
-                          </div>
-                          
-                          {/* Lista de relatórios individuais */}
                           <div className="space-y-1">
-                            {/* Dica visual para auditoria em telas pequenas */}
                             {isAuditoria && groupReports.length > 3 && (
                               <div className="text-xs text-muted-foreground pb-1">
                                 Role para ver todas as 7 etapas.
@@ -439,7 +383,6 @@ export default function GeneralReportModal({
       {showRenderer && (
         <div
           ref={containerRef}
-          // Importante: NÃO usar visibility/opacity aqui, senão o html2canvas captura em branco.
           className="fixed left-[-9999px] top-0 w-[1200px] bg-background"
           style={{ pointerEvents: 'none' }}
         >
