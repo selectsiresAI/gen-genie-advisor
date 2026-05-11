@@ -96,7 +96,6 @@ export default function GeneralReportModal({
     progress,
     progressMessage,
     toggleReport,
-    toggleAllAuditoria,
     updateConfig,
     setProgress,
     setGenerating,
@@ -104,26 +103,6 @@ export default function GeneralReportModal({
     getEstimatedPages,
     reset,
   } = useGeneralReport();
-
-  const [showRenderer, setShowRenderer] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { addReport } = useFileStore();
-  const { toast } = useToast();
-
-  const handleSelectAllAuditoria = () => {
-    const auditoriaReports = reports.filter(r => r.type.startsWith('auditoria_'));
-    const allSelected = auditoriaReports.every(r => r.enabled);
-    toggleAllAuditoria(!allSelected);
-  };
-
-  const handleSelectAllGroup = (groupTypes: ReportType[]) => {
-    const groupReports = reports.filter(r => groupTypes.includes(r.type));
-    const allSelected = groupReports.every(r => r.enabled);
-    groupReports.forEach(r => {
-      if (allSelected && r.enabled) toggleReport(r.type);
-      if (!allSelected && !r.enabled) toggleReport(r.type);
-    });
-  };
 
   const handleGenerate = useCallback(async () => {
     const selectedReports = getSelectedReports();
