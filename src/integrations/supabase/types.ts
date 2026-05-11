@@ -3973,6 +3973,7 @@ export type Database = {
       }
       dmetaphone: { Args: { "": string }; Returns: string }
       dmetaphone_alt: { Args: { "": string }; Returns: string }
+      expand_naab_query: { Args: { q: string }; Returns: string }
       females_public_by_farm: {
         Args: { farm_uuid: string }
         Returns: {
@@ -4072,7 +4073,77 @@ export type Database = {
         Args: { profile_index: number }
         Returns: string
       }
-      get_bull_by_naab: { Args: { naab: string }; Returns: Json }
+      get_bull_by_naab: {
+        Args: { naab: string }
+        Returns: {
+          beta_casein: string
+          birth_date: string
+          bull_id: string
+          bwc: number
+          ccr: number
+          cfp: number
+          cm_dollar: number
+          code: string
+          company: string
+          da: number
+          dce: number
+          dfm: number
+          dpr: number
+          dsb: number
+          f_sav: number
+          fi: number
+          flc: number
+          fls: number
+          fm_dollar: number
+          found: boolean
+          fta: number
+          ftl: number
+          ftp: number
+          fua: number
+          gfi: number
+          gm_dollar: number
+          h_liv: number
+          hcr: number
+          hhp_dollar: number
+          kappa_casein: string
+          ket: number
+          liv: number
+          mast: number
+          met: number
+          mf: number
+          mgs_naab: string
+          mmgs_naab: string
+          name: string
+          nm_dollar: number
+          pl: number
+          ptaf: number
+          ptaf_pct: number
+          ptam: number
+          ptap: number
+          ptap_pct: number
+          ptat: number
+          registration: string
+          rfi: number
+          rlr: number
+          rls: number
+          rp: number
+          rtp: number
+          rua: number
+          ruh: number
+          ruw: number
+          rw: number
+          sce: number
+          scs: number
+          sire_naab: string
+          ssb: number
+          sta: number
+          str: number
+          tpi: number
+          ucl: number
+          udc: number
+          udp: number
+        }[]
+      }
       get_bulls_by_naab_list: {
         Args: { naabs: string[] }
         Returns: {
@@ -4398,25 +4469,15 @@ export type Database = {
           trait_value: number
         }[]
       }
-      nx3_bulls_lookup:
-        | {
-            Args: { p_limit?: number; p_query: string; p_trait: string }
-            Returns: {
-              code: string
-              id: string
-              name: string
-              trait_value: number
-            }[]
-          }
-        | {
-            Args: { p_query: string; p_trait: string }
-            Returns: {
-              code: string
-              id: string
-              name: string
-              trait_value: number
-            }[]
-          }
+      nx3_bulls_lookup: {
+        Args: { p_limit?: number; p_query: string; p_trait: string }
+        Returns: {
+          code: string
+          id: string
+          name: string
+          trait_value: number
+        }[]
+      }
       nx3_list_pta_traits: {
         Args: never
         Returns: {
@@ -4537,7 +4598,73 @@ export type Database = {
       }
       search_bulls: {
         Args: { limit_count?: number; q: string }
-        Returns: Json[]
+        Returns: {
+          beta_casein: string
+          birth_date: string
+          bull_id: string
+          bwc: number
+          ccr: number
+          cfp: number
+          cm_dollar: number
+          code: string
+          company: string
+          da: number
+          dce: number
+          dfm: number
+          dpr: number
+          dsb: number
+          f_sav: number
+          fi: number
+          flc: number
+          fls: number
+          fm_dollar: number
+          fta: number
+          ftl: number
+          ftp: number
+          fua: number
+          gfi: number
+          gm_dollar: number
+          h_liv: number
+          hcr: number
+          hhp_dollar: number
+          kappa_casein: string
+          ket: number
+          liv: number
+          mast: number
+          met: number
+          mf: number
+          mgs_naab: string
+          mmgs_naab: string
+          name: string
+          nm_dollar: number
+          pl: number
+          ptaf: number
+          ptaf_pct: number
+          ptam: number
+          ptap: number
+          ptap_pct: number
+          ptat: number
+          registration: string
+          rfi: number
+          rlr: number
+          rls: number
+          rp: number
+          rtp: number
+          rua: number
+          ruh: number
+          ruw: number
+          rw: number
+          sce: number
+          scs: number
+          sire_naab: string
+          ssb: number
+          sta: number
+          str: number
+          tpi: number
+          ucl: number
+          udc: number
+          udp: number
+        }[]
       }
       set_default_farm: {
         Args: { farm_uuid: string }
