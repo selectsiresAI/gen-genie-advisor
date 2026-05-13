@@ -617,13 +617,41 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
     // Buscar todos os touros únicos em paralelo
     await resolveBulls(Array.from(uniqueNaabs));
 
+    // Pré-carregar touros placeholder para MGS/MGGS ausentes
+    const [mgsPlaceholder, mggsPlaceholder] = await Promise.all([
+      getBullByNaab(MGS_PLACEHOLDER_NAAB).then(mapBullRecord).catch(() => null),
+      getBullByNaab(MGGS_PLACEHOLDER_NAAB).then(mapBullRecord).catch(() => null),
+    ]);
+
     // Agora processar as linhas usando o cache
     for (const row of normalizedRows) {
       const sire = row.fieldErrors.sire ? null : (bullCache.get(row.naabPai) ?? null);
-      const mgs = row.fieldErrors.mgs ? null : (bullCache.get(row.naabAvoMaterno) ?? null);
-      const mmgs = row.fieldErrors.mmgs ? null : (bullCache.get(row.naabBisavoMaterno) ?? null);
+
+      // MGS: se NAAB foi informado, usa o cache; se em branco, usa placeholder 2020
+      let mgs: BullSummary | null;
+      let usedMgsPlaceholder = false;
+      if (row.naabAvoMaterno) {
+        mgs = bullCache.get(row.naabAvoMaterno) ?? null;
+      } else {
+        mgs = mgsPlaceholder;
+        usedMgsPlaceholder = Boolean(mgsPlaceholder);
+      }
+
+      // MGGS: se NAAB foi informado, usa o cache; se em branco, usa placeholder 2017
+      let mmgs: BullSummary | null;
+      let usedMmgsPlaceholder = false;
+      if (row.naabBisavoMaterno) {
+        mmgs = bullCache.get(row.naabBisavoMaterno) ?? null;
+      } else {
+        mmgs = mggsPlaceholder;
+        usedMmgsPlaceholder = Boolean(mggsPlaceholder);
+      }
 
       row.bulls = { sire, mgs, mmgs };
+      row.usedPlaceholder = {
+        mgs: usedMgsPlaceholder,
+        mmgs: usedMmgsPlaceholder,
+      };
 
       if (row.naabPai && !sire) {
         row.fieldErrors.sire = t('nexus2.error.sireNotFound');
