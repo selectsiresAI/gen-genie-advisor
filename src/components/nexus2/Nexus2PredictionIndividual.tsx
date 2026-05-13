@@ -18,6 +18,8 @@ import {
   formatBullValue,
   formatPredictionValue,
   mapBullRecord,
+  MGS_PLACEHOLDER_NAAB,
+  MGGS_PLACEHOLDER_NAAB,
   type PredictionResult
 } from '@/services/prediction.service';
 
