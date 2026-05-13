@@ -372,6 +372,16 @@ const Nexus2PredictionIndividual: React.FC = () => {
       t('nexus2.error.mmgsNotFound')
     );
 
+  const fetchPlaceholder = async (naab: string): Promise<BullSummary | null> => {
+    try {
+      const record = await getBullByNaab(naab);
+      return mapBullRecord(record);
+    } catch (error) {
+      console.error(`Erro ao buscar touro placeholder ${naab}:`, error);
+      return null;
+    }
+  };
+
   const handleCalculate = async () => {
     setIsCalculating(true);
 
@@ -381,12 +391,29 @@ const Nexus2PredictionIndividual: React.FC = () => {
         return;
       }
 
-      const mgs = mgsField.selected ?? (await confirmMgs());
+      // MGS: se em branco, usa placeholder 007HO00001 (média 2020).
+      // Se preenchido, exige confirmação válida.
+      let mgs: BullSummary | null;
+      if (mgsField.selected) {
+        mgs = mgsField.selected;
+      } else if (!mgsField.inputValue.trim()) {
+        mgs = await fetchPlaceholder(MGS_PLACEHOLDER_NAAB);
+      } else {
+        mgs = await confirmMgs();
+      }
       if (!mgs) {
         return;
       }
 
-      const mmgs = mmgsField.selected ?? (await confirmMmgs());
+      // MGGS: se em branco, usa placeholder 007HO00002 (média 2017).
+      let mmgs: BullSummary | null;
+      if (mmgsField.selected) {
+        mmgs = mmgsField.selected;
+      } else if (!mmgsField.inputValue.trim()) {
+        mmgs = await fetchPlaceholder(MGGS_PLACEHOLDER_NAAB);
+      } else {
+        mmgs = await confirmMmgs();
+      }
       if (!mmgs) {
         return;
       }
