@@ -6,6 +6,11 @@ export const GENETIC_WEIGHTS = {
   mmgs: 0.15
 } as const;
 
+// Touros placeholder usados no Nexus 2 quando MGS/MGGS estão em branco.
+// PTAs são calculadas como média geracional via função SQL recalc_placeholder_bulls().
+export const MGS_PLACEHOLDER_NAAB = '007HO00001';  // média 2020
+export const MGGS_PLACEHOLDER_NAAB = '007HO00002'; // média 2017
+
 const FEMALE_PTA_LABELS: Record<string, string> = {
   hhp_dollar: 'HHP$®',
   tpi: 'TPI',
