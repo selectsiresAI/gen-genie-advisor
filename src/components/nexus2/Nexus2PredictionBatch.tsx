@@ -520,13 +520,8 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
         fieldErrors.sire = t('nexus2.error.requiredSire');
       }
 
-      if (!naabAvoMaterno) {
-        fieldErrors.mgs = t('nexus2.error.requiredMgs');
-      }
-
-      if (!naabBisavoMaterno) {
-        fieldErrors.mmgs = t('nexus2.error.requiredMmgs');
-      }
+      // MGS e MGGS em branco são permitidos: serão substituídos pelos touros
+      // placeholder 007HO00001 (média 2020) e 007HO00002 (média 2017).
 
       return {
         lineNumber,
