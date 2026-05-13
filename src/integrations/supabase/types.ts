@@ -4494,6 +4494,7 @@ export type Database = {
       nx3_normalize_trait: { Args: { p_trait: string }; Returns: string }
       parse_flexible_date: { Args: { date_str: string }; Returns: string }
       parse_staging_date: { Args: { date_str: string }; Returns: string }
+      recalc_placeholder_bulls: { Args: never; Returns: undefined }
       remove_bull_from_farm: {
         Args: { bull_uuid: string; farm_uuid: string }
         Returns: {
