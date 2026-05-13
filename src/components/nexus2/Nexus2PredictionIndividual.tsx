@@ -441,9 +441,10 @@ const Nexus2PredictionIndividual: React.FC = () => {
     setPrediction(null);
   };
 
+  // Sire é obrigatório; MGS e MGGS podem ficar em branco (placeholders preenchem).
   const canCalculate = useMemo(
-    () => Boolean(sireField.selected && mgsField.selected && mmgsField.selected),
-    [sireField.selected, mgsField.selected, mmgsField.selected]
+    () => Boolean(sireField.selected),
+    [sireField.selected]
   );
 
   const selectedBulls = useMemo(
