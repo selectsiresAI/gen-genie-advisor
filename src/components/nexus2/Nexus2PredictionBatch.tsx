@@ -97,6 +97,10 @@ interface BatchRow {
     mgs: BullSummary | null;
     mmgs: BullSummary | null;
   };
+  usedPlaceholder?: {
+    mgs?: boolean;
+    mmgs?: boolean;
+  };
   fieldErrors: {
     sire?: string | null;
     mgs?: string | null;
