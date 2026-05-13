@@ -16,6 +16,8 @@ import {
   calculatePedigreePrediction,
   formatPredictionValue,
   mapBullRecord,
+  MGS_PLACEHOLDER_NAAB,
+  MGGS_PLACEHOLDER_NAAB,
   type PredictionResult,
   type PredictionTraitKey
 } from '@/services/prediction.service';
