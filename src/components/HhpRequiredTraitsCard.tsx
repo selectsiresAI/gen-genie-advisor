@@ -88,7 +88,7 @@ export function HhpRequiredTraitsCard({ inline = false, className = "" }: HhpReq
           Traits obrigatórios para cálculo do HHP$
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Para calcular o índice <strong>HHP$</strong> (Holistic Health Profit), seu arquivo deve
+          Para calcular o índice <strong>HHP$</strong>, seu arquivo deve
           conter as <strong>15 traits</strong> abaixo. Traits ausentes resultam em HHP$ = vazio.
         </p>
       </CardHeader>
