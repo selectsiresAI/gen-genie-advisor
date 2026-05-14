@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, FileText } from "lucide-react";
 import ImportFemalesUploader from './ImportFemalesUploader';
+import { HhpRequiredTraitsCard } from './HhpRequiredTraitsCard';
 
 interface FemaleUploadModalProps {
   isOpen: boolean;
@@ -75,6 +76,8 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
               O arquivo pode conter colunas em ordem diferente. Campos como id, farm_id, ptas, created_at e updated_at são ignorados (gerenciados automaticamente pelo sistema).
             </AlertDescription>
           </Alert>
+
+          <HhpRequiredTraitsCard inline className="mb-2" />
 
           <ImportFemalesUploader farmId={farmId} onSuccess={handleSuccess} />
 

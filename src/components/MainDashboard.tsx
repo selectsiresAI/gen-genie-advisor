@@ -39,6 +39,7 @@ import { LanguageSelector } from '@/components/LanguageSelector';
 import { useTranslation } from '@/hooks/useTranslation';
 import UserSupportTickets from '@/components/support/UserSupportTickets';
 import { ShareFarmDialog } from '@/components/ShareFarmDialog';
+import { HhpRequiredTraitsCard } from '@/components/HhpRequiredTraitsCard';
 
 interface MainDashboardProps {
   user: User;
@@ -777,6 +778,9 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
               {t("farm.welcomeMessage")}
             </p>
           </div>
+
+          {/* HHP$ Required Traits Card */}
+          <HhpRequiredTraitsCard />
 
           {/* Farms Section */}
           <div className="space-y-6" data-tour="home:fazendas">

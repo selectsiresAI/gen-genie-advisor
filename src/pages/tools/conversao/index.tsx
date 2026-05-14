@@ -14,6 +14,7 @@ import { LegendBankSummary } from "./components/LegendBankSummary";
 import { DetectionTable, type MappingRow, type MappingMethod } from "./components/DetectionTable";
 import { HelpButton } from "@/components/help/HelpButton";
 import { HelpHint } from "@/components/help/HelpHint";
+import { HhpRequiredTraitsCard } from "@/components/HhpRequiredTraitsCard";
 
 interface ParsedWorkbook {
   headers: string[];
@@ -458,6 +459,8 @@ const ConversaoPage: React.FC = () => {
           colunas originais preservadas.
         </p>
       </div>
+
+      <HhpRequiredTraitsCard inline />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <FileUploadCard
