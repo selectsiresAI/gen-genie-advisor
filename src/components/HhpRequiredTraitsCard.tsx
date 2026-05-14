@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, FlaskConical, CheckCircle2, AlertTriangle } from "lucide-react";
+import { X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,11 +25,11 @@ const requiredTraits = [
 ] as const;
 
 const categoryColors: Record<string, string> = {
-  production: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
-  health: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
-  fertility: "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300",
-  efficiency: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
-  type: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
+  production: "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200",
+  health: "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200",
+  fertility: "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200",
+  efficiency: "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200",
+  type: "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200",
 };
 
 const categoryLabels: Record<string, string> = {
@@ -62,13 +62,18 @@ export function HhpRequiredTraitsCard({ inline = false, className = "" }: HhpReq
     }
   };
 
-  const grouped = requiredTraits.reduce<Record<string, typeof requiredTraits[number][]>>((acc, trait) => {
-    (acc[trait.category] ??= []).push(trait);
-    return acc;
-  }, {});
+  const grouped = requiredTraits.reduce<Record<string, typeof requiredTraits[number][]>>(
+    (acc, trait) => {
+      (acc[trait.category] ??= []).push(trait);
+      return acc;
+    },
+    {},
+  );
 
   return (
-    <Card className={`relative border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20 ${className}`}>
+    <Card
+      className={`relative border-border bg-card ${className}`}
+    >
       <Button
         variant="ghost"
         size="sm"
@@ -79,12 +84,12 @@ export function HhpRequiredTraitsCard({ inline = false, className = "" }: HhpReq
       </Button>
 
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <FlaskConical className="h-5 w-5 text-amber-600" />
+        <CardTitle className="text-base font-semibold">
           Traits obrigatórios para cálculo do HHP$
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Para calcular o índice <strong>HHP$</strong> (Holistic Health Profit), seu arquivo deve conter as <strong>15 traits</strong> abaixo. Traits ausentes resultam em HHP$ = vazio.
+          Para calcular o índice <strong>HHP$</strong> (Holistic Health Profit), seu arquivo deve
+          conter as <strong>15 traits</strong> abaixo. Traits ausentes resultam em HHP$ = vazio.
         </p>
       </CardHeader>
 
@@ -109,12 +114,12 @@ export function HhpRequiredTraitsCard({ inline = false, className = "" }: HhpReq
           </div>
         ))}
 
-        <div className="mt-2 flex items-start gap-2 rounded-md bg-white/60 dark:bg-white/5 p-3 text-xs text-muted-foreground">
-          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" />
-          <div>
-            <p><strong>Dica:</strong> No template CSV disponibilizado, todas as 15 colunas já estão presentes.
-            Use os nomes exatos das colunas (ex: <code>PTAF</code>, <code>SCS</code>, <code>RTP</code>) para mapeamento automático.</p>
-          </div>
+        <div className="mt-2 rounded-md bg-muted p-3 text-xs text-muted-foreground">
+          <p>
+            <strong>Dica:</strong> No template CSV disponibilizado, todas as 15 colunas já estão
+            presentes. Use os nomes exatos das colunas (ex: <code>PTAF</code>, <code>SCS</code>,{" "}
+            <code>RTP</code>) para mapeamento automático.
+          </p>
         </div>
       </CardContent>
     </Card>
