@@ -73,10 +73,14 @@ export default function Nexus3Groups({ onBack, selectedFarmId }: Nexus3GroupsPro
   const chartRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
 
-  // 1) Resolver farmId: URL ?farmId=... -> profiles.default_farm_id
+  // 1) Resolver farmId: prop -> URL ?farmId=... -> profiles.default_farm_id
   useEffect(() => {
     (async () => {
       try {
+        if (selectedFarmId) {
+          setFarmId(selectedFarmId);
+          return;
+        }
         const url = new URL(window.location.href);
         const qFarm = url.searchParams.get("farmId");
         if (qFarm) return setFarmId(qFarm);
@@ -97,7 +101,7 @@ export default function Nexus3Groups({ onBack, selectedFarmId }: Nexus3GroupsPro
         setErr(e.message || String(e));
       }
     })();
-  }, [supabase]);
+  }, [supabase, selectedFarmId]);
 
   // 2) Carregar lista de traits
   useEffect(() => {
