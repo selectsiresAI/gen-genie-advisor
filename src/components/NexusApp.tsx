@@ -31,7 +31,7 @@ const NexusApp: React.FC<NexusAppProps> = ({ selectedFarmId, defaultFarmId }) =>
       ) : currentView === 'nexus2' ? (
         <Nexus2PedigreePrediction onBack={handleBack} selectedFarmId={selectedFarmId} />
       ) : currentView === 'nexus3' ? (
-        <Nexus3Groups />
+        <Nexus3Groups onBack={handleBack} selectedFarmId={selectedFarmId} />
       ) : (
         <NexusEntryPage onSelectMethod={handleMethodSelection} />
       )}
