@@ -49,7 +49,12 @@ const useSupabase = (): SupabaseClient => {
   return client;
 };
 
-export default function Nexus3Groups() {
+interface Nexus3GroupsProps {
+  onBack?: () => void;
+  selectedFarmId?: string | null;
+}
+
+export default function Nexus3Groups({ onBack, selectedFarmId }: Nexus3GroupsProps = {}) {
   const supabase = useSupabase();
 
   const [farmId, setFarmId] = useState<string | null>(null);
