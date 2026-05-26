@@ -49,7 +49,12 @@ const useSupabase = (): SupabaseClient => {
   return client;
 };
 
-export default function Nexus3Groups() {
+interface Nexus3GroupsProps {
+  onBack?: () => void;
+  selectedFarmId?: string | null;
+}
+
+export default function Nexus3Groups({ onBack, selectedFarmId }: Nexus3GroupsProps = {}) {
   const supabase = useSupabase();
 
   const [farmId, setFarmId] = useState<string | null>(null);
@@ -68,10 +73,14 @@ export default function Nexus3Groups() {
   const chartRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
 
-  // 1) Resolver farmId: URL ?farmId=... -> profiles.default_farm_id
+  // 1) Resolver farmId: prop -> URL ?farmId=... -> profiles.default_farm_id
   useEffect(() => {
     (async () => {
       try {
+        if (selectedFarmId) {
+          setFarmId(selectedFarmId);
+          return;
+        }
         const url = new URL(window.location.href);
         const qFarm = url.searchParams.get("farmId");
         if (qFarm) return setFarmId(qFarm);
@@ -92,7 +101,7 @@ export default function Nexus3Groups() {
         setErr(e.message || String(e));
       }
     })();
-  }, [supabase]);
+  }, [supabase, selectedFarmId]);
 
   // 2) Carregar lista de traits
   useEffect(() => {
@@ -193,11 +202,6 @@ export default function Nexus3Groups() {
   };
   const removeBull = (id: string) => setChosen(chosen.filter((b) => b.id !== id));
 
-  // eslint-disable-next-line prefer-rest-params
-  const maybeProps = (arguments as unknown as IArguments)[0] as
-    | { onBack?: () => void }
-    | undefined;
-  const onBack = maybeProps?.onBack;
   const handleBack = () => {
     if (typeof onBack === "function") {
       onBack();
