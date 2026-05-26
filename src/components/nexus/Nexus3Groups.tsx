@@ -198,11 +198,6 @@ export default function Nexus3Groups({ onBack, selectedFarmId }: Nexus3GroupsPro
   };
   const removeBull = (id: string) => setChosen(chosen.filter((b) => b.id !== id));
 
-  // eslint-disable-next-line prefer-rest-params
-  const maybeProps = (arguments as unknown as IArguments)[0] as
-    | { onBack?: () => void }
-    | undefined;
-  const onBack = maybeProps?.onBack;
   const handleBack = () => {
     if (typeof onBack === "function") {
       onBack();
