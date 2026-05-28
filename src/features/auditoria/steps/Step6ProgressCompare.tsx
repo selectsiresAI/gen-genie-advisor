@@ -346,12 +346,15 @@ function Step6ProgressCompareContent() {
       ],
     };
 
-    // Normalização 0–100 por eixo
+    // Normalização 0–100 por eixo preservando sinal (valores maiores = maior raio)
     const radar = cTraits.map((k) => {
       const a = A[k] ?? 0;
       const b = B[k] ?? 0;
-      const maxK = Math.max(1, Math.abs(a), Math.abs(b));
-      const toPct = (v: number) => (Math.abs(v) / maxK) * 100;
+      // Inclui 0 como referência para que negativos fiquem perto do centro e positivos longe
+      const min = Math.min(a, b, 0);
+      const max = Math.max(a, b, 0);
+      const range = max - min;
+      const toPct = (v: number) => (range === 0 ? 0 : ((v - min) / range) * 100);
 
       return {
         trait: (PTA_LABELS[k] ?? k).toUpperCase(),
@@ -365,6 +368,7 @@ function Step6ProgressCompareContent() {
         rawB: B[k] ?? null,
       };
     });
+
 
     return { table, radar, presentPTAs };
   }, [meansByCategory, groupA, groupB, tableTraits, chartTraits, presentPTAs]);
