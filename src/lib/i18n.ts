@@ -2708,6 +2708,7 @@ type TranslationKey = keyof typeof translations[typeof defaultLocale];
 
 type TranslationOptions = {
   count?: number;
+  [key: string]: string | number | undefined;
 };
 
 // Locale management
