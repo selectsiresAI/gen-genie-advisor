@@ -125,7 +125,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
         [t('herd.multiparous')]: categoryCounts.multiparas
       };
       setSelectedHerdId(farm.farm_id);
-      setDashboardCounts(dashboardCounts);
+      setDashboardCounts(dashboardCounts as any);
     }
   }, [categoryCounts, farm.farm_id, setSelectedHerdId, setDashboardCounts]);
   const loadFemales = useCallback(async (showSpinner = true) => {
