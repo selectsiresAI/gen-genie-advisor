@@ -2753,7 +2753,5 @@ export function t(
 
   return output;
 }
-  return template;
-}
 
 export type { TranslationKey };
