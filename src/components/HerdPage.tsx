@@ -330,7 +330,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
     // Importar XLSX para exportação
     import('xlsx').then(({ utils, writeFile }) => {
       import('@/lib/excel-date-formatter').then(({ autoFormatDateColumns }) => {
-        const isEn = locale === 'en';
+        const isEn = locale === 'en-US';
         const isEs = locale === 'es';
         const headers = [isEs ? 'Finca' : isEn ? 'Farm' : 'Fazenda', isEs ? 'Nombre' : isEn ? 'Name' : 'Nome', isEs ? 'Identificador' : isEn ? 'Identifier' : 'Identificador', isEs ? 'ID CDCB' : isEn ? 'CDCB ID' : 'ID CDCB', isEs ? 'Fecha Nacimiento' : isEn ? 'Birth Date' : 'Data Nascimento', isEs ? 'Orden de Parto' : isEn ? 'Parity Order' : 'Ordem de Parto', isEs ? 'Categoría' : isEn ? 'Category' : 'Categoria', isEs ? 'Fuente' : isEn ? 'Source' : 'Fonte', isEs ? 'Padre NAAB' : isEn ? 'Sire NAAB' : 'Pai NAAB', isEs ? 'Abuelo Materno NAAB' : isEn ? 'MGS NAAB' : 'Avô Materno NAAB', isEs ? 'Bisabuelo Materno NAAB' : isEn ? 'MMGS NAAB' : 'BisAvô Materno NAAB', 'HHP$', 'TPI', 'NM$', 'CM$', 'FM$', 'GM$', 'F SAV', 'PTAM', 'CFP', 'PTAF', 'PTAF%', 'PTAP', 'PTAP%', 'PL', 'DPR', 'LIV', 'SCS', 'MAST', 'MET', 'RP', 'DA', 'KET', 'MF', 'PTAT', 'UDC', 'FLC', 'SCE', 'DCE', 'SSB', 'DSB', 'H LIV', 'CCR', 'HCR', 'FI', 'GL', 'EFC', 'BWC', 'STA', 'STR', 'DFM', 'RUA', 'RLS', 'RTP', 'FTL', 'RW', 'RLR', 'FTA', 'FLS', 'FUA', 'RUH', 'RUW', 'UCL', 'UDP', 'FTP', 'RFI', 'Beta-Casein', 'Kappa-Casein', 'GFI', isEs ? 'Creado En' : isEn ? 'Created At' : 'Criado Em', isEs ? 'Actualizado En' : isEn ? 'Updated At' : 'Atualizado Em'];
         
