@@ -478,7 +478,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
     setImporting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error(locale === 'es' ? 'Usuario no autenticado' : locale === 'en' ? 'User not authenticated' : 'Usuário não autenticado');
+      if (!user) throw new Error(locale === 'es' ? 'Usuario no autenticado' : locale === 'en-US' ? 'User not authenticated' : 'Usuário não autenticado');
       const session = await supabase.auth.getSession();
       const accessToken = session.data.session?.access_token;
       const headers = { authorization: `Bearer ${accessToken}`, apikey: supabaseAnonKey };
@@ -564,7 +564,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
     if (rankedBulls.length === 0) return;
     import('xlsx').then(({ utils, writeFile }) => {
       import('@/lib/excel-date-formatter').then(({ autoFormatDateColumns }) => {
-        const isEn = locale === 'en';
+        const isEn = locale === 'en-US';
         const isEs = locale === 'es';
         const headers = ['NAAB', isEs ? 'Nombre' : isEn ? 'Name' : 'Nome', isEs ? 'Registro' : isEn ? 'Registration' : 'Registro', isEs ? 'Empresa' : isEn ? 'Company' : 'Empresa', isEs ? 'Fecha Nac.' : isEn ? 'Birth Date' : 'Data Nasc.', isEs ? 'Padre NAAB' : isEn ? 'Sire NAAB' : 'Pai NAAB', isEs ? 'Abuelo Materno' : isEn ? 'Maternal Grandsire' : 'Avô Materno', 'Score', 'HHP$', 'TPI', 'NM$', 'PTAM', 'CFP'];
         const dataRows = rankedBulls.map(bull => [

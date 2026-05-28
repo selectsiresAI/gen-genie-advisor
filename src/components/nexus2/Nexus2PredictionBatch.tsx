@@ -151,7 +151,7 @@ const normalizeBirthDate = (dateStr: string): string | null => {
   return dateStr;
 };
 
-const buildResultExportRows = (rows: BatchRow[], isEn = false) =>
+const buildResultExportRows = (rows: BatchRow[], isEn = false, isEs = false) =>
   rows
     .filter((row) => row.status === 'valid' && row.prediction)
     .map((row) => {
@@ -795,7 +795,7 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
   };
 
   const exportResults = (format: 'xlsx' | 'csv') => {
-    const data = buildResultExportRows(rows, isEn);
+    const data = buildResultExportRows(rows, isEn, isEs);
 
     if (!data.length) {
       toast({

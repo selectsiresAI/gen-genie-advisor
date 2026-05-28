@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Locale } from "@/lib/i18n";
 
 export interface GlossaryTerm {
   id: string;
@@ -7,6 +8,7 @@ export interface GlossaryTerm {
   category: string;
   pt_br: string;
   en_us: string | null;
+  es: string | null;
   description: string | null;
   context: string | null;
   is_translatable: boolean;
@@ -36,7 +38,7 @@ export function useGlossary() {
     queryClient.invalidateQueries({ queryKey: ['technical_glossary'] });
   };
 
-  const getTerm = (termKey: string, locale: 'pt-BR' | 'en-US'): string | null => {
+  const getTerm = (termKey: string, locale: Locale): string | null => {
     if (!terms) return null;
     
     const term = terms.find(t => t.term_key === termKey);

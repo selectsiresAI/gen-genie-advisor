@@ -2708,6 +2708,7 @@ type TranslationKey = keyof typeof translations[typeof defaultLocale];
 
 type TranslationOptions = {
   count?: number;
+  [key: string]: string | number | undefined;
 };
 
 // Locale management
@@ -2737,17 +2738,20 @@ export function t(
 ): string {
   const activeLocale = locale || getLocale();
   const template = translations[activeLocale]?.[key] ?? translations[defaultLocale][key] ?? key;
+  let output: string = template as string;
 
   if (options.count !== undefined) {
     const formattedCount = new Intl.NumberFormat(activeLocale).format(options.count);
-    const pluralSuffix = activeLocale === 'pt-BR' ? (options.count === 1 ? "" : "s") : (options.count === 1 ? "" : "s");
-
-    return template
-      .replace("{{count}}", formattedCount)
-      .replace("{{plural}}", pluralSuffix);
+    const pluralSuffix = options.count === 1 ? "" : "s";
+    output = output.replace("{{count}}", formattedCount).replace("{{plural}}", pluralSuffix);
   }
 
-  return template;
+  for (const [k, v] of Object.entries(options)) {
+    if (k === 'count' || v === undefined) continue;
+    output = output.replace(new RegExp(`{{\\s*${k}\\s*}}`, 'g'), String(v));
+  }
+
+  return output;
 }
 
 export type { TranslationKey };
