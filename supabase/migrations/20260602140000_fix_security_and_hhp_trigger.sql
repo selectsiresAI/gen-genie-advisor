@@ -157,7 +157,7 @@ CREATE TRIGGER trg_calculate_hhp_dollar_females
   EXECUTE FUNCTION public.trg_calculate_hhp_dollar_females();
 
 -- 4. Missing performance indexes
-CREATE INDEX IF NOT EXISTS idx_farm_tanks_farm_id ON public.farm_tanks (farm_id);
+CREATE INDEX IF NOT EXISTS idx_farm_tanks_client_id ON public.farm_tanks (client_id);
 CREATE INDEX IF NOT EXISTS idx_semen_movements_tank_id ON public.semen_movements (tank_id);
 CREATE INDEX IF NOT EXISTS idx_semen_movements_date ON public.semen_movements (movement_date DESC);
 CREATE INDEX IF NOT EXISTS idx_profiles_full_name ON public.profiles (full_name);
