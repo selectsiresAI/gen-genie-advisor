@@ -47,9 +47,9 @@ async function fetchBullsByNaabsMultiColumn(
   for (const chunk of chunks) {
     try {
       // try multi-column exact matches first
-      const qSire = supabase.from('bulls').select('id, code, name, sire_naab, mgs_naab, mmgs_naab, code_normalized').in('sire_naab', chunk);
-      const qMgs = supabase.from('bulls').select('id, code, name, sire_naab, mgs_naab, mmgs_naab, code_normalized').in('mgs_naab', chunk);
-      const qMmgs = supabase.from('bulls').select('id, code, name, sire_naab, mgs_naab, mmgs_naab, code_normalized').in('mmgs_naab', chunk);
+      const qSire = supabase.from('bulls').select('id, naab_code, name, sire_naab, mgs_naab, mmgs_naab, code_normalized').in('sire_naab', chunk);
+      const qMgs = supabase.from('bulls').select('id, naab_code, name, sire_naab, mgs_naab, mmgs_naab, code_normalized').in('mgs_naab', chunk);
+      const qMmgs = supabase.from('bulls').select('id, naab_code, name, sire_naab, mgs_naab, mmgs_naab, code_normalized').in('mmgs_naab', chunk);
 
       const [rS, rM, rMM] = await Promise.all([qSire, qMgs, qMmgs]);
 
@@ -73,8 +73,8 @@ async function fetchBullsByNaabsMultiColumn(
             const k = normalizeNaab(row.code_normalized);
             if (k && !resultMap.has(k)) resultMap.set(k, row);
           }
-          if (row.code) {
-            const k2 = normalizeNaab(row.code);
+          if (row.naab_code) {
+            const k2 = normalizeNaab(row.naab_code);
             if (k2 && !resultMap.has(k2)) resultMap.set(k2, row);
           }
         });
@@ -86,9 +86,9 @@ async function fetchBullsByNaabsMultiColumn(
         // attempt lookup by code_normalized or code
         const qCode = await supabase
           .from('bulls')
-          .select('id, code, name, sire_naab, mgs_naab, mmgs_naab, code_normalized')
+          .select('id, naab_code, name, sire_naab, mgs_naab, mmgs_naab, code_normalized')
           .in('code_normalized', unmatched)
-          .or(`code.in.(${unmatched.map(v => `"${v}"`).join(',')})`); // fallback to code
+          .or(`naab_code.in.(${unmatched.map(v => `"${v}"`).join(',')})`); // fallback to naab_code
         if (qCode.error) {
           // if .or fails due to syntax or RLS, just log and continue
           console.debug('[import] code fallback query error', qCode.error);
@@ -96,7 +96,7 @@ async function fetchBullsByNaabsMultiColumn(
           (qCode.data || []).forEach((row: any) => {
             const candidates = [
               normalizeNaab(row.code_normalized),
-              normalizeNaab(row.code),
+              normalizeNaab(row.naab_code),
               normalizeNaab(row.sire_naab),
               normalizeNaab(row.mgs_naab),
               normalizeNaab(row.mmgs_naab),

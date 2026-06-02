@@ -22,12 +22,12 @@ interface ParsedCSVRow {
 // Map completo de colunas do CSV para campos da tabela bulls
 const COLUMN_MAP: Record<string, string> = {
   // === IDENTIFICAÇÃO ===
-  'naab': 'code',
-  'naab code': 'code',
-  'naab_code': 'code',
-  'code': 'code',
-  'codigo': 'code',
-  'código': 'code',
+  'naab': 'naab_code',
+  'naab code': 'naab_code',
+  'naab_code': 'naab_code',
+  'code': 'naab_code',
+  'codigo': 'naab_code',
+  'código': 'naab_code',
   'name': 'name',
   'nome': 'name',
   'registration name': 'registration',
@@ -533,7 +533,7 @@ function parseCSV(text: string): { headers: string[]; rows: ParsedCSVRow[] } {
     });
     
     // Só adicionar row se tiver pelo menos code ou name
-    if (row.code || row.name) {
+    if (row.naab_code || row.name) {
       rows.push(row);
     }
   }
@@ -736,7 +736,7 @@ Deno.serve(async (req) => {
           console.log('🔍 First rawRow sample:', JSON.stringify(rawRow).substring(0, 400));
         }
         
-        const code = rawRow.code?.trim();
+        const code = (rawRow.naab_code || rawRow.code)?.trim();
         if (!code) {
           console.log('❌ Skipping row without code:', Object.keys(rawRow).slice(0, 10));
           invalid++;
@@ -745,7 +745,7 @@ Deno.serve(async (req) => {
         }
 
         const bullData: any = {
-          code: code,
+          naab_code: code,
           code_normalized: code.toUpperCase().replace(/[-\s]/g, '').replace(/^0+/, ''),
           name: rawRow.name || '',
           registration: rawRow.registration || null,
@@ -759,23 +759,32 @@ Deno.serve(async (req) => {
           pedigree: rawRow.pedigree || null,
         };
 
-        const ptaFields = [
-          'nm_dollar', 'tpi', 'hhp_dollar', 'ptam', 'ptaf', 'ptap',
-          'cm_dollar', 'fm_dollar', 'gm_dollar', 'f_sav', 'cfp',
-          'ptaf_pct', 'ptap_pct', 'pl', 'dpr', 'liv', 'scs',
-          'mast', 'met', 'rp', 'da', 'ket', 'mf', 'ptat', 'udc',
-          'flc', 'sce', 'dce', 'ssb', 'dsb', 'h_liv', 'ccr', 'hcr',
-          'fi', 'bwc', 'sta', 'str', 'dfm', 'rua', 'rls', 'rtp',
-          'ftl', 'rw', 'rlr', 'fta', 'fls', 'fua', 'ruh', 'ruw',
-          'ucl', 'udp', 'ftp', 'rfi', 'gfi', 'gl'
-        ];
+        // Map from COLUMN_MAP target names (rawRow keys) to actual DB column names
+        const batchPtaFieldMap: Record<string, string> = {
+          'nm_dollar': 'nm_dollar', 'tpi': 'tpi', 'hhp_dollar': 'hhp_dollar',
+          'ptam': 'pta_milk', 'ptaf': 'pta_fat', 'ptap': 'pta_protein',
+          'cm_dollar': 'cm_dollar', 'fm_dollar': 'fm_dollar', 'gm_dollar': 'gm_dollar',
+          'f_sav': 'f_sav', 'cfp': 'cfp',
+          'ptaf_pct': 'pta_fat_pct', 'ptap_pct': 'pta_protein_pct',
+          'pl': 'pta_pl', 'dpr': 'pta_dpr', 'liv': 'pta_livability', 'scs': 'pta_scs',
+          'mast': 'mast', 'met': 'met', 'rp': 'rp', 'da': 'da', 'ket': 'ket',
+          'mf': 'mf_num', 'ptat': 'pta_ptat', 'udc': 'pta_udc',
+          'flc': 'pta_flc', 'sce': 'pta_sce', 'dce': 'pta_sire_sce',
+          'ssb': 'ssb', 'dsb': 'dsb', 'h_liv': 'h_liv',
+          'ccr': 'pta_ccr', 'hcr': 'pta_hcr',
+          'fi': 'fi', 'bwc': 'bwc', 'sta': 'sta', 'str': 'str_num',
+          'dfm': 'dfm', 'rua': 'rua', 'rls': 'rls', 'rtp': 'rtp',
+          'ftl': 'ftl', 'rw': 'rw', 'rlr': 'rlr', 'fta': 'fta',
+          'fls': 'fls', 'fua': 'fua', 'ruh': 'ruh', 'ruw': 'ruw',
+          'ucl': 'ucl', 'udp': 'udp', 'ftp': 'ftp', 'rfi': 'rfi', 'gfi': 'gfi', 'gl': 'gl'
+        };
 
         let ptaCount = 0;
-        ptaFields.forEach(field => {
-          if (rawRow[field]) {
-            const value = parseFloat(rawRow[field]);
+        Object.entries(batchPtaFieldMap).forEach(([rawKey, dbCol]) => {
+          if (rawRow[rawKey]) {
+            const value = parseFloat(rawRow[rawKey]);
             if (!isNaN(value)) {
-              bullData[field] = value;
+              bullData[dbCol] = value;
               ptaCount++;
             }
           }
@@ -783,7 +792,7 @@ Deno.serve(async (req) => {
 
         // Log primeiro touro válido para debug
         if (bullsToUpsert.length === 0 && ptaCount > 0) {
-          console.log(`✅ First valid bull: ${bullData.code} - ${bullData.name} with ${ptaCount} PTAs`);
+          console.log(`✅ First valid bull: ${bullData.naab_code} - ${bullData.name} with ${ptaCount} PTAs`);
           console.log('Sample PTAs:', { 
             tpi: bullData.tpi, 
             nm_dollar: bullData.nm_dollar, 
@@ -799,30 +808,30 @@ Deno.serve(async (req) => {
       if (bullsToUpsert.length > 0) {
         console.log(`📤 Attempting to upsert ${bullsToUpsert.length} bulls...`);
         
-        // Remover duplicatas no batch baseado no code
+        // Remover duplicatas no batch baseado no naab_code
         const uniqueBulls = Array.from(
-          new Map(bullsToUpsert.map(b => [b.code, b])).values()
+          new Map(bullsToUpsert.map(b => [b.naab_code, b])).values()
         );
-        
+
         if (uniqueBulls.length < bullsToUpsert.length) {
           console.log(`⚠️ Removed ${bullsToUpsert.length - uniqueBulls.length} duplicate codes in batch`);
         }
-        
+
         // VERIFICAR QUAIS JÁ EXISTEM **ANTES** DO UPSERT
-        const codes = uniqueBulls.map(b => b.code);
+        const codes = uniqueBulls.map(b => b.naab_code);
         const { data: existingBulls } = await supabase
           .from('bulls')
-          .select('code')
-          .in('code', codes);
+          .select('naab_code')
+          .in('naab_code', codes);
 
-        const existingCodes = new Set(existingBulls?.map(b => b.code) || []);
+        const existingCodes = new Set(existingBulls?.map(b => b.naab_code) || []);
         console.log(`📊 Before upsert: ${existingCodes.size} codes already exist`);
-        
+
         const { data: upsertData, error: upsertError } = await supabase
           .from('bulls')
-          .upsert(uniqueBulls, { 
-            onConflict: 'code',
-            ignoreDuplicates: false 
+          .upsert(uniqueBulls, {
+            onConflict: 'naab_code',
+            ignoreDuplicates: false
           })
           .select('id');
 
@@ -950,7 +959,7 @@ Deno.serve(async (req) => {
         const rawRow = row.raw_row as ParsedCSVRow;
         
         // Validar se tem código mínimo
-        const code = rawRow.code?.trim();
+        const code = (rawRow.naab_code || rawRow.code)?.trim();
         if (!code) {
           invalid++;
           continue;
@@ -958,7 +967,7 @@ Deno.serve(async (req) => {
 
         // Preparar dados para bulls table
         const bullData: any = {
-          code: code,
+          naab_code: code,
           code_normalized: code.toUpperCase().replace(/[-\s]/g, '').replace(/^0+/, ''),
           name: rawRow.name || '',
           registration: rawRow.registration || null,
@@ -972,22 +981,31 @@ Deno.serve(async (req) => {
         };
 
         // Adicionar PTAs se existirem
-        const ptaFields = [
-          'nm_dollar', 'tpi', 'hhp_dollar', 'ptam', 'ptaf', 'ptap',
-          'cm_dollar', 'fm_dollar', 'gm_dollar', 'f_sav', 'cfp',
-          'ptaf_pct', 'ptap_pct', 'pl', 'dpr', 'liv', 'scs',
-          'mast', 'met', 'rp', 'da', 'ket', 'mf', 'ptat', 'udc',
-          'flc', 'sce', 'dce', 'ssb', 'dsb', 'h_liv', 'ccr', 'hcr',
-          'fi', 'bwc', 'sta', 'str', 'dfm', 'rua', 'rls', 'rtp',
-          'ftl', 'rw', 'rlr', 'fta', 'fls', 'fua', 'ruh', 'ruw',
-          'ucl', 'udp', 'ftp', 'rfi', 'gfi'
-        ];
+        // Map from COLUMN_MAP target names (rawRow keys) to actual DB column names
+        const ptaFieldMap: Record<string, string> = {
+          'nm_dollar': 'nm_dollar', 'tpi': 'tpi', 'hhp_dollar': 'hhp_dollar',
+          'ptam': 'pta_milk', 'ptaf': 'pta_fat', 'ptap': 'pta_protein',
+          'cm_dollar': 'cm_dollar', 'fm_dollar': 'fm_dollar', 'gm_dollar': 'gm_dollar',
+          'f_sav': 'f_sav', 'cfp': 'cfp',
+          'ptaf_pct': 'pta_fat_pct', 'ptap_pct': 'pta_protein_pct',
+          'pl': 'pta_pl', 'dpr': 'pta_dpr', 'liv': 'pta_livability', 'scs': 'pta_scs',
+          'mast': 'mast', 'met': 'met', 'rp': 'rp', 'da': 'da', 'ket': 'ket',
+          'mf': 'mf_num', 'ptat': 'pta_ptat', 'udc': 'pta_udc',
+          'flc': 'pta_flc', 'sce': 'pta_sce', 'dce': 'pta_sire_sce',
+          'ssb': 'ssb', 'dsb': 'dsb', 'h_liv': 'h_liv',
+          'ccr': 'pta_ccr', 'hcr': 'pta_hcr',
+          'fi': 'fi', 'bwc': 'bwc', 'sta': 'sta', 'str': 'str_num',
+          'dfm': 'dfm', 'rua': 'rua', 'rls': 'rls', 'rtp': 'rtp',
+          'ftl': 'ftl', 'rw': 'rw', 'rlr': 'rlr', 'fta': 'fta',
+          'fls': 'fls', 'fua': 'fua', 'ruh': 'ruh', 'ruw': 'ruw',
+          'ucl': 'ucl', 'udp': 'udp', 'ftp': 'ftp', 'rfi': 'rfi', 'gfi': 'gfi'
+        };
 
-        ptaFields.forEach(field => {
-          if (rawRow[field]) {
-            const value = parseFloat(rawRow[field]);
+        Object.entries(ptaFieldMap).forEach(([rawKey, dbCol]) => {
+          if (rawRow[rawKey]) {
+            const value = parseFloat(rawRow[rawKey]);
             if (!isNaN(value)) {
-              bullData[field] = value;
+              bullData[dbCol] = value;
             }
           }
         });
@@ -996,7 +1014,7 @@ Deno.serve(async (req) => {
         const { data: existing } = await supabase
           .from('bulls')
           .select('id')
-          .eq('code', bullData.code)
+          .eq('naab_code', bullData.naab_code)
           .single();
 
         if (existing) {
@@ -1007,10 +1025,10 @@ Deno.serve(async (req) => {
             .eq('id', existing.id);
 
           if (updateError) {
-            console.error(`❌ Update error for ${bullData.code}:`, updateError);
+            console.error(`❌ Update error for ${bullData.naab_code}:`, updateError);
             skipped++;
           } else {
-            console.log(`✅ Updated bull: ${bullData.code}`);
+            console.log(`✅ Updated bull: ${bullData.naab_code}`);
             updated++;
           }
         } else {
@@ -1020,10 +1038,10 @@ Deno.serve(async (req) => {
             .insert(bullData);
 
           if (insertError) {
-            console.error(`❌ Insert error for ${bullData.code}:`, insertError);
+            console.error(`❌ Insert error for ${bullData.naab_code}:`, insertError);
             skipped++;
           } else {
-            console.log(`✅ Inserted bull: ${bullData.code}`);
+            console.log(`✅ Inserted bull: ${bullData.naab_code}`);
             inserted++;
           }
         }
