@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { usePlanStore, AVAILABLE_PTAS, getFemalesByFarm, countFromCategoria, calculateMotherAverages, getBullPTAValue, calculatePopulationStructure } from "../hooks/usePlanStore";
+import { usePlanStore, AVAILABLE_PTAS, getFemalesByFarm, countFromCategoria, getBullPTAValue, calculatePopulationStructure } from "../hooks/usePlanStore";
 import { useHerdStore } from "../hooks/useHerdStore";
 import { useFileStore } from "../hooks/useFileStore";
 import { toast } from "sonner";
@@ -424,54 +424,29 @@ function useAppState() {
     // Using Supabase directly
   }, []);
 
-  // Auto-load herd data on page load - prioritize useHerdStore (from HerdPage)
+  // Auto-load population structure on page load (mother averages come from PTAMothersTable via planStore)
   useEffect(() => {
-    const loadHerdData = () => {
-      try {
-        const { selectedHerdId } = useHerdStore.getState();
-        const { selectedFarmId } = usePlanStore.getState();
-        
-        // Priority: 1) useHerdStore (from entering farm), 2) usePlanStore (manual selection)
-        const farmId = selectedHerdId || selectedFarmId;
-        if (farmId) {
-          const populationStructure = calculatePopulationStructure(farmId);
-          
-          // Get farm data for calculating mother averages
-          const females = getFemalesByFarm(farmId);
-          const farmData = { females };
-          const motherAverages = calculateMotherAverages(farmData, usePlanStore.getState().selectedPTAList);
-          
-          setState(prev => ({
-            ...prev,
-            structure: {
-              total: populationStructure.total,
-              novilhas: populationStructure.heifers || 0,
-              primiparas: populationStructure.primiparous || 0,
-              secundiparas: populationStructure.secundiparous || 0,
-              multiparas: populationStructure.multiparous || 0
-            },
-            mothers: {
-              values: {
-                novilhas: motherAverages.heifers || {},
-                primiparas: motherAverages.primiparous || {},
-                secundiparas: motherAverages.secundiparous || {},
-                multiparas: motherAverages.multiparous || {}
-              }
-            },
-            autoCalculatePopulation: true
-          }));
-          
-          toast.success('Herd loaded automatically');
-        } else {
-          // No farm selected for auto-loading
-        }
-      } catch (error) {
-        console.error('❌ Erro ao carregar rebanho:', error);
-        toast.error('Error loading herd automatically');
+    try {
+      const { selectedHerdId } = useHerdStore.getState();
+      const { selectedFarmId } = usePlanStore.getState();
+      const farmId = selectedHerdId || selectedFarmId;
+      if (farmId) {
+        const populationStructure = calculatePopulationStructure(farmId);
+        setState(prev => ({
+          ...prev,
+          structure: {
+            total: populationStructure.total,
+            novilhas: populationStructure.heifers || 0,
+            primiparas: populationStructure.primiparous || 0,
+            secundiparas: populationStructure.secundiparous || 0,
+            multiparas: populationStructure.multiparous || 0
+          },
+          autoCalculatePopulation: true
+        }));
       }
-    };
-    
-    loadHerdData();
+    } catch (error) {
+      console.error('Error loading population structure:', error);
+    }
   }, []);
 
   const loadTestData = () => {
@@ -849,13 +824,7 @@ function PagePlano({ st, setSt }: { st: AppState; setSt: React.Dispatch<React.Se
     selectedFarm && c.farms.some((f: any) => f.id === selectedFarm.id)
   );
   
-  // Auto-calculate mother averages when farm or PTAs change
-  useEffect(() => {
-    if (selectedFarm && planStore.selectedPTAList.length > 0) {
-      const averages = calculateMotherAverages(selectedFarm, planStore.selectedPTAList);
-      planStore.setMotherAverages(averages);
-    }
-  }, [selectedFarm, planStore.selectedPTAList]);
+  // Mother averages are calculated by PTAMothersTable and synced to planStore automatically
   const farms = selectedClientData?.farms || [];
   
   // Backwards compatibility - sync with old state

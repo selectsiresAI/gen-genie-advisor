@@ -76,7 +76,7 @@ const PTAMothersTable: React.FC<PTAMothersTableProps> = ({
       // Update planStore with calculated values
       planStore.setMotherAverages(newMotherAverages);
     }
-  }, [ptaMeansByCategory, selectedPTAs, planStore]);
+  }, [ptaMeansByCategory, selectedPTAs, planStore.setMotherAverages]);
 
   // Manual recalculate function
   const handleRecalculate = async () => {
@@ -215,7 +215,7 @@ const PTAMothersTable: React.FC<PTAMothersTableProps> = ({
         {!showEmptyAlert && !loading && !isRecalculating && (
           <div className="mt-4 text-xs text-muted-foreground">
             <p>
-              {isEs ? "Promedios ponderados por paridad. Valores redondeados a enteros." : isEn ? "Weighted averages by parity. Values rounded to integers." : "Médias ponderadas por paridade. Valores arredondados para inteiros."}
+              {isEs ? "Promedios ponderados por paridad. Formateados por tipo de rasgo." : isEn ? "Weighted averages by parity. Formatted by trait type." : "Médias ponderadas por paridade. Formatadas por tipo de trait."}
               {selectedHerdId && (isEs ? ` Rebaño: ${selectedHerdId.slice(0, 8)}...` : isEn ? ` Herd: ${selectedHerdId.slice(0, 8)}...` : ` Rebanho: ${selectedHerdId.slice(0, 8)}...`)}
             </p>
           </div>

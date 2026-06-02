@@ -89,7 +89,7 @@ export function getAutomaticCategoryLower(birthDate?: string | null, parityOrder
     case 'Primípara': return 'primipara';
     case 'Secundípara': return 'secundipara';
     case 'Multípara': return 'multipara';
-    default: return 'novilha'; // fallback
+    default: return 'todas'; // fallback for 'Indefinida' — filtered out by callers
   }
 }
 

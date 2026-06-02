@@ -10,67 +10,9 @@ export const AVAILABLE_PTAS = [
   "DA", "KET", "MF", "PTAT", "UDC", "FLC", "SCE", "DCE", "SSB", "DSB", 
   "H LIV", "CCR", "HCR", "FI", "GL", "EFC", "BWC", "STA", "STR", "DFM", 
   "RUA", "RLS", "RTP", "FTL", "RW", "RLR", "FTA", "FLS", "FUA", "RUH", 
-  "RUW", "UCL", "UDP", "FTP", "RFI"
+  "RUW", "UCL", "UDP", "FTP", "RFI", "GFI"
 ] as const;
 
-// Mapeamento rótulo ↔ campo do banco (uso interno, preservando rótulo na UI)
-export const LABEL_TO_FIELD: Record<string, string> = {
-  "HHP$®": "HHP$®", // Usar exatamente como está no banco
-  "TPI": "TPI",
-  "NM$": "NM$",
-  "CM$": "CM$",
-  "FM$": "FM$",
-  "GM$": "GM$",
-  "F SAV": "F SAV",
-  "PTAM": "PTAM",
-  "CFP": "CFP",
-  "PTAF": "PTAF",
-  "PTAF%": "PTAF%",
-  "PTAP": "PTAP",
-  "PTAP%": "PTAP%",
-  "PL": "PL",
-  "DPR": "DPR",
-  "LIV": "LIV",
-  "SCS": "SCS",
-  "MAST": "MAST",
-  "MET": "MET",
-  "RP": "RP",
-  "DA": "DA",
-  "KET": "KET",
-  "MF": "MF",
-  "PTAT": "PTAT",
-  "UDC": "UDC",
-  "FLC": "FLC",
-  "SCE": "SCE",
-  "DCE": "DCE",
-  "SSB": "SSB",
-  "DSB": "DSB",
-  "H LIV": "H LIV",
-  "CCR": "CCR",
-  "HCR": "HCR",
-  "FI": "FI",
-  "GL": "GL",
-  "EFC": "EFC",
-  "BWC": "BWC",
-  "STA": "STA",
-  "STR": "STR",
-  "DFM": "DFM",
-  "RUA": "RUA",
-  "RLS": "RLS",
-  "RTP": "RTP",
-  "FTL": "FTL",
-  "RW": "RW",
-  "RLR": "RLR",
-  "FTA": "FTA",
-  "FLS": "FLS",
-  "FUA": "FUA",
-  "RUH": "RUH",
-  "RUW": "RUW",
-  "UCL": "UCL",
-  "UDP": "UDP",
-  "FTP": "FTP",
-  "RFI": "RFI"
-};
 
 // Population structure interface
 interface PopulationCounts {
@@ -342,42 +284,9 @@ export const calculatePopulationStructure = (farmId: string): PopulationCounts =
   return counts;
 };
 
-// Calculate mother averages from farm data
-const calculateMotherAverages = (farm: any, ptaLabels: string[]): Record<string, Record<string, number>> => {
-  if (!farm?.females || ptaLabels.length === 0) {
-    return {};
-  }
-  
-  const categories = {
-    heifers: farm.females.filter(CATEGORY_DEFINITIONS.heifers),
-    primiparous: farm.females.filter(CATEGORY_DEFINITIONS.primiparous),
-    secundiparous: farm.females.filter(CATEGORY_DEFINITIONS.secundiparous),
-    multiparous: farm.females.filter(CATEGORY_DEFINITIONS.multiparous)
-  };
-  
-  const result: Record<string, Record<string, number>> = {};
-  
-  Object.entries(categories).forEach(([categoryKey, females]) => {
-    result[categoryKey] = {};
-    
-    ptaLabels.forEach(ptaLabel => {
-      const fieldName = LABEL_TO_FIELD[ptaLabel] || ptaLabel;
-      const values = females.map((f: any) => {
-        // Use mapped field name to get value from database
-        const value = f[fieldName] || 0;
-        return typeof value === 'number' ? value : 0;
-      }).filter(v => v !== 0);
-        
-        const average = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
-        result[categoryKey][ptaLabel] = average; // Store with label as key
-      });
-  });
-  
-  return result;
-};
 
 // Export utility functions
-export { getFemalesByFarm, normalizeCategoria, countFromCategoria, calculateMotherAverages };
+export { getFemalesByFarm, normalizeCategoria, countFromCategoria };
 
 /**
  * Obtém o valor de uma PTA de um touro, com mapeamento robusto de nomes de campo.
@@ -448,7 +357,7 @@ export const getBullPTAValue = (bull: any, ptaLabel: string): number | null => {
   };
 
   // Obter aliases para este label (ou usar o próprio label como fallback)
-  const aliases = fieldAliases[ptaLabel] || [ptaLabel, LABEL_TO_FIELD[ptaLabel]].filter(Boolean);
+  const aliases = fieldAliases[ptaLabel] || [ptaLabel];
 
   // Tentar cada alias em ordem
   for (const alias of aliases) {
