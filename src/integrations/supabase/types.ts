@@ -4767,6 +4767,7 @@ export type Database = {
           total_females: number
         }[]
       }
+      naab_breed_number_suffixes: { Args: { naab: string }; Returns: string[] }
       naab_variants: { Args: { normalized: string }; Returns: string[] }
       normalize_naab: { Args: { input_naab: string }; Returns: string }
       normalize_text: { Args: { txt: string }; Returns: string }

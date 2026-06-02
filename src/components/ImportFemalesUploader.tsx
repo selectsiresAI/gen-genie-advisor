@@ -20,6 +20,7 @@ export default function ImportFemalesUploader({ farmId, onSuccess }: Props) {
   const fileRef = React.useRef<File | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [fileName, setFileName] = React.useState('');
+  const [progress, setProgress] = React.useState<string>('');
   const { toast } = useToast();
   const { t } = useTranslation();
 
@@ -73,6 +74,42 @@ export default function ImportFemalesUploader({ farmId, onSuccess }: Props) {
     return new File([blob], newName, { type: 'text/csv' });
   }
 
+  // Max rows per chunk sent to the edge function. Stays well under the
+  // server-side cap (5000) to leave headroom for retries and concurrent users.
+  const CHUNK_SIZE = 1500;
+
+  function splitCsv(csv: string): { headerLine: string; dataLines: string[] } {
+    const stripped = csv.charCodeAt(0) === 0xFEFF ? csv.slice(1) : csv;
+    const lines = stripped.split(/\r?\n/).filter((l) => l.trim().length > 0);
+    return { headerLine: lines[0] ?? '', dataLines: lines.slice(1) };
+  }
+
+  function buildChunkFile(headerLine: string, chunk: string[], baseName: string, idx: number, total: number): File {
+    const csv = [headerLine, ...chunk].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const suffix = total > 1 ? `.part${idx + 1}of${total}.csv` : '.csv';
+    const name = baseName.replace(/\.csv$/i, suffix);
+    return new File([blob], name, { type: 'text/csv' });
+  }
+
+  async function sendChunk(file: File, token: string): Promise<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (farmId) formData.append('farm_id', farmId);
+
+    const response = await fetch(getEdgeUrl('import-females/upload'), {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      throw new Error(`HTTP ${response.status}: ${text || 'upload failed'}`);
+    }
+    return response.json().catch(() => ({}));
+  }
+
   async function handleSubmit() {
     if (!fileRef.current) {
       toastError(t("femaleImport.invalidFormat"));
@@ -80,22 +117,18 @@ export default function ImportFemalesUploader({ farmId, onSuccess }: Props) {
     }
 
     setLoading(true);
+    setProgress('');
 
     try {
-      // Refresh session to ensure valid token
       const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-      
       if (refreshError || !refreshData?.session?.access_token) {
         toastError(t("femaleImport.sessionExpired"));
         setLoading(false);
         return;
       }
-
-      // Use the fresh token from the refreshed session
       const token = refreshData.session.access_token;
 
       let uploadFile = fileRef.current;
-
       if (/\.(xlsx|xls|xlsm)$/i.test(uploadFile.name)) {
         uploadFile = await convertXlsxToCsv(uploadFile);
       } else if (!/\.csv$/i.test(uploadFile.name)) {
@@ -104,81 +137,71 @@ export default function ImportFemalesUploader({ farmId, onSuccess }: Props) {
         return;
       }
 
-      const clone = new File([
-        await uploadFile.arrayBuffer(),
-      ], uploadFile.name, { type: uploadFile.type || 'text/csv' });
+      const csvText = await uploadFile.text();
+      const { headerLine, dataLines } = splitCsv(csvText);
 
-      const formData = new FormData();
-      formData.append('file', clone);
-      if (farmId) {
-        formData.append('farm_id', farmId);
-      }
-
-      const url = getEdgeUrl('import-females/upload');
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const text = await response.text().catch(() => '');
-        toastError(`Falha no upload (${response.status}). ${text || 'Ver console.'}`);
-        console.error('Upload failed', response.status, text);
+      if (!headerLine || dataLines.length === 0) {
+        toastError(t("femaleImport.invalidFormat"));
         setLoading(false);
         return;
       }
 
-      let payload: any = {};
-      try {
-        payload = await response.json();
-      } catch (parseError) {
-        // Failed to parse upload response
+      // Build chunks
+      const chunks: string[][] = [];
+      for (let i = 0; i < dataLines.length; i += CHUNK_SIZE) {
+        chunks.push(dataLines.slice(i, i + CHUNK_SIZE));
       }
 
-      const batchId = payload?.import_batch_id;
-      const inserted = payload?.inserted || 0;
-      const validationErrors = payload?.validation_errors || 0;
-      const insertErrors = payload?.insert_errors || 0;
-      const duplicatesRemoved = payload?.duplicates_removed || 0;
+      let totalInserted = 0;
+      let totalValidationErrors = 0;
+      let totalInsertErrors = 0;
+      let totalDuplicatesRemoved = 0;
+      let lastBatchId: string | undefined;
+      const failedChunks: number[] = [];
 
-      // Build summary message
+      for (let idx = 0; idx < chunks.length; idx++) {
+        setProgress(`${idx + 1}/${chunks.length} (${chunks[idx].length} ${t("femaleImport.femalesImported") || 'rows'})`);
+        const chunkFile = buildChunkFile(headerLine, chunks[idx], uploadFile.name, idx, chunks.length);
+        try {
+          const payload = await sendChunk(chunkFile, token);
+          totalInserted += payload?.inserted || 0;
+          totalValidationErrors += payload?.validation_errors || 0;
+          totalInsertErrors += payload?.insert_errors || 0;
+          totalDuplicatesRemoved += payload?.duplicates_removed || 0;
+          if (payload?.import_batch_id) lastBatchId = payload.import_batch_id;
+        } catch (err) {
+          console.error(`Chunk ${idx + 1} failed`, err);
+          failedChunks.push(idx + 1);
+        }
+      }
+
       const summaryParts: string[] = [];
-      summaryParts.push(`${inserted} ${t("femaleImport.femalesImported")}`);
-      if (duplicatesRemoved > 0) summaryParts.push(`${duplicatesRemoved} duplicates removed`);
-      if (validationErrors > 0) summaryParts.push(`${validationErrors} rows skipped`);
+      summaryParts.push(`${totalInserted} ${t("femaleImport.femalesImported")}`);
+      if (totalDuplicatesRemoved > 0) summaryParts.push(`${totalDuplicatesRemoved} duplicates removed`);
+      if (totalValidationErrors > 0) summaryParts.push(`${totalValidationErrors} rows skipped`);
+      if (chunks.length > 1) summaryParts.push(`${chunks.length} chunks`);
 
-      if (insertErrors > 0 && inserted === 0) {
-        toastError(`${t("femaleImport.uploadFailed")} ${insertErrors} ${t("femaleImport.insertErrors")}.`);
-      } else if (insertErrors > 0) {
-        toastInfo(`${t("femaleImport.partialUpload")} ${summaryParts.join(', ')}. ${insertErrors} ${t("femaleImport.insertErrors")}.`);
+      if (totalInserted === 0 && (totalInsertErrors > 0 || failedChunks.length > 0)) {
+        toastError(`${t("femaleImport.uploadFailed")} ${failedChunks.length} chunk(s) failed, ${totalInsertErrors} ${t("femaleImport.insertErrors")}.`);
+      } else if (failedChunks.length > 0 || totalInsertErrors > 0) {
+        toastInfo(`${t("femaleImport.partialUpload")} ${summaryParts.join(', ')}. Failed chunks: ${failedChunks.join(', ') || 'none'}.`);
       } else {
         toastSuccess(`${t("femaleImport.uploadComplete")} ${summaryParts.join(', ')}.`);
       }
 
-      // Commit the batch
-      if (batchId) {
-        const commitUrl = getEdgeUrl('import-females/commit');
-        const commitResponse = await fetch(commitUrl, {
+      if (lastBatchId) {
+        const commitResponse = await fetch(getEdgeUrl('import-females/commit'), {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ import_batch_id: batchId, farm_id: farmId }),
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ import_batch_id: lastBatchId, farm_id: farmId }),
         });
-
         if (!commitResponse.ok) {
           const commitText = await commitResponse.text().catch(() => '');
           console.error('Commit falhou', commitResponse.status, commitText);
         }
       }
 
-      if (typeof onSuccess === 'function') {
-        onSuccess(batchId);
-      }
+      if (typeof onSuccess === 'function') onSuccess(lastBatchId);
     } catch (error: any) {
       if (error?.name === 'NotReadableError' || String(error).includes('NotReadableError')) {
         toastError(t("femaleImport.notReadable"));
@@ -192,8 +215,10 @@ export default function ImportFemalesUploader({ farmId, onSuccess }: Props) {
       }
     } finally {
       setLoading(false);
+      setProgress('');
     }
   }
+
 
   return (
     <div className="space-y-3">
@@ -218,7 +243,7 @@ export default function ImportFemalesUploader({ farmId, onSuccess }: Props) {
         {loading ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />
-            {t("files.uploading")}
+            {t("files.uploading")}{progress ? ` — ${progress}` : ''}
           </>
         ) : (
           t("herd.import")
