@@ -62,6 +62,53 @@ export type Database = {
         }
         Relationships: []
       }
+      bull_naab_aliases: {
+        Row: {
+          bull_id: string
+          naab_variant: string
+          variant_type: string
+        }
+        Insert: {
+          bull_id: string
+          naab_variant: string
+          variant_type?: string
+        }
+        Update: {
+          bull_id?: string
+          naab_variant?: string
+          variant_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bull_naab_aliases_bull_id_fkey"
+            columns: ["bull_id"]
+            isOneToOne: false
+            referencedRelation: "bulls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bull_naab_aliases_bull_id_fkey"
+            columns: ["bull_id"]
+            isOneToOne: false
+            referencedRelation: "bulls_denorm"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bull_naab_aliases_bull_id_fkey"
+            columns: ["bull_id"]
+            isOneToOne: false
+            referencedRelation: "bulls_denorm_member"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bull_naab_aliases_bull_id_fkey"
+            columns: ["bull_id"]
+            isOneToOne: false
+            referencedRelation: "plan_bulls_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bulls: {
         Row: {
           ativo: boolean
@@ -69,6 +116,7 @@ export type Database = {
           birth_date: string | null
           blad: string | null
           breed: string | null
+          breed_number: string | null
           bvh: string | null
           bwc: number | null
           ccr_num: number | null
@@ -164,6 +212,7 @@ export type Database = {
           birth_date?: string | null
           blad?: string | null
           breed?: string | null
+          breed_number?: string | null
           bvh?: string | null
           bwc?: number | null
           ccr_num?: number | null
@@ -259,6 +308,7 @@ export type Database = {
           birth_date?: string | null
           blad?: string | null
           breed?: string | null
+          breed_number?: string | null
           bvh?: string | null
           bwc?: number | null
           ccr_num?: number | null
@@ -1963,7 +2013,6 @@ export type Database = {
           id: string
           manager_id: string | null
           platform: Database["public"]["Enums"]["platform_type"][] | null
-          temporary_password: string | null
           updated_at: string
         }
         Insert: {
@@ -1975,7 +2024,6 @@ export type Database = {
           id: string
           manager_id?: string | null
           platform?: Database["public"]["Enums"]["platform_type"][] | null
-          temporary_password?: string | null
           updated_at?: string
         }
         Update: {
@@ -1987,7 +2035,6 @@ export type Database = {
           id?: string
           manager_id?: string | null
           platform?: Database["public"]["Enums"]["platform_type"][] | null
-          temporary_password?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -4754,6 +4801,77 @@ export type Database = {
           order_id: string
         }[]
       }
+      lookup_bull_by_naab: {
+        Args: { input_naab: string }
+        Returns: {
+          beta_casein: string
+          birth_date: string
+          bull_id: string
+          bwc: number
+          ccr: number
+          cfp: number
+          cm_dollar: number
+          code: string
+          company: string
+          da: number
+          dce: number
+          dfm: number
+          dpr: number
+          dsb: number
+          f_sav: number
+          fi: number
+          flc: number
+          fls: number
+          fm_dollar: number
+          found: boolean
+          fta: number
+          ftl: number
+          ftp: number
+          fua: number
+          gfi: number
+          gm_dollar: number
+          h_liv: number
+          hcr: number
+          hhp_dollar: number
+          kappa_casein: string
+          ket: number
+          liv: number
+          mast: number
+          met: number
+          mf: number
+          mgs_naab: string
+          mmgs_naab: string
+          name: string
+          nm_dollar: number
+          pl: number
+          ptaf: number
+          ptaf_pct: number
+          ptam: number
+          ptap: number
+          ptap_pct: number
+          ptat: number
+          registration: string
+          rfi: number
+          rlr: number
+          rls: number
+          rp: number
+          rtp: number
+          rua: number
+          ruh: number
+          ruw: number
+          rw: number
+          sce: number
+          scs: number
+          sire_naab: string
+          ssb: number
+          sta: number
+          str: number
+          tpi: number
+          ucl: number
+          udc: number
+          udp: number
+        }[]
+      }
       my_farms: {
         Args: never
         Returns: {
@@ -4990,6 +5108,8 @@ export type Database = {
           success: boolean
         }[]
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       soundex: { Args: { "": string }; Returns: string }
       text_soundex: { Args: { "": string }; Returns: string }
       unaccent: { Args: { "": string }; Returns: string }
