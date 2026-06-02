@@ -350,6 +350,102 @@ export type Database = {
         }
         Relationships: []
       }
+      bulls_cdcb: {
+        Row: {
+          ccr_pta: number | null
+          cm_dollar_pta: number | null
+          dab_pta: number | null
+          dpr_pta: number | null
+          efc_pta: number | null
+          fat_pct: number | null
+          fat_pta: number | null
+          flc_pta: number | null
+          fs_pta: number | null
+          gl_pta: number | null
+          hcr_pta: number | null
+          hlv_pta: number | null
+          ket_pta: number | null
+          liv_pta: number | null
+          mas_pta: number | null
+          met_pta: number | null
+          mfv_pta: number | null
+          mlk_pta: number | null
+          naab_code: string
+          name: string | null
+          nm_dollar_pta: number | null
+          pl_pta: number | null
+          pro_pct: number | null
+          pro_pta: number | null
+          rfi_pta: number | null
+          rpl_pta: number | null
+          scs_pta: number | null
+          typ_pta: number | null
+          udc_pta: number | null
+        }
+        Insert: {
+          ccr_pta?: number | null
+          cm_dollar_pta?: number | null
+          dab_pta?: number | null
+          dpr_pta?: number | null
+          efc_pta?: number | null
+          fat_pct?: number | null
+          fat_pta?: number | null
+          flc_pta?: number | null
+          fs_pta?: number | null
+          gl_pta?: number | null
+          hcr_pta?: number | null
+          hlv_pta?: number | null
+          ket_pta?: number | null
+          liv_pta?: number | null
+          mas_pta?: number | null
+          met_pta?: number | null
+          mfv_pta?: number | null
+          mlk_pta?: number | null
+          naab_code: string
+          name?: string | null
+          nm_dollar_pta?: number | null
+          pl_pta?: number | null
+          pro_pct?: number | null
+          pro_pta?: number | null
+          rfi_pta?: number | null
+          rpl_pta?: number | null
+          scs_pta?: number | null
+          typ_pta?: number | null
+          udc_pta?: number | null
+        }
+        Update: {
+          ccr_pta?: number | null
+          cm_dollar_pta?: number | null
+          dab_pta?: number | null
+          dpr_pta?: number | null
+          efc_pta?: number | null
+          fat_pct?: number | null
+          fat_pta?: number | null
+          flc_pta?: number | null
+          fs_pta?: number | null
+          gl_pta?: number | null
+          hcr_pta?: number | null
+          hlv_pta?: number | null
+          ket_pta?: number | null
+          liv_pta?: number | null
+          mas_pta?: number | null
+          met_pta?: number | null
+          mfv_pta?: number | null
+          mlk_pta?: number | null
+          naab_code?: string
+          name?: string | null
+          nm_dollar_pta?: number | null
+          pl_pta?: number | null
+          pro_pct?: number | null
+          pro_pta?: number | null
+          rfi_pta?: number | null
+          rpl_pta?: number | null
+          scs_pta?: number | null
+          typ_pta?: number | null
+          udc_pta?: number | null
+        }
+        Relationships: []
+      }
       bulls_import_log: {
         Row: {
           committed_at: string | null
@@ -431,6 +527,186 @@ export type Database = {
           raw_row?: Json | null
           row_number?: number | null
           uploader_user_id?: string | null
+        }
+        Relationships: []
+      }
+      bulls_ss: {
+        Row: {
+          bod: number | null
+          bwc: number | null
+          ccr: number | null
+          cfp: number | null
+          cm_dollar: number | null
+          da: number | null
+          dce: number | null
+          dfm: number | null
+          dpr: number | null
+          dsb: number | null
+          efc: number | null
+          f_sav: number | null
+          fi: number | null
+          flc: number | null
+          fls: number | null
+          fta: number | null
+          ftl: number | null
+          ftp: number | null
+          fua: number | null
+          gfi: number | null
+          gl: number | null
+          h_liv: number | null
+          hcr: number | null
+          ket: number | null
+          liv: number | null
+          mast: number | null
+          met: number | null
+          mf: number | null
+          naab: string
+          name: string | null
+          nm_dollar: number | null
+          pl: number | null
+          ptaf: number | null
+          ptaf_pct: number | null
+          ptam: number | null
+          ptap: number | null
+          ptap_pct: number | null
+          ptat: number | null
+          registration_name: string | null
+          rfi: number | null
+          rlr: number | null
+          rls: number | null
+          rp: number | null
+          rtp: number | null
+          rua: number | null
+          ruh: number | null
+          ruw: number | null
+          rw: number | null
+          sce: number | null
+          scs: number | null
+          ssb: number | null
+          sta: number | null
+          str: number | null
+          tpi: number | null
+          ucl: number | null
+          udc: number | null
+          udp: number | null
+        }
+        Insert: {
+          bod?: number | null
+          bwc?: number | null
+          ccr?: number | null
+          cfp?: number | null
+          cm_dollar?: number | null
+          da?: number | null
+          dce?: number | null
+          dfm?: number | null
+          dpr?: number | null
+          dsb?: number | null
+          efc?: number | null
+          f_sav?: number | null
+          fi?: number | null
+          flc?: number | null
+          fls?: number | null
+          fta?: number | null
+          ftl?: number | null
+          ftp?: number | null
+          fua?: number | null
+          gfi?: number | null
+          gl?: number | null
+          h_liv?: number | null
+          hcr?: number | null
+          ket?: number | null
+          liv?: number | null
+          mast?: number | null
+          met?: number | null
+          mf?: number | null
+          naab: string
+          name?: string | null
+          nm_dollar?: number | null
+          pl?: number | null
+          ptaf?: number | null
+          ptaf_pct?: number | null
+          ptam?: number | null
+          ptap?: number | null
+          ptap_pct?: number | null
+          ptat?: number | null
+          registration_name?: string | null
+          rfi?: number | null
+          rlr?: number | null
+          rls?: number | null
+          rp?: number | null
+          rtp?: number | null
+          rua?: number | null
+          ruh?: number | null
+          ruw?: number | null
+          rw?: number | null
+          sce?: number | null
+          scs?: number | null
+          ssb?: number | null
+          sta?: number | null
+          str?: number | null
+          tpi?: number | null
+          ucl?: number | null
+          udc?: number | null
+          udp?: number | null
+        }
+        Update: {
+          bod?: number | null
+          bwc?: number | null
+          ccr?: number | null
+          cfp?: number | null
+          cm_dollar?: number | null
+          da?: number | null
+          dce?: number | null
+          dfm?: number | null
+          dpr?: number | null
+          dsb?: number | null
+          efc?: number | null
+          f_sav?: number | null
+          fi?: number | null
+          flc?: number | null
+          fls?: number | null
+          fta?: number | null
+          ftl?: number | null
+          ftp?: number | null
+          fua?: number | null
+          gfi?: number | null
+          gl?: number | null
+          h_liv?: number | null
+          hcr?: number | null
+          ket?: number | null
+          liv?: number | null
+          mast?: number | null
+          met?: number | null
+          mf?: number | null
+          naab?: string
+          name?: string | null
+          nm_dollar?: number | null
+          pl?: number | null
+          ptaf?: number | null
+          ptaf_pct?: number | null
+          ptam?: number | null
+          ptap?: number | null
+          ptap_pct?: number | null
+          ptat?: number | null
+          registration_name?: string | null
+          rfi?: number | null
+          rlr?: number | null
+          rls?: number | null
+          rp?: number | null
+          rtp?: number | null
+          rua?: number | null
+          ruh?: number | null
+          ruw?: number | null
+          rw?: number | null
+          sce?: number | null
+          scs?: number | null
+          ssb?: number | null
+          sta?: number | null
+          str?: number | null
+          tpi?: number | null
+          ucl?: number | null
+          udc?: number | null
+          udp?: number | null
         }
         Relationships: []
       }
@@ -4491,6 +4767,7 @@ export type Database = {
           total_females: number
         }[]
       }
+      naab_variants: { Args: { normalized: string }; Returns: string[] }
       normalize_naab: { Args: { input_naab: string }; Returns: string }
       normalize_text: { Args: { txt: string }; Returns: string }
       nx3_bulls_by_ids: {
@@ -4640,7 +4917,6 @@ export type Database = {
         Returns: {
           beta_casein: string
           birth_date: string
-          bull_id: string
           bwc: number
           ccr: number
           cfp: number
@@ -4666,6 +4942,7 @@ export type Database = {
           h_liv: number
           hcr: number
           hhp_dollar: number
+          id: string
           kappa_casein: string
           ket: number
           liv: number
