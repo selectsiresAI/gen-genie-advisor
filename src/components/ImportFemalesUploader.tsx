@@ -20,6 +20,7 @@ export default function ImportFemalesUploader({ farmId, onSuccess }: Props) {
   const fileRef = React.useRef<File | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [fileName, setFileName] = React.useState('');
+  const [progress, setProgress] = React.useState<string>('');
   const { toast } = useToast();
   const { t } = useTranslation();
 
