@@ -549,7 +549,7 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
     const csvContent = [csvHeaders.join(','), ...templateBulls.map(bull =>
       csvHeaders.map(h => { const v = (bull as any)[h]; return v === undefined ? '' : typeof v === 'string' && v.includes(',') ? `"${v}"` : v; }).join(',')
     )].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.setAttribute('href', URL.createObjectURL(blob));
     link.setAttribute('download', 'template_touros_supabase.csv');

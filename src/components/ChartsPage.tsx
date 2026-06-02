@@ -322,16 +322,15 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
       return;
     }
     
+    const escCSV = (v: unknown): string => { const s = v == null ? '' : typeof v === 'number' ? v.toFixed(2) : String(v); return (s.includes(',') || s.includes('"') || s.includes('\n')) ? '"' + s.replace(/"/g, '""') + '"' : s; };
     const csvContent = [
       Object.keys(processedTrendData[0]).join(','),
-      ...processedTrendData.map(row => 
-        Object.values(row).map(val => 
-          typeof val === 'number' ? val.toFixed(2) : val
-        ).join(',')
+      ...processedTrendData.map(row =>
+        Object.values(row).map(escCSV).join(',')
       )
     ].join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -868,8 +867,9 @@ function TraitCard({
           onClick={() => {
             const rows = chartData.map(d => ({ year: d.year, n: d.n, mean: d.mean, ganho: d.delta }));
             const headers = Object.keys(rows[0] || {});
-            const csv = [headers.join(","), ...rows.map(r => headers.map(h => (r as any)[h]).join(","))].join("\n");
-            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            const esc = (v: unknown): string => { const s = v == null ? '' : String(v); return (s.includes(',') || s.includes('"') || s.includes('\n')) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+            const csv = [headers.join(","), ...rows.map(r => headers.map(h => esc((r as any)[h])).join(","))].join("\n");
+            const blob = new Blob(['\uFEFF' + csv], { type: "text/csv;charset=utf-8;" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a"); 
             a.href = url; 

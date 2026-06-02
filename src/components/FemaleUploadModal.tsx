@@ -41,8 +41,8 @@ const FemaleUploadModal: React.FC<FemaleUploadModalProps> = ({
       '1.1','0.9','1.3','0.8','0.4','1.2','0.6','0.7','1.0','0.3','0.5','1.6','2.1','1.5','1.2','0.9','1.4'
     ];
 
-    const csvContent = [headers.join(';'), sampleRow.join(';')].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const csvContent = [headers.join(','), sampleRow.join(',')].join('\n');
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

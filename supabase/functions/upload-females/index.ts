@@ -79,7 +79,7 @@ function validateNumber(value: unknown, min?: number, max?: number): number | nu
     }
   } else if (hasComma) {
     const parts = s.split(',');
-    if (parts.length === 2 && /^\d{3}$/.test(parts[1])) {
+    if (parts.length === 2 && /^\d{3}$/.test(parts[1]) && /^-?\d{4,}$/.test(parts[0])) {
       s = s.replace(/,/g, '');
     } else {
       s = s.replace(',', '.');
@@ -121,7 +121,7 @@ function validateDate(value: unknown): string | null {
     let a = parseInt(slashMatch[1], 10);
     let b = parseInt(slashMatch[2], 10);
     let c = parseInt(slashMatch[3], 10);
-    if (c < 100) c = c <= 30 ? 2000 + c : 1900 + c;
+    if (c < 100) c = c <= 50 ? 2000 + c : 1900 + c;
     let day: number, month: number;
     if (a > 12) { day = a; month = b; }
     else if (b > 12) { day = b; month = a; }

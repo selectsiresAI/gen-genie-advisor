@@ -324,7 +324,7 @@ const saveSheet = (data: Record<string, string>[], sheetName: string, filename: 
   }
 
   const csv = utils.sheet_to_csv(worksheet);
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;

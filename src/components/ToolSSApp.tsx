@@ -300,9 +300,10 @@ function categorizeAnimal(nascimento: string, ordemParto?: number): string {
 
 function toCSV(rows: any[], filename = "export.csv") {
   if (!rows?.length) return;
+  const esc = (v: unknown): string => { const s = v == null ? '' : String(v); return (s.includes(',') || s.includes('"') || s.includes('\n')) ? '"' + s.replace(/"/g, '""') + '"' : s; };
   const headers = Object.keys(rows[0]);
-  const csv = [headers.join(",")].concat(rows.map(r => headers.map(h => String(r[h] ?? "")).join(","))).join("\n");
-  const blob = new Blob([csv], {
+  const csv = [headers.join(",")].concat(rows.map(r => headers.map(h => esc(r[h])).join(","))).join("\n");
+  const blob = new Blob(['\uFEFF' + csv], {
     type: "text/csv;charset=utf-8;"
   });
   const link = document.createElement("a");

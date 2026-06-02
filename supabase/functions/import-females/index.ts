@@ -1,16 +1,26 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-};
+const ALLOWED_ORIGINS = [
+  'https://toolss-ssb.lovable.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+];
 
-function jsonResponse(_req: Request, body: Record<string, unknown>, status = 200) {
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get('Origin') || '';
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+}
+
+function jsonResponse(req: Request, body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
-      ...corsHeaders,
+      ...getCorsHeaders(req),
       "Content-Type": "application/json",
     },
   });
@@ -102,7 +112,7 @@ function validateDate(value: unknown): string | null {
     var a = parseInt(slashMatch[1], 10);
     var b = parseInt(slashMatch[2], 10);
     var c = parseInt(slashMatch[3], 10);
-    if (c < 100) c = c <= 30 ? 2000 + c : 1900 + c;
+    if (c < 100) c = c <= 50 ? 2000 + c : 1900 + c;
     var day2: number, month2: number;
     if (a > 12) { day2 = a; month2 = b; }
     else if (b > 12) { day2 = b; month2 = a; }
@@ -404,7 +414,7 @@ function parseCSV(csvContent: string): { records: any[]; unmappedCols: string[] 
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, { status: 204, headers: getCorsHeaders(req) });
   }
 
   const url = new URL(req.url);
@@ -455,6 +465,9 @@ Deno.serve(async (req) => {
       if (!file || !(file instanceof File)) {
         return jsonResponse(req, { error: "Arquivo invalido" }, 400);
       }
+      if (file.size > 10 * 1024 * 1024) {
+        return jsonResponse(req, { error: "File too large. Maximum 10MB." }, 413);
+      }
       if (!farmIdParam) {
         return jsonResponse(req, { error: "farm_id obrigatorio" }, 400);
       }
@@ -500,7 +513,7 @@ Deno.serve(async (req) => {
       let duplicatesRemoved = 0;
 
       validatedRecords.forEach(function(record) {
-        const uniqueKey = record.identifier || record.name;
+        const uniqueKey = record.identifier || (record.name + '|' + (record.birth_date || '') + '|' + (record.sire_naab || ''));
         if (uniqueRecordsMap.has(uniqueKey)) duplicatesRemoved++;
         uniqueRecordsMap.set(uniqueKey, record);
       });
