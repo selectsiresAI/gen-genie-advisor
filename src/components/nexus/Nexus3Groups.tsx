@@ -19,7 +19,7 @@ import { ChevronLeft, Download, Loader2, Search as SearchIcon, Sparkles, X } fro
 import { ANIMAL_METRIC_COLUMNS } from "../../constants/animalMetrics";
 import { getAdaptiveYAxisDomainMultiple } from "../../lib/chart-utils";
 import { formatPtaValue } from "@/utils/ptaFormat";
-import { exportSingleChartToPDF } from "@/lib/pdf/exportCharts";
+import { exportSingleChartToPDF, exportMultipleChartsToPDF } from "@/lib/pdf/exportCharts";
 import { format } from "date-fns";
 import { useTranslation } from "@/hooks/useTranslation";
 
@@ -53,9 +53,10 @@ interface TraitSectionProps {
   isEs: boolean;
   onRemove: () => void;
   sharedBulls?: SharedBull[]; // quando presente: usa pacote único, sem busca/seleção interna
+  registerChart?: (trait: string, el: HTMLDivElement | null) => void;
 }
 
-function TraitSection({ trait, farmId, supabase, isEn, isEs, onRemove, sharedBulls }: TraitSectionProps) {
+function TraitSection({ trait, farmId, supabase, isEn, isEs, onRemove, sharedBulls, registerChart }: TraitSectionProps) {
   const useShared = Array.isArray(sharedBulls);
   const [mothers, setMothers] = useState<MotherPoint[]>([]);
   const [bullQuery, setBullQuery] = useState("");
@@ -65,6 +66,13 @@ function TraitSection({ trait, farmId, supabase, isEn, isEs, onRemove, sharedBul
   const [err, setErr] = useState<string | null>(null);
   const chartRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
+
+  // Registra/desregistra o ref do gráfico no parent para exportação múltipla
+  useEffect(() => {
+    if (!registerChart) return;
+    registerChart(trait, chartRef.current);
+    return () => registerChart(trait, null);
+  }, [trait, registerChart]);
 
   const metric = ANIMAL_METRIC_COLUMNS.find((m) => m.key === trait);
   const traitLabel = metric?.label || trait.toUpperCase();
@@ -590,7 +598,56 @@ export default function Nexus3Groups({ onBack, selectedFarmId }: Nexus3GroupsPro
 
   const removeTraitSection = (t: string) => {
     setSelectedTraits((prev) => prev.filter((x) => x !== t));
+    setExportSelection((prev) => {
+      const next = new Set(prev);
+      next.delete(t);
+      return next;
+    });
   };
+
+  // Registro de refs dos gráficos por trait (para exportação múltipla)
+  const chartRefsMap = useRef<Map<string, HTMLDivElement>>(new Map());
+  const registerChart = React.useCallback((trait: string, el: HTMLDivElement | null) => {
+    if (el) chartRefsMap.current.set(trait, el);
+    else chartRefsMap.current.delete(trait);
+  }, []);
+
+  const [exportSelection, setExportSelection] = useState<Set<string>>(new Set());
+  const [isExportingAll, setIsExportingAll] = useState(false);
+
+  const toggleExport = (t: string) => {
+    setExportSelection((prev) => {
+      const next = new Set(prev);
+      if (next.has(t)) next.delete(t);
+      else next.add(t);
+      return next;
+    });
+  };
+
+  const selectAllExport = () => setExportSelection(new Set(selectedTraits));
+  const clearExport = () => setExportSelection(new Set());
+
+  const exportSelectedCharts = async () => {
+    const traitsInOrder = selectedTraits.filter((t) => exportSelection.has(t));
+    const els = traitsInOrder
+      .map((t) => chartRefsMap.current.get(t))
+      .filter((el): el is HTMLDivElement => !!el);
+    if (!els.length) return;
+    setIsExportingAll(true);
+    try {
+      const today = format(new Date(), "yyyy-MM-dd");
+      const traitList = traitsInOrder.map((t) => t.toUpperCase()).join("_");
+      await exportMultipleChartsToPDF(els, {
+        filename: `Nexus3_Graficos_${traitList}_${today}.pdf`,
+        orientation: "l",
+        format: "a4",
+        pageMarginMm: 8,
+      });
+    } finally {
+      setIsExportingAll(false);
+    }
+  };
+
 
   return (
     <div className="space-y-10 p-6">
@@ -812,6 +869,78 @@ export default function Nexus3Groups({ onBack, selectedFarmId }: Nexus3GroupsPro
         </div>
       )}
 
+      {/* Painel de exportação múltipla */}
+      {selectedTraits.length > 0 && (
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <h3 className="text-base font-semibold text-gray-900">
+                {isEs ? "Exportar gráficos a PDF" : isEn ? "Export charts to PDF" : "Exportar gráficos para PDF"}
+              </h3>
+              <p className="mt-1 text-xs text-gray-500">
+                {isEs
+                  ? "Seleccione cuáles gráficos incluir en un único PDF."
+                  : isEn
+                  ? "Choose which charts to include in a single PDF."
+                  : "Selecione quais gráficos incluir em um único PDF."}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={selectAllExport}
+                className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+              >
+                {isEs ? "Seleccionar todos" : isEn ? "Select all" : "Selecionar todos"}
+              </button>
+              <button
+                type="button"
+                onClick={clearExport}
+                className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+              >
+                {isEs ? "Limpiar" : isEn ? "Clear" : "Limpar"}
+              </button>
+              <button
+                type="button"
+                disabled={isExportingAll || exportSelection.size === 0}
+                onClick={exportSelectedCharts}
+                className="inline-flex items-center gap-2 rounded-md bg-[#ED1C24] px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#c8161d] disabled:opacity-50"
+              >
+                {isExportingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                {isEs
+                  ? `Exportar (${exportSelection.size})`
+                  : isEn
+                  ? `Export (${exportSelection.size})`
+                  : `Exportar (${exportSelection.size})`}
+              </button>
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+            {selectedTraits.map((t) => {
+              const metric = ANIMAL_METRIC_COLUMNS.find((m) => m.key === t);
+              const label = metric?.label || t.toUpperCase();
+              const checked = exportSelection.has(t);
+              return (
+                <label
+                  key={t}
+                  className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition ${
+                    checked ? "border-[#ED1C24] bg-[#ED1C24]/5" : "border-gray-200 hover:bg-gray-50"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleExport(t)}
+                    className="h-4 w-4 accent-[#ED1C24]"
+                  />
+                  <span className="font-medium text-gray-800">{label}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Seções por trait (empilhadas, roláveis) */}
       <div className="space-y-8">
         {farmId && selectedTraits.map((t) => (
@@ -824,6 +953,7 @@ export default function Nexus3Groups({ onBack, selectedFarmId }: Nexus3GroupsPro
             isEs={isEs}
             onRemove={() => removeTraitSection(t)}
             sharedBulls={mode === "shared" ? sharedBulls : undefined}
+            registerChart={registerChart}
           />
         ))}
         {selectedTraits.length === 0 && (
