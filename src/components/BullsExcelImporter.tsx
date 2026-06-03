@@ -99,7 +99,7 @@ export function BullsExcelImporter() {
           h_liv: parseFloat(row["Heifer Livability"]) || null,
           da: parseFloat(row["Displaced Abomasum"]) || null,
           rp: parseFloat(row["Retained Placenta"]) || null,
-          efc: parseFloat(row["Early First Calving"]) || null,
+          // efc removido: coluna não existe na tabela bulls
           gfi: parseFloat(row["Feed Effic"]) || null,
           rw: parseFloat(row["TW"]) || null,
           pedigree: row["Sire x MGS x MGGS"] || null,

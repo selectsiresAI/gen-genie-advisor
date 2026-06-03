@@ -156,14 +156,16 @@ function BotijaoVirtualPage({ client, farm, bulls: propBulls, selectedBulls = []
   const loadBulls = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .rpc('get_bulls_denorm')
-        .order('tpi', { ascending: false });
+      const { data, error } = await (supabase as any)
+        .from('bulls_denorm')
+        .select('*')
+        .order('tpi', { ascending: false, nullsFirst: false });
 
       if (error) throw error;
       
       // Transform data to match expected format
-      const transformedBulls: Bull[] = (data || []).map(bull => ({
+      const transformedBulls: Bull[] = (data || []).map((bull: any) => ({
+
         id: bull.id || bull.code,
         code: bull.code || '',
         name: bull.name || '',

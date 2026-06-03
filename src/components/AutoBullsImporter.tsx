@@ -115,7 +115,7 @@ export function AutoBullsImporter() {
             h_liv: row["Heifer Livability"] != null ? parseFloat(row["Heifer Livability"]) : null,
             da: row["Displaced Abomasum"] != null ? parseFloat(row["Displaced Abomasum"]) : null,
             rp: row["Retained Placenta"] != null ? parseFloat(row["Retained Placenta"]) : null,
-            efc: row["Early First Calving"] != null ? parseFloat(row["Early First Calving"]) : null,
+            // efc removido: coluna não existe na tabela bulls
             gfi: row["Feed Effic"] != null ? parseFloat(row["Feed Effic"]) : null,
             rw: row["TW"] != null ? parseFloat(row["TW"]) : null,
             pedigree: row["Sire x MGS x MGGS"] || null,

@@ -767,7 +767,7 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
     });
   };
 
-  const handleProcess = () => {
+  const handleProcess = async () => {
     if (!validRows.length) {
       toast({
         variant: 'destructive',
@@ -779,6 +779,13 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
     setIsProcessing(true);
 
     try {
+      // Carrega placeholders para fallback per-trait
+      // (cobre casos onde o MGS/MGGS real existe mas não tem aquela trait preenchida).
+      const [mgsPlaceholder, mmgsPlaceholder] = await Promise.all([
+        getBullByNaab(MGS_PLACEHOLDER_NAAB).then(mapBullRecord).catch(() => null),
+        getBullByNaab(MGGS_PLACEHOLDER_NAAB).then(mapBullRecord).catch(() => null),
+      ]);
+
       const updatedRows = rows.map((row) => {
         if (row.status !== 'valid') {
           return { ...row, prediction: null };
@@ -786,7 +793,11 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
 
         return {
           ...row,
-          prediction: calculatePedigreePrediction(row.bulls)
+          prediction: calculatePedigreePrediction({
+            ...row.bulls,
+            mgsPlaceholder,
+            mmgsPlaceholder,
+          })
         };
       });
 
@@ -804,6 +815,7 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
       setIsProcessing(false);
     }
   };
+
 
   const handleReset = () => {
     setRows([]);
