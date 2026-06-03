@@ -704,6 +704,114 @@ export default function Nexus3Groups({ onBack, selectedFarmId }: Nexus3GroupsPro
         </div>
       </div>
 
+      {/* Seletor de modo do pacote de touros */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <label className="text-sm font-medium text-gray-700">
+          {isEs ? "Paquete de toros" : isEn ? "Sires package" : "Pacote de touros"}
+        </label>
+        <div className="mt-3 flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => setMode("shared")}
+            className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
+              mode === "shared"
+                ? "border-[#ED1C24] bg-[#ED1C24] text-white"
+                : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            {isEs ? "Mismo paquete para todas las PTAs" : isEn ? "Same package for all PTAs" : "Mesmo pacote para todas as PTAs"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("separate")}
+            className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
+              mode === "separate"
+                ? "border-[#ED1C24] bg-[#ED1C24] text-white"
+                : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            {isEs ? "Paquete separado por PTA" : isEn ? "Separate package per PTA" : "Pacote separado por PTA"}
+          </button>
+        </div>
+        <p className="mt-2 text-xs text-gray-500">
+          {mode === "shared"
+            ? (isEs ? "Defina UN conjunto de toros y se aplicará a todos los gráficos." : isEn ? "Define ONE set of sires that applies to all charts." : "Defina UM conjunto de touros e ele será aplicado a todos os gráficos.")
+            : (isEs ? "Cada característica tendrá su propia búsqueda y selección de toros." : isEn ? "Each trait will have its own search and sires selection." : "Cada característica terá sua própria busca e seleção de touros.")}
+        </p>
+      </div>
+
+      {/* Painel de touros compartilhados (apenas no modo shared) */}
+      {mode === "shared" && (
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-semibold text-gray-900">
+              {isEs ? "Buscar y agregar toros (compartido)" : isEn ? "Search and add sires (shared)" : "Buscar e adicionar touros (compartilhado)"}
+            </h3>
+            {sharedLoading && <Loader2 className="h-4 w-4 animate-spin text-gray-500" />}
+          </div>
+          <div className="relative">
+            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              className="h-11 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-3 text-sm text-gray-900 shadow-sm focus:border-gray-900 focus:outline-none"
+              placeholder="Ex.: 7HO, 007HO, 29HO, HELIX…"
+              value={sharedQuery}
+              onChange={(e) => setSharedQuery(e.target.value)}
+            />
+          </div>
+
+          {sharedResults.length > 0 && (
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {sharedResults.map((r) => (
+                <button key={r.id} type="button" onClick={() => addSharedBull(r)} className="text-left">
+                  <div className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm transition hover:border-gray-300 hover:bg-gray-50">
+                    <p className="text-sm font-semibold text-gray-900">{r.code}</p>
+                    <p className="text-xs text-gray-500">{r.name || "—"}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {sharedBulls.length > 0 ? (
+            <div className="space-y-2">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                {isEs ? "Pacote actual" : isEn ? "Current package" : "Pacote atual"}
+              </h4>
+              {sharedBulls.map((b) => (
+                <div key={b.id} className="flex flex-col gap-2 rounded-xl border border-gray-200 bg-white p-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{b.code}</p>
+                    <p className="text-xs text-gray-500">{b.name || "—"}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-medium text-gray-600">%</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      className="h-9 w-20 rounded-lg border border-gray-300 px-2 text-right text-sm font-semibold text-gray-900 focus:border-gray-900 focus:outline-none"
+                      value={b.percent}
+                      onChange={(e) => setSharedPercent(b.id, parseFloat(e.target.value))}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeSharedBull(b.id)}
+                      className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">
+              {isEs ? "Ningún toro en el paquete todavía." : isEn ? "No sires in the package yet." : "Nenhum touro no pacote ainda."}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Seções por trait (empilhadas, roláveis) */}
       <div className="space-y-8">
         {farmId && selectedTraits.map((t) => (
@@ -715,6 +823,7 @@ export default function Nexus3Groups({ onBack, selectedFarmId }: Nexus3GroupsPro
             isEn={isEn}
             isEs={isEs}
             onRemove={() => removeTraitSection(t)}
+            sharedBulls={mode === "shared" ? sharedBulls : undefined}
           />
         ))}
         {selectedTraits.length === 0 && (
