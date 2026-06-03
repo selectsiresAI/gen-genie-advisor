@@ -186,7 +186,7 @@ const buildResultExportRows = (rows: BatchRow[], isEn = false, isEs = false) =>
          'PTAP%': formatPredictionValue('PTAP%', pred?.ptap_pct ?? null),
          'PL': formatPredictionValue('PL', pred?.pl ?? null),
          'DPR': formatPredictionValue('DPR', pred?.dpr ?? null),
-         '': formatPredictionValue('LIV', pred?.liv ?? null), // LIV column (unnamed in import format)
+         'LIV': formatPredictionValue('LIV', pred?.liv ?? null),
          'SCS': formatPredictionValue('SCS', pred?.scs ?? null),
          'Mast': formatPredictionValue('Mast', pred?.mast ?? null),
          'Met': formatPredictionValue('Met', pred?.met ?? null),

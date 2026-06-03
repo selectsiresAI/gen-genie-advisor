@@ -170,14 +170,14 @@ export function calculatePedigreePrediction({
 
  export function formatPredictionValue(traitKey: string, value: number | null | undefined): string {
    if (value == null) {
-     return '—';
+     return '';
    }
    return formatPtaValue(traitKey, value);
  }
  
  export function formatBullValue(traitKey: string, value: number | null | undefined): string {
    if (value == null) {
-     return '—';
+     return '';
    }
    return formatPtaValue(traitKey, value);
  }
