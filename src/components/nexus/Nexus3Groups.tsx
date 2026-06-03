@@ -19,7 +19,7 @@ import { ChevronLeft, Download, Loader2, Search as SearchIcon, Sparkles, X } fro
 import { ANIMAL_METRIC_COLUMNS } from "../../constants/animalMetrics";
 import { getAdaptiveYAxisDomainMultiple } from "../../lib/chart-utils";
 import { formatPtaValue } from "@/utils/ptaFormat";
-import { exportSingleChartToPDF } from "@/lib/pdf/exportCharts";
+import { exportSingleChartToPDF, exportMultipleChartsToPDF } from "@/lib/pdf/exportCharts";
 import { format } from "date-fns";
 import { useTranslation } from "@/hooks/useTranslation";
 
