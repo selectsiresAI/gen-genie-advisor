@@ -4517,6 +4517,78 @@ export type Database = {
           suggestions: string[]
         }[]
       }
+      get_bulls_by_naabs: {
+        Args: { p_naabs: string[] }
+        Returns: {
+          beta_casein: string
+          birth_date: string
+          bull_id: string
+          bwc: number
+          ccr: number
+          cfp: number
+          cm_dollar: number
+          code: string
+          company: string
+          da: number
+          dce: number
+          dfm: number
+          dpr: number
+          dsb: number
+          f_sav: number
+          fi: number
+          flc: number
+          fls: number
+          fm_dollar: number
+          found: boolean
+          fta: number
+          ftl: number
+          ftp: number
+          fua: number
+          gfi: number
+          gm_dollar: number
+          h_liv: number
+          hcr: number
+          hhp_dollar: number
+          input_naab: string
+          kappa_casein: string
+          ket: number
+          liv: number
+          mast: number
+          met: number
+          mf: number
+          mgs_naab: string
+          mmgs_naab: string
+          name: string
+          nm_dollar: number
+          pl: number
+          ptaf: number
+          ptaf_pct: number
+          ptam: number
+          ptap: number
+          ptap_pct: number
+          ptat: number
+          registration: string
+          rfi: number
+          rlr: number
+          rls: number
+          rp: number
+          rtp: number
+          rua: number
+          ruh: number
+          ruw: number
+          rw: number
+          sce: number
+          scs: number
+          sire_naab: string
+          ssb: number
+          sta: number
+          str: number
+          tpi: number
+          ucl: number
+          udc: number
+          udp: number
+        }[]
+      }
       get_bulls_denorm: {
         Args: never
         Returns: {
