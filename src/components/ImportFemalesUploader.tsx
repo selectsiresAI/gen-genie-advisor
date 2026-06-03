@@ -60,12 +60,17 @@ export default function ImportFemalesUploader({ farmId, onSuccess }: Props) {
     });
     const headerRow = headerRows[0] ?? [];
     const identifierAliases = ['identifier', 'id', 'identificador', 'brinco', 'tag', 'eartag', 'ear tag', 'id animal', 'animal id', 'cow id', 'female id'];
-    const hasIdentifier = headerRow.some((header) =>
-      typeof header === 'string' && identifierAliases.includes(header.trim().toLowerCase()),
-    );
+    const nameAliases = ['name', 'nome', 'n', 'nombre'];
+    const headerSet = headerRow
+      .filter((h): h is string => typeof h === 'string')
+      .map((h) => h.trim().toLowerCase());
+    const hasIdentifier = headerSet.some((h) => identifierAliases.includes(h));
+    const hasName = headerSet.some((h) => nameAliases.includes(h));
 
-    if (!hasIdentifier) {
-      throw new Error(`${t("femaleImport.missingColumn")} "identifier".`);
+    // Nexus 2 exports include the `identifier` header but leave it blank, using `name`
+    // as the animal id. The edge function accepts either, so the pre-check should too.
+    if (!hasIdentifier && !hasName) {
+      throw new Error(`MISSING_ID_COLUMN: ${t("femaleImport.missingColumn")} "identifier".`);
     }
 
     // Force date columns to ISO format (YYYY-MM-DD) so the edge function can parse them
@@ -213,7 +218,7 @@ export default function ImportFemalesUploader({ farmId, onSuccess }: Props) {
     } catch (error: any) {
       if (error?.name === 'NotReadableError' || String(error).includes('NotReadableError')) {
         toastError(t("femaleImport.notReadable"));
-      } else if (error?.message?.includes('identifier')) {
+      } else if (error?.message?.startsWith('MISSING_ID_COLUMN')) {
         toastError(`${t("femaleImport.missingColumn")} "identifier".`);
       } else if (error instanceof TypeError) {
         toastError(t("femaleImport.corsError"));
