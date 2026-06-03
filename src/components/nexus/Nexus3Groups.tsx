@@ -88,7 +88,11 @@ function TraitSection({ trait, farmId, supabase, isEn, isEs, onRemove, sharedBul
           p_farm: farmId,
         });
         if (error) throw error;
-        setMothers((data ?? []) as MotherPoint[]);
+        const currentYear = new Date().getFullYear();
+        const cleaned = ((data ?? []) as MotherPoint[]).filter(
+          (m) => Number(m.birth_year) > 0 && Number(m.birth_year) <= currentYear
+        );
+        setMothers(cleaned);
       } catch (e: any) {
         setErr(e.message || String(e));
       } finally {
@@ -585,6 +589,73 @@ export default function Nexus3Groups({ onBack, selectedFarmId }: Nexus3GroupsPro
       }
     })();
   }, [supabase]);
+
+  // ====== Persistência do pacote (por usuário + fazenda) ======
+  const packageLoadedRef = useRef(false);
+  const packageFarmRef = useRef<string | null>(null);
+
+  // Carrega pacote salvo quando farmId muda
+  useEffect(() => {
+    if (!farmId) return;
+    packageLoadedRef.current = false;
+    packageFarmRef.current = farmId;
+    (async () => {
+      try {
+        const { data: auth } = await supabase.auth.getUser();
+        const uid = auth.user?.id;
+        if (!uid) return;
+        const { data, error } = await supabase
+          .from("nexus3_user_packages")
+          .select("mode, selected_traits, shared_bulls")
+          .eq("user_id", uid)
+          .eq("client_id", farmId)
+          .maybeSingle();
+        if (error) throw error;
+        if (data) {
+          if (data.mode === "shared" || data.mode === "separate") setMode(data.mode);
+          if (Array.isArray(data.selected_traits) && data.selected_traits.length) {
+            setSelectedTraits(data.selected_traits as string[]);
+          }
+          if (Array.isArray(data.shared_bulls)) {
+            setSharedBulls(data.shared_bulls as SharedBull[]);
+          }
+        }
+      } catch (e) {
+        // silencioso — não bloqueia a página
+        console.warn("Nexus3: falha ao carregar pacote salvo", e);
+      } finally {
+        packageLoadedRef.current = true;
+      }
+    })();
+  }, [farmId, supabase]);
+
+  // Autosave (debounced) quando muda algo
+  useEffect(() => {
+    if (!farmId || !packageLoadedRef.current) return;
+    if (packageFarmRef.current !== farmId) return;
+    const handle = setTimeout(async () => {
+      try {
+        const { data: auth } = await supabase.auth.getUser();
+        const uid = auth.user?.id;
+        if (!uid) return;
+        await supabase
+          .from("nexus3_user_packages")
+          .upsert(
+            {
+              user_id: uid,
+              client_id: farmId,
+              mode,
+              selected_traits: selectedTraits,
+              shared_bulls: sharedBulls as any,
+            },
+            { onConflict: "user_id,client_id" }
+          );
+      } catch (e) {
+        console.warn("Nexus3: falha ao salvar pacote", e);
+      }
+    }, 600);
+    return () => clearTimeout(handle);
+  }, [farmId, mode, selectedTraits, sharedBulls, supabase]);
 
   const handleBack = () => {
     if (typeof onBack === "function") onBack();
