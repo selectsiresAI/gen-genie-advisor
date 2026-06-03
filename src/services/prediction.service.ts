@@ -136,18 +136,32 @@ export function mapBullRecord(record: BullsDenormSelection | null): BullSummary 
 export function calculatePedigreePrediction({
   sire,
   mgs,
-  mmgs
+  mmgs,
+  mgsPlaceholder = null,
+  mmgsPlaceholder = null,
 }: {
   sire: BullSummary | null;
   mgs: BullSummary | null;
   mmgs: BullSummary | null;
+  /**
+   * Touro "média da geração" usado como fallback per-trait quando
+   * o MGS real não tem aquela trait preenchida (007HO00001 / 2020).
+   */
+  mgsPlaceholder?: BullSummary | null;
+  /**
+   * Touro "média da geração" usado como fallback per-trait quando
+   * o MGGS real não tem aquela trait preenchida (007HO00002 / 2017).
+   */
+  mmgsPlaceholder?: BullSummary | null;
 }): PredictionResult {
   const result: PredictionResult = {} as PredictionResult;
 
   for (const trait of PREDICTION_TRAITS) {
     const sireValue = sire?.ptas[trait.key];
-    const mgsValue = mgs?.ptas[trait.key];
-    const mmgsValue = mmgs?.ptas[trait.key];
+    // Fallback per-trait: se o MGS/MGGS real não possui a trait,
+    // usa a média da geração para não perder a predição.
+    const mgsValue = mgs?.ptas[trait.key] ?? mgsPlaceholder?.ptas[trait.key];
+    const mmgsValue = mmgs?.ptas[trait.key] ?? mmgsPlaceholder?.ptas[trait.key];
 
     if (
       sireValue == null ||
