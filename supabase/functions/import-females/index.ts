@@ -131,10 +131,16 @@ function validateRecord(record: any, farmId: string): FemaleRecord | null {
   }
   if (!name || name.length === 0 || name.length > 200) return null;
 
+  // Nexus 2 exports include an `identifier` column but leave it blank,
+  // using `name` as the animal id. Fall back to the name so the unique
+  // key remains meaningful and duplicates can be detected.
+  const rawIdentifier = sanitizeString(record.identifier);
+  const identifier = (rawIdentifier && rawIdentifier.length > 0 ? rawIdentifier : name).substring(0, 100);
+
   const validated: FemaleRecord = {
     client_id: farmId,
     name,
-    identifier: sanitizeString(record.identifier)?.substring(0, 100) || undefined,
+    identifier,
     cdcb_id: sanitizeString(record.cdcb_id)?.substring(0, 50) || undefined,
     birth_date: validateDate(record.birth_date) || undefined,
     parity_order: validateNumber(record.parity_order, 0, 20) || undefined,
