@@ -218,7 +218,7 @@ export default function ImportFemalesUploader({ farmId, onSuccess }: Props) {
     } catch (error: any) {
       if (error?.name === 'NotReadableError' || String(error).includes('NotReadableError')) {
         toastError(t("femaleImport.notReadable"));
-      } else if (error?.message?.includes('identifier')) {
+      } else if (error?.message?.startsWith('MISSING_ID_COLUMN')) {
         toastError(`${t("femaleImport.missingColumn")} "identifier".`);
       } else if (error instanceof TypeError) {
         toastError(t("femaleImport.corsError"));
