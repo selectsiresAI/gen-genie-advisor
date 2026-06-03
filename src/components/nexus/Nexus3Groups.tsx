@@ -88,7 +88,11 @@ function TraitSection({ trait, farmId, supabase, isEn, isEs, onRemove, sharedBul
           p_farm: farmId,
         });
         if (error) throw error;
-        setMothers((data ?? []) as MotherPoint[]);
+        const currentYear = new Date().getFullYear();
+        const cleaned = ((data ?? []) as MotherPoint[]).filter(
+          (m) => Number(m.birth_year) > 0 && Number(m.birth_year) <= currentYear
+        );
+        setMothers(cleaned);
       } catch (e: any) {
         setErr(e.message || String(e));
       } finally {
