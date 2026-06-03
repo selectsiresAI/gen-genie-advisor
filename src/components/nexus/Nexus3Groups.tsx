@@ -435,6 +435,100 @@ export default function Nexus3Groups({ onBack, selectedFarmId }: Nexus3GroupsPro
   const [pickerOpen, setPickerOpen] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  // Modo: 'shared' = mesmo pacote de touros para todas; 'separate' = pacote por característica
+  const [mode, setMode] = useState<"shared" | "separate">("shared");
+  const [sharedBulls, setSharedBulls] = useState<SharedBull[]>([]);
+  const [sharedQuery, setSharedQuery] = useState("");
+  const [sharedResults, setSharedResults] = useState<BullRow[]>([]);
+  const [sharedLoading, setSharedLoading] = useState(false);
+
+  // Busca compartilhada: usa primeiro trait selecionado para listagem
+  useEffect(() => {
+    if (mode !== "shared") return;
+    const searchTrait = selectedTraits[0];
+    if (!searchTrait) return;
+    const t = setTimeout(async () => {
+      if (!sharedQuery) return setSharedResults([]);
+      try {
+        setSharedLoading(true);
+        const { data, error } = await supabase.rpc("nx3_bulls_lookup", {
+          p_query: sharedQuery,
+          p_trait: searchTrait,
+          p_limit: 12,
+        });
+        if (error) throw error;
+        setSharedResults((data ?? []) as BullRow[]);
+      } catch (e: any) {
+        setErr(e.message || String(e));
+      } finally {
+        setSharedLoading(false);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [sharedQuery, selectedTraits, mode, supabase]);
+
+  // Adiciona touro ao pacote compartilhado buscando valores de TODAS as características selecionadas
+  const addSharedBull = async (b: BullRow) => {
+    if (sharedBulls.find((x) => x.id === b.id)) return;
+    try {
+      const cols = ["id", "code", "name", ...selectedTraits].filter((v, i, a) => a.indexOf(v) === i);
+      const { data, error } = await supabase
+        .from("bulls_denorm")
+        .select(cols.join(","))
+        .eq("id", b.id)
+        .maybeSingle();
+      if (error) throw error;
+      const values: Record<string, number | null> = {};
+      selectedTraits.forEach((t) => {
+        const v = (data as any)?.[t];
+        values[t] = v == null ? null : Number(v);
+      });
+      setSharedBulls((prev) => [...prev, { id: b.id, code: b.code, name: b.name, percent: 100, values }]);
+    } catch (e: any) {
+      setErr(e.message || String(e));
+    }
+  };
+
+  // Quando o usuário adiciona novas características, busca os valores faltantes
+  useEffect(() => {
+    if (mode !== "shared" || !sharedBulls.length) return;
+    const missing = sharedBulls.some((b) => selectedTraits.some((t) => !(t in b.values)));
+    if (!missing) return;
+    (async () => {
+      try {
+        const ids = sharedBulls.map((b) => b.id);
+        const cols = ["id", ...selectedTraits].filter((v, i, a) => a.indexOf(v) === i);
+        const { data, error } = await supabase
+          .from("bulls_denorm")
+          .select(cols.join(","))
+          .in("id", ids);
+        if (error) throw error;
+        const byId = new Map((data ?? []).map((r: any) => [r.id, r]));
+        setSharedBulls((prev) =>
+          prev.map((b) => {
+            const row: any = byId.get(b.id);
+            if (!row) return b;
+            const values = { ...b.values };
+            selectedTraits.forEach((t) => {
+              if (!(t in values)) values[t] = row[t] == null ? null : Number(row[t]);
+            });
+            return { ...b, values };
+          })
+        );
+      } catch (e: any) {
+        setErr(e.message || String(e));
+      }
+    })();
+  }, [selectedTraits, sharedBulls, mode, supabase]);
+
+  const setSharedPercent = (id: string, v: number) => {
+    setSharedBulls((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, percent: isNaN(v) ? 0 : Math.min(100, Math.max(0, v)) } : b))
+    );
+  };
+  const removeSharedBull = (id: string) => setSharedBulls((prev) => prev.filter((b) => b.id !== id));
+
+
   // Resolver farmId
   useEffect(() => {
     (async () => {
