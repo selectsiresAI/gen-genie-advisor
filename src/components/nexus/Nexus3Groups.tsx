@@ -479,11 +479,29 @@ export default function Nexus3Groups({ onBack, selectedFarmId }: Nexus3GroupsPro
     return () => clearTimeout(t);
   }, [sharedQuery, selectedTraits, mode, supabase]);
 
+  // Lista de colunas de PTA realmente existentes em bulls_denorm.
+  // Mantida explícita para evitar que uma coluna inexistente (ex.: 'efc') quebre o SELECT inteiro.
+  const VALID_DENORM_PTA_COLS = useMemo(
+    () =>
+      new Set([
+        "hhp_dollar","tpi","nm_dollar","cm_dollar","fm_dollar","gm_dollar","f_sav",
+        "ptam","cfp","ptaf","ptaf_pct","ptap","ptap_pct","pl","dpr","liv","scs",
+        "mast","met","rp","da","ket","mf","ptat","udc","flc","sce","dce","ssb","dsb",
+        "h_liv","ccr","hcr","fi","gl","bwc","sta","str","dfm","rua","rls","rtp","ftl",
+        "rw","rlr","fta","fls","fua","ruh","ruw","ucl","udp","ftp","rfi","gfi",
+      ]),
+    []
+  );
+  const validSelectedTraits = useMemo(
+    () => selectedTraits.filter((t) => VALID_DENORM_PTA_COLS.has(t)),
+    [selectedTraits, VALID_DENORM_PTA_COLS]
+  );
+
   // Adiciona touro ao pacote compartilhado buscando valores de TODAS as características selecionadas
   const addSharedBull = async (b: BullRow) => {
     if (sharedBulls.find((x) => x.id === b.id)) return;
     try {
-      const cols = ["id", "code", "name", ...selectedTraits].filter((v, i, a) => a.indexOf(v) === i);
+      const cols = ["id", "code", "name", ...validSelectedTraits].filter((v, i, a) => a.indexOf(v) === i);
       const { data, error } = await supabase
         .from("bulls_denorm")
         .select(cols.join(","))
@@ -501,15 +519,22 @@ export default function Nexus3Groups({ onBack, selectedFarmId }: Nexus3GroupsPro
     }
   };
 
-  // Quando o usuário adiciona novas características, busca os valores faltantes
+  // Garante que TODOS os touros do pacote tenham valor para TODAS as características selecionadas.
+  // Usa uma chave estável dos IDs para evitar loops, e refaz a busca sempre que faltar algum trait.
+  const sharedBullIdsKey = useMemo(
+    () => sharedBulls.map((b) => b.id).sort().join(","),
+    [sharedBulls]
+  );
   useEffect(() => {
-    if (mode !== "shared" || !sharedBulls.length) return;
-    const missing = sharedBulls.some((b) => selectedTraits.some((t) => !(t in b.values)));
-    if (!missing) return;
+    if (mode !== "shared") return;
+    if (!sharedBullIdsKey) return;
+    const ids = sharedBullIdsKey.split(",").filter(Boolean);
+    if (!ids.length) return;
+    const missingAny = sharedBulls.some((b) => selectedTraits.some((t) => !(t in (b.values || {}))));
+    if (!missingAny) return;
     (async () => {
       try {
-        const ids = sharedBulls.map((b) => b.id);
-        const cols = ["id", ...selectedTraits].filter((v, i, a) => a.indexOf(v) === i);
+        const cols = ["id", ...validSelectedTraits].filter((v, i, a) => a.indexOf(v) === i);
         const { data, error } = await supabase
           .from("bulls_denorm")
           .select(cols.join(","))
@@ -519,10 +544,12 @@ export default function Nexus3Groups({ onBack, selectedFarmId }: Nexus3GroupsPro
         setSharedBulls((prev) =>
           prev.map((b) => {
             const row: any = byId.get(b.id);
-            if (!row) return b;
-            const values = { ...b.values };
+            const values = { ...(b.values || {}) };
             selectedTraits.forEach((t) => {
-              if (!(t in values)) values[t] = row[t] == null ? null : Number(row[t]);
+              if (!(t in values)) {
+                const v = row ? row[t] : null;
+                values[t] = v == null ? null : Number(v);
+              }
             });
             return { ...b, values };
           })
@@ -531,7 +558,8 @@ export default function Nexus3Groups({ onBack, selectedFarmId }: Nexus3GroupsPro
         setErr(e.message || String(e));
       }
     })();
-  }, [selectedTraits, sharedBulls, mode, supabase]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTraits, sharedBullIdsKey, mode, supabase, validSelectedTraits]);
 
   const setSharedPercent = (id: string, v: number) => {
     setSharedBulls((prev) =>
