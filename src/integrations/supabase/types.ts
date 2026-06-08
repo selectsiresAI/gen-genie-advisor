@@ -746,6 +746,127 @@ export type Database = {
         }
         Relationships: []
       }
+      client_botijao_itens: {
+        Row: {
+          botijao_id: string
+          caneca: number
+          client_id: string
+          created_at: string
+          doses: number
+          id: string
+          observacoes: string | null
+          preco: number
+          tipo: string
+          touro_breed: string | null
+          touro_code: string
+          touro_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          botijao_id: string
+          caneca?: number
+          client_id: string
+          created_at?: string
+          doses?: number
+          id?: string
+          observacoes?: string | null
+          preco?: number
+          tipo?: string
+          touro_breed?: string | null
+          touro_code: string
+          touro_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          botijao_id?: string
+          caneca?: number
+          client_id?: string
+          created_at?: string
+          doses?: number
+          id?: string
+          observacoes?: string | null
+          preco?: number
+          tipo?: string
+          touro_breed?: string | null
+          touro_code?: string
+          touro_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_botijao_itens_botijao_id_fkey"
+            columns: ["botijao_id"]
+            isOneToOne: false
+            referencedRelation: "client_botijoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_botijoes: {
+        Row: {
+          canecas: number
+          capacidade_litros: number
+          client_id: string
+          created_at: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          canecas?: number
+          capacidade_litros?: number
+          client_id: string
+          created_at?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          canecas?: number
+          capacidade_litros?: number
+          client_id?: string
+          created_at?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
+      client_nitrogen_records: {
+        Row: {
+          botijao_id: string | null
+          client_id: string
+          created_at: string
+          data_abastecimento: string
+          id: string
+          observacoes: string | null
+          volume: number
+        }
+        Insert: {
+          botijao_id?: string | null
+          client_id: string
+          created_at?: string
+          data_abastecimento: string
+          id?: string
+          observacoes?: string | null
+          volume: number
+        }
+        Update: {
+          botijao_id?: string | null
+          client_id?: string
+          created_at?: string
+          data_abastecimento?: string
+          id?: string
+          observacoes?: string | null
+          volume?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_nitrogen_records_botijao_id_fkey"
+            columns: ["botijao_id"]
+            isOneToOne: false
+            referencedRelation: "client_botijoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_users: {
         Row: {
           client_id: string
