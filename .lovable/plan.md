@@ -1,75 +1,57 @@
-## Resposta direta
 
-**De onde vêm os dados:** a Nexus 2 (predição por pedigree) lê touros do projeto Supabase `odactdxpecpiyiyaqfgi`, tabela base `public.bulls`, exposta pela view `public.bulls_denorm` e consultada pelas funções RPC `get_bull_by_naab` / `get_bulls_by_naabs`.
+## Diagnóstico
 
-**Por que algumas traits não saem:** identifiquei a causa real analisando o arquivo `nexus2_resultados (13).xlsx`. As colunas que vêm **sempre vazias** (`F SAV`, `DCE`, `H LIV`, `CCR`, `HCR`, `GL`, `RFI`) NÃO são bug de fórmula — é dado faltando no touro buscado. E o motivo é:
+A função SQL `public.calculate_hhp_dollar` que alimenta `females.hhp_dollar` e `bulls.hhp_dollar` está com coeficientes diferentes da planilha oficial enviada (`HHP_Index_auto_2.xlsx`). Isso explica os valores estranhos (ex.: HHP$ −1397 com NM$ 120, +2366 com NM$ 264). O culpado dominante é o peso do RFI (atual −16,67; correto −0,19 — quase 90× maior do que deveria).
 
-A tabela `bulls` tem **35 NAABs duplicados**, com dois registros para o mesmo touro (um vindo da importação com código original `11HO12418` e outro da importação zero-padded `011HO12418`). Cada uma das duas linhas tem apenas **um subconjunto parcial das traits**.
+### Comparação coeficiente a coeficiente
 
-Exemplo confirmado por consulta SQL para `11HO12418`:
+| Trait (col Excel) | Fórmula correta (planilha) | Fórmula atual (banco) | Ação |
+|---|---|---|---|
+| PTA Fat (B) | `4,91 · ptaf` | `3,80 · ptaf` | trocar |
+| PTA Pro (C) | `6,01 · ptap` | `6,44 · ptap` | trocar |
+| PTA PL (D) | `12,83 · pl` | `13,80 · pl` | trocar |
+| PTA Livability (E) | `10,69 · liv` | `7,41 · liv` | trocar |
+| PTA SCS (F) | `−158,56 · (scs − 3)` (sinal mantido) | `30,20 · clamp(−(scs−2,5), 0)` | trocar fórmula e centro (2,5→3) |
+| PTA DPR (G) | `19,30 · dpr` | `6,82 · dpr` | trocar |
+| CCR (H) | `15,84 · ccr` | `3,50 · ccr` | trocar |
+| RFI (I) | `−0,19 · rfi` | `−16,67 · rfi` | **trocar (principal causa)** |
+| STA (J) | `−13,32 · sta` | `+7,69 · sta` | trocar sinal e magnitude |
+| DF / DFM (K) | `−8,88 · dfm` | `+3,85 · dfm` | trocar sinal e magnitude |
+| RUW (L) | `8,88 · ruw` | `3,85 · ruw` | trocar |
+| UD / UDP (M) | `13,32 · udp` | `11,54 · udp` | trocar |
+| RTP (N) | `−14,80 · (ABS(rtp) − 0,65)` | `−7,69 · ABS(rtp − 2,30)` | trocar (centro 0, não 2,3) |
+| TL / FTL (O) | `−26,64 · (ABS(ftl) − 0,5)` | `−7,69 · ABS(ftl − 0,5)` | trocar (centro 0, não 0,5) |
+| Mastitis (P) | `+25,37 · mast` | `−4,00 · mast` | trocar sinal e magnitude |
 
-| Linha | f_sav | dce(=pta_sire_sce) | h_liv | ccr_num | gl   | rfi  |
-|-------|-------|---------------------|-------|---------|------|------|
-| `11HO12418`  | 149  | 1.5 | 0.9 | NULL | -1.2 | 60   |
-| `011HO12418` | NULL | NULL | NULL | 1.8 | NULL | NULL |
+### Tratamento de traits ausentes
 
-O RPC `get_bull_by_naab` faz:
-```sql
-WHERE code_normalized = ANY(variants) ORDER BY tpi DESC LIMIT 1
-```
-e retorna **apenas uma** das duas linhas. As traits que estão na outra linha vêm `NULL` — exatamente o que aparece como colunas vazias no Excel.
+O card "Traits requeridos para cálculo do HHP$" já diz: *"Traits ausentes resultam em HHP$ vazio."* Hoje o SQL usa `COALESCE(..., 0)` → trata ausente como zero, o que distorce o índice. Vai passar a retornar **NULL** se qualquer um dos 15 traits estiver ausente.
 
-Touros 100% afetados no arquivo (todos sires usados): `200HO11431`, `11HO15985`, `11HO12418`, `11HO11422`, `11HO11736`, `1HO12996` — todos têm linha duplicada.
+## Mudanças
 
-## Plano de correção
+1. **Recriar `public.calculate_hhp_dollar(...)`** com:
+   - Os 15 coeficientes corretos exatamente como na planilha.
+   - SCS: `−158,56 · (scs − 3)` (sem clamp, sem abs).
+   - RTP: `−14,8 · (ABS(rtp) − 0,65)`.
+   - FTL: `−26,64 · (ABS(ftl) − 0,5)`.
+   - Retorno `NULL` se qualquer um dos 15 parâmetros for `NULL` (sem `COALESCE`).
+   - `ROUND(result, 0)` no fim, mantendo `SECURITY DEFINER` + `search_path = public`.
 
-### 1. Consolidar duplicatas em `bulls` (migration)
-Para cada `code_normalized` com duas linhas, fazer `UPDATE` na linha vencedora (maior `tpi`, ou a com mais campos não-nulos) preenchendo via `COALESCE` os campos faltantes da linha perdedora, depois deletar a perdedora. Mover também `bull_naab_aliases` que apontarem para o id removido.
+2. **Manter triggers existentes** `trg_females_hhp_dollar` e `trg_bulls_hhp_dollar` (já leem das colunas top-level corretas). Eles passam a chamar automaticamente a função corrigida; nenhuma mudança de trigger necessária.
 
-Pseudo-SQL:
-```sql
-WITH dups AS (
-  SELECT code_normalized,
-         (array_agg(id ORDER BY (CASE WHEN tpi IS NULL THEN 0 ELSE 1 END) DESC, tpi DESC NULLS LAST))[1] AS keep_id,
-         (array_agg(id ORDER BY (CASE WHEN tpi IS NULL THEN 0 ELSE 1 END) DESC, tpi DESC NULLS LAST))[2] AS drop_id
-  FROM bulls
-  GROUP BY code_normalized
-  HAVING count(*) > 1
-)
-UPDATE bulls k SET
-  f_sav      = COALESCE(k.f_sav,      d.f_sav),
-  h_liv      = COALESCE(k.h_liv,      d.h_liv),
-  ccr_num    = COALESCE(k.ccr_num,    d.ccr_num),
-  hcr_num    = COALESCE(k.hcr_num,    d.hcr_num),
-  gl         = COALESCE(k.gl,         d.gl),
-  rfi        = COALESCE(k.rfi,        d.rfi),
-  pta_sire_sce = COALESCE(k.pta_sire_sce, d.pta_sire_sce),
-  -- ... todos os demais campos numeric/text usados pela Nexus 2 ...
-FROM dups x JOIN bulls d ON d.id = x.drop_id
-WHERE k.id = x.keep_id;
+3. **Backfill** em `public.females` e `public.bulls`:
+   - `UPDATE … SET hhp_dollar = NULL`
+   - `UPDATE … SET updated_at = now()` → reativa o trigger e recalcula todos os HHP$ com a nova fórmula. Linhas sem os 15 traits ficarão com HHP$ vazio (esperado).
 
-UPDATE bull_naab_aliases SET bull_id = x.keep_id
-FROM dups x WHERE bull_id = x.drop_id;
+4. **Memória do projeto** `mem://infrastructure/hhp-dollar-auto-calculation-v2025` atualizada com os coeficientes oficiais para referência futura.
 
-DELETE FROM bulls WHERE id IN (SELECT drop_id FROM dups);
-```
+## Validação após aplicar
 
-### 2. Prevenir reincidência
-Criar índice único parcial:
-```sql
-CREATE UNIQUE INDEX IF NOT EXISTS bulls_code_normalized_unique
-  ON public.bulls(code_normalized) WHERE code_normalized IS NOT NULL;
-```
-Isso bloqueia novas duplicatas em futuros imports.
+- Conferir 3 fêmeas onde temos todos os 15 traits — recalcular HHP$ manualmente com a planilha e comparar.
+- Conferir distribuição: spread de HHP$ deve ficar muito mais próximo de NM$ (não mais ±1500 puxado pelo RFI).
+- Fêmeas sem algum dos 15 traits devem aparecer com HHP$ vazio na tabela do rebanho.
 
-### 3. Endurecer o RPC (defesa em profundidade)
-Ajustar `get_bull_by_naab` (e a versão batch `get_bulls_by_naabs`) para, caso ainda existam múltiplas linhas, ordenar por "completude" (número de campos críticos não-nulos) antes do `tpi`, evitando que um valor parcial mascare dados reais durante a janela de migração.
+## Fora do escopo
 
-### 4. Verificação
-- Re-rodar a planilha do usuário pela Nexus 2 e conferir que `F SAV / DCE / H LIV / CCR / HCR / GL / RFI` agora aparecem.
-- Query de auditoria: `SELECT count(*) FROM (SELECT code_normalized FROM bulls GROUP BY 1 HAVING count(*)>1) s;` deve retornar 0.
-
-### Detalhes técnicos
-- O passo 1 é uma migration de DML pura. Nenhum schema novo.
-- `bulls_denorm` é apenas SELECT da `bulls`, então a correção propaga automaticamente — não precisa recriar a view.
-- O frontend (`src/services/prediction.service.ts`, `Nexus2PredictionIndividual.tsx`, `Nexus2PredictionBatch.tsx`) não precisa de mudança; o problema é 100% de dados na origem.
+- Front-end (formatação, gráficos, filtros) — sem mudanças, já consome `hhp_dollar` direto.
+- Pesos do TPI, NM$ ou outros índices — não tocar.
