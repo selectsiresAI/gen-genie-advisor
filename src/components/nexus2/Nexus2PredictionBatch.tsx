@@ -888,7 +888,9 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
 
       for (let index = 0; index < data.length; index += batchSize) {
         const chunk = data.slice(index, index + batchSize);
-        const { error } = await supabase.from('females').insert(chunk);
+        const { error } = await supabase
+          .from('females')
+          .upsert(chunk, { onConflict: 'client_id,identifier', ignoreDuplicates: false });
 
         if (error) {
           throw error;
