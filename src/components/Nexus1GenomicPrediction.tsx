@@ -68,6 +68,7 @@ const Nexus1GenomicPrediction: React.FC<Nexus1GenomicPredictionProps> = ({
   const [isCalculating, setIsCalculating] = useState(false);
   const [loadingDatabase, setLoadingDatabase] = useState(false);
   const [lastFarmId, setLastFarmId] = useState<string | null>(null);
+  const [hasSegmentation, setHasSegmentation] = useState<boolean | null>(null);
 
   // Estados para busca de touros
   const [naabSearch, setNaabSearch] = useState('');
