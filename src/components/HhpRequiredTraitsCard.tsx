@@ -84,56 +84,56 @@ export function HhpRequiredTraitsCard({ inline = false, className = "" }: HhpReq
       <Button
         variant="ghost"
         size="sm"
-        className="absolute right-2 top-2 h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+        className="absolute right-1 top-1 z-10 h-6 w-6 rounded-full bg-background/80 p-0 text-muted-foreground hover:text-foreground shadow-sm"
         onClick={handleDismiss}
+        aria-label="Fechar"
       >
-        <X className="h-4 w-4" />
+        <X className="h-3.5 w-3.5" />
       </Button>
 
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <FlaskConical className="h-5 w-5 text-amber-600" />
-          {isEs ? "Traits requeridos para el cálculo de HHP$" : isEn ? "Required traits for HHP$ calculation" : "Traits obrigatórios para cálculo do HHP$"}
+      <CardHeader className="pb-1 pt-4 pr-8">
+        <CardTitle className="flex items-center gap-1.5 text-sm">
+          <FlaskConical className="h-4 w-4 text-amber-600" />
+          {isEs ? "Traits requeridos para HHP$" : isEn ? "Required traits for HHP$" : "Traits obrigatórios para HHP$"}
         </CardTitle>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs text-muted-foreground leading-relaxed">
           {isEs
-            ? <>Para calcular el índice <strong>HHP$</strong> (Holistic Health Profit), su archivo debe contener los <strong>15 traits</strong> a continuación. Traits faltantes resultan en HHP$ = vacío.</>
+            ? <>El archivo debe contener los <strong>15 traits</strong> siguientes. Faltantes = HHP$ vacío.</>
             : isEn
-            ? <>To calculate the <strong>HHP$</strong> (Holistic Health Profit) index, your file must contain the <strong>15 traits</strong> below. Missing traits result in HHP$ = empty.</>
-            : <>Para calcular o índice <strong>HHP$</strong> (Holistic Health Profit), seu arquivo deve conter as <strong>15 traits</strong> abaixo. Traits ausentes resultam em HHP$ = vazio.</>
+            ? <>File must contain the <strong>15 traits</strong> below. Missing = HHP$ empty.</>
+            : <>O arquivo deve conter as <strong>15 traits</strong> abaixo. Ausentes = HHP$ vazio.</>
           }
         </p>
       </CardHeader>
 
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-2 pt-0 pb-3">
         {Object.entries(grouped).map(([category, traits]) => (
           <div key={category}>
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               {categoryLabels[category] || category}
             </span>
-            <div className="mt-1 flex flex-wrap gap-1.5">
+            <div className="mt-0.5 flex flex-wrap gap-1">
               {traits.map((trait) => (
                 <Badge
                   key={trait.key}
                   variant="secondary"
-                  className={`text-xs font-medium ${categoryColors[category] || ""}`}
+                  className={`text-[10px] px-1.5 py-0 font-medium ${categoryColors[category] || ""}`}
                 >
                   {trait.key}
-                  <span className="ml-1 opacity-60">({trait.label})</span>
                 </Badge>
               ))}
             </div>
           </div>
         ))}
 
-        <div className="mt-2 flex items-start gap-2 rounded-md bg-white/60 dark:bg-white/5 p-3 text-xs text-muted-foreground">
-          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" />
+        <div className="mt-1 flex items-start gap-1.5 rounded-md bg-white/60 dark:bg-white/5 p-2 text-[10px] text-muted-foreground">
+          <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0 text-amber-500" />
           <div>
             <p>{isEs
-              ? <><strong>Consejo:</strong> En la plantilla CSV proporcionada, las 15 columnas ya están presentes. Use los nombres exactos de las columnas (ej.: <code>PTAF</code>, <code>SCS</code>, <code>RTP</code>) para el mapeo automático.</>
+              ? <>Use nombres exactos de columnas (<code>PTAF</code>, <code>SCS</code>, <code>RTP</code>) para mapeo automático.</>
               : isEn
-              ? <><strong>Tip:</strong> In the provided CSV template, all 15 columns are already present. Use exact column names (e.g.: <code>PTAF</code>, <code>SCS</code>, <code>RTP</code>) for automatic mapping.</>
-              : <><strong>Dica:</strong> No template CSV disponibilizado, todas as 15 colunas já estão presentes. Use os nomes exatos das colunas (ex: <code>PTAF</code>, <code>SCS</code>, <code>RTP</code>) para mapeamento automático.</>
+              ? <>Use exact column names (<code>PTAF</code>, <code>SCS</code>, <code>RTP</code>) for automatic mapping.</>
+              : <>Use nomes exatos das colunas (<code>PTAF</code>, <code>SCS</code>, <code>RTP</code>) para mapeamento automático.</>
             }</p>
           </div>
         </div>
