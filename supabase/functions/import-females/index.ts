@@ -190,7 +190,9 @@ function parseCSV(csvContent: string): { records: any[]; unmappedCols: string[] 
 
   console.log("Detected CSV delimiter: '" + delimiter + "'");
 
-  const forbiddenFields = ['id', 'farm_id', 'client_id', 'ptas', 'created_at', 'updated_at', 'deleted_at'];
+  // NOTE: 'id' is NOT forbidden because Conversão exports populate it as the animal id.
+  // It is remapped to 'identifier' via columnMapping below.
+  const forbiddenFields = ['farm_id', 'client_id', 'ptas', 'created_at', 'updated_at', 'deleted_at'];
 
   const columnMapping: Record<string, string> = {
     'hhp$': 'hhp_dollar',
@@ -264,6 +266,7 @@ function parseCSV(csvContent: string): { records: any[]; unmappedCols: string[] 
     // Portuguese/Spanish/English variations
     'nome': 'name',
     'identificador': 'identifier',
+    'id': 'identifier',
     'brinco': 'identifier',
     'tag': 'identifier',
     'id animal': 'identifier',
