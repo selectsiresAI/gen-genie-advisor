@@ -1145,7 +1145,7 @@ export default function ToolSSApp() {
               </div>
             </div>
           </div>
-          <NexusApp />
+          <NexusApp selectedFarmId={selectedFarmId} />
         </div>}
 
       {page === "arquivos" && farm && <PastaArquivosPage onBack={() => setPage("fazenda")} />}
