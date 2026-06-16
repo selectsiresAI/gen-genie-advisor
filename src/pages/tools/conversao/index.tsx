@@ -393,7 +393,15 @@ const ConversaoPage: React.FC = () => {
     });
 
     // Usar SOMENTE as colunas do modelo padrão (não adicionar colunas originais)
-    const finalHeaders = [...modelHeaders];
+    // Filtrar colunas reservadas do sistema que não devem aparecer no arquivo final
+    // (o import-females as rejeita e elas confundem o usuário durante a conversão)
+    const RESERVED_COLUMNS = new Set([
+      "id", "farm_id", "client_id", "ptas",
+      "created_at", "updated_at", "deleted_at",
+    ]);
+    const finalHeaders = modelHeaders.filter(
+      (h) => !RESERVED_COLUMNS.has(normalizeKey(h)) && !RESERVED_COLUMNS.has(h.toLowerCase().trim())
+    );
 
     const convertedRows = dataRows.map((row) => {
       const output: Record<string, any> = {};
