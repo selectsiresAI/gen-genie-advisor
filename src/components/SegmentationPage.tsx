@@ -837,6 +837,9 @@ export default function SegmentationPage({
       "CustomScore",
       ...(shouldIncludeNormalized ? ["CustomScore_Normalized"] : []),
       t('seg.classification'),
+      t('seg.sire'),
+      t('seg.mgs'),
+      t('seg.mmgs'),
       ...metricHeaders
     ];
 
@@ -859,6 +862,9 @@ export default function SegmentationPage({
         row.CustomScore,
         ...(shouldIncludeNormalized ? [normalizedScore] : []),
         row.Classificacao,
+        row.sire_naab,
+        row.mgs_naab,
+        row.mmgs_naab,
         ...row.metrics
       ];
     });
