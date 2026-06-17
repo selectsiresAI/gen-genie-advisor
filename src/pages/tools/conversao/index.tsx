@@ -501,6 +501,25 @@ const ConversaoPage: React.FC = () => {
 
       <HhpRequiredTraitsCard inline />
 
+      {(modelHeaders.length > 0 || legendEntries.length > 0) && (
+        <Alert className="border-emerald-500/40 bg-emerald-500/5">
+          <AlertTitle className="text-emerald-700 dark:text-emerald-400">
+            {isEs
+              ? "✨ Listo para empezar"
+              : isEn
+              ? "✨ Ready to go"
+              : "✨ Tudo pronto para começar"}
+          </AlertTitle>
+          <AlertDescription>
+            {isEs
+              ? "Ya cargamos automáticamente el Modelo ToolSS y las Legendas ToolSS. Solo necesita subir el archivo de datos (paso 3) y revisar las sugerencias."
+              : isEn
+              ? "We already loaded the ToolSS Model and ToolSS Legends automatically. You only need to upload your data file (step 3) and review the suggestions."
+              : "Já carregamos automaticamente o Modelo ToolSS e as Legendas ToolSS. Você só precisa subir o arquivo de dados (passo 3) e revisar as sugestões."}
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-3">
         <FileUploadCard
           title={isEs ? "1. Modelo estándar ✨" : isEn ? "1. Standard model ✨" : "1. Modelo padrão ✨"}
