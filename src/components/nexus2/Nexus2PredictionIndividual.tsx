@@ -425,12 +425,8 @@ const Nexus2PredictionIndividual: React.FC = () => {
         return;
       }
 
-      // Carrega os placeholders sempre (também usados como fallback per-trait
-      // quando o MGS/MGGS real não possui aquela trait preenchida).
-      const [mgsPlaceholder, mmgsPlaceholder] = await Promise.all([
-        fetchPlaceholder(MGS_PLACEHOLDER_NAAB),
-        fetchPlaceholder(MGGS_PLACEHOLDER_NAAB),
-      ]);
+      // Placeholders já carregados acima — reutilizados também como fallback
+      // per-trait quando o MGS/MGGS real não possui aquela trait preenchida.
 
       const result = calculatePedigreePrediction({
         sire,
