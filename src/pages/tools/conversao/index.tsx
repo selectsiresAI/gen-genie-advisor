@@ -512,7 +512,13 @@ const ConversaoPage: React.FC = () => {
           inputId="model-file-input"
           helper={
             <div className="space-y-3">
-              {modelHeaders.length === 0 && (
+              {modelHeaders.length > 0 ? (
+                <div className="p-2 bg-emerald-500/10 rounded-md border border-emerald-500/30">
+                  <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                    {isEs ? "✓ Modelo ToolSS ya cargado automáticamente" : isEn ? "✓ ToolSS Model already loaded automatically" : "✓ Modelo ToolSS já carregado automaticamente"}
+                  </p>
+                </div>
+              ) : (
                 <div className="p-2 bg-primary/5 rounded-md border border-primary/20">
                   <p className="text-xs font-medium text-primary">
                     {isEs ? "👇 Recomendado: Use nuestro modelo ToolSS completo" : isEn ? "👇 Recommended: Use our complete ToolSS model" : "👇 Recomendado: Use nosso modelo ToolSS completo"}
