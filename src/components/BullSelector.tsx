@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/useTranslation";
+import { buildBullSearchFilter } from "@/utils/bullSearchFilter";
 
 /** View bulls_denorm — single source of truth for all bull lookups */
 const BULL_DENORM_TABLE = "bulls_denorm" as const;
@@ -138,11 +139,11 @@ export function BullSelector({
 
     setLoading(true);
     try {
-      const escaped = term.replace(/[%_]/g, m => `\\${m}`);
+      const filter = buildBullSearchFilter(term);
       const { data, error } = await supabase
         .from(BULL_DENORM_TABLE)
         .select(BULL_SELECT_FIELDS)
-        .or(`code.ilike.%${escaped}%,name.ilike.%${escaped}%`)
+        .or(filter)
         .order("tpi", { ascending: false, nullsFirst: false })
         .limit(20);
 

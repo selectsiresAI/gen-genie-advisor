@@ -17,6 +17,7 @@ import { ANIMAL_METRIC_COLUMNS } from '@/constants/animalMetrics';
 import { useToast } from '@/hooks/use-toast';
 import { StagingMigrationButton } from './StagingMigrationButton';
 import { normalizeNaabCode } from '@/utils/bullNormalization';
+import { buildBullSearchFilter } from "@/utils/bullSearchFilter";
 import { useTranslation } from '@/hooks/useTranslation';
 import {
   supabase,
@@ -271,8 +272,8 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
 
       // ── Search filter ──
       if (debouncedSearch.trim()) {
-        const term = debouncedSearch.trim().replace(/%/g, '\\%').replace(/_/g, '\\_');
-        query = query.or(`name.ilike.%${term}%,code.ilike.%${term}%`);
+        const filter = buildBullSearchFilter(debouncedSearch);
+        if (filter) query = query.or(filter);
       }
 
       // ── Sort ──
