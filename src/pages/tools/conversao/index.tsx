@@ -602,7 +602,13 @@ const ConversaoPage: React.FC = () => {
           inputId="legend-file-input"
           helper={
             <div className="space-y-3">
-              {legendEntries.length === 0 && (
+              {legendEntries.length > 0 ? (
+                <div className="p-2 bg-emerald-500/10 rounded-md border border-emerald-500/30">
+                  <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                    {isEs ? "✓ Leyendas ToolSS ya cargadas automáticamente" : isEn ? "✓ ToolSS Legends already loaded automatically" : "✓ Legendas ToolSS já carregadas automaticamente"}
+                  </p>
+                </div>
+              ) : (
                 <div className="p-2 bg-primary/5 rounded-md border border-primary/20">
                   <p className="text-xs font-medium text-primary">
                     {isEs ? "👇 Use nuestras leyendas (cubre +500 variaciones)" : isEn ? "👇 Use our legends (covers 500+ variations)" : "👇 Use nossas legendas (cobre +500 variações)"}
