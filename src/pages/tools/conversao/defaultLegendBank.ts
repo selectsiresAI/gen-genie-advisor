@@ -2,6 +2,15 @@ import { LegendEntry, normalizeKey } from "./utils";
 
 const entries: Array<Omit<LegendEntry, "source">> = [
   // Identificação e informações básicas
+  { alias: "id fazenda", canonical: "identifier" },
+  { alias: "id_fazenda", canonical: "identifier" },
+  { alias: "idfazenda", canonical: "identifier" },
+  { alias: "farm id", canonical: "identifier" },
+  { alias: "farm_id", canonical: "identifier" },
+  { alias: "brinco", canonical: "identifier" },
+  { alias: "tag", canonical: "identifier" },
+  { alias: "animal id", canonical: "identifier" },
+  { alias: "identificador", canonical: "identifier" },
   { alias: "naab code", canonical: "code" },
   { alias: "code", canonical: "code" },
   { alias: "name", canonical: "name" },

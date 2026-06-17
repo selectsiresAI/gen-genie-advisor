@@ -267,6 +267,12 @@ function parseCSV(csvContent: string): { records: any[]; unmappedCols: string[] 
     'nome': 'name',
     'identificador': 'identifier',
     'id': 'identifier',
+    // In ToolSS native sheets, "ID_Fazenda"/"farm_id" is the animal identifier
+    // exported by the Conversion tool, not the destination farm selected in Rebanho.
+    'farm_id': 'identifier',
+    'id_fazenda': 'identifier',
+    'id fazenda': 'identifier',
+    'idfazenda': 'identifier',
     'brinco': 'identifier',
     'tag': 'identifier',
     'id animal': 'identifier',
