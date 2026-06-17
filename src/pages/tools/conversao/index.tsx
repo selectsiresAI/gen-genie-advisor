@@ -225,7 +225,7 @@ const ConversaoPage: React.FC = () => {
     });
   }, [dataHeaders, combinedLegend, canonicalLookup, detectSuggestion]);
 
-  const handleModelUpload = async (file: File) => {
+  const handleModelUpload = useCallback(async (file: File) => {
     try {
       const workbook = await readWorkbook(file);
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -246,9 +246,9 @@ const ConversaoPage: React.FC = () => {
     } catch (error: any) {
       toast({ title: isEs ? "Error al cargar modelo" : isEn ? "Error loading model" : "Erro ao carregar modelo", description: error.message ?? String(error), variant: "destructive" });
     }
-  };
+  }, [isEn, isEs, toast]);
 
-  const handleLegendUpload = async (file: File) => {
+  const handleLegendUpload = useCallback(async (file: File) => {
     try {
       const workbook = await readWorkbook(file);
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -269,7 +269,36 @@ const ConversaoPage: React.FC = () => {
     } catch (error: any) {
       toast({ title: isEs ? "Error al cargar banco" : isEn ? "Error loading bank" : "Erro ao carregar banco", description: error.message ?? String(error), variant: "destructive" });
     }
-  };
+  }, [isEn, isEs, toast]);
+
+  // Auto-carregar Modelo ToolSS e Legendas ToolSS na abertura da página
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        if (modelHeaders.length === 0) {
+          const r = await fetch(`/planilha-modelo-padrao.csv?v=${Date.now()}`, { cache: 'no-store' });
+          if (r.ok && !cancelled) {
+            const blob = await r.blob();
+            await handleModelUpload(new File([blob], 'Planilha_modelo_padrão.csv', { type: 'text/csv' }));
+          }
+        }
+      } catch { /* silencioso: usuário ainda pode enviar manualmente */ }
+      try {
+        if (legendEntries.length === 0) {
+          const fileName = 'Legendas_27092025.csv';
+          const r = await fetch(`/${encodeURIComponent(fileName)}?v=${Date.now()}`, { cache: 'no-store' });
+          if (r.ok && !cancelled) {
+            const blob = await r.blob();
+            await handleLegendUpload(new File([blob], fileName, { type: 'text/csv' }));
+          }
+        }
+      } catch { /* silencioso */ }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
 
   const handleDataUpload = async (file: File) => {
     try {
@@ -472,6 +501,25 @@ const ConversaoPage: React.FC = () => {
 
       <HhpRequiredTraitsCard inline />
 
+      {(modelHeaders.length > 0 || legendEntries.length > 0) && (
+        <Alert className="border-emerald-500/40 bg-emerald-500/5">
+          <AlertTitle className="text-emerald-700 dark:text-emerald-400">
+            {isEs
+              ? "✨ Listo para empezar"
+              : isEn
+              ? "✨ Ready to go"
+              : "✨ Tudo pronto para começar"}
+          </AlertTitle>
+          <AlertDescription>
+            {isEs
+              ? "Ya cargamos automáticamente el Modelo ToolSS y las Legendas ToolSS. Solo necesita subir el archivo de datos (paso 3) y revisar las sugerencias."
+              : isEn
+              ? "We already loaded the ToolSS Model and ToolSS Legends automatically. You only need to upload your data file (step 3) and review the suggestions."
+              : "Já carregamos automaticamente o Modelo ToolSS e as Legendas ToolSS. Você só precisa subir o arquivo de dados (passo 3) e revisar as sugestões."}
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-3">
         <FileUploadCard
           title={isEs ? "1. Modelo estándar ✨" : isEn ? "1. Standard model ✨" : "1. Modelo padrão ✨"}
@@ -483,7 +531,13 @@ const ConversaoPage: React.FC = () => {
           inputId="model-file-input"
           helper={
             <div className="space-y-3">
-              {modelHeaders.length === 0 && (
+              {modelHeaders.length > 0 ? (
+                <div className="p-2 bg-emerald-500/10 rounded-md border border-emerald-500/30">
+                  <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                    {isEs ? "✓ Modelo ToolSS ya cargado automáticamente" : isEn ? "✓ ToolSS Model already loaded automatically" : "✓ Modelo ToolSS já carregado automaticamente"}
+                  </p>
+                </div>
+              ) : (
                 <div className="p-2 bg-primary/5 rounded-md border border-primary/20">
                   <p className="text-xs font-medium text-primary">
                     {isEs ? "👇 Recomendado: Use nuestro modelo ToolSS completo" : isEn ? "👇 Recommended: Use our complete ToolSS model" : "👇 Recomendado: Use nosso modelo ToolSS completo"}
@@ -567,7 +621,13 @@ const ConversaoPage: React.FC = () => {
           inputId="legend-file-input"
           helper={
             <div className="space-y-3">
-              {legendEntries.length === 0 && (
+              {legendEntries.length > 0 ? (
+                <div className="p-2 bg-emerald-500/10 rounded-md border border-emerald-500/30">
+                  <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                    {isEs ? "✓ Leyendas ToolSS ya cargadas automáticamente" : isEn ? "✓ ToolSS Legends already loaded automatically" : "✓ Legendas ToolSS já carregadas automaticamente"}
+                  </p>
+                </div>
+              ) : (
                 <div className="p-2 bg-primary/5 rounded-md border border-primary/20">
                   <p className="text-xs font-medium text-primary">
                     {isEs ? "👇 Use nuestras leyendas (cubre +500 variaciones)" : isEn ? "👇 Use our legends (covers 500+ variations)" : "👇 Use nossas legendas (cobre +500 variações)"}

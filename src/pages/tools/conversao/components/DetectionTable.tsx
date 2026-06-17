@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { cn } from "@/lib/utils";
 import { normalizeKey } from "../utils";
 import { useTranslation } from "@/hooks/useTranslation";
+import { getTraitFriendlyName } from "../traitNames";
 
 export type MappingMethod = "legend" | "regex" | "fuzzy" | undefined;
 
@@ -102,7 +103,7 @@ export const DetectionTable: React.FC<DetectionTableProps> = ({
             <TableHead className="w-[180px]">{isEs ? "Encabezado original" : isEn ? "Original header" : "Cabeçalho original"}</TableHead>
             <TableHead>{isEs ? "Método" : isEn ? "Method" : "Método"}</TableHead>
             <TableHead>{isEs ? "Confianza" : isEn ? "Confidence" : "Confiança"}</TableHead>
-            <TableHead className="w-[280px]">{isEs ? "Clave canónica sugerida" : isEn ? "Suggested canonical key" : "Chave canônica sugerida"}</TableHead>
+            <TableHead className="w-[280px]">{isEs ? "Nombre sugerido" : isEn ? "Suggested name" : "Nome sugerido"}</TableHead>
             <TableHead className="w-[100px]">{isEs ? "Excluir" : isEn ? "Exclude" : "Excluir"}</TableHead>
             <TableHead className="w-[140px]">{isEs ? "Aprobado" : isEn ? "Approved" : "Aprovado"}</TableHead>
           </TableRow>
@@ -137,15 +138,34 @@ export const DetectionTable: React.FC<DetectionTableProps> = ({
                     }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder={isEs ? "Seleccione una clave" : isEn ? "Select a key" : "Selecione uma chave"} />
+                      <SelectValue placeholder={isEs ? "Seleccione una clave" : isEn ? "Select a key" : "Selecione uma chave"}>
+                        {row.selectedCanonical ? (
+                          <span className="flex items-center gap-2 truncate">
+                            <span className="font-medium">{row.selectedCanonical}</span>
+                            {getTraitFriendlyName(row.selectedCanonical, locale) && (
+                              <span className="text-xs text-muted-foreground truncate">
+                                — {getTraitFriendlyName(row.selectedCanonical, locale)}
+                              </span>
+                            )}
+                          </span>
+                        ) : null}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">{isEs ? "— Ninguno —" : isEn ? "— None —" : "— Nenhum —"}</SelectItem>
-                      {canonicalOptions.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                      ))}
+                      {canonicalOptions.map((option) => {
+                        const friendly = getTraitFriendlyName(option, locale);
+                        return (
+                          <SelectItem key={option} value={option}>
+                            <span className="flex items-center gap-2">
+                              <span className="font-medium">{option}</span>
+                              {friendly && (
+                                <span className="text-xs text-muted-foreground">— {friendly}</span>
+                              )}
+                            </span>
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                   {isSuggestionChanged && !row.exclude && (
