@@ -138,15 +138,34 @@ export const DetectionTable: React.FC<DetectionTableProps> = ({
                     }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder={isEs ? "Seleccione una clave" : isEn ? "Select a key" : "Selecione uma chave"} />
+                      <SelectValue placeholder={isEs ? "Seleccione una clave" : isEn ? "Select a key" : "Selecione uma chave"}>
+                        {row.selectedCanonical ? (
+                          <span className="flex items-center gap-2 truncate">
+                            <span className="font-medium">{row.selectedCanonical}</span>
+                            {getTraitFriendlyName(row.selectedCanonical, locale) && (
+                              <span className="text-xs text-muted-foreground truncate">
+                                — {getTraitFriendlyName(row.selectedCanonical, locale)}
+                              </span>
+                            )}
+                          </span>
+                        ) : null}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">{isEs ? "— Ninguno —" : isEn ? "— None —" : "— Nenhum —"}</SelectItem>
-                      {canonicalOptions.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                      ))}
+                      {canonicalOptions.map((option) => {
+                        const friendly = getTraitFriendlyName(option, locale);
+                        return (
+                          <SelectItem key={option} value={option}>
+                            <span className="flex items-center gap-2">
+                              <span className="font-medium">{option}</span>
+                              {friendly && (
+                                <span className="text-xs text-muted-foreground">— {friendly}</span>
+                              )}
+                            </span>
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                   {isSuggestionChanged && !row.exclude && (
