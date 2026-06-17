@@ -229,6 +229,11 @@ const entries: Array<Omit<LegendEntry, "source">> = [
   { alias: "gfi", canonical: "GFI" },
   { alias: "feed effic", canonical: "GFI" },
   { alias: "feed efficiency", canonical: "GFI" },
+
+  { alias: "bobby depth", canonical: "BD" },
+  { alias: "bd", canonical: "BD" },
+  { alias: "body depth", canonical: "BD" },
+
   
   // Tipo e conformação
   { alias: "pta type", canonical: "PTAT" },
