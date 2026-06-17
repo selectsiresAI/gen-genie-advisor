@@ -808,6 +808,9 @@ export default function SegmentationPage({
         Fonte: fonteInfo.label === '—' ? '' : fonteInfo.label,
         CustomScore: customScore,
         Classificacao: a.Classification ?? "",
+        sire_naab: (a as any).sire_naab ?? "",
+        mgs_naab: (a as any).mgs_naab ?? "",
+        mmgs_naab: (a as any).mmgs_naab ?? "",
         metrics
       };
     });
@@ -834,6 +837,9 @@ export default function SegmentationPage({
       "CustomScore",
       ...(shouldIncludeNormalized ? ["CustomScore_Normalized"] : []),
       t('seg.classification'),
+      t('seg.sire'),
+      t('seg.mgs'),
+      t('seg.mmgs'),
       ...metricHeaders
     ];
 
@@ -856,6 +862,9 @@ export default function SegmentationPage({
         row.CustomScore,
         ...(shouldIncludeNormalized ? [normalizedScore] : []),
         row.Classificacao,
+        row.sire_naab,
+        row.mgs_naab,
+        row.mmgs_naab,
         ...row.metrics
       ];
     });
