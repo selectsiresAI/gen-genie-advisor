@@ -225,7 +225,7 @@ const ConversaoPage: React.FC = () => {
     });
   }, [dataHeaders, combinedLegend, canonicalLookup, detectSuggestion]);
 
-  const handleModelUpload = async (file: File) => {
+  const handleModelUpload = useCallback(async (file: File) => {
     try {
       const workbook = await readWorkbook(file);
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -246,9 +246,9 @@ const ConversaoPage: React.FC = () => {
     } catch (error: any) {
       toast({ title: isEs ? "Error al cargar modelo" : isEn ? "Error loading model" : "Erro ao carregar modelo", description: error.message ?? String(error), variant: "destructive" });
     }
-  };
+  }, [isEn, isEs, toast]);
 
-  const handleLegendUpload = async (file: File) => {
+  const handleLegendUpload = useCallback(async (file: File) => {
     try {
       const workbook = await readWorkbook(file);
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -269,7 +269,36 @@ const ConversaoPage: React.FC = () => {
     } catch (error: any) {
       toast({ title: isEs ? "Error al cargar banco" : isEn ? "Error loading bank" : "Erro ao carregar banco", description: error.message ?? String(error), variant: "destructive" });
     }
-  };
+  }, [isEn, isEs, toast]);
+
+  // Auto-carregar Modelo ToolSS e Legendas ToolSS na abertura da página
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        if (modelHeaders.length === 0) {
+          const r = await fetch(`/planilha-modelo-padrao.csv?v=${Date.now()}`, { cache: 'no-store' });
+          if (r.ok && !cancelled) {
+            const blob = await r.blob();
+            await handleModelUpload(new File([blob], 'Planilha_modelo_padrão.csv', { type: 'text/csv' }));
+          }
+        }
+      } catch { /* silencioso: usuário ainda pode enviar manualmente */ }
+      try {
+        if (legendEntries.length === 0) {
+          const fileName = 'Legendas_27092025.csv';
+          const r = await fetch(`/${encodeURIComponent(fileName)}?v=${Date.now()}`, { cache: 'no-store' });
+          if (r.ok && !cancelled) {
+            const blob = await r.blob();
+            await handleLegendUpload(new File([blob], fileName, { type: 'text/csv' }));
+          }
+        }
+      } catch { /* silencioso */ }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
 
   const handleDataUpload = async (file: File) => {
     try {
