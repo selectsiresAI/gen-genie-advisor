@@ -59,6 +59,7 @@ export const TRAIT_FRIENDLY_NAMES: Record<string, Names> = {
   STA: { pt: "Estatura", en: "Stature", es: "Estatura" },
   STR: { pt: "Força", en: "Strength", es: "Fuerza" },
   DFM: { pt: "Forma Leiteira", en: "Dairy Form", es: "Forma Lechera" },
+  BD: { pt: "Bobby Depth (Profundidade do Torso)", en: "Bobby Depth (Body Depth)", es: "Bobby Depth (Profundidad del Tórax)" },
   RUA: { pt: "Ângulo da Garupa", en: "Rump Angle", es: "Ángulo de la Grupa" },
   RLS: { pt: "Pernas (vista lateral)", en: "Rear Legs Side", es: "Patas (vista lateral)" },
   RLR: { pt: "Pernas (vista posterior)", en: "Rear Legs Rear", es: "Patas (vista trasera)" },
