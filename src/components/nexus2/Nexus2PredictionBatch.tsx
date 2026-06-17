@@ -364,12 +364,10 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
       if (row.naabPai && !row.bulls.sire) {
         sire.add(row.naabPai);
       }
-      // MGS/MGGS: NAAB foi informado mas substituído pelo placeholder porque
-      // não foi reconhecido (continua útil exportar para o usuário corrigir).
-      if (row.naabAvoMaterno && row.usedPlaceholder?.mgs) {
+      if (row.naabAvoMaterno && !row.bulls.mgs) {
         mgs.add(row.naabAvoMaterno);
       }
-      if (row.naabBisavoMaterno && row.usedPlaceholder?.mmgs) {
+      if (row.naabBisavoMaterno && !row.bulls.mmgs) {
         mmgs.add(row.naabBisavoMaterno);
       }
     }
@@ -653,34 +651,21 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
     for (const row of normalizedRows) {
       const sire = row.fieldErrors.sire ? null : (bullCache.get(row.naabPai) ?? null);
 
-      // MGS: usa cache se NAAB foi informado E reconhecido; senão (em branco
-      // OU NAAB não encontrado) cai no placeholder "touro médio" 2020.
+      // MGS: se NAAB foi informado, usa o cache; se em branco, usa placeholder 2020
       let mgs: BullSummary | null;
       let usedMgsPlaceholder = false;
       if (row.naabAvoMaterno) {
-        const cached = bullCache.get(row.naabAvoMaterno) ?? null;
-        if (cached) {
-          mgs = cached;
-        } else {
-          mgs = mgsPlaceholder;
-          usedMgsPlaceholder = Boolean(mgsPlaceholder);
-        }
+        mgs = bullCache.get(row.naabAvoMaterno) ?? null;
       } else {
         mgs = mgsPlaceholder;
         usedMgsPlaceholder = Boolean(mgsPlaceholder);
       }
 
-      // MGGS: mesma regra com placeholder "touro médio" 2017.
+      // MGGS: se NAAB foi informado, usa o cache; se em branco, usa placeholder 2017
       let mmgs: BullSummary | null;
       let usedMmgsPlaceholder = false;
       if (row.naabBisavoMaterno) {
-        const cached = bullCache.get(row.naabBisavoMaterno) ?? null;
-        if (cached) {
-          mmgs = cached;
-        } else {
-          mmgs = mggsPlaceholder;
-          usedMmgsPlaceholder = Boolean(mggsPlaceholder);
-        }
+        mmgs = bullCache.get(row.naabBisavoMaterno) ?? null;
       } else {
         mmgs = mggsPlaceholder;
         usedMmgsPlaceholder = Boolean(mggsPlaceholder);
@@ -697,9 +682,15 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
         row.errors.push(t('nexus2.error.sireNotFound'));
       }
 
-      // MGS/MGGS não reconhecidos não invalidam mais a linha — foram substituídos
-      // pelo touro médio acima. Os NAABs originais continuam sendo expostos via
-      // missingNaabCodes para o export "NAABs Ausentes".
+      if (row.naabAvoMaterno && !mgs) {
+        row.fieldErrors.mgs = t('nexus2.error.mgsNotFound');
+        row.errors.push(t('nexus2.error.mgsNotFound'));
+      }
+
+      if (row.naabBisavoMaterno && !mmgs) {
+        row.fieldErrors.mmgs = t('nexus2.error.mmgsNotFound');
+        row.errors.push(t('nexus2.error.mmgsNotFound'));
+      }
 
       const hasFieldErrors = Boolean(row.fieldErrors.sire || row.fieldErrors.mgs || row.fieldErrors.mmgs);
       row.status = row.errors.length === 0 && !hasFieldErrors ? 'valid' : 'invalid';
