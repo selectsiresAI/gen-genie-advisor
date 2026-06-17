@@ -23,6 +23,7 @@ import {
   type PredictionTraitKey
 } from '@/services/prediction.service';
 import { read, utils, writeFileXLSX, SSF } from 'xlsx';
+import NativeSheetImporter from './NativeSheetImporter';
 
 const ACCEPTED_EXTENSIONS = '.csv,.xlsx,.xls,.xlsm';
 
@@ -698,15 +699,8 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
     return normalizedRows;
   };
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
+  const processFile = async (file: File) => {
     setIsParsing(true);
-
     try {
       const parsedRows = await parseFile(file);
       setRows(parsedRows);
@@ -724,9 +718,15 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
       });
     } finally {
       setIsParsing(false);
-      if (event.target) {
-        event.target.value = '';
-      }
+    }
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await processFile(file);
+    if (event.target) {
+      event.target.value = '';
     }
   };
 
