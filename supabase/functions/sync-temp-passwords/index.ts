@@ -81,8 +81,9 @@ serve(async (req) => {
     const results = [];
     let successCount = 0;
     let errorCount = 0;
+    const logEntries: Array<{ user_id: string; email: string; reset_by: string; notes: string }> = [];
 
-    // Atualizar senha de cada usuário
+    // Atualizar senha de cada usuario
     for (const profile of profiles || []) {
       try {
         const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
@@ -106,15 +107,13 @@ serve(async (req) => {
             success: true
           });
 
-          // Registrar no log
-          await supabaseAdmin
-            .from('password_reset_log')
-            .insert({
-              user_id: profile.id,
-              email: profile.email,
-              reset_by: 'sync-temp-passwords',
-              notes: 'Senha temporária sincronizada automaticamente'
-            });
+          // Collect log entry for batch insert
+          logEntries.push({
+            user_id: profile.id,
+            email: profile.email,
+            reset_by: 'sync-temp-passwords',
+            notes: 'Senha temporaria sincronizada automaticamente'
+          });
         }
       } catch (error: any) {
         console.error(`Exceção ao processar ${profile.email}:`, error);
@@ -124,6 +123,16 @@ serve(async (req) => {
           success: false,
           error: error.message
         });
+      }
+    }
+
+    // Batch insert all log entries at once (instead of 1 insert per user)
+    if (logEntries.length > 0) {
+      const { error: logError } = await supabaseAdmin
+        .from('password_reset_log')
+        .insert(logEntries);
+      if (logError) {
+        console.error('Erro ao inserir logs em batch:', logError);
       }
     }
 

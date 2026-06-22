@@ -76,11 +76,37 @@ serve(async (req) => {
       skipped: 0
     };
 
+    // Pre-fetch ALL profiles and farms ONCE (avoids N+2 queries per CSV line)
+    const { data: allProfiles, error: profilesErr } = await supabase
+      .from('profiles')
+      .select('id, full_name');
+    if (profilesErr) throw new Error(`Error fetching profiles: ${profilesErr.message}`);
+
+    const { data: allFarms, error: farmsErr } = await supabase
+      .from('farms')
+      .select('id, name, owner_name');
+    if (farmsErr) throw new Error(`Error fetching farms: ${farmsErr.message}`);
+
+    // Build lookup maps (normalized name -> record)
+    const techMap = new Map<string, { id: string; full_name: string }>();
+    for (const t of allProfiles || []) {
+      if (t.full_name) techMap.set(t.full_name.trim().toLowerCase(), t);
+    }
+
+    // Pre-fetch existing user_farms links to avoid per-row check
+    const { data: allLinks } = await supabase
+      .from('user_farms')
+      .select('user_id, farm_id');
+    const linkSet = new Set((allLinks || []).map(l => `${l.user_id}:${l.farm_id}`));
+
+    // Collect inserts for batch operation
+    const toInsert: Array<{ user_id: string; farm_id: string; role: string }> = [];
+
     // Skip header line
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i];
       const parts = line.split(';');
-      
+
       if (parts.length < 5) {
         results.errors.push({
           line: i + 1,
@@ -93,26 +119,9 @@ serve(async (req) => {
       const [ownerName, , farmName, technicianName] = parts;
 
       try {
-        // Find technician by EXACT name match (normalize spaces and case)
+        // Find technician from pre-loaded map
         const normalizedTechName = technicianName.trim().toLowerCase();
-        const { data: technicians, error: techError } = await supabase
-          .from('profiles')
-          .select('id, full_name');
-
-        if (techError || !technicians) {
-          results.errors.push({
-            line: i + 1,
-            error: 'Error fetching technician',
-            technician: technicianName,
-            details: techError?.message
-          });
-          continue;
-        }
-
-        // Find exact match (case insensitive, whitespace normalized)
-        const matchedTech = technicians.find(t => 
-          t.full_name.trim().toLowerCase() === normalizedTechName
-        );
+        const matchedTech = techMap.get(normalizedTechName);
 
         if (!matchedTech) {
           results.errors.push({
@@ -126,26 +135,11 @@ serve(async (req) => {
 
         const technicianId = matchedTech.id;
 
-        // Find farm by EXACT name or owner match
+        // Find farm from pre-loaded list
         const normalizedFarmName = farmName.trim().toLowerCase();
         const normalizedOwnerName = ownerName.trim().toLowerCase();
-        
-        const { data: farms, error: farmError } = await supabase
-          .from('farms')
-          .select('id, name, owner_name');
 
-        if (farmError || !farms) {
-          results.errors.push({
-            line: i + 1,
-            error: 'Error fetching farm',
-            farm: farmName,
-            details: farmError?.message
-          });
-          continue;
-        }
-
-        // Find exact match by farm name OR owner name
-        const matchedFarm = farms.find(f => 
+        const matchedFarm = (allFarms || []).find(f =>
           f.name.trim().toLowerCase() === normalizedFarmName ||
           f.owner_name.trim().toLowerCase() === normalizedOwnerName
         );
@@ -163,38 +157,15 @@ serve(async (req) => {
 
         const farmId = matchedFarm.id;
 
-        // Check if link already exists
-        const { data: existing } = await supabase
-          .from('user_farms')
-          .select('id')
-          .eq('user_id', technicianId)
-          .eq('farm_id', farmId)
-          .single();
-
-        if (existing) {
+        // Check if link already exists using pre-loaded set
+        if (linkSet.has(`${technicianId}:${farmId}`)) {
           results.skipped++;
           continue;
         }
 
-        // Create link
-        const { error: insertError } = await supabase
-          .from('user_farms')
-          .insert({
-            user_id: technicianId,
-            farm_id: farmId,
-            role: 'technician'
-          });
-
-        if (insertError) {
-          results.errors.push({
-            line: i + 1,
-            error: insertError.message,
-            technician: technicianName,
-            farm: farmName
-          });
-        } else {
-          results.success++;
-        }
+        toInsert.push({ user_id: technicianId, farm_id: farmId, role: 'technician' });
+        linkSet.add(`${technicianId}:${farmId}`); // prevent duplicates within same CSV
+        results.success++;
 
       } catch (error) {
         results.errors.push({
@@ -203,6 +174,23 @@ serve(async (req) => {
           technician: technicianName,
           farm: farmName
         });
+      }
+    }
+
+    // Batch insert all links at once
+    if (toInsert.length > 0) {
+      const { error: insertError } = await supabase.from('user_farms').insert(toInsert);
+      if (insertError) {
+        // Fallback: insert one by one to identify which ones fail
+        let batchFails = 0;
+        for (const row of toInsert) {
+          const { error: singleErr } = await supabase.from('user_farms').insert(row);
+          if (singleErr) {
+            batchFails++;
+            results.errors.push({ error: singleErr.message, technician: row.user_id, farm: row.farm_id });
+          }
+        }
+        results.success -= batchFails;
       }
     }
 

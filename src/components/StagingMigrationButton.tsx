@@ -40,7 +40,12 @@ export function StagingMigrationButton() {
             token = refreshResult.data.session.access_token;
           }
         }
-        
+
+        // Throttle: evitar burst de invocações no Supabase
+        if (iterations > 1) {
+          await new Promise(r => setTimeout(r, 500));
+        }
+
         const response = await fetch(
           `https://odactdxpecpiyiyaqfgi.supabase.co/functions/v1/import-bulls/auto-commit`,
           {

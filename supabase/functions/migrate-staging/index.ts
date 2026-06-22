@@ -153,6 +153,13 @@ Deno.serve(async (req) => {
 
     const profileMapping = new Map<string, string>(); // email -> uuid
 
+    // Pre-fetch ALL auth users ONCE (avoids N calls to listUsers inside loop)
+    const { data: allAuthUsersData } = await supabase.auth.admin.listUsers({ perPage: 10000 });
+    const authUsersByEmail = new Map<string, { id: string; email: string }>();
+    for (const u of allAuthUsersData?.users || []) {
+      if (u.email) authUsersByEmail.set(u.email, { id: u.id, email: u.email });
+    }
+
     for (const sp of stagingProfiles || []) {
       try {
         if (!sp.email) {
@@ -161,9 +168,8 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Check if user already exists in auth.users
-        const { data: existingAuthUsers } = await supabase.auth.admin.listUsers();
-        const authUser = existingAuthUsers?.users?.find(u => u.email === sp.email);
+        // Check if user already exists using pre-loaded map
+        const authUser = authUsersByEmail.get(sp.email);
 
         let userId: string;
 
@@ -217,6 +223,8 @@ Deno.serve(async (req) => {
           }
 
           userId = newAuthUser.user.id;
+          // Update pre-loaded map with new user
+          authUsersByEmail.set(sp.email, { id: userId, email: sp.email });
           console.log(`✅ Created auth user: ${sp.email}`);
           
           // Verify profile was auto-created by trigger

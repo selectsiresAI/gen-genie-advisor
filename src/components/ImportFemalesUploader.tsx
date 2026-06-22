@@ -202,18 +202,6 @@ export default function ImportFemalesUploader({ farmId, onSuccess }: Props) {
         toastSuccess(`${t("femaleImport.uploadComplete")} ${summaryParts.join(', ')}.`);
       }
 
-      if (lastBatchId) {
-        const commitResponse = await fetch(getEdgeUrl('import-females/commit'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ import_batch_id: lastBatchId, farm_id: farmId }),
-        });
-        if (!commitResponse.ok) {
-          const commitText = await commitResponse.text().catch(() => '');
-          console.error('Commit falhou', commitResponse.status, commitText);
-        }
-      }
-
       if (typeof onSuccess === 'function') onSuccess(lastBatchId);
     } catch (error: any) {
       if (error?.name === 'NotReadableError' || String(error).includes('NotReadableError')) {
