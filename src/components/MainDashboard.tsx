@@ -957,7 +957,7 @@ Select Sires do Brasil</p>
         <EditFarmModal
           isOpen={!!editingFarm}
           onClose={() => setEditingFarm(null)}
-          onSuccess={() => { setEditingFarm(null); loadDashboardData(); }}
+          onSuccess={() => { setEditingFarm(null); handleCreateFarmSuccess(); }}
           farmId={editingFarm.farm_id}
           initialFarmName={editingFarm.farm_name}
           initialOwnerName={editingFarm.owner_name}
