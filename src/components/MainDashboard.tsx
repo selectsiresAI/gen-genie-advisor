@@ -953,6 +953,17 @@ Select Sires do Brasil</p>
 
       <CreateFarmModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onSuccess={handleCreateFarmSuccess} />
 
+      {editingFarm && (
+        <EditFarmModal
+          isOpen={!!editingFarm}
+          onClose={() => setEditingFarm(null)}
+          onSuccess={() => { setEditingFarm(null); loadDashboardData(); }}
+          farmId={editingFarm.farm_id}
+          initialFarmName={editingFarm.farm_name}
+          initialOwnerName={editingFarm.owner_name}
+        />
+      )}
+
       {/* Upload Modal */}
       {selectedFarm && <FemaleUploadModal isOpen={showUploadModal} onClose={() => setShowUploadModal(false)} farmId={selectedFarm.farm_id} farmName={selectedFarm.farm_name} />}
       
