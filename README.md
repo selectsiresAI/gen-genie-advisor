@@ -60,6 +60,14 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## Onde ficam os módulos Nexus
+
+Os três módulos Nexus (Nexus 1, Nexus 2 e Nexus 3) têm seus pontos de entrada, fluxo de renderização e fórmulas documentados em detalhes em:
+
+📄 **[docs/nexus-localizacao.md](docs/nexus-localizacao.md)**
+
+Esse guia explica desde o menu inicial (`NexusEntryPage`) até os componentes específicos de cada Nexus, incluindo arquivos como `Nexus1GenomicPrediction.tsx`, `Nexus2PedigreePrediction.tsx` e `Nexus3Groups.tsx`.
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/7b4363a5-dbd4-4089-b017-7d6e269de656) and click on Share -> Publish.
