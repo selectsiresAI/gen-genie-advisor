@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PTA_CATALOG } from "@/lib/pta";
  import { formatPtaValue } from "@/utils/ptaFormat";
+import { isCompleteFemaleRow } from "@/supabase/queries/females";
 import { useTranslation } from "@/hooks/useTranslation";
 
 type Row = {
