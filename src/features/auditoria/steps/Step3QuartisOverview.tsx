@@ -84,10 +84,11 @@ function Step3QuartisOverviewContent() {
 
       if (error) throw new Error(error.message);
 
-      const pageData = Array.isArray(data) ? (data as any[]).filter(isCompleteFemaleRow) : [];
+      const rawPage = Array.isArray(data) ? (data as any[]) : [];
+      const pageData = rawPage.filter(isCompleteFemaleRow);
       allRows.push(...pageData);
 
-      hasMore = pageData.length === PAGE_SIZE;
+      hasMore = rawPage.length === PAGE_SIZE;
       page += 1;
     }
 
