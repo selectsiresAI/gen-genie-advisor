@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Building2, Users, Beef, BarChart3, Plus, LogOut, Zap, ArrowLeft, ArrowLeftRight, TrendingUp, Beaker, Target, FolderOpen, Calculator, Trash2, Sparkles, MessageSquare, FileText } from "lucide-react";
+import { Building2, Users, Beef, BarChart3, Plus, LogOut, Zap, ArrowLeft, ArrowLeftRight, TrendingUp, Beaker, Target, FolderOpen, Calculator, Trash2, Sparkles, MessageSquare, FileText, Pencil } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import CreateFarmModal from './CreateFarmModal';
+import EditFarmModal from './EditFarmModal';
 import BotijaoVirtualPage from './BotijaoVirtual';
 import MetasPage from './Metas';
 import PastaArquivosPage from './PastaArquivos';
@@ -68,6 +69,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingFarm, setEditingFarm] = useState<Farm | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
   const [currentView, setCurrentView] = useState<DashboardView>('dashboard');
@@ -853,9 +855,20 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                              {getRoleLabel(farm.my_role)}
                            </Badge>
                            {farm.is_default && <Badge variant="outline">{t("farm.default")}</Badge>}
-                           {farm.my_role === 'owner' && <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-destructive hover:text-destructive-foreground" onClick={e => handleDeleteFarm(farm.farm_id, farm.farm_name, e)} title={t("farm.delete")}>
-                               <Trash2 className="h-4 w-4" />
-                             </Button>}
+                            {(farm.my_role === 'owner' || farm.my_role === 'editor') && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={(e) => { e.stopPropagation(); setEditingFarm(farm); }}
+                                title={t('editFarm.title') || 'Editar fazenda'}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {farm.my_role === 'owner' && <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-destructive hover:text-destructive-foreground" onClick={e => handleDeleteFarm(farm.farm_id, farm.farm_name, e)} title={t("farm.delete")}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>}
                          </div>
                        </div>
                      </CardHeader>
@@ -939,6 +952,17 @@ Select Sires do Brasil</p>
       </div>
 
       <CreateFarmModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} onSuccess={handleCreateFarmSuccess} />
+
+      {editingFarm && (
+        <EditFarmModal
+          isOpen={!!editingFarm}
+          onClose={() => setEditingFarm(null)}
+          onSuccess={() => { setEditingFarm(null); handleCreateFarmSuccess(); }}
+          farmId={editingFarm.farm_id}
+          initialFarmName={editingFarm.farm_name}
+          initialOwnerName={editingFarm.owner_name}
+        />
+      )}
 
       {/* Upload Modal */}
       {selectedFarm && <FemaleUploadModal isOpen={showUploadModal} onClose={() => setShowUploadModal(false)} farmId={selectedFarm.farm_id} farmName={selectedFarm.farm_name} />}
