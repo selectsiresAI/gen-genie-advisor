@@ -69,16 +69,17 @@ export default function AuditoriaStep3Section({ farmId }: AuditoriaStep3SectionP
 
       const { data, error } = await supabase
         .from("females_denorm")
-        .select(["farm_id", ...columns].join(","))
+        .select(["id", "name", "farm_id", ...columns].join(","))
         .eq("farm_id", farmId)
         .range(from, to);
 
       if (error) throw new Error(error.message);
 
-      const pageData = Array.isArray(data) ? data : [];
+      const rawPage = Array.isArray(data) ? (data as any[]) : [];
+      const pageData = rawPage.filter(isCompleteFemaleRow);
       allRows.push(...pageData);
 
-      hasMore = pageData.length === PAGE_SIZE;
+      hasMore = rawPage.length === PAGE_SIZE;
       page += 1;
     }
 
