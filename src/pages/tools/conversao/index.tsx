@@ -315,6 +315,20 @@ const ConversaoPage: React.FC = () => {
 
   const handleDataUpload = async (file: File) => {
     try {
+      const hasBD = modelHeaders.some((h) => normalizeKey(h) === "bd");
+      if (modelHeaders.length > 0 && !hasBD) {
+        toast({
+          title: isEs ? "Característica BD ausente" : isEn ? "BD trait missing" : "Característica BD ausente",
+          description: isEs
+            ? "La lista de nomenclatura no contiene BD. Inclúyala antes de cargar el archivo de datos."
+            : isEn
+            ? "The nomenclature list does not contain BD. Add it before uploading the data file."
+            : "A lista de nomenclatura não contém BD. Inclua-a antes de carregar o arquivo de dados.",
+          variant: "destructive",
+          duration: 8000,
+        });
+        return;
+      }
       const workbook = await readWorkbook(file);
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       if (!sheet) {
