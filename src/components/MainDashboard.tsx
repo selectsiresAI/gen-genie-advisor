@@ -855,7 +855,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                              {getRoleLabel(farm.my_role)}
                            </Badge>
                            {farm.is_default && <Badge variant="outline">{t("farm.default")}</Badge>}
-                            {(farm.my_role === 'owner' || farm.my_role === 'editor') && (
+                            {(farm.my_role === 'owner' || farm.my_role === 'editor' || farm.my_role === 'technician') && (
                               <Button
                                 variant="ghost"
                                 size="sm"
