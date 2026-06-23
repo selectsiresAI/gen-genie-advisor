@@ -126,40 +126,26 @@ export function ShareFarmDialog({ farmId, farmName, myRole }: ShareFarmDialogPro
         return;
       }
 
-      // Try to find user in profiles
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id, email")
-        .eq("email", trimmedEmail)
-        .maybeSingle();
+      // Always go through the edge function so it can look up the profile
+      // with elevated privileges (RLS blocks cross-user profile reads) and
+      // grant direct access when the invitee already has an account.
+      const { data: result, error: fnError } = await supabase.functions.invoke(
+        "share-farm",
+        { body: { farm_id: farmId, email: trimmedEmail, role } }
+      );
 
-      if (profile) {
-        // User exists — add directly to user_farms
-        const { error: insertError } = await supabase
-          .from("user_farms")
-          .insert({ user_id: profile.id, client_id: farmId, role } as any);
+      if (fnError) throw fnError;
+      if (result?.error) throw new Error(result.error);
 
-        if (insertError) throw insertError;
-
+      const status = result?.status as string | undefined;
+      if (status === "granted" || status === "already_member") {
         toast.success(t("share.accessGranted"));
-      } else {
-        // User doesn't exist — create pending invite
-        const { data: session } = await supabase.auth.getSession();
-        const userId = session?.session?.user?.id;
-        if (!userId) throw new Error("Not authenticated");
-
-        const { error: inviteError } = await supabase
-          .from("farm_invites")
-          .insert({
-            client_id: farmId,
-            invited_by: userId,
-            invited_email: trimmedEmail,
-            role,
-          } as any);
-
-        if (inviteError) throw inviteError;
-
+      } else if (status === "invited") {
         toast.success(t("share.inviteSent"));
+      } else if (status === "already_invited") {
+        toast.error(t("share.alreadyInvited"));
+      } else {
+        toast.success(t("share.accessGranted"));
       }
 
       setEmail("");
