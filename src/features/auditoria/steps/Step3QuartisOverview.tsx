@@ -14,6 +14,7 @@ import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
 import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
 import { useRegisterChart } from "@/components/pdf/useRegisterChart";
 import { formatPtaValue } from "@/utils/ptaFormat";
+import { isCompleteFemaleRow } from "@/supabase/queries/females";
 import { useTranslation } from "@/hooks/useTranslation";
 
 type Row = {
