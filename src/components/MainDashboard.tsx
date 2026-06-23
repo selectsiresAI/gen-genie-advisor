@@ -69,6 +69,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingFarm, setEditingFarm] = useState<Farm | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
   const [currentView, setCurrentView] = useState<DashboardView>('dashboard');
