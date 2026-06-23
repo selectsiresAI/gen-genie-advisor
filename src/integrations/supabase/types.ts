@@ -4918,6 +4918,17 @@ export type Database = {
       soundex: { Args: { "": string }; Returns: string }
       text_soundex: { Args: { "": string }; Returns: string }
       unaccent: { Args: { "": string }; Returns: string }
+      update_farm_basic: {
+        Args: {
+          farm_uuid: string
+          new_farm_name: string
+          new_owner_name: string
+        }
+        Returns: {
+          message: string
+          success: boolean
+        }[]
+      }
       validate_naab: {
         Args: { naab: string }
         Returns: {
