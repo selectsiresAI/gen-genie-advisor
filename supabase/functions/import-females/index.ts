@@ -80,43 +80,129 @@ function validateNumber(value: unknown, min?: number, max?: number): number | nu
   return num;
 }
 
+// Map of month names (PT/EN/ES) → numeric month
+const MONTH_NAMES: Record<string, number> = {
+  jan: 1, janeiro: 1, january: 1, ene: 1, enero: 1,
+  fev: 2, fevereiro: 2, feb: 2, february: 2, febrero: 2,
+  mar: 3, marco: 3, 'março': 3, march: 3, marzo: 3,
+  abr: 4, abril: 4, apr: 4, april: 4,
+  mai: 5, maio: 5, may: 5, mayo: 5,
+  jun: 6, junho: 6, june: 6, junio: 6,
+  jul: 7, julho: 7, july: 7, julio: 7,
+  ago: 8, agosto: 8, aug: 8, august: 8,
+  set: 9, setembro: 9, sep: 9, sept: 9, september: 9, septiembre: 9,
+  out: 10, outubro: 10, oct: 10, october: 10, octubre: 10,
+  nov: 11, novembro: 11, november: 11, noviembre: 11,
+  dez: 12, dezembro: 12, dec: 12, december: 12, dic: 12, diciembre: 12,
+};
+
+function toIsoSafe(year: number, month: number, day: number): string | null {
+  if (!year || !month || !day) return null;
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  if (year < 100) year = year <= 50 ? 2000 + year : 1900 + year;
+  if (year < 1900 || year > 2100) return null;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (isNaN(date.getTime())) return null;
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
+  const mm = String(month).padStart(2, '0');
+  const dd = String(day).padStart(2, '0');
+  return `${year}-${mm}-${dd}`;
+}
+
 function validateDate(value: unknown): string | null {
-  if (!value) return null;
-  const dateStr = String(value).trim();
+  if (value === null || value === undefined || value === '') return null;
 
-  if (/^\d{4,5}$/.test(dateStr)) {
+  // Date object (xlsx can deliver real Dates when cellDates is enabled)
+  if (value instanceof Date) {
+    if (isNaN(value.getTime())) return null;
+    return value.toISOString().split('T')[0];
+  }
+
+  // Numeric input → Excel serial date
+  if (typeof value === 'number' && isFinite(value)) {
+    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+    const d = new Date(excelEpoch.getTime() + Math.round(value) * 86400000);
+    if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+    return null;
+  }
+
+  let dateStr = String(value).trim();
+  if (!dateStr) return null;
+
+  // Strip surrounding quotes/whitespace and any time component
+  dateStr = dateStr.replace(/^['"]+|['"]+$/g, '').trim();
+  // Keep only the date portion if there's a time/timezone after a space or "T"
+  const tSplit = dateStr.split(/[T\s]/)[0];
+  if (tSplit && /\d/.test(tSplit) && !/[a-zA-Z]/.test(tSplit)) {
+    dateStr = tSplit;
+  }
+  // Normalize separators of all kinds (., /, -, spaces) — except for word-month forms handled below
+  const hasMonthName = /[a-zA-Z]{3,}/.test(dateStr);
+
+  // Pure digits → Excel serial (allow up to 6 digits to cover year 2100+)
+  if (/^\d{4,6}$/.test(dateStr) && !hasMonthName) {
     const excelSerial = parseInt(dateStr, 10);
-    const excelEpoch = new Date(1899, 11, 30);
-    const date = new Date(excelEpoch.getTime() + excelSerial * 24 * 60 * 60 * 1000);
-    if (!isNaN(date.getTime())) {
-      return date.toISOString().split('T')[0];
+    if (excelSerial > 59 && excelSerial < 80000) {
+      const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+      const d = new Date(excelEpoch.getTime() + excelSerial * 86400000);
+      if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
     }
   }
 
-  const isoMatch = dateStr.match(/^(\d{4})[\-\/](\d{1,2})[\-\/](\d{1,2})$/);
+  // ISO YYYY-MM-DD (or with / or .)
+  const isoMatch = dateStr.match(/^(\d{4})[\-\/.](\d{1,2})[\-\/.](\d{1,2})$/);
   if (isoMatch) {
-    const date = new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]));
-    if (!isNaN(date.getTime())) {
-      return date.toISOString().split('T')[0];
-    }
+    const r = toIsoSafe(+isoMatch[1], +isoMatch[2], +isoMatch[3]);
+    if (r) return r;
   }
 
-  const slashMatch = dateStr.match(/^(\d{1,2})[\-\/.](\d{1,2})[\-\/.](\d{2,4})$/);
+  // DD/MM/YYYY, DD-MM-YY, DD.MM.YYYY — Brazilian/EU default for ambiguous
+  const slashMatch = dateStr.match(/^(\d{1,2})[\-\/.\s](\d{1,2})[\-\/.\s](\d{2,4})$/);
   if (slashMatch) {
-    var a = parseInt(slashMatch[1], 10);
-    var b = parseInt(slashMatch[2], 10);
-    var c = parseInt(slashMatch[3], 10);
-    if (c < 100) c = c <= 50 ? 2000 + c : 1900 + c;
-    var day2: number, month2: number;
-    if (a > 12) { day2 = a; month2 = b; }
-    else if (b > 12) { day2 = b; month2 = a; }
-    else { /* ambiguous → assume US format MM/DD/YY */ day2 = b; month2 = a; }
-    const date = new Date(c, month2 - 1, day2);
-    if (!isNaN(date.getTime())) {
-      return date.toISOString().split('T')[0];
-    }
+    const a = parseInt(slashMatch[1], 10);
+    const b = parseInt(slashMatch[2], 10);
+    const c = parseInt(slashMatch[3], 10);
+    let day: number, month: number;
+    if (a > 12) { day = a; month = b; }
+    else if (b > 12) { day = b; month = a; }
+    else { day = a; month = b; } // Ambiguous → DD/MM (PT-BR default)
+    const r = toIsoSafe(c, month, day);
+    if (r) return r;
   }
 
+  // YYYY/DD/MM (rare, but try as fallback)
+  const yddmm = dateStr.match(/^(\d{4})[\-\/.\s](\d{1,2})[\-\/.\s](\d{1,2})$/);
+  if (yddmm) {
+    const r = toIsoSafe(+yddmm[1], +yddmm[3], +yddmm[2]);
+    if (r) return r;
+  }
+
+  // Word months: "12 de março de 2024", "12-mar-2024", "March 12, 2024", "12 Mar 2024"
+  if (hasMonthName) {
+    const cleaned = dateStr
+      .toLowerCase()
+      .normalize('NFD').replace(/\p{Diacritic}/gu, '')
+      .replace(/\s+de\s+/g, ' ')
+      .replace(/,/g, ' ')
+      .replace(/[\-\/.]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const parts = cleaned.split(' ');
+    let day = 0, month = 0, year = 0;
+    for (const p of parts) {
+      if (MONTH_NAMES[p] && !month) month = MONTH_NAMES[p];
+      else if (/^\d+$/.test(p)) {
+        const n = parseInt(p, 10);
+        if (n > 31 && !year) year = n;
+        else if (!day) day = n;
+        else if (!year) year = n;
+      }
+    }
+    const r = toIsoSafe(year, month, day);
+    if (r) return r;
+  }
+
+  // Last resort: native Date
   const date = new Date(dateStr);
   if (!isNaN(date.getTime())) {
     return date.toISOString().split('T')[0];
