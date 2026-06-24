@@ -266,7 +266,7 @@ function validateRecord(record: any, farmId: string, preferMMDD: boolean = false
   return validated;
 }
 
-function parseCSV(csvContent: string): { records: any[]; unmappedCols: string[] } {
+function parseCSV(csvContent: string): { records: any[]; unmappedCols: string[]; preferMMDD: boolean } {
   let content = csvContent;
   if (content.charCodeAt(0) === 0xFEFF) {
     content = content.slice(1);
