@@ -165,6 +165,7 @@ function validateDate(value: unknown, preferMMDD: boolean = false): string | nul
     let day: number, month: number;
     if (a > 12) { day = a; month = b; }
     else if (b > 12) { day = b; month = a; }
+    else if (preferMMDD) { month = a; day = b; }
     else { day = a; month = b; } // Ambiguous → DD/MM (PT-BR default)
     const r = toIsoSafe(c, month, day);
     if (r) return r;
