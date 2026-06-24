@@ -109,7 +109,7 @@ function toIsoSafe(year: number, month: number, day: number): string | null {
   return `${year}-${mm}-${dd}`;
 }
 
-function validateDate(value: unknown): string | null {
+function validateDate(value: unknown, preferMMDD: boolean = false): string | null {
   if (value === null || value === undefined || value === '') return null;
 
   // Date object (xlsx can deliver real Dates when cellDates is enabled)
@@ -165,6 +165,7 @@ function validateDate(value: unknown): string | null {
     let day: number, month: number;
     if (a > 12) { day = a; month = b; }
     else if (b > 12) { day = b; month = a; }
+    else if (preferMMDD) { month = a; day = b; }
     else { day = a; month = b; } // Ambiguous → DD/MM (PT-BR default)
     const r = toIsoSafe(c, month, day);
     if (r) return r;
@@ -210,7 +211,7 @@ function validateDate(value: unknown): string | null {
   return null;
 }
 
-function validateRecord(record: any, farmId: string): FemaleRecord | null {
+function validateRecord(record: any, farmId: string, preferMMDD: boolean = false): FemaleRecord | null {
   let name = sanitizeString(record.name);
   if (!name && record.identifier) {
     name = sanitizeString(record.identifier);
@@ -234,7 +235,7 @@ function validateRecord(record: any, farmId: string): FemaleRecord | null {
     name,
     identifier,
     cdcb_id: sanitizeString(record.cdcb_id)?.substring(0, 50) || undefined,
-    birth_date: validateDate(record.birth_date) || undefined,
+    birth_date: validateDate(record.birth_date, preferMMDD) || undefined,
     parity_order: validateNumber(record.parity_order, 0, 20) || undefined,
     category: sanitizeString(record.category)?.substring(0, 50) || undefined,
     sire_naab: sanitizeString(record.sire_naab)?.substring(0, 50) || undefined,
@@ -265,7 +266,7 @@ function validateRecord(record: any, farmId: string): FemaleRecord | null {
   return validated;
 }
 
-function parseCSV(csvContent: string): { records: any[]; unmappedCols: string[] } {
+function parseCSV(csvContent: string): { records: any[]; unmappedCols: string[]; preferMMDD: boolean } {
   let content = csvContent;
   if (content.charCodeAt(0) === 0xFEFF) {
     content = content.slice(1);
@@ -284,9 +285,20 @@ function parseCSV(csvContent: string): { records: any[]; unmappedCols: string[] 
 
   // NOTE: 'id' is NOT forbidden because Conversão exports populate it as the animal id.
   // It is remapped to 'identifier' via columnMapping below.
-  const forbiddenFields = ['farm_id', 'client_id', 'ptas', 'created_at', 'updated_at', 'deleted_at'];
+  const forbiddenFields = [
+    'farm_id', 'client_id', 'ptas', 'created_at', 'updated_at', 'deleted_at',
+    // Mangled variants (some exporters strip "t" from headers)
+    'creaed_a', 'updaed_a', 'pas',
+  ];
 
   const columnMapping: Record<string, string> = {
+    // Mangled headers (exporter stripped the letter "t")
+    'birh_dae': 'birth_date',
+    'birh dae': 'birth_date',
+    'idenifier': 'identifier',
+    'pariy_order': 'parity_order',
+    'pariy order': 'parity_order',
+    'caegory': 'category',
     'hhp$': 'hhp_dollar',
     'nm$': 'nm_dollar',
     'cm$': 'cm_dollar',
@@ -526,7 +538,33 @@ function parseCSV(csvContent: string): { records: any[]; unmappedCols: string[] 
   }
 
   console.log("Parsed " + records.length + " records from CSV");
-  return { records, unmappedCols };
+
+  // Auto-detect MM/DD vs DD/MM for the birth_date column by scanning all values.
+  // If any row has the first part > 12, it's DD/MM. If only the second part > 12, it's MM/DD.
+  // Otherwise (fully ambiguous), default to DD/MM (PT-BR).
+  let preferMMDD = false;
+  let firstGt12 = 0;
+  let secondGt12 = 0;
+  for (const rec of records) {
+    const v = rec.birth_date;
+    if (typeof v !== 'string') continue;
+    const m = v.trim().match(/^(\d{1,2})[\-\/.\s](\d{1,2})[\-\/.\s]\d{2,4}$/);
+    if (!m) continue;
+    const a = parseInt(m[1], 10);
+    const b = parseInt(m[2], 10);
+    if (a > 12) firstGt12++;
+    else if (b > 12) secondGt12++;
+  }
+  if (secondGt12 > 0 && firstGt12 === 0) {
+    preferMMDD = true;
+    console.log("Date column auto-detected as MM/DD/YYYY format");
+  } else if (firstGt12 > 0) {
+    console.log("Date column auto-detected as DD/MM/YYYY format");
+  } else {
+    console.log("Date column ambiguous, defaulting to DD/MM/YYYY (PT-BR)");
+  }
+
+  return { records, unmappedCols, preferMMDD };
 }
 
 Deno.serve(async (req) => {
@@ -603,7 +641,7 @@ Deno.serve(async (req) => {
       }
 
       const csvContent = await file.text();
-      const { records: parsedRecords, unmappedCols } = parseCSV(csvContent);
+      const { records: parsedRecords, unmappedCols, preferMMDD } = parseCSV(csvContent);
 
       if (parsedRecords.length === 0) {
         return jsonResponse(req, { error: "Arquivo CSV vazio ou invalido" }, 400);
@@ -618,7 +656,7 @@ Deno.serve(async (req) => {
       const errors: { row: number; error: string }[] = [];
 
       parsedRecords.forEach(function(record, index) {
-        const validated = validateRecord(record, farmId);
+        const validated = validateRecord(record, farmId, preferMMDD);
         if (validated) {
           validatedRecords.push(validated);
         } else {
