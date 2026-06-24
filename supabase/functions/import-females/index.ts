@@ -538,7 +538,33 @@ function parseCSV(csvContent: string): { records: any[]; unmappedCols: string[] 
   }
 
   console.log("Parsed " + records.length + " records from CSV");
-  return { records, unmappedCols };
+
+  // Auto-detect MM/DD vs DD/MM for the birth_date column by scanning all values.
+  // If any row has the first part > 12, it's DD/MM. If only the second part > 12, it's MM/DD.
+  // Otherwise (fully ambiguous), default to DD/MM (PT-BR).
+  let preferMMDD = false;
+  let firstGt12 = 0;
+  let secondGt12 = 0;
+  for (const rec of records) {
+    const v = rec.birth_date;
+    if (typeof v !== 'string') continue;
+    const m = v.trim().match(/^(\d{1,2})[\-\/.\s](\d{1,2})[\-\/.\s]\d{2,4}$/);
+    if (!m) continue;
+    const a = parseInt(m[1], 10);
+    const b = parseInt(m[2], 10);
+    if (a > 12) firstGt12++;
+    else if (b > 12) secondGt12++;
+  }
+  if (secondGt12 > 0 && firstGt12 === 0) {
+    preferMMDD = true;
+    console.log("Date column auto-detected as MM/DD/YYYY format");
+  } else if (firstGt12 > 0) {
+    console.log("Date column auto-detected as DD/MM/YYYY format");
+  } else {
+    console.log("Date column ambiguous, defaulting to DD/MM/YYYY (PT-BR)");
+  }
+
+  return { records, unmappedCols, preferMMDD };
 }
 
 Deno.serve(async (req) => {
