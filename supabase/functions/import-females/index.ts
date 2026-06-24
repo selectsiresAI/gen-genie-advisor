@@ -641,7 +641,7 @@ Deno.serve(async (req) => {
       }
 
       const csvContent = await file.text();
-      const { records: parsedRecords, unmappedCols } = parseCSV(csvContent);
+      const { records: parsedRecords, unmappedCols, preferMMDD } = parseCSV(csvContent);
 
       if (parsedRecords.length === 0) {
         return jsonResponse(req, { error: "Arquivo CSV vazio ou invalido" }, 400);
@@ -656,7 +656,7 @@ Deno.serve(async (req) => {
       const errors: { row: number; error: string }[] = [];
 
       parsedRecords.forEach(function(record, index) {
-        const validated = validateRecord(record, farmId);
+        const validated = validateRecord(record, farmId, preferMMDD);
         if (validated) {
           validatedRecords.push(validated);
         } else {
