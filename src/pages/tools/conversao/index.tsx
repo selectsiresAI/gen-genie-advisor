@@ -410,6 +410,21 @@ const ConversaoPage: React.FC = () => {
   
   const excludedCount = useMemo(() => mappings.filter((row) => row.exclude).length, [mappings]);
 
+  const notApprovedRows = useMemo(
+    () => mappings.filter((row) => !row.approved && !row.exclude),
+    [mappings],
+  );
+
+  const handleExcludeAllNotApproved = () => {
+    setMappings((current) =>
+      current.map((row) =>
+        row.approved || row.exclude
+          ? row
+          : { ...row, exclude: true, selectedCanonical: undefined, approved: true, manual: true },
+      ),
+    );
+  };
+
   const hasPendingApprovals = useMemo(
     () => mappings.some((row) => row.selectedCanonical && !row.approved),
     [mappings],
