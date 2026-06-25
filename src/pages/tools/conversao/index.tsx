@@ -410,6 +410,21 @@ const ConversaoPage: React.FC = () => {
   
   const excludedCount = useMemo(() => mappings.filter((row) => row.exclude).length, [mappings]);
 
+  const notApprovedRows = useMemo(
+    () => mappings.filter((row) => !row.approved && !row.exclude),
+    [mappings],
+  );
+
+  const handleExcludeAllNotApproved = () => {
+    setMappings((current) =>
+      current.map((row) =>
+        row.approved || row.exclude
+          ? row
+          : { ...row, exclude: true, selectedCanonical: undefined, approved: true, manual: true },
+      ),
+    );
+  };
+
   const hasPendingApprovals = useMemo(
     () => mappings.some((row) => row.selectedCanonical && !row.approved),
     [mappings],
@@ -768,6 +783,9 @@ const ConversaoPage: React.FC = () => {
             )}
             <Button variant="outline" onClick={handleApproveSafe} disabled={safeSuggestions.length === 0}>
               {isEs ? `Aprobar sugerencias seguras (${safeSuggestions.length})` : isEn ? `Approve safe suggestions (${safeSuggestions.length})` : `Aprovar sugestões seguras (${safeSuggestions.length})`}
+            </Button>
+            <Button variant="outline" className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={handleExcludeAllNotApproved} disabled={notApprovedRows.length === 0}>
+              {isEs ? `Excluir no aprobadas (${notApprovedRows.length})` : isEn ? `Exclude not approved (${notApprovedRows.length})` : `Excluir não aprovadas (${notApprovedRows.length})`}
             </Button>
             <Button onClick={handleDownload} disabled={!canDownload}>
               {isEs ? "Descargar *_padronizado.xlsx" : isEn ? "Download *_padronizado.xlsx" : "Baixar *_padronizado.xlsx"}
