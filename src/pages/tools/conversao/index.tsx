@@ -784,7 +784,11 @@ const ConversaoPage: React.FC = () => {
 
         <DetectionTable
           rows={mappings}
-          canonicalOptions={modelHeaders}
+          canonicalOptions={
+            modelHeaders.some((h) => normalizeKey(h) === "bd")
+              ? modelHeaders
+              : [...modelHeaders, "BD"]
+          }
           onSelectCanonical={handleSelectCanonical}
           onToggleApproved={handleToggleApproved}
         />
