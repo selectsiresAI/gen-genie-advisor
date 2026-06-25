@@ -784,6 +784,9 @@ const ConversaoPage: React.FC = () => {
             <Button variant="outline" onClick={handleApproveSafe} disabled={safeSuggestions.length === 0}>
               {isEs ? `Aprobar sugerencias seguras (${safeSuggestions.length})` : isEn ? `Approve safe suggestions (${safeSuggestions.length})` : `Aprovar sugestões seguras (${safeSuggestions.length})`}
             </Button>
+            <Button variant="outline" className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={handleExcludeAllNotApproved} disabled={notApprovedRows.length === 0}>
+              {isEs ? `Excluir no aprobadas (${notApprovedRows.length})` : isEn ? `Exclude not approved (${notApprovedRows.length})` : `Excluir não aprovadas (${notApprovedRows.length})`}
+            </Button>
             <Button onClick={handleDownload} disabled={!canDownload}>
               {isEs ? "Descargar *_padronizado.xlsx" : isEn ? "Download *_padronizado.xlsx" : "Baixar *_padronizado.xlsx"}
             </Button>
