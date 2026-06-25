@@ -253,7 +253,7 @@ function validateRecord(record: any, farmId: string, preferMMDD: boolean = false
     'pta_ptat', 'pta_udc', 'pta_flc', 'pta_sce', 'pta_sire_sce', 'ssb', 'dsb', 'h_liv',
     'pta_ccr', 'pta_hcr', 'fi', 'gl', 'efc', 'bwc', 'sta', 'str_num', 'dfm', 'rua',
     'rls', 'rtp', 'ftl', 'rw', 'rlr', 'fta', 'fls', 'fua', 'ruh', 'ruw', 'ucl', 'udp',
-    'ftp', 'rfi', 'gfi', 'pta_bdc'
+    'ftp', 'rfi', 'gfi', 'pta_bdc', 'bd'
   ];
 
   ptaFields.forEach(function(field) {
@@ -320,7 +320,9 @@ function parseCSV(csvContent: string): { records: any[]; unmappedCols: string[];
     'flc': 'pta_flc',
     'str': 'str_num',
     'mf': 'mf_num',
-    'bd': 'pta_bdc',
+    'bd': 'bd',
+    'body depth': 'bd',
+    'bobby depth': 'bd',
     'sce': 'pta_sce',
     'dce': 'pta_sire_sce',
     'h liv': 'h_liv',

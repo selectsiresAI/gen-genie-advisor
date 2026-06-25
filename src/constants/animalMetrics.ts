@@ -42,6 +42,7 @@ export const ANIMAL_METRIC_COLUMNS: AnimalMetricColumn[] = [
   { key: 'gl', label: 'GL', numeric: true },
   { key: 'efc', label: 'EFC', numeric: true },
   { key: 'bwc', label: 'BWC', numeric: true },
+  { key: 'bd', label: 'BD', numeric: true },
   { key: 'sta', label: 'STA', numeric: true },
   { key: 'str', label: 'STR', numeric: true },
   { key: 'dfm', label: 'DFM', numeric: true },
