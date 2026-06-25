@@ -41,6 +41,7 @@ export const NEXUS2_PTA_DEFINITIONS: readonly Nexus2PtaDefinition[] = [
   { label: 'GL', key: 'gl' },
   { label: 'EFC', key: 'efc' },
   { label: 'BWC', key: 'bwc' },
+  { label: 'BD', key: 'bd' },
   { label: 'STA', key: 'sta' },
   { label: 'STR', key: 'str' },
   { label: 'DFM', key: 'dfm' },
