@@ -2875,6 +2875,48 @@ export type Database = {
         }
         Relationships: []
       }
+      technical_glossary: {
+        Row: {
+          category: string
+          context: string | null
+          created_at: string
+          description: string | null
+          en_us: string | null
+          es: string | null
+          id: string
+          is_translatable: boolean
+          pt_br: string
+          term_key: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          context?: string | null
+          created_at?: string
+          description?: string | null
+          en_us?: string | null
+          es?: string | null
+          id?: string
+          is_translatable?: boolean
+          pt_br: string
+          term_key: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          context?: string | null
+          created_at?: string
+          description?: string | null
+          en_us?: string | null
+          es?: string | null
+          id?: string
+          is_translatable?: boolean
+          pt_br?: string
+          term_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       technicians: {
         Row: {
           ativo: boolean | null
@@ -2941,6 +2983,42 @@ export type Database = {
           name?: string | null
           object_id?: string | null
           owner_id?: string | null
+        }
+        Relationships: []
+      }
+      user_activity_tracking: {
+        Row: {
+          created_at: string
+          features_used: string[] | null
+          id: string
+          pages_visited: string[] | null
+          session_end: string | null
+          session_start: string
+          total_session_time_seconds: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          features_used?: string[] | null
+          id?: string
+          pages_visited?: string[] | null
+          session_end?: string | null
+          session_start?: string
+          total_session_time_seconds?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          features_used?: string[] | null
+          id?: string
+          pages_visited?: string[] | null
+          session_end?: string | null
+          session_start?: string
+          total_session_time_seconds?: number | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
