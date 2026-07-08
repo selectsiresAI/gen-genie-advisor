@@ -1350,6 +1350,57 @@ export type Database = {
           },
         ]
       }
+      farms_ag: {
+        Row: {
+          address: string | null
+          city: string | null
+          code: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          country: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          notes: string | null
+          state: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          code?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          state?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          code?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          state?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       female_segmentations: {
         Row: {
           class: Database["public"]["Enums"]["segmentation_class"]
@@ -1717,6 +1768,74 @@ export type Database = {
             columns: ["genomic_result_id"]
             isOneToOne: false
             referencedRelation: "ssgen_client_results"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      females_ag: {
+        Row: {
+          birth_date: string | null
+          breed: string | null
+          created_at: string
+          created_by: string | null
+          dam_id: string | null
+          ear_tag: string | null
+          farm_id: string
+          id: string
+          lactation_number: number | null
+          mgs_naab: string | null
+          name: string | null
+          notes: string | null
+          raw_data: Json | null
+          registration_id: string | null
+          sire_naab: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          birth_date?: string | null
+          breed?: string | null
+          created_at?: string
+          created_by?: string | null
+          dam_id?: string | null
+          ear_tag?: string | null
+          farm_id: string
+          id?: string
+          lactation_number?: number | null
+          mgs_naab?: string | null
+          name?: string | null
+          notes?: string | null
+          raw_data?: Json | null
+          registration_id?: string | null
+          sire_naab?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          birth_date?: string | null
+          breed?: string | null
+          created_at?: string
+          created_by?: string | null
+          dam_id?: string | null
+          ear_tag?: string | null
+          farm_id?: string
+          id?: string
+          lactation_number?: number | null
+          mgs_naab?: string | null
+          name?: string | null
+          notes?: string | null
+          raw_data?: Json | null
+          registration_id?: string | null
+          sire_naab?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "females_ag_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms_ag"
             referencedColumns: ["id"]
           },
         ]
@@ -2237,6 +2356,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      profiles_ag: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          is_active: boolean
+          language: string | null
+          phone: string | null
+          role_title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          is_active?: boolean
+          language?: string | null
+          phone?: string | null
+          role_title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          is_active?: boolean
+          language?: string | null
+          phone?: string | null
+          role_title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       representantes: {
         Row: {
@@ -3094,6 +3255,38 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "farm_dashboard_kpis"
             referencedColumns: ["farm_id"]
+          },
+        ]
+      }
+      user_farms_ag: {
+        Row: {
+          created_at: string
+          farm_id: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          farm_id: string
+          id?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          farm_id?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_farms_ag_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms_ag"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -4531,6 +4724,10 @@ export type Database = {
         }
       }
       get_user_role: { Args: never; Returns: string }
+      has_farm_access_ag: {
+        Args: { _farm_id: string; _user_id: string }
+        Returns: boolean
+      }
       has_farm_membership: { Args: never; Returns: boolean }
       has_role: {
         Args: {
