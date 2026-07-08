@@ -71,8 +71,8 @@ export default function ImportFemalesUploader({ farmId, onSuccess }: Props) {
       'id fazenda', 'idfazenda', 'codigo fazenda', 'cod fazenda', 'name', 'nome', 'nome animal', 'n', 'nombre',
       'cdcb', 'cdcb id', 'registration', 'registro', 'data nascimento', 'data de nascimento', 'birth date', 'birthdate', 'dob',
       'naab', 'naab pai', 'sire naab', 'sire', 'pai', 'naab avo materno', 'mgs naab', 'mgs', 'avo materno',
-      'naab bisavo materno', 'mmgs naab', 'mmgs', 'bisavo materno', 'hhp$', 'tpi', 'nm$', 'cm$', 'fm$', 'gm$',
-      'ptam', 'ptaf', 'ptaf%', 'ptap', 'ptap%', 'cfp', 'pl', 'dpr', 'liv', 'scs', 'ptat', 'udc', 'flc', 'rfi', 'gfi'
+      'naab bisavo materno', 'mmgs naab', 'mmgs', 'bisavo materno', 'hhp$', 'hhp$®', 'tpi', 'nm$', 'cm$', 'fm$', 'gm$',
+      'ptam', 'pta milk', 'ptaf', 'pta fat', 'ptaf%', 'ptap', 'pta protein', 'ptap%', 'cfp', 'pl', 'dpr', 'liv', 'scs', 'ptat', 'pta type', 'udc', 'flc', 'rfi', 'gfi'
     ];
     const importableAliasSet = new Set(importableAliases.map(normalizeHeader));
     const headerSet = headerRow
