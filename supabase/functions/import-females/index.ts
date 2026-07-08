@@ -211,7 +211,7 @@ function validateDate(value: unknown, preferMMDD: boolean = false): string | nul
   return null;
 }
 
-function validateRecord(record: any, farmId: string, preferMMDD: boolean = false): FemaleRecord | null {
+function validateRecord(record: any, farmId: string, preferMMDD: boolean = false, rowIndex: number = 0): FemaleRecord | null {
   let name = sanitizeString(record.name);
   if (!name && record.identifier) {
     name = sanitizeString(record.identifier);
@@ -221,6 +221,22 @@ function validateRecord(record: any, farmId: string, preferMMDD: boolean = false
   // the row is not silently dropped.
   if (!name && record.cdcb_id) {
     name = sanitizeString(record.cdcb_id);
+  }
+  // Last-resort fallback: if the row has ANY meaningful data (a NAAB, a PTA,
+  // a birth date), keep it with a synthetic name derived from the row index.
+  // This prevents entire uploads from being silently discarded when the source
+  // file lacks a name/identifier column (e.g. Nexus 2 batches with only NAABs).
+  if (!name) {
+    const hasAnySignal = !!(
+      sanitizeString(record.sire_naab) ||
+      sanitizeString(record.mgs_naab) ||
+      sanitizeString(record.mmgs_naab) ||
+      record.birth_date ||
+      record.hhp_dollar || record.tpi || record.nm_dollar || record.pta_milk
+    );
+    if (hasAnySignal) {
+      name = `linha-${rowIndex + 1}`;
+    }
   }
   if (!name || name.length === 0 || name.length > 200) return null;
 
@@ -658,7 +674,7 @@ Deno.serve(async (req) => {
       const errors: { row: number; error: string }[] = [];
 
       parsedRecords.forEach(function(record, index) {
-        const validated = validateRecord(record, farmId, preferMMDD);
+        const validated = validateRecord(record, farmId, preferMMDD, index);
         if (validated) {
           validatedRecords.push(validated);
         } else {

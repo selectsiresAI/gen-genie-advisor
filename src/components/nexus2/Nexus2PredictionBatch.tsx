@@ -159,11 +159,20 @@ const buildResultExportRows = (rows: BatchRow[], isEn = false, isEs = false) =>
       // Map PTA values with exact column names required for import
       const pred = row.prediction;
 
+      // Ensure name/identifier are never empty — otherwise the Rebanho importer
+      // (import-females) rejects the row for missing required fields. Mirror the
+      // same fallback used by buildResultInsertRows (direct DB path).
+      const idFazenda = row.idFazenda?.trim() || '';
+      const nome = row.nome?.trim() || '';
+      const fallbackId = `predicao-${row.lineNumber}`;
+      const nameOut = idFazenda || nome || fallbackId;
+      const identifierOut = nome || idFazenda || fallbackId;
+
       return {
         id: '',
         farm_id: '',
-        name: row.idFazenda,
-        identifier: row.nome,
+        name: nameOut,
+        identifier: identifierOut,
         cdcb_id: '',
         sire_naab: row.naabPai,
         mgs_naab: row.naabAvoMaterno,
