@@ -674,7 +674,7 @@ Deno.serve(async (req) => {
       const errors: { row: number; error: string }[] = [];
 
       parsedRecords.forEach(function(record, index) {
-        const validated = validateRecord(record, farmId, preferMMDD);
+        const validated = validateRecord(record, farmId, preferMMDD, index);
         if (validated) {
           validatedRecords.push(validated);
         } else {
