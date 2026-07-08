@@ -42,6 +42,41 @@ function sanitizeString(value: unknown): string {
   return value.trim().replace(/[<>]/g, '');
 }
 
+function isMeaningfulValue(value: unknown): boolean {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'number') return Number.isFinite(value);
+  if (typeof value === 'boolean') return value;
+  const text = String(value).trim();
+  if (!text) return false;
+  const normalized = text.toLowerCase();
+  return normalized !== '-' && normalized !== '--' && normalized !== 'null' && normalized !== 'undefined' && normalized !== 'nan';
+}
+
+const NON_ANIMAL_INPUT_FIELDS = new Set([
+  'id', 'farm_id', 'client_id', 'ptas', 'created_at', 'updated_at', 'deleted_at',
+  'import_batch_id', 'uploader_user_id', 'row_number', 'raw_line', 'creaed_a', 'updaed_a', 'pas'
+]);
+
+function hasMeaningfulAnimalData(record: Record<string, unknown>): boolean {
+  return Object.entries(record).some(([key, value]) => !NON_ANIMAL_INPUT_FIELDS.has(key) && isMeaningfulValue(value));
+}
+
+function normalizeSourceTag(value?: string): string {
+  const text = String(value || 'upload')
+    .replace(/\.[^.]+$/, '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 36);
+  return text || 'upload';
+}
+
+function syntheticAnimalId(rowIndex: number, sourceTag?: string): string {
+  return `linha-${normalizeSourceTag(sourceTag)}-${rowIndex + 1}`;
+}
+
 function validateNumber(value: unknown, min?: number, max?: number): number | null {
   if (value === null || value === undefined || value === '') return null;
   if (typeof value === 'number') {
@@ -211,7 +246,7 @@ function validateDate(value: unknown, preferMMDD: boolean = false): string | nul
   return null;
 }
 
-function validateRecord(record: any, farmId: string, preferMMDD: boolean = false, rowIndex: number = 0): FemaleRecord | null {
+function validateRecord(record: any, farmId: string, preferMMDD: boolean = false, rowIndex: number = 0, sourceTag?: string): FemaleRecord | null {
   let name = sanitizeString(record.name);
   if (!name && record.identifier) {
     name = sanitizeString(record.identifier);
@@ -222,20 +257,12 @@ function validateRecord(record: any, farmId: string, preferMMDD: boolean = false
   if (!name && record.cdcb_id) {
     name = sanitizeString(record.cdcb_id);
   }
-  // Last-resort fallback: if the row has ANY meaningful data (a NAAB, a PTA,
-  // a birth date), keep it with a synthetic name derived from the row index.
-  // This prevents entire uploads from being silently discarded when the source
-  // file lacks a name/identifier column (e.g. Nexus 2 batches with only NAABs).
+  // Last-resort fallback: if the row has ANY meaningful animal data, keep it
+  // with a deterministic synthetic name. Include the source/chunk tag so rows
+  // from large chunked uploads do not collide as linha-1, linha-2, etc.
   if (!name) {
-    const hasAnySignal = !!(
-      sanitizeString(record.sire_naab) ||
-      sanitizeString(record.mgs_naab) ||
-      sanitizeString(record.mmgs_naab) ||
-      record.birth_date ||
-      record.hhp_dollar || record.tpi || record.nm_dollar || record.pta_milk
-    );
-    if (hasAnySignal) {
-      name = `linha-${rowIndex + 1}`;
+    if (hasMeaningfulAnimalData(record)) {
+      name = syntheticAnimalId(rowIndex, sourceTag);
     }
   }
   if (!name || name.length === 0 || name.length > 200) return null;
@@ -289,7 +316,7 @@ function parseCSV(csvContent: string): { records: any[]; unmappedCols: string[];
   }
 
   const lines = content.trim().split('\n');
-  if (lines.length < 2) return { records: [], unmappedCols: [] };
+  if (lines.length < 2) return { records: [], unmappedCols: [], preferMMDD: false };
 
   const firstLine = lines[0];
   const semicolons = (firstLine.match(/;/g) || []).length;
@@ -387,6 +414,9 @@ function parseCSV(csvContent: string): { records: any[]; unmappedCols: string[];
     'hhp$®': 'hhp_dollar',
     // Portuguese/Spanish/English variations
     'nome': 'name',
+    'nome animal': 'name',
+    'animal name': 'name',
+    'nombre': 'name',
     'identificador': 'identifier',
     'id': 'identifier',
     // In ToolSS native sheets, "ID_Fazenda"/"farm_id" is the animal identifier
@@ -397,6 +427,8 @@ function parseCSV(csvContent: string): { records: any[]; unmappedCols: string[];
     'idfazenda': 'identifier',
     'brinco': 'identifier',
     'tag': 'identifier',
+    'tag id': 'identifier',
+    'eartag': 'identifier',
     'id animal': 'identifier',
     'ear tag': 'identifier',
     'animal id': 'identifier',
@@ -450,7 +482,9 @@ function parseCSV(csvContent: string): { records: any[]; unmappedCols: string[];
     'cdcb': 'cdcb_id',
     'cdcb id': 'cdcb_id',
     'registration': 'cdcb_id',
+    'reg': 'cdcb_id',
     'registro': 'cdcb_id',
+    'registro animal': 'cdcb_id',
     'beta casein': 'beta_casein',
     'kappa casein': 'kappa_casein',
     'beta caseina': 'beta_casein',
@@ -470,6 +504,25 @@ function parseCSV(csvContent: string): { records: any[]; unmappedCols: string[];
     'pta hcr': 'pta_hcr',
   };
 
+  function headerLookupKey(value: string): string {
+    return value
+      .trim()
+      .replace(/\ufeff/g, '')
+      .replace(/^['"]+|['"]+$/g, '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[_.\-/]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function mapHeader(value: string): string {
+    const raw = value.trim().replace(/\ufeff/g, '').replace(/^['"]+|['"]+$/g, '').toLowerCase();
+    const normalized = headerLookupKey(value);
+    return columnMapping[raw] || columnMapping[normalized] || raw;
+  }
+
   const headerLine = lines[0];
   const allHeaders: string[] = [];
   const headerIndices: number[] = [];
@@ -482,8 +535,7 @@ function parseCSV(csvContent: string): { records: any[]; unmappedCols: string[];
     if (char === '"') {
       inQuotes = !inQuotes;
     } else if (char === delimiter && !inQuotes) {
-      let normalized = currentField.trim().toLowerCase().replace(/\ufeff/g, '');
-      normalized = columnMapping[normalized] || normalized;
+      let normalized = mapHeader(currentField);
       if (!forbiddenFields.includes(normalized)) {
         allHeaders.push(normalized);
         headerIndices.push(columnIndex);
@@ -495,8 +547,7 @@ function parseCSV(csvContent: string): { records: any[]; unmappedCols: string[];
     }
   }
   if (currentField) {
-    let normalized = currentField.trim().toLowerCase().replace(/\ufeff/g, '');
-    normalized = columnMapping[normalized] || normalized;
+    let normalized = mapHeader(currentField);
     if (!forbiddenFields.includes(normalized)) {
       allHeaders.push(normalized);
       headerIndices.push(columnIndex);
@@ -508,7 +559,7 @@ function parseCSV(csvContent: string): { records: any[]; unmappedCols: string[];
   // Log which raw headers weren't mapped for debugging
   const rawCols = lines[0].split(delimiter).map((h: string) => h.trim().replace(/"/g, '').replace(/\ufeff/g, '').toLowerCase());
   const recognizedCols = new Set([...allHeaders, ...forbiddenFields]);
-  const unmappedCols = rawCols.filter((h: string) => h && !recognizedCols.has(h) && !recognizedCols.has(columnMapping[h] || ''));
+  const unmappedCols = rawCols.filter((h: string) => h && !recognizedCols.has(h) && !recognizedCols.has(columnMapping[h] || '') && !recognizedCols.has(columnMapping[headerLookupKey(h)] || ''));
   if (unmappedCols.length > 0) {
     console.warn("[import-females] Unrecognized columns (passed through as-is): " + unmappedCols.join(', '));
   }
@@ -674,7 +725,7 @@ Deno.serve(async (req) => {
       const errors: { row: number; error: string }[] = [];
 
       parsedRecords.forEach(function(record, index) {
-        const validated = validateRecord(record, farmId, preferMMDD, index);
+        const validated = validateRecord(record, farmId, preferMMDD, index, file.name);
         if (validated) {
           validatedRecords.push(validated);
         } else {

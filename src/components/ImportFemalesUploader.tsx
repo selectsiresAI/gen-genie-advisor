@@ -59,17 +59,30 @@ export default function ImportFemalesUploader({ farmId, onSuccess }: Props) {
       defval: null,
     });
     const headerRow = headerRows[0] ?? [];
-    const identifierAliases = ['identifier', 'id', 'identificador', 'brinco', 'tag', 'eartag', 'ear tag', 'id animal', 'animal id', 'cow id', 'female id'];
-    const nameAliases = ['name', 'nome', 'n', 'nombre'];
+    const normalizeHeader = (value: string) => value
+      .trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[_\-./]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .toLowerCase();
+    const importableAliases = [
+      'identifier', 'id', 'identificador', 'brinco', 'tag', 'eartag', 'ear tag', 'id animal', 'animal id', 'cow id', 'female id',
+      'id fazenda', 'idfazenda', 'codigo fazenda', 'cod fazenda', 'name', 'nome', 'nome animal', 'n', 'nombre',
+      'cdcb', 'cdcb id', 'registration', 'registro', 'data nascimento', 'data de nascimento', 'birth date', 'birthdate', 'dob',
+      'naab', 'naab pai', 'sire naab', 'sire', 'pai', 'naab avo materno', 'mgs naab', 'mgs', 'avo materno',
+      'naab bisavo materno', 'mmgs naab', 'mmgs', 'bisavo materno', 'hhp$', 'tpi', 'nm$', 'cm$', 'fm$', 'gm$',
+      'ptam', 'ptaf', 'ptaf%', 'ptap', 'ptap%', 'cfp', 'pl', 'dpr', 'liv', 'scs', 'ptat', 'udc', 'flc', 'rfi', 'gfi'
+    ];
+    const importableAliasSet = new Set(importableAliases.map(normalizeHeader));
     const headerSet = headerRow
       .filter((h): h is string => typeof h === 'string')
-      .map((h) => h.trim().toLowerCase());
-    const hasIdentifier = headerSet.some((h) => identifierAliases.includes(h));
-    const hasName = headerSet.some((h) => nameAliases.includes(h));
+      .map(normalizeHeader);
+    const hasImportableColumn = headerSet.some((h) => importableAliasSet.has(h));
 
-    // Nexus 2 exports include the `identifier` header but leave it blank, using `name`
-    // as the animal id. The edge function accepts either, so the pre-check should too.
-    if (!hasIdentifier && !hasName) {
+    // The edge function can preserve rows that only have pedigree/PTA data by
+    // generating a safe identifier, so the client must not block those files.
+    if (!hasImportableColumn) {
       throw new Error(`MISSING_ID_COLUMN: ${t("femaleImport.missingColumn")} "identifier".`);
     }
 
