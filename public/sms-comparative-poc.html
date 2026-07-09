@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ToolSS Nexus 2 — Predicao Comparativa SMS</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root {
+    /* Select Sires brand */
+    --ss-red: #ED1C24;
+    --ss-red-dark: #c41820;
+    --ss-red-light: #fef2f2;
+    --ss-black: #1C1C1C;
+    --ss-gray: #D9D9D9;
+    --ss-white: #F2F2F2;
+    --ss-green: #8DC63F;
+    --ss-green-dark: #6fa830;
+    --ss-green-bg: #f4fae8;
+    --ss-green-border: #c5e291;
+    /* Functional */
+    --blue: #2563eb;
+    --blue-bg: #eff6ff;
+    --blue-border: #bfdbfe;
+    --purple: #7c3aed;
+    --purple-bg: #f5f3ff;
+    --purple-border: #ddd6fe;
+    --amber: #d97706;
+    --amber-bg: #fffbeb;
+    --amber-border: #fde68a;
+    --gray-50: #fafafa;
+    --gray-100: #f5f5f5;
+    --gray-200: #e5e5e5;
+    --gray-300: #d4d4d4;
+    --gray-400: #a3a3a3;
+    --gray-500: #737373;
+    --gray-600: #525252;
+    --gray-700: #404040;
+    --gray-800: #262626;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--ss-white);
+    color: var(--ss-black);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: var(--ss-black);
+    color: white;
+    padding: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 40%;
+    height: 100%;
+    background: linear-gradient(135deg, transparent 0%, var(--ss-red) 100%);
+    opacity: 0.15;
+  }
+  .hero-inner {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 2.5rem 2rem 2rem;
+    position: relative;
+    z-index: 1;
+  }
+  .hero-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+  .hero-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .hero-logo {
+    width: 40px;
+    height: 40px;
+    background: var(--ss-red);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.875rem;
+    letter-spacing: -0.03em;
+    color: white;
+  }
+  .hero-brand-text { display: flex; flex-direction: column; }
+  .hero-brand-name { font-weight: 700; font-size: 0.9375rem; letter-spacing: 0.02em; }
+  .hero-brand-sub { font-size: 0.6875rem; color: rgba(255,255,255,0.5); font-weight: 500; }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 999px;
+    padding: 5px 14px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.7);
+  }
+  .hero-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ss-green); }
+  .hero-title {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    margin-bottom: 0.375rem;
+    line-height: 1.15;
+  }
+  .hero-title span { color: var(--ss-red); }
+  .hero p { color: rgba(255,255,255,0.55); font-size: 0.875rem; max-width: 560px; line-height: 1.5; }
+  .hero-divider {
+    height: 3px;
+    background: linear-gradient(90deg, var(--ss-red) 0%, var(--ss-red) 30%, var(--ss-green) 100%);
+  }
+
+  /* ── PIPELINE FLOW ── */
+  .pipeline {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    transform: translateY(-20px);
+    position: relative;
+    z-index: 2;
+  }
+  .pipeline-inner {
+    background: white;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    overflow-x: auto;
+    border: 1px solid var(--gray-200);
+  }
+  .pipe-step {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+  }
+  .pipe-num {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--ss-red);
+    color: white;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .pipe-text { font-size: 0.8125rem; font-weight: 600; color: var(--gray-700); }
+  .pipe-arrow { flex-shrink: 0; margin: 0 0.625rem; color: var(--ss-gray); }
+  .pipe-arrow svg { display: block; }
+
+  /* ── MAIN ── */
+  .main { max-width: 1440px; margin: 0 auto; padding: 0.5rem 2rem 2rem; }
+
+  /* ── FORMULA ── */
+  .formula-strip {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    background: var(--ss-black);
+    color: white;
+    border-radius: var(--radius);
+    padding: 0.875rem 1.25rem;
+    margin-bottom: 1.25rem;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.8125rem;
+    overflow-x: auto;
+  }
+  .formula-strip .tag {
+    background: var(--ss-red);
+    padding: 3px 10px;
+    border-radius: 5px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    flex-shrink: 0;
+  }
+  .formula-strip code { color: #fca5a5; }
+  .formula-strip .sep { color: rgba(255,255,255,0.25); }
+
+  /* ── CARD ── */
+  .card {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 1.25rem;
+    overflow: hidden;
+  }
+  .card-head {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .card-head h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--ss-black);
+  }
+  .card-head h2 .icon-wrap {
+    width: 28px;
+    height: 28px;
+    background: var(--ss-red-light);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .card-head h2 .icon-wrap svg { color: var(--ss-red); }
+  .card-body { padding: 1.25rem; }
+
+  /* ── LEGEND ── */
+  .legend-bar {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    padding: 0.625rem 1.25rem;
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-200);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--gray-600);
+  }
+  .legend-bar .item { display: flex; align-items: center; gap: 5px; }
+  .legend-bar .swatch { width: 12px; height: 12px; border-radius: 3px; border: 2px solid; }
+  .sw-green { background: var(--ss-green-bg); border-color: var(--ss-green); }
+  .sw-blue { background: var(--blue-bg); border-color: var(--blue); }
+  .sw-purple { background: var(--purple-bg); border-color: var(--purple); }
+
+  /* ── FEMALE GROUP ── */
+  .female-block { padding: 1.25rem; }
+  .female-block + .female-block { border-top: 2px solid var(--ss-white); }
+  .female-top {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .female-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--ss-red-light);
+    border: 2px solid var(--ss-red);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .female-avatar svg { color: var(--ss-red); }
+  .female-label { font-weight: 700; font-size: 0.875rem; }
+  .female-id { color: var(--gray-400); font-size: 0.8125rem; font-weight: 500; }
+
+  /* ── BADGE ── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 5px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    border: 1px solid;
+    white-space: nowrap;
+  }
+  .b-red { background: var(--ss-red-light); color: var(--ss-red); border-color: #fecaca; }
+  .b-green { background: var(--ss-green-bg); color: var(--ss-green-dark); border-color: var(--ss-green-border); }
+  .b-blue { background: var(--blue-bg); color: var(--blue); border-color: var(--blue-border); }
+  .b-purple { background: var(--purple-bg); color: var(--purple); border-color: var(--purple-border); }
+  .b-dark { background: var(--ss-black); color: white; border-color: var(--ss-black); }
+  .b-outline { background: white; color: var(--gray-600); border-color: var(--gray-300); }
+  .b-amber { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border); }
+
+  /* ── TABLE ── */
+  .tbl-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--gray-200); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+  thead th {
+    background: var(--ss-black);
+    color: white;
+    padding: 0.5rem 0.625rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-align: center;
+    white-space: nowrap;
+    border: none;
+  }
+  thead th:nth-child(-n+2) { text-align: left; }
+  tbody td {
+    padding: 0.5rem 0.625rem;
+    text-align: center;
+    border-bottom: 1px solid var(--gray-100);
+    font-variant-numeric: tabular-nums;
+  }
+  tbody td:nth-child(-n+2) { text-align: left; }
+  tbody tr:hover td { background: var(--gray-50); }
+  tbody tr.winner td { background: rgba(237,28,36,0.03); }
+  tbody tr.winner td:first-child { box-shadow: inset 3px 0 0 var(--ss-red); }
+
+  td.best {
+    background: var(--ss-green-bg) !important;
+    color: var(--ss-green-dark);
+    font-weight: 700;
+  }
+
+  .bull-cell { display: flex; flex-direction: column; gap: 1px; }
+  .bull-name { font-weight: 600; color: var(--ss-black); }
+  .bull-naab { font-size: 0.625rem; color: var(--gray-400); font-family: monospace; }
+
+  /* ── ELECTION DASHBOARD ── */
+  .election-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.875rem; }
+  .elec-card {
+    border-radius: 8px;
+    padding: 1.125rem;
+    text-align: center;
+    border: 2px solid var(--gray-200);
+    position: relative;
+    overflow: hidden;
+  }
+  .elec-card.active { border-color: var(--ss-red); background: var(--ss-red-light); }
+  .elec-card.active::before {
+    content: 'VENCEDOR';
+    position: absolute;
+    top: 6px; right: -30px;
+    background: var(--ss-red);
+    color: white;
+    font-size: 0.5rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    padding: 2px 34px;
+    transform: rotate(45deg);
+  }
+  .elec-label {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--gray-500);
+    margin-bottom: 0.375rem;
+  }
+  .elec-value { font-size: 2.25rem; font-weight: 800; color: var(--ss-black); line-height: 1; }
+  .elec-card.active .elec-value { color: var(--ss-red); }
+  .elec-sub { font-size: 0.6875rem; color: var(--gray-400); margin-top: 0.25rem; }
+  .elec-bar-wrap { margin-top: 0.625rem; height: 5px; background: var(--gray-200); border-radius: 3px; overflow: hidden; }
+  .elec-bar { height: 100%; border-radius: 3px; background: var(--gray-400); }
+  .elec-card.active .elec-bar { background: var(--ss-red); }
+
+  /* ── SEGMENTATION SECTION ── */
+  .seg-explainer { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
+  .seg-box { border-radius: 8px; padding: 1rem; border: 1px solid; }
+  .seg-box.election { background: var(--ss-red-light); border-color: #fecaca; }
+  .seg-box.objective { background: var(--purple-bg); border-color: var(--purple-border); }
+  .seg-box h4 { font-size: 0.8125rem; font-weight: 700; margin-bottom: 0.375rem; display: flex; align-items: center; gap: 6px; }
+  .seg-box.election h4 { color: var(--ss-red); }
+  .seg-box.objective h4 { color: var(--purple); }
+  .seg-box p { font-size: 0.8125rem; color: var(--gray-600); line-height: 1.5; }
+  .seg-box strong { color: var(--ss-black); }
+
+  .seg-table-wrap { border-radius: 8px; overflow: hidden; border: 2px solid var(--purple-border); }
+  .seg-table-wrap thead th { background: var(--purple); }
+  .seg-table-wrap td.seg-best { background: var(--ss-green-bg) !important; color: var(--ss-green-dark); font-weight: 700; }
+  .seg-verdict { display: flex; align-items: center; gap: 6px; justify-content: center; }
+  .seg-verdict .check {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--purple);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .seg-verdict .check svg { color: white; }
+
+  /* ── CONFLICT CALLOUT ── */
+  .conflict-callout {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    background: var(--amber-bg);
+    border: 1px solid var(--amber-border);
+    border-left: 4px solid var(--amber);
+    border-radius: 0 8px 8px 0;
+    padding: 1rem 1.125rem;
+    margin-top: 1rem;
+  }
+  .conflict-callout .icon {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: #fef3c7;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .conflict-callout h5 { font-size: 0.8125rem; font-weight: 700; color: var(--amber); margin-bottom: 3px; }
+  .conflict-callout p { font-size: 0.8125rem; color: var(--gray-600); line-height: 1.5; }
+  .conflict-callout strong { color: var(--ss-black); }
+
+  /* ── FOOTER ── */
+  .footer {
+    text-align: center;
+    padding: 1.5rem 2rem;
+    font-size: 0.6875rem;
+    color: var(--gray-400);
+    border-top: 1px solid var(--gray-200);
+    background: white;
+  }
+  .footer strong { color: var(--ss-red); font-weight: 700; }
+
+  @media (max-width: 768px) {
+    .hero-inner { padding: 1.5rem 1rem; }
+    .hero-title { font-size: 1.5rem; }
+    .pipeline-inner { flex-wrap: wrap; gap: 0.5rem; }
+    .main { padding: 0.75rem 1rem; }
+    .seg-explainer { grid-template-columns: 1fr; }
+    .election-grid { grid-template-columns: 1fr; }
+  }
+
+  @media print {
+    .hero { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    thead th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .card { break-inside: avoid; }
+    body { background: white; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-inner">
+    <div class="hero-top">
+      <div class="hero-brand">
+        <div class="hero-logo">SS</div>
+        <div class="hero-brand-text">
+          <span class="hero-brand-name">ToolSS</span>
+          <span class="hero-brand-sub">Select Sires Genetic Tools</span>
+        </div>
+      </div>
+      <div class="hero-badge"><div class="dot"></div> Nexus 2 — Prova de Conceito</div>
+    </div>
+    <h1 class="hero-title">Predicao <span>Comparativa</span> SMS</h1>
+    <p>Compara as 3 recomendacoes de acasalamento do SMS, calcula PTAs preditas e elege a melhor opcao por caracteristica e por objetivo genetico da fazenda.</p>
+  </div>
+  <div class="hero-divider"></div>
+</header>
+
+<!-- PIPELINE -->
+<div class="pipeline">
+  <div class="pipeline-inner">
+    <div class="pipe-step"><div class="pipe-num">1</div><div class="pipe-text">Upload SMS</div></div>
+    <div class="pipe-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+    <div class="pipe-step"><div class="pipe-num">2</div><div class="pipe-text">Match ID &times; Rebanho</div></div>
+    <div class="pipe-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+    <div class="pipe-step"><div class="pipe-num">3</div><div class="pipe-text">Lookup Touros</div></div>
+    <div class="pipe-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+    <div class="pipe-step"><div class="pipe-num">4</div><div class="pipe-text">Predicao &times;3</div></div>
+    <div class="pipe-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+    <div class="pipe-step"><div class="pipe-num">5</div><div class="pipe-text">Eleicao + Segmentacao</div></div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- FORMULA -->
+  <div class="formula-strip">
+    <div class="tag">Formula</div>
+    <code>Pred = ((PTA<sub>femea</sub> + PTA<sub>touro</sub>) / 2) &times; 0,93</code>
+    <span class="sep">|</span>
+    <code>SCS = (PTA<sub>femea</sub> + PTA<sub>touro</sub>) / 2</code>
+  </div>
+
+  <!-- RESULTADOS -->
+  <div class="card">
+    <div class="card-head">
+      <h2>
+        <div class="icon-wrap"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg></div>
+        Resultados Comparativos
+      </h2>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <span class="badge b-outline">3 femeas</span>
+        <span class="badge b-outline">3 touros</span>
+        <span class="badge b-outline">16 traits</span>
+      </div>
+    </div>
+
+    <div class="legend-bar">
+      <div class="item"><div class="swatch sw-green"></div> Melhor PTA na caracteristica</div>
+      <div class="item"><div class="swatch sw-blue"></div> Touro vencedor geral</div>
+      <div class="item"><div class="swatch sw-purple"></div> Melhor pelo objetivo genetico</div>
+    </div>
+
+    <!-- Vaca 20 -->
+    <div class="female-block">
+      <div class="female-top">
+        <div class="female-avatar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg></div>
+        <span class="female-label">Vaca 20</span>
+        <span class="female-id">ID: 20</span>
+        <span class="badge b-red">Vencedor: Rec. 1 — Mican (13/16)</span>
+        <span class="badge b-purple">Seg. TPI: Rec. 1</span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Touro</th><th>HHP$</th><th>TPI</th><th>NM$</th><th>CM$</th><th>FM$</th><th>GM$</th><th>PTAM</th><th>CFP</th><th>PTAF</th><th>PTAP</th><th>PL</th><th>DPR</th><th>SCS</th><th>PTAT</th><th>UDC</th><th>FLC</th></tr></thead>
+          <tbody>
+            <tr class="winner">
+              <td><span class="badge b-dark">1</span></td>
+              <td><div class="bull-cell"><span class="bull-name">Mican</span><span class="bull-naab">7HO17191</span></div></td>
+              <td class="best">742</td><td class="best">2689</td><td class="best">548</td><td class="best">492</td>
+              <td class="best">389</td><td class="best">412</td><td class="best">1674</td><td class="best">82</td>
+              <td class="best">68</td><td class="best">52</td><td class="best">6.23</td><td class="best">1.82</td>
+              <td>2.71</td><td class="best">2.45</td><td class="best">2.18</td><td>1.92</td>
+            </tr>
+            <tr>
+              <td><span class="badge b-outline">2</span></td>
+              <td><div class="bull-cell"><span class="bull-name">Rosemary</span><span class="bull-naab">7HO17220</span></div></td>
+              <td>698</td><td>2542</td><td>501</td><td>451</td><td>362</td><td>388</td><td>1521</td><td>76</td>
+              <td>61</td><td>47</td><td>5.89</td><td>1.54</td><td class="best">2.65</td><td>2.12</td><td>2.01</td><td class="best">2.08</td>
+            </tr>
+            <tr>
+              <td><span class="badge b-outline">3</span></td>
+              <td><div class="bull-cell"><span class="bull-name">Esquire</span><span class="bull-naab">7HO15937</span></div></td>
+              <td>621</td><td>2401</td><td>432</td><td>398</td><td>312</td><td>345</td><td>1389</td><td>69</td>
+              <td>54</td><td>41</td><td>5.12</td><td>1.21</td><td>2.78</td><td>1.89</td><td>1.85</td><td>1.76</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Vaca 122 -->
+    <div class="female-block">
+      <div class="female-top">
+        <div class="female-avatar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg></div>
+        <span class="female-label">Vaca 122</span>
+        <span class="female-id">ID: 122</span>
+        <span class="badge b-red">Vencedor: Rec. 1 — Mican (10/16)</span>
+        <span class="badge b-amber">Seg. TPI diverge: Rec. 2</span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Touro</th><th>HHP$</th><th>TPI</th><th>NM$</th><th>CM$</th><th>FM$</th><th>GM$</th><th>PTAM</th><th>CFP</th><th>PTAF</th><th>PTAP</th><th>PL</th><th>DPR</th><th>SCS</th><th>PTAT</th><th>UDC</th><th>FLC</th></tr></thead>
+          <tbody>
+            <tr class="winner">
+              <td><span class="badge b-dark">1</span></td>
+              <td><div class="bull-cell"><span class="bull-name">Mican</span><span class="bull-naab">7HO17191</span></div></td>
+              <td class="best">801</td><td>2754</td><td class="best">589</td><td class="best">532</td>
+              <td class="best">421</td><td class="best">448</td><td class="best">1798</td><td class="best">89</td>
+              <td class="best">74</td><td class="best">56</td><td>6.45</td><td>1.95</td><td>2.82</td><td>2.56</td><td>2.34</td><td>1.98</td>
+            </tr>
+            <tr>
+              <td><span class="badge b-outline">2</span></td>
+              <td><div class="bull-cell"><span class="bull-name">Rosemary</span><span class="bull-naab">7HO17220</span></div></td>
+              <td>756</td><td class="best">2812</td><td>542</td><td>491</td><td>394</td><td>424</td><td>1645</td><td>82</td>
+              <td>67</td><td>51</td><td class="best">6.78</td><td class="best">2.12</td><td class="best">2.58</td>
+              <td class="best">2.89</td><td class="best">2.51</td><td class="best">2.15</td>
+            </tr>
+            <tr>
+              <td><span class="badge b-outline">3</span></td>
+              <td><div class="bull-cell"><span class="bull-name">Esquire</span><span class="bull-naab">7HO15937</span></div></td>
+              <td>678</td><td>2489</td><td>478</td><td>434</td><td>348</td><td>381</td><td>1512</td><td>75</td>
+              <td>59</td><td>44</td><td>5.34</td><td>1.45</td><td>2.91</td><td>2.01</td><td>1.89</td><td>1.72</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Vaca 176 -->
+    <div class="female-block">
+      <div class="female-top">
+        <div class="female-avatar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg></div>
+        <span class="female-label">Vaca 176</span>
+        <span class="female-id">ID: 176</span>
+        <span class="badge b-red">Vencedor: Rec. 2 — Rosemary (10/16)</span>
+        <span class="badge b-purple">Seg. TPI: Rec. 2</span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Touro</th><th>HHP$</th><th>TPI</th><th>NM$</th><th>CM$</th><th>FM$</th><th>GM$</th><th>PTAM</th><th>CFP</th><th>PTAF</th><th>PTAP</th><th>PL</th><th>DPR</th><th>SCS</th><th>PTAT</th><th>UDC</th><th>FLC</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="badge b-outline">1</span></td>
+              <td><div class="bull-cell"><span class="bull-name">Mican</span><span class="bull-naab">7HO17191</span></div></td>
+              <td class="best">856</td><td>2891</td><td class="best">634</td><td class="best">571</td>
+              <td>445</td><td>476</td><td>1856</td><td>91</td><td class="best">78</td><td>58</td>
+              <td>6.12</td><td>1.78</td><td>2.89</td><td>2.34</td><td>2.12</td><td>1.95</td>
+            </tr>
+            <tr class="winner">
+              <td><span class="badge b-dark">2</span></td>
+              <td><div class="bull-cell"><span class="bull-name">Rosemary</span><span class="bull-naab">7HO17220</span></div></td>
+              <td>812</td><td class="best">2945</td><td>587</td><td>530</td><td class="best">468</td>
+              <td class="best">498</td><td class="best">1923</td><td class="best">95</td><td>71</td>
+              <td class="best">62</td><td class="best">7.01</td><td class="best">2.34</td><td class="best">2.52</td>
+              <td class="best">2.91</td><td class="best">2.45</td><td class="best">2.18</td>
+            </tr>
+            <tr>
+              <td><span class="badge b-outline">3</span></td>
+              <td><div class="bull-cell"><span class="bull-name">Esquire</span><span class="bull-naab">7HO15937</span></div></td>
+              <td>734</td><td>2612</td><td>523</td><td>472</td><td>389</td><td>412</td><td>1678</td><td>82</td>
+              <td>65</td><td>48</td><td>5.67</td><td>1.56</td><td>2.95</td><td>2.12</td><td>1.92</td><td>1.78</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ELEICAO -->
+  <div class="card">
+    <div class="card-head">
+      <h2>
+        <div class="icon-wrap"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5C7 4 7 7 7 7"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5C17 4 17 7 17 7"/><path d="M4 22h16"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg></div>
+        Painel de Eleicao
+      </h2>
+      <span class="badge b-outline">Quem ganhou mais femeas no rebanho?</span>
+    </div>
+    <div class="card-body">
+      <p style="font-size:0.8125rem;color:var(--gray-500);margin-bottom:1rem;">
+        Cada femea "vota" no touro que venceu na maioria das caracteristicas. Abaixo, o placar geral.
+      </p>
+      <div class="election-grid">
+        <div class="elec-card active">
+          <div class="elec-label">1a Recomendacao</div>
+          <div class="elec-value">2</div>
+          <div class="elec-sub">femeas elegeram</div>
+          <div class="elec-bar-wrap"><div class="elec-bar" style="width:66.7%"></div></div>
+        </div>
+        <div class="elec-card">
+          <div class="elec-label">2a Recomendacao</div>
+          <div class="elec-value">1</div>
+          <div class="elec-sub">femea elegeu</div>
+          <div class="elec-bar-wrap"><div class="elec-bar" style="width:33.3%"></div></div>
+        </div>
+        <div class="elec-card">
+          <div class="elec-label">3a Recomendacao</div>
+          <div class="elec-value">0</div>
+          <div class="elec-sub">nenhuma femea</div>
+          <div class="elec-bar-wrap"><div class="elec-bar" style="width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEGMENTACAO -->
+  <div class="card">
+    <div class="card-head">
+      <h2>
+        <div class="icon-wrap"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></div>
+        Decisao por Objetivo Genetico
+      </h2>
+      <span class="badge b-purple">Indice ativo: TPI</span>
+    </div>
+    <div class="card-body">
+      <div class="seg-explainer">
+        <div class="seg-box election">
+          <h4>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5C7 4 7 7 7 7"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5C17 4 17 7 17 7"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+            Eleicao (democracia de traits)
+          </h4>
+          <p>Cada caracteristica "vota" no touro que produziu a <strong>melhor PTA predita</strong>. O touro com mais votos e o <strong>vencedor geral</strong> — o mais completo.</p>
+        </div>
+        <div class="seg-box objective">
+          <h4>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+            Objetivo Genetico (foco da fazenda)
+          </h4>
+          <p>Olha <strong>somente o indice</strong> que a fazenda definiu na Segmentacao (TPI, NM$, HHP$ ou Custom). Mostra qual touro atende melhor <strong>o seu objetivo</strong>.</p>
+        </div>
+      </div>
+
+      <div class="seg-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="text-align:left;">Femea</th>
+              <th>Eleicao Geral</th>
+              <th>TPI Rec. 1</th>
+              <th>TPI Rec. 2</th>
+              <th>TPI Rec. 3</th>
+              <th>Melhor por TPI</th>
+              <th>Concordam?</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="text-align:left;"><strong>Vaca 20</strong></td>
+              <td><span class="badge b-red">Rec. 1</span></td>
+              <td class="seg-best">2689</td><td>2542</td><td>2401</td>
+              <td><div class="seg-verdict"><div class="check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><span class="badge b-purple">Rec. 1</span></div></td>
+              <td><span class="badge b-green">Sim</span></td>
+            </tr>
+            <tr>
+              <td style="text-align:left;"><strong>Vaca 122</strong></td>
+              <td><span class="badge b-red">Rec. 1</span></td>
+              <td>2754</td><td class="seg-best">2812</td><td>2489</td>
+              <td><div class="seg-verdict"><div class="check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><span class="badge b-purple">Rec. 2</span></div></td>
+              <td><span class="badge b-amber">Diverge</span></td>
+            </tr>
+            <tr>
+              <td style="text-align:left;"><strong>Vaca 176</strong></td>
+              <td><span class="badge b-red">Rec. 2</span></td>
+              <td>2891</td><td class="seg-best">2945</td><td>2612</td>
+              <td><div class="seg-verdict"><div class="check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><span class="badge b-purple">Rec. 2</span></div></td>
+              <td><span class="badge b-green">Sim</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="conflict-callout">
+        <div class="icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+        <div>
+          <h5>Divergencia: Vaca 122</h5>
+          <p>O touro mais completo (<strong>Rec. 1 — Mican</strong>) nao e o melhor para TPI (<strong>Rec. 2 — Rosemary</strong>, 2812 vs 2754). Escolha depende da estrategia: <strong>equilibrio geral</strong> ou <strong>foco no indice</strong>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <strong>ToolSS</strong> &mdash; Select Sires &mdash; Predicao Comparativa SMS &mdash; 08/07/2026
+</footer>
+
+</body>
+</html>
