@@ -134,7 +134,7 @@ async function parseSMSPdf(buffer: ArrayBuffer): Promise<SMSRow[]> {
     }
   }
 
-  doc.destroy();
+  await (doc as any).destroy?.();
   return rows;
 }
 
