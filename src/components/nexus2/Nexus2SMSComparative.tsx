@@ -17,9 +17,16 @@ import {
   type PredictionTraitKey
 } from '@/services/prediction.service';
 import { read, utils, writeFileXLSX } from 'xlsx';
+import * as pdfjsLib from 'pdfjs-dist';
 import { useHerdStore } from '@/hooks/useHerdStore';
 
-const ACCEPTED_EXTENSIONS = '.csv,.xlsx,.xls,.xlsm';
+// Configure pdf.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).toString();
+
+const ACCEPTED_EXTENSIONS = '.csv,.xlsx,.xls,.xlsm,.pdf';
 
 // Traits onde MENOR valor = MELHOR (saude, dificuldade de parto, etc.)
 const LOWER_IS_BETTER = new Set<string>([
@@ -61,6 +68,74 @@ function normalizeNaab(value: string): string {
   n = n.replace(/^0+([1-9]\d*[A-Z]+)/, '$1');
   n = n.replace(/^0+([A-Z]+)/, '$1');
   return n;
+}
+
+// --- Parse PDF do SMS (formato: ID | NAAB Nome | NAAB Nome | NAAB Nome) ---
+async function parseSMSPdf(buffer: ArrayBuffer): Promise<SMSRow[]> {
+  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+  const rows: SMSRow[] = [];
+
+  for (let p = 1; p <= doc.numPages; p++) {
+    const page = await doc.getPage(p);
+    const content = await page.getTextContent();
+    const items = content.items.filter(
+      (it: any) => it.str && it.str.trim()
+    ) as Array<{ str: string; transform: number[] }>;
+
+    // Agrupar por coordenada Y (linha)
+    const lineMap: Record<number, Array<{ x: number; text: string }>> = {};
+    for (const item of items) {
+      const y = Math.round(item.transform[5]);
+      if (!lineMap[y]) lineMap[y] = [];
+      lineMap[y].push({ x: Math.round(item.transform[4]), text: item.str.trim() });
+    }
+
+    // Ordenar linhas de cima para baixo (Y decrescente)
+    const sortedYs = Object.keys(lineMap).map(Number).sort((a, b) => b - a);
+
+    for (const y of sortedYs) {
+      const cells = lineMap[y].sort((a, b) => a.x - b.x).map(c => c.text);
+      // Pular header e linhas vazias
+      if (cells.length < 2) continue;
+      const first = cells[0].toLowerCase();
+      if (first === 'id' || first.includes('recommendation') || first.includes('recomend')) continue;
+
+      // Formato esperado: ID, NAAB1, Nome1, NAAB2, Nome2, NAAB3, Nome3
+      // ou: ID, NAAB1 Nome1, NAAB2 Nome2, NAAB3 Nome3
+      const cowId = cells[0];
+      if (!/^\d+$/.test(cowId) && !/^[A-Z0-9-]+$/i.test(cowId)) continue;
+
+      const mates: Array<{ naab: string; name?: string }> = [];
+
+      // Detectar formato: cells alternando NAAB/Nome OU cells com "NAAB Nome" junto
+      const remaining = cells.slice(1);
+      let i = 0;
+      while (i < remaining.length && mates.length < 3) {
+        const cell = remaining[i];
+        // Checar se parece NAAB (ex: 250HO17507, 009HO17471)
+        if (/^\d{1,3}[A-Z]{2}\d{4,6}$/i.test(cell)) {
+          const name = remaining[i + 1] && !/^\d{1,3}[A-Z]{2}\d{4,6}$/i.test(remaining[i + 1])
+            ? remaining[i + 1] : undefined;
+          mates.push({ naab: normalizeNaab(cell), name });
+          i += name ? 2 : 1;
+        } else {
+          // Pode ser "NAAB Nome" junto
+          const match = cell.match(/^(\d{1,3}[A-Z]{2}\d{4,6})\s+(.+)$/i);
+          if (match) {
+            mates.push({ naab: normalizeNaab(match[1]), name: match[2] });
+          }
+          i++;
+        }
+      }
+
+      if (mates.length > 0) {
+        rows.push({ cowId, mates });
+      }
+    }
+  }
+
+  doc.destroy();
+  return rows;
 }
 
 interface SMSRow {
@@ -132,50 +207,69 @@ const Nexus2SMSComparative: React.FC<Nexus2SMSComparativeProps> = ({ selectedFar
 
     try {
       const buffer = await file.arrayBuffer();
-      const workbook = read(buffer, { type: 'array' });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = utils.sheet_to_json<Record<string, any>>(sheet);
+      const isPdf = file.name.toLowerCase().endsWith('.pdf');
+      let rows: SMSRow[];
 
-      if (!jsonData.length) {
-        toast({ title: 'Arquivo vazio', variant: 'destructive' });
-        return;
+      if (isPdf) {
+        rows = await parseSMSPdf(buffer);
+        if (!rows.length) {
+          toast({
+            title: isEs ? 'PDF vacio o formato no reconocido' : isEn ? 'Empty PDF or unrecognized format' : 'PDF vazio ou formato nao reconhecido',
+            description: isEs
+              ? 'El PDF debe contener: ID, 1a Recomendacion, 2a, 3a (NAAB + Nombre)'
+              : isEn
+                ? 'PDF must contain: ID, 1st Recommendation, 2nd, 3rd (NAAB + Name)'
+                : 'O PDF deve conter: ID, 1a Recomendacao, 2a, 3a (NAAB + Nome)',
+            variant: 'destructive'
+          });
+          return;
+        }
+      } else {
+        const workbook = read(buffer, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = utils.sheet_to_json<Record<string, any>>(sheet);
+
+        if (!jsonData.length) {
+          toast({ title: 'Arquivo vazio', variant: 'destructive' });
+          return;
+        }
+
+        const headers = Object.keys(jsonData[0]);
+        const colId = findColumn(headers, ID_ALIASES);
+        const colMate1 = findColumn(headers, MATE1_NAAB_ALIASES);
+        const colMate2 = findColumn(headers, MATE2_NAAB_ALIASES);
+        const colMate3 = findColumn(headers, MATE3_NAAB_ALIASES);
+        const colName1 = findColumn(headers, MATE1_NAME_ALIASES);
+        const colName2 = findColumn(headers, MATE2_NAME_ALIASES);
+        const colName3 = findColumn(headers, MATE3_NAME_ALIASES);
+
+        if (!colId || !colMate1) {
+          toast({
+            title: isEs ? 'Columnas no encontradas' : isEn ? 'Columns not found' : 'Colunas nao encontradas',
+            description: isEs
+              ? 'El archivo debe contener al menos: ID y 1a Recomendacion'
+              : isEn
+                ? 'File must contain at least: ID and 1st Recommendation'
+                : 'Arquivo deve conter pelo menos: ID e 1a Recomendacao (Mate1_NAAB)',
+            variant: 'destructive'
+          });
+          return;
+        }
+
+        rows = jsonData
+          .filter(row => row[colId] != null && String(row[colId]).trim())
+          .map(row => {
+            const mates: Array<{ naab: string; name?: string }> = [];
+            if (colMate1 && row[colMate1]) mates.push({ naab: normalizeNaab(String(row[colMate1])), name: colName1 ? String(row[colName1] ?? '') : undefined });
+            if (colMate2 && row[colMate2]) mates.push({ naab: normalizeNaab(String(row[colMate2])), name: colName2 ? String(row[colName2] ?? '') : undefined });
+            if (colMate3 && row[colMate3]) mates.push({ naab: normalizeNaab(String(row[colMate3])), name: colName3 ? String(row[colName3] ?? '') : undefined });
+            return {
+              cowId: String(row[colId]).trim(),
+              cowName: row['Cow_Name'] ? String(row['Cow_Name']) : undefined,
+              mates
+            };
+          });
       }
-
-      const headers = Object.keys(jsonData[0]);
-      const colId = findColumn(headers, ID_ALIASES);
-      const colMate1 = findColumn(headers, MATE1_NAAB_ALIASES);
-      const colMate2 = findColumn(headers, MATE2_NAAB_ALIASES);
-      const colMate3 = findColumn(headers, MATE3_NAAB_ALIASES);
-      const colName1 = findColumn(headers, MATE1_NAME_ALIASES);
-      const colName2 = findColumn(headers, MATE2_NAME_ALIASES);
-      const colName3 = findColumn(headers, MATE3_NAME_ALIASES);
-
-      if (!colId || !colMate1) {
-        toast({
-          title: isEs ? 'Columnas no encontradas' : isEn ? 'Columns not found' : 'Colunas nao encontradas',
-          description: isEs
-            ? 'El archivo debe contener al menos: ID y 1a Recomendacion'
-            : isEn
-              ? 'File must contain at least: ID and 1st Recommendation'
-              : 'Arquivo deve conter pelo menos: ID e 1a Recomendacao (Mate1_NAAB)',
-          variant: 'destructive'
-        });
-        return;
-      }
-
-      const rows: SMSRow[] = jsonData
-        .filter(row => row[colId] != null && String(row[colId]).trim())
-        .map(row => {
-          const mates: Array<{ naab: string; name?: string }> = [];
-          if (colMate1 && row[colMate1]) mates.push({ naab: normalizeNaab(String(row[colMate1])), name: colName1 ? String(row[colName1] ?? '') : undefined });
-          if (colMate2 && row[colMate2]) mates.push({ naab: normalizeNaab(String(row[colMate2])), name: colName2 ? String(row[colName2] ?? '') : undefined });
-          if (colMate3 && row[colMate3]) mates.push({ naab: normalizeNaab(String(row[colMate3])), name: colName3 ? String(row[colName3] ?? '') : undefined });
-          return {
-            cowId: String(row[colId]).trim(),
-            cowName: row['Cow_Name'] ? String(row['Cow_Name']) : undefined,
-            mates
-          };
-        });
 
       setSmsRows(rows);
       toast({
@@ -518,10 +612,10 @@ const Nexus2SMSComparative: React.FC<Nexus2SMSComparativeProps> = ({ selectedFar
           </div>
           <p className="text-sm text-muted-foreground">
             {isEs
-              ? 'Archivo de acoplamiento SMS (.csv, .xlsx) con columnas: ID, Mate1_NAAB, Mate2_NAAB, Mate3_NAAB'
+              ? 'Archivo de acoplamiento SMS (.pdf, .csv, .xlsx) con columnas: ID, 1a/2a/3a Recomendacion'
               : isEn
-                ? 'SMS mating file (.csv, .xlsx) with columns: ID, Mate1_NAAB, Mate2_NAAB, Mate3_NAAB'
-                : 'Arquivo de acasalamento SMS (.csv, .xlsx) com colunas: ID, Mate1_NAAB, Mate2_NAAB, Mate3_NAAB'}
+                ? 'SMS mating file (.pdf, .csv, .xlsx) with columns: ID, 1st/2nd/3rd Recommendation'
+                : 'Arquivo de acasalamento SMS (.pdf, .csv, .xlsx) com colunas: ID, 1a/2a/3a Recomendacao'}
           </p>
 
           {/* Preview do arquivo carregado */}
