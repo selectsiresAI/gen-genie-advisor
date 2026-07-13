@@ -309,11 +309,26 @@ const Nexus2SMSComparative: React.FC<Nexus2SMSComparativeProps> = ({ selectedFar
         select: 'id,name,identifier,farm_id,client_id,' + PREDICTION_TRAITS.map(t => t.key).join(','),
       });
 
-      // Mapear por identifier (farm_id do animal)
-      const femalesByIdentifier = new Map<string, CompleteFemaleDenormRow>();
+      // Normaliza um ID para matching flexivel: trim, upper, remove zeros a esquerda
+      const normId = (v: any) => String(v ?? '').trim().toUpperCase().replace(/^0+(?=\d)/, '');
+      const digitsOnly = (v: any) => String(v ?? '').replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+
+      // Mapear femeas por multiplas chaves (identifier e name), com variantes normalizadas
+      const femalesByKey = new Map<string, CompleteFemaleDenormRow>();
+      const addKey = (k: string, f: CompleteFemaleDenormRow) => {
+        if (k && !femalesByKey.has(k)) femalesByKey.set(k, f);
+      };
       for (const f of farmFemales) {
-        if (f.identifier) femalesByIdentifier.set(String(f.identifier).trim(), f);
-        if (f.name) femalesByIdentifier.set(String(f.name).trim(), f);
+        for (const raw of [f.identifier, f.name]) {
+          if (raw == null) continue;
+          const s = String(raw).trim();
+          if (!s) continue;
+          addKey(s, f);
+          addKey(s.toUpperCase(), f);
+          addKey(normId(s), f);
+          const d = digitsOnly(s);
+          if (d) addKey(`#${d}`, f);
+        }
       }
 
       // 2. Match SMS rows com femeas
@@ -321,9 +336,14 @@ const Nexus2SMSComparative: React.FC<Nexus2SMSComparativeProps> = ({ selectedFar
       const unmatched: string[] = [];
 
       for (const sms of smsRows) {
-        const female = femalesByIdentifier.get(sms.cowId)
-          || femalesByIdentifier.get(sms.cowId.padStart(4, '0'))
-          || femalesByIdentifier.get(sms.cowName ?? '');
+        const raw = sms.cowId;
+        const d = digitsOnly(raw);
+        const female =
+          femalesByKey.get(raw) ||
+          femalesByKey.get(raw.toUpperCase()) ||
+          femalesByKey.get(normId(raw)) ||
+          (d ? femalesByKey.get(`#${d}`) : undefined) ||
+          femalesByKey.get(sms.cowName ?? '');
         if (female) {
           matched.push({ sms, female });
         } else {
