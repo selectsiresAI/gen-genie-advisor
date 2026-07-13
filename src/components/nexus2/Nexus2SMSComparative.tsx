@@ -70,10 +70,45 @@ function normalizeNaab(value: string): string {
   return n;
 }
 
+// Regex NAAB: aceita 1-3 digitos + 1-2 letras + 4-6 digitos
+// Ex: 250HO17507 (formato antigo), 7H17379 / 250H17544 / 9H16840 (formato novo SMS)
+const NAAB_RE = /^\d{1,3}[A-Z]{1,2}\d{4,6}$/i;
+const NAAB_INLINE_RE = /^(\d{1,3}[A-Z]{1,2}\d{4,6})\s+(.+)$/i;
+const NAAB_GLOBAL_RE = /\b(\d{1,3}[A-Z]{1,2}\d{4,6})\b(?:\s+([A-Z0-9][A-Z0-9 .\-'/]{1,40}?))?(?=\s+\d{1,3}[A-Z]{1,2}\d{4,6}|\s*$)/gi;
+
+function extractMatesFromCells(cells: string[]): Array<{ naab: string; name?: string }> {
+  const mates: Array<{ naab: string; name?: string }> = [];
+  let i = 0;
+  while (i < cells.length && mates.length < 3) {
+    const cell = cells[i];
+    if (NAAB_RE.test(cell)) {
+      const name = cells[i + 1] && !NAAB_RE.test(cells[i + 1]) ? cells[i + 1] : undefined;
+      mates.push({ naab: normalizeNaab(cell), name });
+      i += name ? 2 : 1;
+    } else {
+      const m = cell.match(NAAB_INLINE_RE);
+      if (m) mates.push({ naab: normalizeNaab(m[1]), name: m[2] });
+      i++;
+    }
+  }
+  return mates;
+}
+
+function extractMatesFromText(text: string): Array<{ naab: string; name?: string }> {
+  const mates: Array<{ naab: string; name?: string }> = [];
+  let m: RegExpExecArray | null;
+  const re = new RegExp(NAAB_GLOBAL_RE.source, 'gi');
+  while ((m = re.exec(text)) !== null && mates.length < 3) {
+    mates.push({ naab: normalizeNaab(m[1]), name: m[2]?.trim() });
+  }
+  return mates;
+}
+
 // --- Parse PDF do SMS (formato: ID | NAAB Nome | NAAB Nome | NAAB Nome) ---
 async function parseSMSPdf(buffer: ArrayBuffer): Promise<SMSRow[]> {
   const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
   const rows: SMSRow[] = [];
+  const Y_TOLERANCE = 2; // px - tolera desalinhamento de baseline
 
   for (let p = 1; p <= doc.numPages; p++) {
     const page = await doc.getPage(p);
@@ -82,57 +117,56 @@ async function parseSMSPdf(buffer: ArrayBuffer): Promise<SMSRow[]> {
       (it: any) => it.str && it.str.trim()
     ) as Array<{ str: string; transform: number[] }>;
 
-    // Agrupar por coordenada Y (linha)
-    const lineMap: Record<number, Array<{ x: number; text: string }>> = {};
+    // Agrupar por coordenada Y com tolerancia
+    const buckets: Array<{ y: number; items: Array<{ x: number; text: string }> }> = [];
     for (const item of items) {
-      const y = Math.round(item.transform[5]);
-      if (!lineMap[y]) lineMap[y] = [];
-      lineMap[y].push({ x: Math.round(item.transform[4]), text: item.str.trim() });
+      const y = item.transform[5];
+      const x = item.transform[4];
+      const bucket = buckets.find(b => Math.abs(b.y - y) <= Y_TOLERANCE);
+      if (bucket) {
+        bucket.items.push({ x, text: item.str.trim() });
+      } else {
+        buckets.push({ y, items: [{ x, text: item.str.trim() }] });
+      }
     }
 
     // Ordenar linhas de cima para baixo (Y decrescente)
-    const sortedYs = Object.keys(lineMap).map(Number).sort((a, b) => b - a);
+    buckets.sort((a, b) => b.y - a.y);
 
-    for (const y of sortedYs) {
-      const cells = lineMap[y].sort((a, b) => a.x - b.x).map(c => c.text);
-      // Pular header e linhas vazias
+    const pageLinesText: string[] = [];
+
+    for (const bucket of buckets) {
+      const cells = bucket.items.sort((a, b) => a.x - b.x).map(c => c.text);
+      const lineText = cells.join(' ');
+      pageLinesText.push(lineText);
+
       if (cells.length < 2) continue;
       const first = cells[0].toLowerCase();
       if (first === 'id' || first.includes('recommendation') || first.includes('recomend')) continue;
 
-      // Formato esperado: ID, NAAB1, Nome1, NAAB2, Nome2, NAAB3, Nome3
-      // ou: ID, NAAB1 Nome1, NAAB2 Nome2, NAAB3 Nome3
       const cowId = cells[0];
-      if (!/^\d+$/.test(cowId) && !/^[A-Z0-9-]+$/i.test(cowId)) continue;
+      if (!/^[A-Z0-9-]+$/i.test(cowId)) continue;
 
-      const mates: Array<{ naab: string; name?: string }> = [];
-
-      // Detectar formato: cells alternando NAAB/Nome OU cells com "NAAB Nome" junto
-      const remaining = cells.slice(1);
-      let i = 0;
-      // Regex NAAB: aceita 1-3 digitos + 1-2 letras + 4-6 digitos
-      // Ex: 250HO17507 (formato antigo), 7H17379 / 250H17544 / 9H16840 (formato novo SMS)
-      const NAAB_RE = /^\d{1,3}[A-Z]{1,2}\d{4,6}$/i;
-      const NAAB_INLINE_RE = /^(\d{1,3}[A-Z]{1,2}\d{4,6})\s+(.+)$/i;
-      while (i < remaining.length && mates.length < 3) {
-        const cell = remaining[i];
-        if (NAAB_RE.test(cell)) {
-          const name = remaining[i + 1] && !NAAB_RE.test(remaining[i + 1])
-            ? remaining[i + 1] : undefined;
-          mates.push({ naab: normalizeNaab(cell), name });
-          i += name ? 2 : 1;
-        } else {
-          // Pode ser "NAAB Nome" junto (ex: "7H17379 DROP N HO")
-          const match = cell.match(NAAB_INLINE_RE);
-          if (match) {
-            mates.push({ naab: normalizeNaab(match[1]), name: match[2] });
-          }
-          i++;
-        }
+      let mates = extractMatesFromCells(cells.slice(1));
+      // Fallback: escanear a linha inteira como texto se coordenadas nao ajudaram
+      if (mates.length === 0) {
+        mates = extractMatesFromText(lineText);
       }
-
       if (mates.length > 0) {
         rows.push({ cowId, mates });
+      }
+    }
+
+    // Fallback global: se pagina nao gerou nenhuma linha, tenta reconstruir por texto
+    if (rows.length === 0 && p === doc.numPages) {
+      for (const line of pageLinesText) {
+        // linha deve iniciar com um "ID" (numerico ou alfanumerico curto) e conter NAABs
+        const m = line.match(/^\s*([A-Z0-9][A-Z0-9-]{0,15})\s+(.*\d{1,3}[A-Z]{1,2}\d{4,6}.*)$/i);
+        if (!m) continue;
+        const cowId = m[1];
+        if (cowId.toLowerCase() === 'id') continue;
+        const mates = extractMatesFromText(m[2]);
+        if (mates.length > 0) rows.push({ cowId, mates });
       }
     }
   }
