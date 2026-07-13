@@ -73,42 +73,40 @@ function normalizeNaab(value: string): string {
 // Regex NAAB: aceita 1-3 digitos + 1-2 letras + 4-6 digitos
 // Ex: 250HO17507 (formato antigo), 7H17379 / 250H17544 / 9H16840 (formato novo SMS)
 const NAAB_RE = /^\d{1,3}[A-Z]{1,2}\d{4,6}$/i;
-const NAAB_INLINE_RE = /^(\d{1,3}[A-Z]{1,2}\d{4,6})\s+(.+)$/i;
-const NAAB_GLOBAL_RE = /\b(\d{1,3}[A-Z]{1,2}\d{4,6})\b(?:\s+([A-Z0-9][A-Z0-9 .\-'/]{1,40}?))?(?=\s+\d{1,3}[A-Z]{1,2}\d{4,6}|\s*$)/gi;
+const NAAB_GLOBAL_RE = /\b(\d{1,3}[A-Z]{1,2}\d{4,6})\b/gi;
 
-function extractMatesFromCells(cells: string[]): Array<{ naab: string; name?: string }> {
-  const mates: Array<{ naab: string; name?: string }> = [];
-  let i = 0;
-  while (i < cells.length && mates.length < 3) {
-    const cell = cells[i];
-    if (NAAB_RE.test(cell)) {
-      const name = cells[i + 1] && !NAAB_RE.test(cells[i + 1]) ? cells[i + 1] : undefined;
-      mates.push({ naab: normalizeNaab(cell), name });
-      i += name ? 2 : 1;
-    } else {
-      const m = cell.match(NAAB_INLINE_RE);
-      if (m) mates.push({ naab: normalizeNaab(m[1]), name: m[2] });
-      i++;
-    }
-  }
-  return mates;
-}
-
-function extractMatesFromText(text: string): Array<{ naab: string; name?: string }> {
-  const mates: Array<{ naab: string; name?: string }> = [];
-  let m: RegExpExecArray | null;
+// Parse UMA linha textual do SMS. Robusto a nomes com espacos ("DROP N HO", "WAR GEAR").
+function parseSMSLine(lineText: string): SMSRow | null {
+  const naabs: Array<{ naab: string; idx: number; end: number }> = [];
   const re = new RegExp(NAAB_GLOBAL_RE.source, 'gi');
-  while ((m = re.exec(text)) !== null && mates.length < 3) {
-    mates.push({ naab: normalizeNaab(m[1]), name: m[2]?.trim() });
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(lineText)) !== null) {
+    naabs.push({ naab: normalizeNaab(m[1]), idx: m.index, end: m.index + m[0].length });
   }
-  return mates;
+  if (naabs.length === 0) return null;
+
+  // ID = ultimo token nao-vazio antes do primeiro NAAB
+  const before = lineText.slice(0, naabs[0].idx).trim();
+  const tokens = before.split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return null;
+  const cowId = tokens[tokens.length - 1];
+  if (!/^[A-Z0-9-]{1,20}$/i.test(cowId)) return null;
+  if (cowId.toLowerCase() === 'id' || cowId.toLowerCase() === 'number') return null;
+
+  const mates = naabs.slice(0, 3).map((n, i) => {
+    const nameEnd = naabs[i + 1] ? naabs[i + 1].idx : lineText.length;
+    const rawName = lineText.slice(n.end, nameEnd).replace(/\s+/g, ' ').trim();
+    return { naab: n.naab, name: rawName || undefined };
+  });
+  return { cowId, mates };
 }
 
 // --- Parse PDF do SMS (formato: ID | NAAB Nome | NAAB Nome | NAAB Nome) ---
 async function parseSMSPdf(buffer: ArrayBuffer): Promise<SMSRow[]> {
   const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
   const rows: SMSRow[] = [];
-  const Y_TOLERANCE = 2; // px - tolera desalinhamento de baseline
+  const seen = new Set<string>();
+  const Y_TOLERANCE = 2;
 
   for (let p = 1; p <= doc.numPages; p++) {
     const page = await doc.getPage(p);
@@ -123,50 +121,18 @@ async function parseSMSPdf(buffer: ArrayBuffer): Promise<SMSRow[]> {
       const y = item.transform[5];
       const x = item.transform[4];
       const bucket = buckets.find(b => Math.abs(b.y - y) <= Y_TOLERANCE);
-      if (bucket) {
-        bucket.items.push({ x, text: item.str.trim() });
-      } else {
-        buckets.push({ y, items: [{ x, text: item.str.trim() }] });
-      }
+      if (bucket) bucket.items.push({ x, text: item.str.trim() });
+      else buckets.push({ y, items: [{ x, text: item.str.trim() }] });
     }
-
-    // Ordenar linhas de cima para baixo (Y decrescente)
     buckets.sort((a, b) => b.y - a.y);
-
-    const pageLinesText: string[] = [];
 
     for (const bucket of buckets) {
       const cells = bucket.items.sort((a, b) => a.x - b.x).map(c => c.text);
       const lineText = cells.join(' ');
-      pageLinesText.push(lineText);
-
-      if (cells.length < 2) continue;
-      const first = cells[0].toLowerCase();
-      if (first === 'id' || first.includes('recommendation') || first.includes('recomend')) continue;
-
-      const cowId = cells[0];
-      if (!/^[A-Z0-9-]+$/i.test(cowId)) continue;
-
-      let mates = extractMatesFromCells(cells.slice(1));
-      // Fallback: escanear a linha inteira como texto se coordenadas nao ajudaram
-      if (mates.length === 0) {
-        mates = extractMatesFromText(lineText);
-      }
-      if (mates.length > 0) {
-        rows.push({ cowId, mates });
-      }
-    }
-
-    // Fallback global: se pagina nao gerou nenhuma linha, tenta reconstruir por texto
-    if (rows.length === 0 && p === doc.numPages) {
-      for (const line of pageLinesText) {
-        // linha deve iniciar com um "ID" (numerico ou alfanumerico curto) e conter NAABs
-        const m = line.match(/^\s*([A-Z0-9][A-Z0-9-]{0,15})\s+(.*\d{1,3}[A-Z]{1,2}\d{4,6}.*)$/i);
-        if (!m) continue;
-        const cowId = m[1];
-        if (cowId.toLowerCase() === 'id') continue;
-        const mates = extractMatesFromText(m[2]);
-        if (mates.length > 0) rows.push({ cowId, mates });
+      const row = parseSMSLine(lineText);
+      if (row && !seen.has(row.cowId)) {
+        seen.add(row.cowId);
+        rows.push(row);
       }
     }
   }
@@ -174,6 +140,7 @@ async function parseSMSPdf(buffer: ArrayBuffer): Promise<SMSRow[]> {
   await (doc as any).destroy?.();
   return rows;
 }
+
 
 interface SMSRow {
   cowId: string;
