@@ -110,17 +110,20 @@ async function parseSMSPdf(buffer: ArrayBuffer): Promise<SMSRow[]> {
       // Detectar formato: cells alternando NAAB/Nome OU cells com "NAAB Nome" junto
       const remaining = cells.slice(1);
       let i = 0;
+      // Regex NAAB: aceita 1-3 digitos + 1-2 letras + 4-6 digitos
+      // Ex: 250HO17507 (formato antigo), 7H17379 / 250H17544 / 9H16840 (formato novo SMS)
+      const NAAB_RE = /^\d{1,3}[A-Z]{1,2}\d{4,6}$/i;
+      const NAAB_INLINE_RE = /^(\d{1,3}[A-Z]{1,2}\d{4,6})\s+(.+)$/i;
       while (i < remaining.length && mates.length < 3) {
         const cell = remaining[i];
-        // Checar se parece NAAB (ex: 250HO17507, 009HO17471)
-        if (/^\d{1,3}[A-Z]{2}\d{4,6}$/i.test(cell)) {
-          const name = remaining[i + 1] && !/^\d{1,3}[A-Z]{2}\d{4,6}$/i.test(remaining[i + 1])
+        if (NAAB_RE.test(cell)) {
+          const name = remaining[i + 1] && !NAAB_RE.test(remaining[i + 1])
             ? remaining[i + 1] : undefined;
           mates.push({ naab: normalizeNaab(cell), name });
           i += name ? 2 : 1;
         } else {
-          // Pode ser "NAAB Nome" junto
-          const match = cell.match(/^(\d{1,3}[A-Z]{2}\d{4,6})\s+(.+)$/i);
+          // Pode ser "NAAB Nome" junto (ex: "7H17379 DROP N HO")
+          const match = cell.match(NAAB_INLINE_RE);
           if (match) {
             mates.push({ naab: normalizeNaab(match[1]), name: match[2] });
           }
