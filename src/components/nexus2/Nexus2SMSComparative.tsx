@@ -560,7 +560,7 @@ const Nexus2SMSComparative: React.FC<Nexus2SMSComparativeProps> = ({ selectedFar
       };
       for (const trait of PREDICTION_TRAITS) {
         const raw = row.predictions[trait.key];
-        if (raw == null || raw === '') {
+        if (raw == null || (raw as any) === '') {
           base[trait.label] = '';
         } else {
           const formatted = formatPtaValue(trait.key, raw);
