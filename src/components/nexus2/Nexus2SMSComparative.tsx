@@ -558,7 +558,14 @@ const Nexus2SMSComparative: React.FC<Nexus2SMSComparativeProps> = ({ selectedFar
         'Nome Touro': row.bullName
       };
       for (const trait of PREDICTION_TRAITS) {
-        base[trait.label] = row.predictions[trait.key] ?? '';
+        const raw = row.predictions[trait.key];
+        if (raw == null || raw === '') {
+          base[trait.label] = '';
+        } else {
+          const formatted = formatPtaValue(trait.key, raw);
+          const n = Number(formatted);
+          base[trait.label] = Number.isFinite(n) ? n : formatted;
+        }
       }
       const election = elections.get(row.femaleId);
       base['Melhor Geral'] = election?.overallBest === row.recommendation ? 'SIM' : '';
