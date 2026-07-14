@@ -17,6 +17,7 @@ import {
   type PredictionTraitKey
 } from '@/services/prediction.service';
 import { read, utils, writeFileXLSX } from 'xlsx';
+import { formatPtaValue } from '@/utils/ptaFormat';
 import * as pdfjsLib from 'pdfjs-dist';
 import { useHerdStore } from '@/hooks/useHerdStore';
 
