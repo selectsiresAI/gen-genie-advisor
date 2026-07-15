@@ -230,15 +230,16 @@ export function TraitSection({ trait, farmId, supabase, isEn, isEs, onRemove, sh
           </div>
           {loading && <Loader2 className="h-4 w-4 animate-spin text-gray-500" />}
         </div>
-        <button
-          type="button"
-          onClick={onRemove}
-          className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-50"
-        >
-          <X className="h-3.5 w-3.5" />
-          {isEs ? "Quitar" : isEn ? "Remove" : "Remover"}
-        </button>
-      </div>
+        {!hideRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-50"
+          >
+            <X className="h-3.5 w-3.5" />
+            {isEs ? "Quitar" : isEn ? "Remove" : "Remover"}
+          </button>
+        )}
 
       {err && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{err}</div>
