@@ -28,7 +28,8 @@ import {
   BarChart3,
   TrendingUp,
   Users,
-  PieChart
+  PieChart,
+  Sparkles
 } from 'lucide-react';
 import { useGeneralReport, ReportType } from '@/hooks/useGeneralReport';
 import { generateGeneralReport, downloadPDF } from '@/lib/pdf/generateGeneralReport';
