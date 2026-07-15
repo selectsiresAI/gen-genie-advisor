@@ -52,6 +52,7 @@ const getDefaultReports = (): ReportSelection[] => {
     { type: 'auditoria_step5', enabled: false, label: l('Auditoria - Comparação', 'Audit - Comparison', 'Auditoría - Comparación'), description: l('Comparação por categoria', 'Comparison by category', 'Comparación por categoría') },
     { type: 'auditoria_step6', enabled: false, label: l('Auditoria - Quartis Índices', 'Audit - Quartile Indices', 'Auditoría - Índices por Cuartiles'), description: l('Análise de quartis por índices', 'Quartile analysis by indices', 'Análisis de cuartiles por índices') },
     { type: 'auditoria_step7', enabled: false, label: l('Auditoria - Distribuição', 'Audit - Distribution', 'Auditoría - Distribución'), description: l('Distribuição de PTAs', 'PTA distribution', 'Distribución de PTAs') },
+    { type: 'nexus3', enabled: false, label: l('Nexus 3 - Grupos', 'Nexus 3 - Groups', 'Nexus 3 - Grupos'), description: l('Gráficos Mães vs. Filhas gerados na página Nexus 3', 'Dams vs. Daughters charts generated on the Nexus 3 page', 'Gráficos Madres vs. Hijas generados en la página Nexus 3') },
   ];
 };
 
