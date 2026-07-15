@@ -21,6 +21,17 @@ verify_jwt = true
 [functions.translate-i18n]
 verify_jwt = true
 
-# [auth.password]
-# min_length = 10
-# leaked_passwords = "enabled"
+[auth.password]
+min_length = 10
+leaked_passwords = "enabled"
+
+[auth.mfa]
+max_enrolled_factors = 10
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[auth.mfa.phone]
+enroll_enabled = true
+verify_enabled = true
