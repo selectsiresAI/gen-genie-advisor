@@ -140,6 +140,7 @@ export function useGeneralReport() {
     selected.forEach(r => {
       if (r.type === 'herd_summary') pages += 1;
       else if (r.type === 'segmentation') pages += 2;
+      else if (r.type === 'nexus3') pages += 1;
       else if (r.type.startsWith('auditoria_')) pages += 1;
     });
     
