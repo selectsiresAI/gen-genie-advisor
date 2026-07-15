@@ -240,6 +240,8 @@ export function TraitSection({ trait, farmId, supabase, isEn, isEs, onRemove, sh
             {isEs ? "Quitar" : isEn ? "Remove" : "Remover"}
           </button>
         )}
+      </div>
+
 
       {err && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{err}</div>
