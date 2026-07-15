@@ -10,7 +10,8 @@ export type ReportType =
   | 'auditoria_step4'
   | 'auditoria_step5'
   | 'auditoria_step6'
-  | 'auditoria_step7';
+  | 'auditoria_step7'
+  | 'nexus3';
 
 export interface ReportSelection {
   type: ReportType;
