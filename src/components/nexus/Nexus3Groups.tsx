@@ -45,7 +45,7 @@ interface Nexus3GroupsProps {
 }
 
 // ---------- Subcomponente: uma seção por característica ----------
-interface TraitSectionProps {
+export interface TraitSectionProps {
   trait: string;
   farmId: string;
   supabase: SupabaseClient;
@@ -54,9 +54,11 @@ interface TraitSectionProps {
   onRemove: () => void;
   sharedBulls?: SharedBull[]; // quando presente: usa pacote único, sem busca/seleção interna
   registerChart?: (trait: string, el: HTMLDivElement | null) => void;
+  hideRemove?: boolean; // esconde botão remover (uso em relatórios)
+  hideExport?: boolean; // esconde botão de exportar PDF individual
 }
 
-function TraitSection({ trait, farmId, supabase, isEn, isEs, onRemove, sharedBulls, registerChart }: TraitSectionProps) {
+export function TraitSection({ trait, farmId, supabase, isEn, isEs, onRemove, sharedBulls, registerChart, hideRemove, hideExport }: TraitSectionProps) {
   const useShared = Array.isArray(sharedBulls);
   const [mothers, setMothers] = useState<MotherPoint[]>([]);
   const [bullQuery, setBullQuery] = useState("");
