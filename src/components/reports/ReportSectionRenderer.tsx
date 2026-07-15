@@ -15,6 +15,7 @@ import AuditoriaStep3Section from './sections/AuditoriaStep3Section';
 import AuditoriaStep5Section from './sections/AuditoriaStep5Section';
 import AuditoriaStep6Section from './sections/AuditoriaStep6Section';
 import AuditoriaStep7Section from './sections/AuditoriaStep7Section';
+import Nexus3ReportSectionContent from './sections/Nexus3ReportSection';
 
 interface ReportSectionRendererProps {
   farmId: string;
