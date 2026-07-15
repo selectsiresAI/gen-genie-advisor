@@ -245,7 +245,7 @@ export default function GeneralReportModal({
               <div className="flex-1 max-h-[50vh] overflow-y-auto pr-4">
                 <Accordion 
                   type="multiple" 
-                  defaultValue={['herd', 'auditoria']}
+                  defaultValue={['herd', 'auditoria', 'nexus']}
                   className="w-full"
                 >
                   {REPORT_GROUPS.map(group => {
