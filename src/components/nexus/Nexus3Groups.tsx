@@ -23,9 +23,9 @@ import { exportSingleChartToPDF, exportMultipleChartsToPDF } from "@/lib/pdf/exp
 import { format } from "date-fns";
 import { useTranslation } from "@/hooks/useTranslation";
 
-type MotherPoint = { birth_year: number; avg_value: number };
-type BullRow = { id: string; code: string; name?: string; trait_value: number; percent?: number };
-type SharedBull = { id: string; code: string; name?: string; percent: number; values: Record<string, number | null> };
+export type MotherPoint = { birth_year: number; avg_value: number };
+export type BullRow = { id: string; code: string; name?: string; trait_value: number; percent?: number };
+export type SharedBull = { id: string; code: string; name?: string; percent: number; values: Record<string, number | null> };
 
 const useSupabase = (): SupabaseClient => {
   const client = useMemo(() => {
