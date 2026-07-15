@@ -15,6 +15,7 @@ import AuditoriaStep3Section from './sections/AuditoriaStep3Section';
 import AuditoriaStep5Section from './sections/AuditoriaStep5Section';
 import AuditoriaStep6Section from './sections/AuditoriaStep6Section';
 import AuditoriaStep7Section from './sections/AuditoriaStep7Section';
+import Nexus3ReportSectionContent from './sections/Nexus3ReportSection';
 
 interface ReportSectionRendererProps {
   farmId: string;
@@ -193,6 +194,18 @@ function AuditoriaStep7SectionWrapper({ farmId, farmName }: { farmId: string; fa
   );
 }
 
+// Nexus 3 - Groups (Dams vs Daughters charts from user-generated package)
+function Nexus3SectionWrapper({ farmId, farmName }: { farmId: string; farmName: string }) {
+  const { locale } = useTranslation();
+  const isEn = locale === "en-US";
+  const isEs = locale === "es";
+  return (
+    <SectionWrapper type="nexus3" title={isEs ? "Nexus 3 - Madres vs. Hijas" : isEn ? "Nexus 3 - Dams vs. Daughters" : "Nexus 3 - Mães vs. Filhas"}>
+      <Nexus3ReportSectionContent farmId={farmId} farmName={farmName} />
+    </SectionWrapper>
+  );
+}
+
 // Map of report types to their components
 const SECTION_COMPONENTS: Record<ReportType, React.FC<{ farmId: string; farmName: string }>> = {
   herd_summary: HerdSummarySection,
@@ -204,6 +217,7 @@ const SECTION_COMPONENTS: Record<ReportType, React.FC<{ farmId: string; farmName
   auditoria_step5: AuditoriaStep5SectionWrapper,
   auditoria_step6: AuditoriaStep6SectionWrapper,
   auditoria_step7: AuditoriaStep7SectionWrapper,
+  nexus3: Nexus3SectionWrapper,
 };
 
 export default function ReportSectionRenderer({

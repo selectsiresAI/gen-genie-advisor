@@ -28,7 +28,8 @@ import {
   BarChart3,
   TrendingUp,
   Users,
-  PieChart
+  PieChart,
+  Sparkles
 } from 'lucide-react';
 import { useGeneralReport, ReportType } from '@/hooks/useGeneralReport';
 import { generateGeneralReport, downloadPDF } from '@/lib/pdf/generateGeneralReport';
@@ -56,6 +57,7 @@ const REPORT_ICONS: Record<string, React.ReactNode> = {
   auditoria_step5: <TrendingUp className="h-4 w-4" />,
   auditoria_step6: <BarChart3 className="h-4 w-4" />,
   auditoria_step7: <BarChart3 className="h-4 w-4" />,
+  nexus3: <Sparkles className="h-4 w-4" />,
 };
 
 const REPORT_GROUPS = [
@@ -80,6 +82,13 @@ const REPORT_GROUPS = [
       'auditoria_step6',
       'auditoria_step7',
     ] as ReportType[],
+  },
+  {
+    id: 'nexus',
+    title: 'Nexus 3',
+    titleEn: 'Nexus 3',
+    titleEs: 'Nexus 3',
+    types: ['nexus3'] as ReportType[],
   },
 ];
 
@@ -236,7 +245,7 @@ export default function GeneralReportModal({
               <div className="flex-1 max-h-[50vh] overflow-y-auto pr-4">
                 <Accordion 
                   type="multiple" 
-                  defaultValue={['herd', 'auditoria']}
+                  defaultValue={['herd', 'auditoria', 'nexus']}
                   className="w-full"
                 >
                   {REPORT_GROUPS.map(group => {

@@ -23,9 +23,9 @@ import { exportSingleChartToPDF, exportMultipleChartsToPDF } from "@/lib/pdf/exp
 import { format } from "date-fns";
 import { useTranslation } from "@/hooks/useTranslation";
 
-type MotherPoint = { birth_year: number; avg_value: number };
-type BullRow = { id: string; code: string; name?: string; trait_value: number; percent?: number };
-type SharedBull = { id: string; code: string; name?: string; percent: number; values: Record<string, number | null> };
+export type MotherPoint = { birth_year: number; avg_value: number };
+export type BullRow = { id: string; code: string; name?: string; trait_value: number; percent?: number };
+export type SharedBull = { id: string; code: string; name?: string; percent: number; values: Record<string, number | null> };
 
 const useSupabase = (): SupabaseClient => {
   const client = useMemo(() => {
@@ -45,7 +45,7 @@ interface Nexus3GroupsProps {
 }
 
 // ---------- Subcomponente: uma seção por característica ----------
-interface TraitSectionProps {
+export interface TraitSectionProps {
   trait: string;
   farmId: string;
   supabase: SupabaseClient;
@@ -54,9 +54,11 @@ interface TraitSectionProps {
   onRemove: () => void;
   sharedBulls?: SharedBull[]; // quando presente: usa pacote único, sem busca/seleção interna
   registerChart?: (trait: string, el: HTMLDivElement | null) => void;
+  hideRemove?: boolean; // esconde botão remover (uso em relatórios)
+  hideExport?: boolean; // esconde botão de exportar PDF individual
 }
 
-function TraitSection({ trait, farmId, supabase, isEn, isEs, onRemove, sharedBulls, registerChart }: TraitSectionProps) {
+export function TraitSection({ trait, farmId, supabase, isEn, isEs, onRemove, sharedBulls, registerChart, hideRemove, hideExport }: TraitSectionProps) {
   const useShared = Array.isArray(sharedBulls);
   const [mothers, setMothers] = useState<MotherPoint[]>([]);
   const [bullQuery, setBullQuery] = useState("");
@@ -228,15 +230,18 @@ function TraitSection({ trait, farmId, supabase, isEn, isEs, onRemove, sharedBul
           </div>
           {loading && <Loader2 className="h-4 w-4 animate-spin text-gray-500" />}
         </div>
-        <button
-          type="button"
-          onClick={onRemove}
-          className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-50"
-        >
-          <X className="h-3.5 w-3.5" />
-          {isEs ? "Quitar" : isEn ? "Remove" : "Remover"}
-        </button>
+        {!hideRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-50"
+          >
+            <X className="h-3.5 w-3.5" />
+            {isEs ? "Quitar" : isEn ? "Remove" : "Remover"}
+          </button>
+        )}
       </div>
+
 
       {err && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{err}</div>
