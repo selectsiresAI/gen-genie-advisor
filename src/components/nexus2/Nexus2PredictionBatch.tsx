@@ -286,11 +286,23 @@ const TRAIT_TO_FEMALE_COLUMN: Partial<Record<PredictionTraitKey, keyof FemaleIns
 
 const buildResultInsertRows = (rows: BatchRow[], farmId: string): FemaleInsert[] => {
   const nowIso = new Date().toISOString();
+  // Garante que cada fêmea vá com um identifier ÚNICO. import_females_json faz
+  // upsert por identifier e dedupeInsertRowsByIdentifier colapsa no Map — se duas
+  // linhas compartilharem o mesmo identifier (ex.: planilha com coluna de ID da
+  // fazenda constante em todo o rebanho), só a ÚLTIMA seria salva.
+  const usedIdentifiers = new Set<string>();
 
   return rows
     .filter((row) => row.status === 'valid' && row.prediction)
     .map((row) => {
-      const identifier = row.idFazenda?.trim() || row.nome?.trim() || `predicao-${row.lineNumber}`;
+      const baseIdentifier = row.idFazenda?.trim() || row.nome?.trim() || `predicao-${row.lineNumber}`;
+      // Desambigua colisões com o número da linha (único por linha da planilha).
+      let identifier = baseIdentifier;
+      if (usedIdentifiers.has(identifier)) {
+        identifier = `${baseIdentifier}-${row.lineNumber}`;
+      }
+      usedIdentifiers.add(identifier);
+
       const name = row.nome?.trim() || row.idFazenda?.trim() || `Predição ${row.lineNumber}`;
 
       const insertRecord: any = {
@@ -482,9 +494,13 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
 
     const indexMap = {
       idFazenda: findHeaderIndex([
+        // Identificador do ANIMAL na fazenda (brinco/tag), NÃO o ID da fazenda.
+        // Aliases de nível-fazenda (farm_id, codigo_fazenda...) foram removidos:
+        // eram constantes no rebanho e colapsavam todas as fêmeas num só identifier.
         'id_fazenda', 'idfazenda', 'id fazenda', 'ID_FAZENDA', 'ID FAZENDA',
-        'id_farm', 'idfarm', 'farm_id', 'farmid',
-        'codigo_fazenda', 'cod_fazenda'
+        'id_do_animal', 'id_animal', 'idanimal',
+        'brinco', 'brinco_animal', 'numero_brinco',
+        'identificador', 'identifier', 'ear_tag', 'eartag', 'tag'
       ]),
       nome: findHeaderIndex([
         'nome', 'name', 'NOME', 'NAME',
