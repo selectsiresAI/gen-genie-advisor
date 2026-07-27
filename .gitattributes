@@ -1,0 +1,12 @@
+* text=auto eol=lf
+
+# Binarios — nunca normalizar (renormalizar quebraria o arquivo)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.xlsx binary
+
+# Exports de dados — deixar como estao, nao sao codigo-fonte
+*.csv -text
+*.dbf binary

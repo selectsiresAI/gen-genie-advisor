@@ -145,8 +145,11 @@ function calculateOutputs(inputs: CalculatorInputs): CalculatorOutputs {
   // 2. CALCULATE STRATEGY - Cálculos intermediários
   // ============================================
   
-  // J12 - Impacto genético médio (placeholder - será refinado)
-  const CALC_J12 = 0.02; // TODO: Calcular baseado na estratégia genética
+  // J12 - Impacto genético médio. Na planilha Excel original (aba "CALCULATE STRATEGY",
+  // célula J12) este também não é um valor calculado por fórmula — é um valor de negócio
+  // digitado manualmente (ver src/lib/calculator/excelMapping.ts: formula=null). Fixo em
+  // 0.02 até alguém definir a regra por estratégia (planilha original ou nova diretriz).
+  const CALC_J12 = 0.02;
   
   // M5 = INPUT_PAGE_D10 * (INPUT_PAGE_D6 / 12)
   const CALC_M5 = INPUT_PAGE_D10 * (INPUT_PAGE_D6 / 12);

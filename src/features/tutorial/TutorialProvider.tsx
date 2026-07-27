@@ -4,14 +4,14 @@ import TourSpotlight from "./TourSpotlight";
 import { fetchTutorial, getOrInitProgress, updateProgress, tutorialsEnabled } from "./api";
 import type { TutorialStep } from "./types";
 import { useSupabaseSession } from "@/hooks/useSupabaseSession";
+import { useHerdStore } from "@/hooks/useHerdStore";
 
 const __DEV__ = import.meta.env.MODE !== "production";
 
-/** TODO: troque por seu hook real (ex.: useAGFilters().farmId) */
 function useTenantId() {
-  // Simplified: use userId as tenantId for single-tenant setup
-  const session = useSupabaseSession();
-  return session?.user?.id ?? null;
+  // Fazenda atualmente selecionada (mesmo store que MainDashboard sincroniza em handleFarmSelect)
+  const { selectedHerdId } = useHerdStore();
+  return selectedHerdId;
 }
 
 type Ctx = {
