@@ -62,6 +62,96 @@ export type Database = {
         }
         Relationships: []
       }
+      breed_index_params: {
+        Row: {
+          breed: string
+          ftl_opt: number
+          is_placeholder: boolean
+          label: string
+          notes: string | null
+          reference: Json
+          rtp_opt: number
+          scs_base: number
+          updated_at: string
+          w_ccr: number
+          w_da: number
+          w_dfm: number
+          w_dpr: number
+          w_ftl: number
+          w_hliv: number
+          w_liv: number
+          w_mast: number
+          w_pl: number
+          w_ptaf: number
+          w_ptap: number
+          w_ptat: number
+          w_rfi: number
+          w_rtp: number
+          w_ruw: number
+          w_scs: number
+          w_sta: number
+          w_udp: number
+        }
+        Insert: {
+          breed: string
+          ftl_opt?: number
+          is_placeholder?: boolean
+          label: string
+          notes?: string | null
+          reference?: Json
+          rtp_opt?: number
+          scs_base?: number
+          updated_at?: string
+          w_ccr?: number
+          w_da?: number
+          w_dfm?: number
+          w_dpr?: number
+          w_ftl?: number
+          w_hliv?: number
+          w_liv?: number
+          w_mast?: number
+          w_pl?: number
+          w_ptaf?: number
+          w_ptap?: number
+          w_ptat?: number
+          w_rfi?: number
+          w_rtp?: number
+          w_ruw?: number
+          w_scs?: number
+          w_sta?: number
+          w_udp?: number
+        }
+        Update: {
+          breed?: string
+          ftl_opt?: number
+          is_placeholder?: boolean
+          label?: string
+          notes?: string | null
+          reference?: Json
+          rtp_opt?: number
+          scs_base?: number
+          updated_at?: string
+          w_ccr?: number
+          w_da?: number
+          w_dfm?: number
+          w_dpr?: number
+          w_ftl?: number
+          w_hliv?: number
+          w_liv?: number
+          w_mast?: number
+          w_pl?: number
+          w_ptaf?: number
+          w_ptap?: number
+          w_ptat?: number
+          w_rfi?: number
+          w_rtp?: number
+          w_ruw?: number
+          w_scs?: number
+          w_sta?: number
+          w_udp?: number
+        }
+        Relationships: []
+      }
       bull_naab_aliases: {
         Row: {
           bull_id: string
@@ -135,6 +225,8 @@ export type Database = {
           hcr_num: number | null
           hhp_dollar: number | null
           id: string
+          jpi: number | null
+          jui: number | null
           kappa_casein: string | null
           ket: number | null
           mast: number | null
@@ -232,6 +324,8 @@ export type Database = {
           hcr_num?: number | null
           hhp_dollar?: number | null
           id?: string
+          jpi?: number | null
+          jui?: number | null
           kappa_casein?: string | null
           ket?: number | null
           mast?: number | null
@@ -329,6 +423,8 @@ export type Database = {
           hcr_num?: number | null
           hhp_dollar?: number | null
           id?: string
+          jpi?: number | null
+          jui?: number | null
           kappa_casein?: string | null
           ket?: number | null
           mast?: number | null
@@ -916,6 +1012,7 @@ export type Database = {
           coordenador_id: string | null
           cpf_cnpj: string | null
           created_at: string
+          default_breed: string | null
           deleted_at: string | null
           endereco: string | null
           estado: string | null
@@ -943,6 +1040,7 @@ export type Database = {
           coordenador_id?: string | null
           cpf_cnpj?: string | null
           created_at?: string
+          default_breed?: string | null
           deleted_at?: string | null
           endereco?: string | null
           estado?: string | null
@@ -970,6 +1068,7 @@ export type Database = {
           coordenador_id?: string | null
           cpf_cnpj?: string | null
           created_at?: string
+          default_breed?: string | null
           deleted_at?: string | null
           endereco?: string | null
           estado?: string | null
@@ -1506,6 +1605,8 @@ export type Database = {
           hhp_dollar: number | null
           id: string
           identifier: string | null
+          jpi: number | null
+          jui: number | null
           kappa_casein: string | null
           ket: number | null
           mast: number | null
@@ -1597,6 +1698,8 @@ export type Database = {
           hhp_dollar?: number | null
           id?: string
           identifier?: string | null
+          jpi?: number | null
+          jui?: number | null
           kappa_casein?: string | null
           ket?: number | null
           mast?: number | null
@@ -1688,6 +1791,8 @@ export type Database = {
           hhp_dollar?: number | null
           id?: string
           identifier?: string | null
+          jpi?: number | null
+          jui?: number | null
           kappa_casein?: string | null
           ket?: number | null
           mast?: number | null
@@ -4470,6 +4575,30 @@ export type Database = {
         }
         Returns: number
       }
+      calculate_hhp_dollar_breed: {
+        Args: {
+          p_breed: string
+          p_ccr: number
+          p_da: number
+          p_dfm: number
+          p_dpr: number
+          p_ftl: number
+          p_hliv: number
+          p_liv: number
+          p_mast: number
+          p_pl: number
+          p_ptaf: number
+          p_ptap: number
+          p_ptat: number
+          p_rfi: number
+          p_rtp: number
+          p_ruw: number
+          p_scs: number
+          p_sta: number
+          p_udp: number
+        }
+        Returns: number
+      }
       can_access_farm: { Args: { farm_uuid: string }; Returns: boolean }
       can_edit_farm: { Args: { farm_uuid: string }; Returns: boolean }
       create_farm_basic: {
@@ -4855,6 +4984,7 @@ export type Database = {
       }
       naab_breed_number_suffixes: { Args: { naab: string }; Returns: string[] }
       naab_variants: { Args: { normalized: string }; Returns: string[] }
+      normalize_breed: { Args: { p_breed: string }; Returns: string }
       normalize_naab: { Args: { input_naab: string }; Returns: string }
       normalize_text: { Args: { txt: string }; Returns: string }
       nx3_bulls_by_ids: {
