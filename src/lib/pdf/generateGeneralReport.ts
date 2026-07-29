@@ -384,64 +384,68 @@ export async function generateGeneralReport(
       continue;
     }
 
-    // Special handling for Step 7 histograms - each chart on its own landscape page
-    if (report.type === 'auditoria_step7') {
-      const histogramCards = sectionEl.querySelectorAll('[data-chart-page="histogram"]');
-      
-      for (let hIdx = 0; hIdx < histogramCards.length; hIdx++) {
-        const card = histogramCards[hIdx] as HTMLElement;
-        const chartLabel = card.getAttribute('data-chart-label') || `${L.histogram} ${hIdx + 1}`;
-        
+    // Special handling: charts that must render one-per-landscape-page.
+    // Applies to Step 7 histograms and Nexus 3 Dams-vs-Daughters cards.
+    const perChartSelector =
+      report.type === 'auditoria_step7'
+        ? '[data-chart-page="histogram"]'
+        : report.type === 'nexus3'
+        ? '[data-chart-page="nexus3"]'
+        : null;
+
+    if (perChartSelector) {
+      const cards = sectionEl.querySelectorAll(perChartSelector);
+      const baseLabel = report.type === 'nexus3' ? (RL[report.type] ?? report.label) : L.distribution;
+      const fallbackName = report.type === 'nexus3' ? 'Nexus 3' : L.histogram;
+
+      for (let hIdx = 0; hIdx < cards.length; hIdx++) {
+        const card = cards[hIdx] as HTMLElement;
+        const chartLabel = card.getAttribute('data-chart-label') || `${fallbackName} ${hIdx + 1}`;
+
         try {
-          // Capture the individual histogram
           const canvas = await captureElement(card, 2);
           const imgData = canvas.toDataURL('image/png');
-          
-          // Add new page in LANDSCAPE orientation (forced for histograms)
+
+          // Add new page in LANDSCAPE orientation (forced)
           doc.addPage('a4', 'l');
           currentPage++;
-          
-          // Landscape A4 dimensions
+
           const pageWidth = 297; // mm
           const pageHeight = 210; // mm
           const margin = 15;
           const contentTop = 30;
-          
-          // Add section title
-          addSectionTitle(doc, `${L.distribution} - ${chartLabel}`);
-          
-          // Calculate image dimensions for landscape
+
+          addSectionTitle(doc, `${baseLabel} - ${chartLabel}`);
+
           const maxW = pageWidth - margin * 2;
           const maxH = pageHeight - contentTop - margin - 15;
           const ratio = canvas.height / canvas.width;
-          
+
           let imgW = maxW;
           let imgH = imgW * ratio;
-          
+
           if (imgH > maxH) {
             imgH = maxH;
             imgW = imgH / ratio;
           }
-          
-          // Center the image
+
           const xOffset = (pageWidth - imgW) / 2;
           doc.addImage(imgData, 'PNG', xOffset, contentTop, imgW, imgH);
-          
-          // Track page info
+
           pageTracker.push({
-            title: `${L.distribution} - ${chartLabel}`,
+            title: `${baseLabel} - ${chartLabel}`,
             pageNumber: currentPage,
           });
         } catch (error) {
-          console.error(`Error capturing histogram ${chartLabel}:`, error);
+          console.error(`Error capturing chart ${chartLabel}:`, error);
         }
-        
-        // Small delay to prevent UI freezing
+
         await new Promise(resolve => requestAnimationFrame(resolve));
       }
-      
+
       continue; // Skip standard section processing
     }
+
 
     // Standard section capture for non-histogram reports
     try {
