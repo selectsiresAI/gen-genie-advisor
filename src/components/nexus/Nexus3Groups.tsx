@@ -358,7 +358,7 @@ export function TraitSection({ trait, farmId, supabase, isEn, isEs, onRemove, sh
         </div>
       )}
 
-      <div ref={chartRef} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div ref={chartRef} data-chart-page="nexus3" data-chart-label={traitLabel} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">
