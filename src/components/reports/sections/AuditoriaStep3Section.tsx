@@ -98,7 +98,9 @@ export default function AuditoriaStep3Section({ farmId }: AuditoriaStep3SectionP
         return;
       }
       
-      const sanitized = safeCols(DEFAULT_PTAS);
+      const savedTraits =
+        useAGSelections.getState().step3TraitsByFarm[String(farmId)] ?? DEFAULT_PTAS;
+      const sanitized = safeCols(savedTraits);
       if (sanitized.length === 0) {
         setErrorMsg(isEs ? "Ningún PTA disponible." : isEn ? "No PTA available." : "Nenhuma PTA disponível.");
         return;
