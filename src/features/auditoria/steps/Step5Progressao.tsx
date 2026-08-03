@@ -297,8 +297,8 @@ function Step5ProgressaoContent() {
   const { data: females = [], isLoading } = useFemales(farmId);
   const { t } = useTranslation();
 
-  const [showMean, setShowMean] = useState(true);
-  const [showTrend, setShowTrend] = useState(true);
+  const [showMean, setShowMean] = useAGSetting<boolean>("step5.showMean", true);
+  const [showTrend, setShowTrend] = useAGSetting<boolean>("step5.showTrend", true);
 
   useEffect(() => {
     if (!ptasSelecionadas.length) {
