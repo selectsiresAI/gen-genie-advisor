@@ -16,6 +16,8 @@ export interface AGFiltersState {
   categoria: Categoria;
   segmentacao: Segmentacao;
   ptasSelecionadas: string[];
+  /** Seleção de PTAs persistida por fazenda (usada pelos passos 5, 7 e 9). */
+  ptasByFarm: Record<string, string[]>;
 
   setFarmId: (id?: string | number) => void;
   setAnos: (anos: number[]) => void;
@@ -26,23 +28,53 @@ export interface AGFiltersState {
   setPTAs: (keys: string[]) => void;
 }
 
-export const useAGFilters = create<AGFiltersState>((set) => ({
-  farmId: undefined,
-  anos: [],
-  indiceBase: "hhp_dollar",
-  benchmark: { origem: "EUA", percentil: "top5" },
-  categoria: "todas",
-  segmentacao: "todas",
-  ptasSelecionadas: ["tpi", "hhp_dollar", "nm_dollar"],
+const DEFAULT_PTAS_FILTRO = ["tpi", "hhp_dollar", "nm_dollar"];
 
-  setFarmId: (farmId) => set({ farmId }),
-  setAnos: (anos) => set({ anos }),
-  setIndiceBase: (indiceBase) => set({ indiceBase }),
-  setBenchmark: (benchmark) => set({ benchmark }),
-  setCategoria: (categoria) => set({ categoria }),
-  setSegmentacao: (segmentacao) => set({ segmentacao }),
-  setPTAs: (ptasSelecionadas) => set({ ptasSelecionadas }),
-}));
+export const useAGFilters = create<AGFiltersState>()(
+  persist(
+    (set, get) => ({
+      farmId: undefined,
+      anos: [],
+      indiceBase: "hhp_dollar",
+      benchmark: { origem: "EUA", percentil: "top5" } as AGFiltersState["benchmark"],
+      categoria: "todas" as Categoria,
+      segmentacao: "todas" as Segmentacao,
+      ptasSelecionadas: DEFAULT_PTAS_FILTRO,
+      ptasByFarm: {},
+
+      // Ao trocar de fazenda, restaura a seleção salva daquela fazenda
+      setFarmId: (farmId) => {
+        if (farmId == null) {
+          set({ farmId });
+          return;
+        }
+        const key = farmKeyOf(farmId);
+        const saved = get().ptasByFarm[key];
+        set({
+          farmId,
+          ptasSelecionadas: saved && saved.length ? saved : DEFAULT_PTAS_FILTRO,
+        });
+      },
+      setAnos: (anos) => set({ anos }),
+      setIndiceBase: (indiceBase) => set({ indiceBase }),
+      setBenchmark: (benchmark) => set({ benchmark }),
+      setCategoria: (categoria) => set({ categoria }),
+      setSegmentacao: (segmentacao) => set({ segmentacao }),
+      setPTAs: (ptasSelecionadas) => {
+        const key = farmKeyOf(get().farmId);
+        set((s) => ({
+          ptasSelecionadas,
+          ptasByFarm: { ...s.ptasByFarm, [key]: ptasSelecionadas },
+        }));
+      },
+    }),
+    {
+      name: "ag-filters-v1",
+      // farmId nunca é persistido: vem sempre da fazenda selecionada na sessão
+      partialize: (s) => ({ ptasByFarm: s.ptasByFarm }),
+    }
+  )
+);
 
 /**
  * Seleções do usuário na Auditoria Genética (persistidas por fazenda).
