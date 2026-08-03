@@ -21,7 +21,7 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
-import { useAGFilters } from "../store";
+import { useAGFilters, useAGSetting } from "../store";
 import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
 import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
 import { useRegisterChart } from "@/components/pdf/useRegisterChart";
