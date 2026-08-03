@@ -456,6 +456,21 @@ export default function Nexus3Groups({ onBack, selectedFarmId }: Nexus3GroupsPro
   const [selectedTraits, setSelectedTraits] = useState<string[]>(["ptam"]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [dragTrait, setDragTrait] = useState<string | null>(null);
+
+  /** Reordena a característica arrastada para a posição alvo (define a ordem dos gráficos). */
+  const moveTraitTo = (trait: string, targetIndex: number) => {
+    setSelectedTraits((prev) => {
+      const from = prev.indexOf(trait);
+      if (from < 0) return prev;
+      const to = Math.max(0, Math.min(prev.length - 1, targetIndex));
+      if (from === to) return prev;
+      const next = [...prev];
+      next.splice(from, 1);
+      next.splice(to, 0, trait);
+      return next;
+    });
+  };
 
   // Modo: 'shared' = mesmo pacote de touros para todas; 'separate' = pacote por característica
   const [mode, setMode] = useState<"shared" | "separate">("shared");
