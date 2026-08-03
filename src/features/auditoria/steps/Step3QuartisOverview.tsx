@@ -60,7 +60,17 @@ function Step3QuartisOverviewContent() {
     [labelMap]
   );
 
-  const [selectedTraits, setSelectedTraits] = useState<string[]>(DEFAULT_PTAS);
+  const step3TraitsByFarm = useAGSelections((s) => s.step3TraitsByFarm);
+  const setStep3Traits = useAGSelections((s) => s.setStep3Traits);
+  const farmKey = farmId != null ? String(farmId) : "__none__";
+  const selectedTraits = step3TraitsByFarm[farmKey] ?? DEFAULT_PTAS;
+  const setSelectedTraits = useCallback(
+    (next: string[] | ((prev: string[]) => string[])) => {
+      const prev = useAGSelections.getState().step3TraitsByFarm[farmKey] ?? DEFAULT_PTAS;
+      setStep3Traits(farmId, typeof next === "function" ? next(prev) : next);
+    },
+    [farmId, farmKey, setStep3Traits]
+  );
   const [rows, setRows] = useState<Row[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
