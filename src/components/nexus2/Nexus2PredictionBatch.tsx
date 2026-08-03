@@ -915,7 +915,10 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
   };
 
   const sendResultsToHerd = async () => {
-    if (!selectedFarmId) {
+    // Fallback: usa o rebanho ativo caso a prop não tenha sido propagada
+    const farmId = selectedFarmId || useHerdStore.getState().selectedHerdId || null;
+
+    if (!farmId) {
       toast({
         variant: 'destructive',
         title: t('nexus2.batch.toast.noFarmSelected')
@@ -924,7 +927,7 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
     }
 
     const { records: data, duplicatesRemoved } = dedupeInsertRowsByIdentifier(
-      buildResultInsertRows(rows, selectedFarmId)
+      buildResultInsertRows(rows, farmId)
     );
 
     if (!data.length) {
@@ -938,13 +941,13 @@ const Nexus2PredictionBatch: React.FC<Nexus2PredictionBatchProps> = ({ selectedF
     setIsSendingToHerd(true);
 
     try {
-      const batchSize = 100;
+      const batchSize = 50;
       let totalSaved = 0;
 
       for (let index = 0; index < data.length; index += batchSize) {
         const chunk = data.slice(index, index + batchSize);
         const { data: savedCount, error } = await supabase.rpc('import_females_json', {
-          p_client_id: selectedFarmId,
+          p_client_id: farmId,
           p_data: chunk as any,
         });
 
