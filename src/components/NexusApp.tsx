@@ -14,6 +14,8 @@ interface NexusAppProps {
 
 const NexusApp: React.FC<NexusAppProps> = ({ selectedFarmId, defaultFarmId }) => {
   const [currentView, setCurrentView] = useState<SelectedMethod>('entry');
+  // Fazenda efetiva: seleção atual > fazenda padrão do perfil
+  const effectiveFarmId = selectedFarmId || defaultFarmId || null;
 
   const handleMethodSelection = (method: 'nexus1' | 'nexus2' | 'nexus3') => {
     setCurrentView(method);
@@ -29,9 +31,9 @@ const NexusApp: React.FC<NexusAppProps> = ({ selectedFarmId, defaultFarmId }) =>
       {currentView === 'nexus1' ? (
         <Nexus1GenomicPrediction onBack={handleBack} />
       ) : currentView === 'nexus2' ? (
-        <Nexus2PedigreePrediction onBack={handleBack} selectedFarmId={selectedFarmId} />
+        <Nexus2PedigreePrediction onBack={handleBack} selectedFarmId={effectiveFarmId} />
       ) : currentView === 'nexus3' ? (
-        <Nexus3Groups onBack={handleBack} selectedFarmId={selectedFarmId} />
+        <Nexus3Groups onBack={handleBack} selectedFarmId={effectiveFarmId} />
       ) : (
         <NexusEntryPage onSelectMethod={handleMethodSelection} />
       )}
