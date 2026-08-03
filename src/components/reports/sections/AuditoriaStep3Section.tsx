@@ -7,6 +7,7 @@ import { PTA_CATALOG } from "@/lib/pta";
  import { formatPtaValue } from "@/utils/ptaFormat";
 import { isCompleteFemaleRow } from "@/supabase/queries/females";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useAGSelections, AG_STEP3_DEFAULT_PTAS } from "@/features/auditoria/store";
 
 type Row = {
   trait_key: string;
@@ -28,8 +29,8 @@ function safeCols(keys: string[]) {
   );
 }
 
-// PTAs padrão para o relatório
-const DEFAULT_PTAS = ["tpi", "ptam", "fm_dollar", "cm_dollar", "nm_dollar", "gm_dollar", "hhp_dollar"];
+// PTAs padrão para o relatório (usa a seleção salva pelo usuário no Passo 3)
+const DEFAULT_PTAS = AG_STEP3_DEFAULT_PTAS;
 
 interface AuditoriaStep3SectionProps {
   farmId: string;
@@ -97,7 +98,9 @@ export default function AuditoriaStep3Section({ farmId }: AuditoriaStep3SectionP
         return;
       }
       
-      const sanitized = safeCols(DEFAULT_PTAS);
+      const savedTraits =
+        useAGSelections.getState().step3TraitsByFarm[String(farmId)] ?? DEFAULT_PTAS;
+      const sanitized = safeCols(savedTraits);
       if (sanitized.length === 0) {
         setErrorMsg(isEs ? "Ningún PTA disponible." : isEn ? "No PTA available." : "Nenhuma PTA disponível.");
         return;

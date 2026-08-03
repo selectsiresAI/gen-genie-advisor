@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { RefreshCw } from "lucide-react";
-import { useAGFilters } from "@/features/auditoria/store";
+import { useAGFilters, useAGSelections, AG_STEP3_DEFAULT_PTAS } from "@/features/auditoria/store";
 import { PTA_CATALOG } from "@/lib/pta";
 import { parseNum } from "@/lib/number";
 import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
@@ -38,7 +38,7 @@ function safeCols(keys: string[]) {
 }
 
 // PTAs padrão para exibição automática
-const DEFAULT_PTAS = ["tpi", "ptam", "fm_dollar", "cm_dollar", "nm_dollar", "gm_dollar", "hhp_dollar"];
+const DEFAULT_PTAS = AG_STEP3_DEFAULT_PTAS;
 
 function Step3QuartisOverviewContent() {
   const { farmId } = useAGFilters();
@@ -60,7 +60,17 @@ function Step3QuartisOverviewContent() {
     [labelMap]
   );
 
-  const [selectedTraits, setSelectedTraits] = useState<string[]>(DEFAULT_PTAS);
+  const step3TraitsByFarm = useAGSelections((s) => s.step3TraitsByFarm);
+  const setStep3Traits = useAGSelections((s) => s.setStep3Traits);
+  const farmKey = farmId != null ? String(farmId) : "__none__";
+  const selectedTraits = step3TraitsByFarm[farmKey] ?? DEFAULT_PTAS;
+  const setSelectedTraits = useCallback(
+    (next: string[] | ((prev: string[]) => string[])) => {
+      const prev = useAGSelections.getState().step3TraitsByFarm[farmKey] ?? DEFAULT_PTAS;
+      setStep3Traits(farmId, typeof next === "function" ? next(prev) : next);
+    },
+    [farmId, farmKey, setStep3Traits]
+  );
   const [rows, setRows] = useState<Row[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
