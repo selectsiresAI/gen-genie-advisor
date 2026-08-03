@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 export type Categoria = "bezerra" | "novilha" | "primipara" | "secundipara" | "multipara" | "todas";
 export type Segmentacao = "superior" | "intermediario" | "inferior" | "todas";
