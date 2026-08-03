@@ -832,13 +832,17 @@ export default function Nexus3Groups({ onBack, selectedFarmId }: Nexus3GroupsPro
                     draggable
                     onDragStart={() => setDragTrait(t)}
                     onDragEnd={() => setDragTrait(null)}
-                    onDragOver={(e) => e.preventDefault()}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      // reordena ao vivo enquanto o cursor passa sobre outra etiqueta
+                      if (dragTrait && dragTrait !== t) moveTraitTo(dragTrait, idx);
+                    }}
                     onDrop={(e) => {
                       e.preventDefault();
                       if (dragTrait) moveTraitTo(dragTrait, idx);
                       setDragTrait(null);
                     }}
-                    className={`inline-flex cursor-grab items-center gap-1 rounded-full bg-[#ED1C24] px-2.5 py-1 text-xs font-semibold text-white transition ${
+                    className={`inline-flex cursor-grab items-center gap-1 rounded-full bg-[#ED1C24] px-2.5 py-1 text-xs font-semibold text-white transition active:cursor-grabbing ${
                       isDragging ? "opacity-50 ring-2 ring-gray-400" : ""
                     }`}
                     title={
@@ -848,28 +852,6 @@ export default function Nexus3Groups({ onBack, selectedFarmId }: Nexus3GroupsPro
                     <GripVertical className="h-3 w-3 opacity-70" />
                     <span className="tabular-nums opacity-70">{idx + 1}.</span>
                     {label}
-                    {selectedTraits.length > 1 && (
-                      <span className="ml-0.5 inline-flex items-center">
-                        <button
-                          type="button"
-                          onClick={() => moveTraitTo(t, idx - 1)}
-                          disabled={idx === 0}
-                          className="rounded-full p-0.5 hover:bg-white/20 disabled:opacity-30"
-                          aria-label={isEn ? "move left" : "mover para tras"}
-                        >
-                          <ChevronLeft className="h-3 w-3" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => moveTraitTo(t, idx + 1)}
-                          disabled={idx === selectedTraits.length - 1}
-                          className="rounded-full p-0.5 hover:bg-white/20 disabled:opacity-30"
-                          aria-label={isEn ? "move right" : "mover para frente"}
-                        >
-                          <ChevronRight className="h-3 w-3" />
-                        </button>
-                      </span>
-                    )}
                     <button
                       type="button"
                       onClick={() => toggleTrait(t)}
