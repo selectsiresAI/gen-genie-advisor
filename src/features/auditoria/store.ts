@@ -59,26 +59,71 @@ export const AG_STEP3_DEFAULT_PTAS = [
 ];
 
 interface AGSelectionsState {
+  /** Seleção de PTAs do Passo 3, por fazenda (legado, mantido por compatibilidade). */
   step3TraitsByFarm: Record<string, string[]>;
+  /** Qualquer outra seleção de passo: settingsByFarm[farmKey][settingKey] */
+  settingsByFarm: Record<string, Record<string, unknown>>;
   getStep3Traits: (farmId?: string | number) => string[];
   setStep3Traits: (farmId: string | number | undefined, traits: string[]) => void;
+  setSetting: (farmId: string | number | undefined, key: string, value: unknown) => void;
 }
+
+export const farmKeyOf = (farmId?: string | number) =>
+  farmId != null && String(farmId).length > 0 ? String(farmId) : "__none__";
 
 export const useAGSelections = create<AGSelectionsState>()(
   persist(
     (set, get) => ({
       step3TraitsByFarm: {},
-      getStep3Traits: (farmId) => {
-        const key = farmId != null ? String(farmId) : "__none__";
-        return get().step3TraitsByFarm[key] ?? AG_STEP3_DEFAULT_PTAS;
-      },
+      settingsByFarm: {},
+      getStep3Traits: (farmId) =>
+        get().step3TraitsByFarm[farmKeyOf(farmId)] ?? AG_STEP3_DEFAULT_PTAS,
       setStep3Traits: (farmId, traits) => {
-        const key = farmId != null ? String(farmId) : "__none__";
+        const key = farmKeyOf(farmId);
         set((s) => ({
           step3TraitsByFarm: { ...s.step3TraitsByFarm, [key]: traits },
+        }));
+      },
+      setSetting: (farmId, settingKey, value) => {
+        const key = farmKeyOf(farmId);
+        set((s) => ({
+          settingsByFarm: {
+            ...s.settingsByFarm,
+            [key]: { ...(s.settingsByFarm[key] ?? {}), [settingKey]: value },
+          },
         }));
       },
     }),
     { name: "ag-selections-v1" }
   )
 );
+
+/**
+ * useState persistido por fazenda para as seleções da Auditoria Genética.
+ * Mesma assinatura de useState — inclusive updater funcional.
+ */
+export function useAGSetting<T>(settingKey: string, defaultValue: T) {
+  const farmId = useAGFilters((s) => s.farmId);
+  const key = farmKeyOf(farmId);
+  const stored = useAGSelections((s) => s.settingsByFarm[key]?.[settingKey]) as T | undefined;
+  const setSetting = useAGSelections((s) => s.setSetting);
+
+  const value = stored === undefined ? defaultValue : stored;
+
+  const setValue = useCallback(
+    (next: T | ((prev: T) => T)) => {
+      const prevStored = useAGSelections.getState().settingsByFarm[key]?.[settingKey] as
+        | T
+        | undefined;
+      const prev = prevStored === undefined ? defaultValue : prevStored;
+      const resolved =
+        typeof next === "function" ? (next as (p: T) => T)(prev) : next;
+      setSetting(farmId, settingKey, resolved);
+    },
+    // defaultValue intencionalmente fora das deps (pode ser literal recriado)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [farmId, key, settingKey, setSetting]
+  );
+
+  return [value, setValue] as [T, (next: T | ((prev: T) => T)) => void];
+}
