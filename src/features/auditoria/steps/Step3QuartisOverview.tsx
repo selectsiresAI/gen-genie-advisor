@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { RefreshCw } from "lucide-react";
-import { useAGFilters } from "@/features/auditoria/store";
+import { useAGFilters, useAGSelections, AG_STEP3_DEFAULT_PTAS } from "@/features/auditoria/store";
 import { PTA_CATALOG } from "@/lib/pta";
 import { parseNum } from "@/lib/number";
 import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
