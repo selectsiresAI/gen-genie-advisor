@@ -28,8 +28,8 @@ function safeCols(keys: string[]) {
   );
 }
 
-// PTAs padrão para o relatório
-const DEFAULT_PTAS = ["tpi", "ptam", "fm_dollar", "cm_dollar", "nm_dollar", "gm_dollar", "hhp_dollar"];
+// PTAs padrão para o relatório (usa a seleção salva pelo usuário no Passo 3)
+const DEFAULT_PTAS = AG_STEP3_DEFAULT_PTAS;
 
 interface AuditoriaStep3SectionProps {
   farmId: string;
