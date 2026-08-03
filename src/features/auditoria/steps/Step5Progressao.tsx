@@ -19,7 +19,7 @@ import {
 } from "recharts";
 import { PTA_CATALOG } from "@/lib/pta";
 import { useFemales } from "../hooks";
-import { useAGFilters } from "../store";
+import { useAGFilters, useAGSetting } from "../store";
 import { formatPtaValue } from "@/utils/ptaFormat";
 import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
 import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
@@ -297,8 +297,8 @@ function Step5ProgressaoContent() {
   const { data: females = [], isLoading } = useFemales(farmId);
   const { t } = useTranslation();
 
-  const [showMean, setShowMean] = useState(true);
-  const [showTrend, setShowTrend] = useState(true);
+  const [showMean, setShowMean] = useAGSetting<boolean>("step5.showMean", true);
+  const [showTrend, setShowTrend] = useAGSetting<boolean>("step5.showTrend", true);
 
   useEffect(() => {
     if (!ptasSelecionadas.length) {

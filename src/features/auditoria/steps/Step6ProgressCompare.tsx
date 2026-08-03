@@ -21,7 +21,7 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
-import { useAGFilters } from "../store";
+import { useAGFilters, useAGSetting } from "../store";
 import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
 import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
 import { useRegisterChart } from "@/components/pdf/useRegisterChart";
@@ -158,10 +158,10 @@ function Step6ProgressCompareContent() {
   const [categories, setCategories] = useState<string[]>([]);
   const [categoryCol, setCategoryCol] = useState<string>("");
 
-  const [groupA, setGroupA] = useState("Novilha");
-  const [groupB, setGroupB] = useState("Primípara");
-  const [tableTraits, setTableTraits] = useState<string[]>(DEFAULT_TABLE_TRAITS);
-  const [chartTraits, setChartTraits] = useState<string[]>(DEFAULT_CHART_TRAITS);
+  const [groupA, setGroupA] = useAGSetting<string>("step6.groupA", "Novilha");
+  const [groupB, setGroupB] = useAGSetting<string>("step6.groupB", "Primípara");
+  const [tableTraits, setTableTraits] = useAGSetting<string[]>("step6.tableTraits", DEFAULT_TABLE_TRAITS);
+  const [chartTraits, setChartTraits] = useAGSetting<string[]>("step6.chartTraits", DEFAULT_CHART_TRAITS);
 
   const cardRef = useRef<HTMLDivElement>(null);
   const chartTitle = t("ag.compare.title");

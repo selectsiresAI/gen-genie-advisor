@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { useAGFilters } from "../store";
+import { useAGFilters, useAGSetting } from "../store";
 import { useTranslation } from "@/hooks/useTranslation";
 
 type ParentRole = "sire" | "mgs";
@@ -56,11 +56,11 @@ export default function Step2TopParents() {
   const { farmId } = useAGFilters();
   const { t } = useTranslation();
 
-  const [yearFrom, setYearFrom] = useState(() => new Date().getFullYear() - 4);
-  const [yearTo, setYearTo] = useState(() => new Date().getFullYear() + 1);
-  const [limit, setLimit] = useState(20);
-  const [orderTrait, setOrderTrait] = useState(DEFAULT_TRAIT);
-  const [ageFilter, setAgeFilter] = useState<AgeSegment>("Todas");
+  const [yearFrom, setYearFrom] = useAGSetting<number>("step2.yearFrom", new Date().getFullYear() - 4);
+  const [yearTo, setYearTo] = useAGSetting<number>("step2.yearTo", new Date().getFullYear() + 1);
+  const [limit, setLimit] = useAGSetting<number>("step2.limit", 20);
+  const [orderTrait, setOrderTrait] = useAGSetting<string>("step2.orderTrait", DEFAULT_TRAIT);
+  const [ageFilter, setAgeFilter] = useAGSetting<AgeSegment>("step2.ageFilter", "Todas");
 
   const [rowsSire, setRowsSire] = useState<Row[]>([]);
   const [rowsMgs, setRowsMgs] = useState<Row[]>([]);
