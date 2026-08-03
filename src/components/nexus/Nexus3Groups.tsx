@@ -15,7 +15,7 @@ import {
   LabelList,
 } from "recharts";
 import type { LabelProps } from "recharts";
-import { ChevronLeft, Download, Loader2, Search as SearchIcon, Sparkles, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, GripVertical, Loader2, Search as SearchIcon, Sparkles, X } from "lucide-react";
 import { ANIMAL_METRIC_COLUMNS } from "../../constants/animalMetrics";
 import { getAdaptiveYAxisDomainMultiple } from "../../lib/chart-utils";
 import { formatPtaValue } from "@/utils/ptaFormat";
@@ -456,6 +456,21 @@ export default function Nexus3Groups({ onBack, selectedFarmId }: Nexus3GroupsPro
   const [selectedTraits, setSelectedTraits] = useState<string[]>(["ptam"]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [dragTrait, setDragTrait] = useState<string | null>(null);
+
+  /** Reordena a característica arrastada para a posição alvo (define a ordem dos gráficos). */
+  const moveTraitTo = (trait: string, targetIndex: number) => {
+    setSelectedTraits((prev) => {
+      const from = prev.indexOf(trait);
+      if (from < 0) return prev;
+      const to = Math.max(0, Math.min(prev.length - 1, targetIndex));
+      if (from === to) return prev;
+      const next = [...prev];
+      next.splice(from, 1);
+      next.splice(to, 0, trait);
+      return next;
+    });
+  };
 
   // Modo: 'shared' = mesmo pacote de touros para todas; 'separate' = pacote por característica
   const [mode, setMode] = useState<"shared" | "separate">("shared");
@@ -797,16 +812,64 @@ export default function Nexus3Groups({ onBack, selectedFarmId }: Nexus3GroupsPro
             <label className="text-sm font-medium text-gray-700">
               {isEs ? "Características (PTA)" : isEn ? "Traits (PTA)" : "Características (PTA)"}
             </label>
+            {selectedTraits.length > 1 && (
+              <p className="text-xs text-gray-500">
+                {isEs
+                  ? "Arrastre las etiquetas (o use las flechas) para definir el orden de los gráficos."
+                  : isEn
+                  ? "Drag the chips (or use the arrows) to set the chart order."
+                  : "Arraste as etiquetas (ou use as setas) para definir a ordem dos gráficos."}
+              </p>
+            )}
             <div className="flex flex-wrap gap-2">
-              {selectedTraits.map((t) => {
+              {selectedTraits.map((t, idx) => {
                 const metric = ANIMAL_METRIC_COLUMNS.find((m) => m.key === t);
                 const label = metric?.label || t.toUpperCase();
+                const isDragging = dragTrait === t;
                 return (
                   <span
                     key={t}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-[#ED1C24] px-3 py-1 text-xs font-semibold text-white"
+                    draggable
+                    onDragStart={() => setDragTrait(t)}
+                    onDragEnd={() => setDragTrait(null)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (dragTrait) moveTraitTo(dragTrait, idx);
+                      setDragTrait(null);
+                    }}
+                    className={`inline-flex cursor-grab items-center gap-1 rounded-full bg-[#ED1C24] px-2.5 py-1 text-xs font-semibold text-white transition ${
+                      isDragging ? "opacity-50 ring-2 ring-gray-400" : ""
+                    }`}
+                    title={
+                      isEs ? "Arrastre para reordenar" : isEn ? "Drag to reorder" : "Arraste para reordenar"
+                    }
                   >
+                    <GripVertical className="h-3 w-3 opacity-70" />
+                    <span className="tabular-nums opacity-70">{idx + 1}.</span>
                     {label}
+                    {selectedTraits.length > 1 && (
+                      <span className="ml-0.5 inline-flex items-center">
+                        <button
+                          type="button"
+                          onClick={() => moveTraitTo(t, idx - 1)}
+                          disabled={idx === 0}
+                          className="rounded-full p-0.5 hover:bg-white/20 disabled:opacity-30"
+                          aria-label={isEn ? "move left" : "mover para tras"}
+                        >
+                          <ChevronLeft className="h-3 w-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveTraitTo(t, idx + 1)}
+                          disabled={idx === selectedTraits.length - 1}
+                          className="rounded-full p-0.5 hover:bg-white/20 disabled:opacity-30"
+                          aria-label={isEn ? "move right" : "mover para frente"}
+                        >
+                          <ChevronRight className="h-3 w-3" />
+                        </button>
+                      </span>
+                    )}
                     <button
                       type="button"
                       onClick={() => toggleTrait(t)}
