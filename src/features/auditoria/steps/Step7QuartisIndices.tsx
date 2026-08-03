@@ -61,12 +61,12 @@ const getIndexDisplayLabel = (value: string) => {
 function Step7QuartisIndicesContent() {
   const { farmId } = useAGFilters();
   const { t } = useTranslation();
-  const [indexA, setIndexA] = useState("hhp_dollar");
-  const [indexB, setIndexB] = useState("nm_dollar");
+  const [indexA, setIndexA] = useAGSetting<string>("step7i.indexA", "hhp_dollar");
+  const [indexB, setIndexB] = useAGSetting<string>("step7i.indexB", "nm_dollar");
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState("");
-  const [showAllTraits, setShowAllTraits] = useState(false);
+  const [showAllTraits, setShowAllTraits] = useAGSetting<boolean>("step7i.showAllTraits", false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
