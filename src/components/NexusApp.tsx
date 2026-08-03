@@ -14,6 +14,8 @@ interface NexusAppProps {
 
 const NexusApp: React.FC<NexusAppProps> = ({ selectedFarmId, defaultFarmId }) => {
   const [currentView, setCurrentView] = useState<SelectedMethod>('entry');
+  // Fazenda efetiva: seleção atual > fazenda padrão do perfil
+  const effectiveFarmId = selectedFarmId || defaultFarmId || null;
 
   const handleMethodSelection = (method: 'nexus1' | 'nexus2' | 'nexus3') => {
     setCurrentView(method);
