@@ -19,7 +19,7 @@ import {
 } from "recharts";
 import { PTA_CATALOG } from "@/lib/pta";
 import { useFemales } from "../hooks";
-import { useAGFilters } from "../store";
+import { useAGFilters, useAGSetting } from "../store";
 import { formatPtaValue } from "@/utils/ptaFormat";
 import { ChartExportProvider } from "@/components/pdf/ChartExportProvider";
 import { BatchExportBar, SingleExportButton } from "@/components/pdf/ExportButtons";
