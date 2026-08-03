@@ -7,6 +7,7 @@ import { PTA_CATALOG } from "@/lib/pta";
  import { formatPtaValue } from "@/utils/ptaFormat";
 import { isCompleteFemaleRow } from "@/supabase/queries/females";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useAGSelections, AG_STEP3_DEFAULT_PTAS } from "@/features/auditoria/store";
 
 type Row = {
   trait_key: string;
