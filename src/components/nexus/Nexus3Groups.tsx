@@ -15,7 +15,7 @@ import {
   LabelList,
 } from "recharts";
 import type { LabelProps } from "recharts";
-import { ChevronLeft, ChevronRight, Download, GripVertical, Loader2, Search as SearchIcon, Sparkles, X } from "lucide-react";
+import { ChevronLeft, Download, GripVertical, Loader2, Search as SearchIcon, Sparkles, X } from "lucide-react";
 import { ANIMAL_METRIC_COLUMNS } from "../../constants/animalMetrics";
 import { getAdaptiveYAxisDomainMultiple } from "../../lib/chart-utils";
 import { formatPtaValue } from "@/utils/ptaFormat";
