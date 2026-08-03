@@ -28,6 +28,9 @@ export interface AGFiltersState {
   setPTAs: (keys: string[]) => void;
 }
 
+export const farmKeyOf = (farmId?: string | number) =>
+  farmId != null && String(farmId).length > 0 ? String(farmId) : "__none__";
+
 const DEFAULT_PTAS_FILTRO = ["tpi", "hhp_dollar", "nm_dollar"];
 
 export const useAGFilters = create<AGFiltersState>()(
@@ -101,8 +104,6 @@ interface AGSelectionsState {
   setSetting: (farmId: string | number | undefined, key: string, value: unknown) => void;
 }
 
-export const farmKeyOf = (farmId?: string | number) =>
-  farmId != null && String(farmId).length > 0 ? String(farmId) : "__none__";
 
 export const useAGSelections = create<AGSelectionsState>()(
   persist(
