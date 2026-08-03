@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { useAGFilters } from "../store";
+import { useAGFilters, useAGSetting } from "../store";
 import { useTranslation } from "@/hooks/useTranslation";
 
 type ParentRole = "sire" | "mgs";
