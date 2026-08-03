@@ -38,7 +38,7 @@ function safeCols(keys: string[]) {
 }
 
 // PTAs padrão para exibição automática
-const DEFAULT_PTAS = ["tpi", "ptam", "fm_dollar", "cm_dollar", "nm_dollar", "gm_dollar", "hhp_dollar"];
+const DEFAULT_PTAS = AG_STEP3_DEFAULT_PTAS;
 
 function Step3QuartisOverviewContent() {
   const { farmId } = useAGFilters();
