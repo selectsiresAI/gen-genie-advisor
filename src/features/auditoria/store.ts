@@ -42,3 +42,43 @@ export const useAGFilters = create<AGFiltersState>((set) => ({
   setSegmentacao: (segmentacao) => set({ segmentacao }),
   setPTAs: (ptasSelecionadas) => set({ ptasSelecionadas }),
 }));
+
+/**
+ * Seleções do usuário na Auditoria Genética (persistidas por fazenda).
+ * Mantém as escolhas ao navegar entre passos, recarregar a página
+ * e ao gerar o Relatório Geral.
+ */
+export const AG_STEP3_DEFAULT_PTAS = [
+  "tpi",
+  "ptam",
+  "fm_dollar",
+  "cm_dollar",
+  "nm_dollar",
+  "gm_dollar",
+  "hhp_dollar",
+];
+
+interface AGSelectionsState {
+  step3TraitsByFarm: Record<string, string[]>;
+  getStep3Traits: (farmId?: string | number) => string[];
+  setStep3Traits: (farmId: string | number | undefined, traits: string[]) => void;
+}
+
+export const useAGSelections = create<AGSelectionsState>()(
+  persist(
+    (set, get) => ({
+      step3TraitsByFarm: {},
+      getStep3Traits: (farmId) => {
+        const key = farmId != null ? String(farmId) : "__none__";
+        return get().step3TraitsByFarm[key] ?? AG_STEP3_DEFAULT_PTAS;
+      },
+      setStep3Traits: (farmId, traits) => {
+        const key = farmId != null ? String(farmId) : "__none__";
+        set((s) => ({
+          step3TraitsByFarm: { ...s.step3TraitsByFarm, [key]: traits },
+        }));
+      },
+    }),
+    { name: "ag-selections-v1" }
+  )
+);
