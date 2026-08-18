@@ -147,17 +147,14 @@ export function TraitSection({ trait, farmId, supabase, isEn, isEs, onRemove, sh
 
   const chartData = useMemo(() => {
     if (!mothers.length) return [];
-    // SCS é escala logarítmica e não recebe o fator de regressão 0,93
-    const isSCS = (trait || '').toString().trim().toUpperCase() === 'SCS';
-    return mothers.map((m) => {
-      const base = (m.avg_value + bullsAvg) / 2;
-      return {
-        year: m.birth_year,
-        mothers_avg: m.avg_value,
-        daughters_pred: isSCS ? base : base * 0.93,
-      };
-    });
-  }, [mothers, bullsAvg, trait]);
+    // Predição sem fator de regressão: (Mãe + MédiaTouros) / 2
+    return mothers.map((m) => ({
+      year: m.birth_year,
+      mothers_avg: m.avg_value,
+      daughters_pred: (m.avg_value + bullsAvg) / 2,
+    }));
+  }, [mothers, bullsAvg]);
+
 
   const [yMin, yMax] = useMemo(
     () => getAdaptiveYAxisDomainMultiple(chartData, ["mothers_avg", "daughters_pred"]),
