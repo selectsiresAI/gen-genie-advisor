@@ -780,10 +780,11 @@ export default function Nexus3Groups({ onBack, selectedFarmId }: Nexus3GroupsPro
             </h1>
             <p className="max-w-3xl text-sm text-muted-foreground">
               {isEs
-                ? "Seleccione una o varias características para comparar. Predicción: ((Madre + PromedioToros)/2) × 0,93 (excepto SCS, sin factor 0,93)"
+                ? "Seleccione una o varias características para comparar. Predicción: (Madre + PromedioToros)/2"
                 : isEn
-                ? "Select one or more traits to compare. Prediction: ((Dam + SiresAvg)/2) × 0.93 (except SCS, no 0.93 factor)"
-                : "Selecione uma ou várias características para comparar. Predição: ((Mãe + MédiaTouros)/2) × 0,93 (exceto SCS, sem fator 0,93)"}
+                ? "Select one or more traits to compare. Prediction: (Dam + SiresAvg)/2"
+                : "Selecione uma ou várias características para comparar. Predição: (Mãe + MédiaTouros)/2"}
+
             </p>
           </div>
           {onBack && (
