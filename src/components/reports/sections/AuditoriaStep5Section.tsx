@@ -17,14 +17,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatPtaValue } from "@/utils/ptaFormat";
 import { getAdaptiveYAxisDomainFromValues } from "@/lib/chart-utils";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useAGFilters } from "@/features/auditoria/store";
 
 type SeriesPoint = { year: number; n: number; mean: number };
 
 const avg = (values: number[]) =>
   values.length ? values.reduce((s, v) => s + v, 0) / values.length : 0;
 
-// PTAs padrão para o relatório
-const DEFAULT_PTAS = ["hhp_dollar", "tpi", "nm_dollar"];
+const FALLBACK_PTAS = ["hhp_dollar", "tpi", "nm_dollar"];
 
 function getYearFromBirth(birth: unknown): number | null {
   if (!birth) return null;
@@ -83,6 +83,8 @@ export default function AuditoriaStep5Section({ farmId }: AuditoriaStep5SectionP
   const { locale } = useTranslation();
   const isEn = locale === "en-US";
   const isEs = locale === "es";
+  const ptasSelecionadas = useAGFilters(state => state.ptasSelecionadas);
+  const activePtas = ptasSelecionadas?.length ? ptasSelecionadas : FALLBACK_PTAS;
   const [females, setFemales] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -92,6 +94,7 @@ export default function AuditoriaStep5Section({ farmId }: AuditoriaStep5SectionP
       const allRows: any[] = [];
       let page = 0;
       let hasMore = true;
+      const cols = ["birth_date", ...activePtas].join(", ");
 
       while (hasMore) {
         const from = page * PAGE_SIZE;
@@ -99,7 +102,7 @@ export default function AuditoriaStep5Section({ farmId }: AuditoriaStep5SectionP
 
         const { data, error } = await supabase
           .from("females_denorm")
-          .select("birth_date, hhp_dollar, tpi, nm_dollar")
+          .select(cols)
           .eq("farm_id", farmId)
           .range(from, to);
 
@@ -117,7 +120,8 @@ export default function AuditoriaStep5Section({ farmId }: AuditoriaStep5SectionP
     }
 
     fetchData();
-  }, [farmId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [farmId, activePtas.join(",")]);
 
   const domainTicks = useMemo(() => {
     const years = new Set<number>();
@@ -140,7 +144,7 @@ export default function AuditoriaStep5Section({ farmId }: AuditoriaStep5SectionP
   const seriesByKey = useMemo(() => {
     const out: Record<string, SeriesPoint[]> = {};
 
-    for (const key of DEFAULT_PTAS) {
+    for (const key of activePtas) {
       const byYear = new Map<number, number[]>();
       
       for (const f of females) {
@@ -162,7 +166,7 @@ export default function AuditoriaStep5Section({ farmId }: AuditoriaStep5SectionP
         .filter((p): p is SeriesPoint => p !== null);
     }
     return out;
-  }, [females, domainTicks]);
+  }, [females, domainTicks, activePtas]);
 
   const labelOf = (key: string) =>
     PTA_CATALOG.find((i) => i.key === key)?.label ?? key.toUpperCase();
@@ -173,7 +177,7 @@ export default function AuditoriaStep5Section({ farmId }: AuditoriaStep5SectionP
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      {DEFAULT_PTAS.map((key) => {
+      {activePtas.map((key) => {
         const data = seriesByKey[key];
         if (!data?.length) return null;
         const label = labelOf(key);
