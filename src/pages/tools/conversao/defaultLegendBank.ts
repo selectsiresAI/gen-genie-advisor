@@ -66,7 +66,6 @@ const entries: Array<Omit<LegendEntry, "source">> = [
   { alias: "fm$", canonical: "FM$" },
   { alias: "fm$®", canonical: "FM$" },
   { alias: "fm", canonical: "FM$" },
-  { alias: "mf", canonical: "FM$" },
   { alias: "mf$", canonical: "FM$" },
   { alias: "mérito volume", canonical: "FM$" },
   { alias: "mérito fluído", canonical: "FM$" },
@@ -171,6 +170,7 @@ const entries: Array<Omit<LegendEntry, "source">> = [
   { alias: "pta gl", canonical: "GL" },
   { alias: "gl", canonical: "GL" },
   
+  { alias: "mf", canonical: "MF" },
   { alias: "milk fever", canonical: "MF" },
   { alias: "mfv", canonical: "MF" },
   { alias: "hipoc", canonical: "MF" },
