@@ -63,6 +63,35 @@ Deno.serve(async (req) => {
       return json({ error: "Tag não encontrada. Confirme o código com a Gabriely." }, 404);
     }
 
+    // NORMALIZAÇÃO: puxa o cadastro canônico do Tracker (mesmo uuid) e atualiza o Platform.
+    const TRACKER_URL = Deno.env.get("TRACKER_URL");
+    const TRACKER_SR = Deno.env.get("TRACKER_SERVICE_ROLE_KEY");
+    if (TRACKER_URL && TRACKER_SR) {
+      try {
+        const tracker = createClient(TRACKER_URL, TRACKER_SR);
+        const { data: tc } = await tracker
+          .from("clients")
+          .select("nome, email, cpf_cnpj, cidade, estado, representante, coordenador")
+          .eq("id", client.id)
+          .is("deleted_at", null)
+          .maybeSingle();
+        if (tc) {
+          const patch: Record<string, unknown> = {};
+          if (tc.email) patch.email = tc.email;
+          if (tc.nome) patch.nome = tc.nome;
+          if (tc.cidade) patch.cidade = tc.cidade;
+          if (tc.estado) patch.estado = tc.estado;
+          if (tc.cpf_cnpj != null) patch.cpf_cnpj = String(tc.cpf_cnpj);
+          if (Object.keys(patch).length) {
+            await admin.from("clients").update(patch).eq("id", client.id);
+            Object.assign(client, patch);
+          }
+        }
+      } catch (syncErr) {
+        console.error("tracker sync warn:", (syncErr as Error)?.message);
+      }
+    }
+
     // já vinculado?
     const { data: existing } = await admin
       .from("user_farms")
@@ -106,6 +135,7 @@ Deno.serve(async (req) => {
         nome: client.nome,
         owner_name: client.owner_name,
         farm_name: client.farm_name,
+        email: (client as Record<string, unknown>).email ?? null,
         tag,
         femeas: femeas ?? 0,
       },
