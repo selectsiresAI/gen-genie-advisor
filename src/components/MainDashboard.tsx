@@ -11,6 +11,7 @@ import { Building2, Users, Beef, BarChart3, Plus, LogOut, Zap, ArrowLeft, ArrowL
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import CreateFarmModal from './CreateFarmModal';
+import { LinkFarmByTagDialog } from './LinkFarmByTagDialog';
 import EditFarmModal from './EditFarmModal';
 import BotijaoVirtualPage from './BotijaoVirtual';
 import MetasPage from './Metas';
@@ -815,6 +816,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
                   placeholder={t("farm.search")}
                   className="w-full sm:w-64 bg-white"
                 />
+                <LinkFarmByTagDialog onSuccess={handleCreateFarmSuccess} />
                 <Button onClick={handleCreateFarm} data-tour="home:criar" className="sm:w-auto">
                   <Plus className="w-4 h-4 mr-2" />
                   {t("farm.create")}
