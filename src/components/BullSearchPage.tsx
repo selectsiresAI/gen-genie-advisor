@@ -810,7 +810,12 @@ const BullSearchPage: React.FC<BullSearchPageProps> = ({
                             <td className="px-2 py-1 text-center">
                               <input type="checkbox" checked={selectedBulls.includes(bull.code)} onChange={() => handleBullToggle(bull.code)} />
                             </td>
-                            <td className="px-2 py-1 font-mono text-xs font-bold">{bull.code}</td>
+                            <td className="px-2 py-1 font-mono text-xs font-bold">
+                              {bull.code}
+                              {bull.registration && (
+                                <div className="text-[10px] font-normal text-muted-foreground">{bull.registration}</div>
+                              )}
+                            </td>
                             <td className="px-2 py-1 text-xs">
                               <div className="font-medium">{bull.name}</div>
                               {(bull.sire_naab || bull.mgs_naab) && (

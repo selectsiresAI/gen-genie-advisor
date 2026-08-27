@@ -1186,7 +1186,12 @@ function BotijaoVirtualPage({ client, farm, bulls: propBulls, selectedBulls = []
                 <tbody>
                   {sortedItems.map((item) => (
                     <tr key={item.id} className="border-b hover:bg-muted/50">
-                      <td className="p-3">{item.touro.code}</td>
+                      <td className="p-3">
+                        {item.touro.code}
+                        {item.touro.registration && (
+                          <div className="text-xs text-muted-foreground">{item.touro.registration}</div>
+                        )}
+                      </td>
                       <td className="p-3 font-medium">{item.touro.name}</td>
                       <td className="p-3">{item.touro.empresa || "-"}</td>
                       <td className="p-3">

@@ -200,7 +200,9 @@ export function BullSelector({
     );
   };
 
-  const displayValue = value ? `${value.code} — ${value.name}` : "";
+  const displayValue = value
+    ? `${value.code} — ${value.name}${value.registration ? ` (${value.registration})` : ""}`
+    : "";
 
   return (
     <div className={`space-y-2 ${className}`} ref={containerRef}>
@@ -308,6 +310,11 @@ export function BullSelector({
                 <div style={{ fontWeight: 600, fontSize: 13 }}>
                   {highlightMatch(bull.code, query)} — {highlightMatch(bull.name, query)}
                 </div>
+                {bull.registration && (
+                  <div style={{ fontSize: 11, color: "#6b7280", marginTop: 1 }}>
+                    {bull.registration}
+                  </div>
+                )}
                 <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>
                   {bull.company || (isEs ? "Sin empresa" : isEn ? "No company" : "Sem empresa")}
                   {bull.tpi != null && (
