@@ -50,19 +50,25 @@ Deno.serve(async (req) => {
       .from("clients").select("id, nome, owner_name, email").eq("id", clientId).is("deleted_at", null).maybeSingle();
     if (!client) return json({ error: "Cliente não encontrado" }, 404);
 
-    // técnicos/users da fazenda (ToolSS)
+    // técnicos/users da fazenda (ToolSS) — busca em 2 passos (embed não é confiável)
     const { data: techLinks } = await admin
-      .from("user_farms").select("user_id, role, profiles:user_id(email, full_name)")
+      .from("user_farms").select("user_id, role")
       .eq("client_id", clientId).in("role", ["technician", "owner", "editor"]);
+    const techIds = [...new Set((techLinks ?? []).map((l: { user_id: string }) => l.user_id))];
+    const profById: Record<string, { email?: string; full_name?: string }> = {};
+    if (techIds.length) {
+      const { data: profs } = await admin.from("profiles").select("id, email, full_name").in("id", techIds);
+      for (const p of (profs ?? []) as Array<{ id: string; email?: string; full_name?: string }>) profById[p.id] = p;
+    }
 
     type Rec = { recipient_type: string; recipient_email: string | null; recipient_name: string | null; recipient_profile_id: string | null };
     const recipients: Rec[] = [];
     if (client.email) {
       recipients.push({ recipient_type: "client", recipient_email: client.email, recipient_name: client.owner_name ?? client.nome, recipient_profile_id: null });
     }
-    for (const l of (techLinks ?? []) as Array<{ user_id: string; profiles?: { email?: string; full_name?: string } }>) {
-      const em = l.profiles?.email ?? null;
-      recipients.push({ recipient_type: "technician", recipient_email: em, recipient_name: l.profiles?.full_name ?? null, recipient_profile_id: l.user_id });
+    for (const id of techIds) {
+      const p = profById[id];
+      recipients.push({ recipient_type: "technician", recipient_email: p?.email ?? null, recipient_name: p?.full_name ?? null, recipient_profile_id: id });
     }
 
     const summary = {
