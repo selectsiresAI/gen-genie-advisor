@@ -20,7 +20,8 @@ const adminLinksConfig = [
   { labelPt: "Tickets de suporte", labelEn: "Support Tickets", labelEs: "Tickets de soporte", to: "/admin/support-tickets" },
   { labelPt: "i18n Dashboard", labelEn: "i18n Dashboard", labelEs: "Panel i18n", to: "/admin/i18n" },
   { labelPt: "Glossário Técnico", labelEn: "Technical Glossary", labelEs: "Glosario Técnico", to: "/admin/glossary" },
-  { labelPt: "Tradução em Lote", labelEn: "Batch Translation", labelEs: "Traducción por Lotes", to: "/admin/translation" }
+  { labelPt: "Tradução em Lote", labelEn: "Batch Translation", labelEs: "Traducción por Lotes", to: "/admin/translation" },
+  { labelPt: "Redefinir Senha", labelEn: "Reset Password", labelEs: "Restablecer Contraseña", to: "/admin/reset-password" }
 ];
 
 const UserBadge = ({ user, isEn, isEs }: { user: User | null; isEn: boolean; isEs?: boolean }) => {

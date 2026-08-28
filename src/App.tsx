@@ -21,6 +21,7 @@ import GlossaryManager from "@/pages/admin/GlossaryManager";
 import TranslationBatch from "@/pages/admin/TranslationBatch";
 import I18nDashboard from "@/pages/admin/I18nDashboard";
 import ResultsProcessingPage from "@/pages/admin/ResultsProcessingPage";
+import PasswordResetPage from "@/pages/admin/PasswordResetPage";
 import { useTranslation } from "@/hooks/useTranslation";
 
 const AppContent = () => {
@@ -118,6 +119,7 @@ const AppContent = () => {
           <Route path="i18n" element={<I18nDashboard />} />
           <Route path="glossary" element={<GlossaryManager />} />
           <Route path="translation" element={<TranslationBatch />} />
+          <Route path="reset-password" element={<PasswordResetPage />} />
         </Route>
       </Routes>
     </>
