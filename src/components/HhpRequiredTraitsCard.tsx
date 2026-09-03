@@ -23,6 +23,7 @@ const requiredTraits = [
   { key: "UD", label: "Udder Depth", category: "type" },
   { key: "RTP", label: "Rear Teat Placement", category: "type" },
   { key: "TL", label: "Teat Length", category: "type" },
+  { key: "H_LIV", label: "Heifer Livability", category: "health" },
 ] as const;
 
 const categoryColors: Record<string, string> = {
@@ -98,10 +99,10 @@ export function HhpRequiredTraitsCard({ inline = false, className = "" }: HhpReq
         </CardTitle>
         <p className="text-xs text-muted-foreground leading-relaxed">
           {isEs
-            ? <>El archivo debe contener los <strong>15 traits</strong> siguientes. Faltantes = HHP$ vacío.</>
+            ? <>El archivo debe contener los <strong>16 traits</strong> siguientes. Faltantes = HHP$ vacío.</>
             : isEn
-            ? <>File must contain the <strong>15 traits</strong> below. Missing = HHP$ empty.</>
-            : <>O arquivo deve conter as <strong>15 traits</strong> abaixo. Ausentes = HHP$ vazio.</>
+            ? <>File must contain the <strong>16 traits</strong> below. Missing = HHP$ empty.</>
+            : <>O arquivo deve conter as <strong>16 traits</strong> abaixo. Ausentes = HHP$ vazio.</>
           }
         </p>
       </CardHeader>
