@@ -198,7 +198,7 @@ def row_to_bull(row):
 
 def upsert_batch(session, bulls, batch_num, total_batches):
     """UPSERT a batch of bulls via PostgREST."""
-    url = f"{SUPABASE_URL}/rest/v1/{TABLE}"
+    url = f"{SUPABASE_URL}/rest/v1/{TABLE}?on_conflict=naab_code"
     headers = {
         "apikey": SERVICE_ROLE_KEY,
         "Authorization": f"Bearer {SERVICE_ROLE_KEY}",
@@ -206,13 +206,25 @@ def upsert_batch(session, bulls, batch_num, total_batches):
         "Prefer": "resolution=merge-duplicates",
     }
 
-    resp = session.post(url, headers=headers, json=bulls, timeout=120)
+    for attempt in range(1, 4):
+        try:
+            resp = session.post(url, headers=headers, json=bulls, timeout=120)
+        except requests.exceptions.RequestException as e:
+            if attempt == 3:
+                print(f"  ERRO batch {batch_num}/{total_batches}: conexao falhou apos 3 tentativas - {e}")
+                return False
+            time.sleep(2 * attempt)
+            continue
 
-    if resp.status_code in (200, 201):
-        return True
-    else:
-        print(f"  ERRO batch {batch_num}/{total_batches}: {resp.status_code} - {resp.text[:500]}")
-        return False
+        if resp.status_code in (200, 201):
+            return True
+        elif resp.status_code in (429, 502, 503, 504) and attempt < 3:
+            time.sleep(2 * attempt)
+            continue
+        else:
+            print(f"  ERRO batch {batch_num}/{total_batches}: {resp.status_code} - {resp.text[:500]}")
+            return False
+    return False
 
 
 def main():
@@ -271,7 +283,7 @@ def main():
         else:
             errors += len(batch)
 
-        if batch_num % 50 == 0 or batch_num == total_batches:
+        if batch_num % 20 == 0 or batch_num == total_batches:
             elapsed = time.time() - t0
             rate = success / elapsed if elapsed > 0 else 0
             print(f"  [{batch_num}/{total_batches}] {success} ok, {errors} erros ({rate:.0f} touros/s)")
