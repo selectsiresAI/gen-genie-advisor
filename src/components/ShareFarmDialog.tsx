@@ -48,7 +48,7 @@ export function ShareFarmDialog({ farmId, farmName, myRole }: ShareFarmDialogPro
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
 
-  const canShare = myRole === "owner" || myRole === "editor";
+  const canShare = myRole === "owner" || myRole === "editor" || myRole === "technician";
   const canRemove = myRole === "owner";
 
   useEffect(() => {
