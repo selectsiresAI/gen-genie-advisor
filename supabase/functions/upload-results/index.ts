@@ -120,11 +120,70 @@ Deno.serve(async (req: Request) => {
         })
         .eq("id", serviceOrderId);
 
+      // Auto-trigger ingest-results on SSGEN Client after successful upload
+      const ssgenClientUrl = Deno.env.get("SSGEN_CLIENT_URL");
+      const ssgenClientKey = Deno.env.get("SSGEN_CLIENT_SERVICE_ROLE_KEY");
+
+      let ingestResult = null;
+      let ingestError = null;
+
+      if (ssgenClientUrl && ssgenClientKey) {
+        try {
+          const ingestResp = await fetch(`${ssgenClientUrl}/functions/v1/ingest-results`, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${ssgenClientKey}`,
+              "Content-Type": "application/json",
+              "apikey": ssgenClientKey,
+            },
+            body: JSON.stringify({
+              file_path: storagePath,
+              service_order_id: serviceOrderId,
+              client_id: so.client_id,
+            }),
+          });
+
+          ingestResult = await ingestResp.json();
+
+          if (!ingestResp.ok) {
+            ingestError = ingestResult.error ?? `Ingest returned ${ingestResp.status}`;
+            console.error(`[upload-results] Auto-ingest failed for OS ${serviceOrderId}: ${ingestError}`);
+          } else {
+            console.log(`[upload-results] Auto-ingest OK for OS ${serviceOrderId}: ${ingestResult.genomic_results_inserted} results`);
+
+            // Log the processing in audit
+            await supabase
+              .from("order_audit_log")
+              .insert({
+                order_id: serviceOrderId,
+                field_name: "results_processed",
+                old_value: null,
+                new_value: JSON.stringify({
+                  genomic_results_inserted: ingestResult.genomic_results_inserted,
+                  females_proofs_updated: ingestResult.females_proofs_updated,
+                  file_path: storagePath,
+                }),
+                changed_by: user?.id ?? null,
+                user_email: user?.email ?? "service_role",
+                changed_at: new Date().toISOString(),
+              });
+          }
+        } catch (err) {
+          ingestError = (err as Error).message;
+          console.error(`[upload-results] Auto-ingest exception: ${ingestError}`);
+        }
+      }
+
       return new Response(JSON.stringify({
         success: true,
         file_path: storagePath,
         client_id: so.client_id,
         service_order_id: serviceOrderId,
+        ingest: ingestResult ? {
+          genomic_results_inserted: ingestResult.genomic_results_inserted,
+          females_proofs_updated: ingestResult.females_proofs_updated,
+        } : null,
+        ingest_error: ingestError,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
