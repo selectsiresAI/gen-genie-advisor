@@ -15,6 +15,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { HelpButton } from '@/components/help/HelpButton';
 import { HelpHint } from '@/components/help/HelpHint';
 import { formatPtaValue } from '@/utils/ptaFormat';
+import { findBullsSmartBatch, type BullSmartMatch } from '@/supabase/queries/bulls';
 
 import SortableHeader from '@/components/animals/SortableHeader';
 import { ANIMAL_METRIC_COLUMNS } from '@/constants/animalMetrics';
@@ -42,6 +43,7 @@ const HerdPage: React.FC<HerdPageProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedYear, setSelectedYear] = useState<string>('');
   const [selectedFemales, setSelectedFemales] = useState<string[]>([]);
+  const [pedigreeNames, setPedigreeNames] = useState<Map<string, BullSmartMatch>>(new Map());
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -141,8 +143,15 @@ const HerdPage: React.FC<HerdPageProps> = ({
       });
       const completeRows = rows.filter(isCompleteFemaleRow) as Female[];
       setFemales(completeRows);
+      const pedigreeCodes = completeRows.flatMap((female) => [
+        female.sire_naab,
+        female.mgs_naab,
+        female.mmgs_naab,
+      ]).filter((code): code is string => Boolean(code));
+      setPedigreeNames(await findBullsSmartBatch(pedigreeCodes));
     } catch (error) {
       console.error('Error loading females:', error);
+      setPedigreeNames(new Map());
       toast({
         title: t('common.error'),
         description: t('herd.loadError'),
@@ -726,9 +735,9 @@ const HerdPage: React.FC<HerdPageProps> = ({
                             <td className="sticky z-10 border bg-background px-3 py-2 text-xs font-medium whitespace-nowrap shadow-[6px_0_12px_-6px_rgba(15,23,42,0.3)]" style={stickyColumnStyles.name}>{female.name}</td>
                             <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.identifier || '-'}</td>
                             <td className="border px-3 py-2 text-xs whitespace-nowrap">{female.fonte === 'Predição' ? '-' : (female.cdcb_id || '-')}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{renderPedigreeCell(female.sire_naab)}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{renderPedigreeCell(female.mgs_naab)}</td>
-                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{renderPedigreeCell(female.mmgs_naab)}</td>
+                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{renderPedigreeCell(female.sire_naab, pedigreeNames.get(female.sire_naab || '')?.name)}</td>
+                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{renderPedigreeCell(female.mgs_naab, pedigreeNames.get(female.mgs_naab || '')?.name)}</td>
+                            <td className="border px-3 py-2 text-xs whitespace-nowrap">{renderPedigreeCell(female.mmgs_naab, pedigreeNames.get(female.mmgs_naab || '')?.name)}</td>
                             <td className="border px-3 py-2 text-xs whitespace-nowrap">
                               {female.birth_date ? formatDate(female.birth_date) : '-'}
                               {female.birth_date && <span className="text-muted-foreground ml-1">

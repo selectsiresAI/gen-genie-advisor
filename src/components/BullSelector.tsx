@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/useTranslation";
-import { buildBullSearchFilter } from "@/utils/bullSearchFilter";
+import { findBullSmart } from "@/supabase/queries/bulls";
 
 /** View bulls_denorm — single source of truth for all bull lookups */
 const BULL_DENORM_TABLE = "bulls_denorm" as const;
@@ -139,19 +139,25 @@ export function BullSelector({
 
     setLoading(true);
     try {
-      const filter = buildBullSearchFilter(term);
+      const smartMatches = await findBullSmart(term);
+      const bullIds = smartMatches.map((match) => match.bull_id);
+      if (bullIds.length === 0) {
+        setResults([]);
+        setIsOpen(true);
+        return;
+      }
+
       const { data, error } = await supabase
         .from(BULL_DENORM_TABLE)
         .select(BULL_SELECT_FIELDS)
-        .or(filter)
-        .order("tpi", { ascending: false, nullsFirst: false })
-        .limit(20);
+        .in("id", bullIds);
 
       if (error) {
         console.error("Erro na busca de touros:", error);
         setResults([]);
       } else {
-        setResults((data as any) || []);
+        const byId = new Map(((data as BullSearchResult[]) || []).map((bull) => [bull.id, bull]));
+        setResults(bullIds.map((id) => byId.get(id)).filter((bull): bull is BullSearchResult => Boolean(bull)));
       }
       setIsOpen(true);
     } catch (err) {

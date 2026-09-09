@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAGFilters, useAGSetting } from "../store";
 import { useTranslation } from "@/hooks/useTranslation";
+import { findBullsSmartBatch } from "@/supabase/queries/bulls";
 
 type ParentRole = "sire" | "mgs";
 type AgeSegment = "Todas" | "Bezerra" | "Novilha" | "Primípara" | "Secundípara" | "Multípara";
@@ -38,19 +39,6 @@ const AGE_SEGMENT_KEYS: Record<AgeSegment, string> = {
   "Secundípara": "ag.topParents.secondiparous",
   "Multípara": "ag.topParents.multiparous",
 };
-
-async function fetchBullNames(naabCodes: string[]): Promise<Map<string, string>> {
-  if (naabCodes.length === 0) return new Map();
-
-  const { data, error } = await supabase
-    .from("bulls_denorm")
-    .select("code, name")
-    .in("code", naabCodes);
-
-  if (error || !data) return new Map();
-
-  return new Map(data.map((b) => [b.code, b.name]));
-}
 
 export default function Step2TopParents() {
   const { farmId } = useAGFilters();
@@ -104,11 +92,11 @@ export default function Step2TopParents() {
       ]),
     ];
 
-    const namesMap = await fetchBullNames(allNaabs);
+    const namesMap = await findBullsSmartBatch(allNaabs);
 
     const enrichRow = (row: RawRow): Row => ({
       ...row,
-      parent_name: namesMap.get(row.parent_label) || null,
+      parent_name: namesMap.get(row.parent_label)?.name || null,
     });
 
     setRowsSire(sireRaw.map(enrichRow));

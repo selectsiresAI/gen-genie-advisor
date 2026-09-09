@@ -189,3 +189,56 @@ export async function searchBulls(term: string, limit = 10): Promise<BullsDenorm
     return { id: bull_id, ...bullData } as unknown as BullsDenormSelection;
   });
 }
+
+export type BullSmartMatch = {
+  bull_id: string;
+  code: string;
+  name: string;
+  registration: string | null;
+  match_type: 'naab_exact' | 'intl_alias' | 'registration' | 'fuzzy_name';
+};
+
+/** Busca um touro por NAAB, ID internacional, registration ou nome. Nunca lanca. */
+export async function findBullSmart(query: string): Promise<BullSmartMatch[]> {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+  const { data, error } = await supabase.rpc('find_bull_smart', { p_query: trimmed });
+  if (error) {
+    console.error('[findBullSmart] RPC error', error);
+    return [];
+  }
+  return (data as BullSmartMatch[]) || [];
+}
+
+/**
+ * Batch: resolve N codigos/nomes em 1 round-trip.
+ * Retorna Map cuja chave e o input ORIGINAL (nao normalizado) que foi passado em `queries`,
+ * para o caller poder fazer `map.get(codigoOriginal)` sem reimplementar normalizacao.
+ */
+export async function findBullsSmartBatch(queries: string[]): Promise<Map<string, BullSmartMatch>> {
+  const cleaned = Array.from(new Set(queries.map(q => (q || '').trim()).filter(Boolean)));
+  const result = new Map<string, BullSmartMatch>();
+  if (cleaned.length === 0) return result;
+
+  const { data, error } = await supabase.rpc('find_bulls_smart_batch', { p_queries: cleaned });
+  if (error) {
+    console.error('[findBullsSmartBatch] RPC error', error);
+    return result;
+  }
+
+  const byUpper = new Map<string, BullSmartMatch>();
+  for (const row of (data as any[]) || []) {
+    byUpper.set(String(row.input_query).toUpperCase(), {
+      bull_id: row.bull_id, code: row.code, name: row.name,
+      registration: row.registration, match_type: row.match_type,
+    });
+  }
+  // remapeia para as chaves ORIGINAIS pedidas (podem ter caixa/espacos diferentes de q)
+  for (const original of queries) {
+    const trimmedOriginal = (original || '').trim();
+    if (!trimmedOriginal) continue;
+    const hit = byUpper.get(trimmedOriginal.toUpperCase());
+    if (hit) result.set(original, hit);
+  }
+  return result;
+}
