@@ -163,21 +163,25 @@ export function calculatePedigreePrediction({
     const mgsValue = mgs?.ptas[trait.key] ?? mgsPlaceholder?.ptas[trait.key];
     const mmgsValue = mmgs?.ptas[trait.key] ?? mmgsPlaceholder?.ptas[trait.key];
 
-    if (
-      sireValue == null ||
-      mgsValue == null ||
-      mmgsValue == null
-    ) {
+    // Renormalização: se, mesmo após o fallback acima, um ancestral ainda não
+    // tem a trait, ele sai da conta e o peso dele é redistribuído entre os
+    // ancestrais que têm dado real (prática padrão de "parent average" com
+    // ancestral desconhecido) — em vez de anular a predição inteira.
+    // Só fica null quando NENHUM dos três tem a trait.
+    const contributions: Array<{ value: number; weight: number }> = [];
+    if (sireValue != null) contributions.push({ value: sireValue, weight: GENETIC_WEIGHTS.sire });
+    if (mgsValue != null) contributions.push({ value: mgsValue, weight: GENETIC_WEIGHTS.mgs });
+    if (mmgsValue != null) contributions.push({ value: mmgsValue, weight: GENETIC_WEIGHTS.mmgs });
+
+    if (contributions.length === 0) {
       result[trait.key] = null;
       continue;
     }
 
-    const predicted =
-      sireValue * GENETIC_WEIGHTS.sire +
-      mgsValue * GENETIC_WEIGHTS.mgs +
-      mmgsValue * GENETIC_WEIGHTS.mmgs;
+    const totalWeight = contributions.reduce((sum, c) => sum + c.weight, 0);
+    const weightedSum = contributions.reduce((sum, c) => sum + c.value * c.weight, 0);
 
-    result[trait.key] = toTwoDecimals(predicted);
+    result[trait.key] = toTwoDecimals(weightedSum / totalWeight);
   }
 
   return result;
