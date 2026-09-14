@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
-    // Verify caller is owner/editor of that farm
+    // Verify caller is owner/editor/technician of that farm
     const { data: myMembership } = await admin
       .from("user_farms")
       .select("role")
@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
       .eq("user_id", userId)
       .maybeSingle();
 
-    if (!myMembership || !["owner", "editor"].includes(myMembership.role)) {
+    if (!myMembership || !["owner", "editor", "technician"].includes(myMembership.role)) {
       return new Response(JSON.stringify({ error: "Permission denied" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

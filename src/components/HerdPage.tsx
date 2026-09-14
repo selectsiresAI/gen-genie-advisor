@@ -148,7 +148,14 @@ const HerdPage: React.FC<HerdPageProps> = ({
         female.mgs_naab,
         female.mmgs_naab,
       ]).filter((code): code is string => Boolean(code));
-      setPedigreeNames(await findBullsSmartBatch(pedigreeCodes));
+      // Busca dos nomes de pai/avô em segundo plano: não bloqueia a lista
+      // nem derruba o carregamento se demorar ou falhar.
+      void findBullsSmartBatch(pedigreeCodes)
+        .then((map) => setPedigreeNames(map))
+        .catch((err) => {
+          console.error('Error loading pedigree names:', err);
+          setPedigreeNames(new Map());
+        });
     } catch (error) {
       console.error('Error loading females:', error);
       setPedigreeNames(new Map());

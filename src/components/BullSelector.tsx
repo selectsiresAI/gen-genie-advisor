@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/useTranslation";
 import { findBullSmart } from "@/supabase/queries/bulls";
+import { buildBullSearchFilter } from "@/utils/bullSearchFilter";
 
 /** View bulls_denorm — single source of truth for all bull lookups */
 const BULL_DENORM_TABLE = "bulls_denorm" as const;
@@ -142,7 +143,17 @@ export function BullSelector({
       const smartMatches = await findBullSmart(term);
       const bullIds = smartMatches.map((match) => match.bull_id);
       if (bullIds.length === 0) {
-        setResults([]);
+        // Fallback: busca parcial por código/nome (ex.: "7HO16", "HO16000")
+        const orFilter = buildBullSearchFilter(term);
+        const { data: partial, error: partialError } = await supabase
+          .from(BULL_DENORM_TABLE)
+          .select(BULL_SELECT_FIELDS)
+          .or(orFilter)
+          .order("tpi", { ascending: false, nullsFirst: false })
+          .limit(20);
+
+        if (partialError) console.error("Erro na busca de touros:", partialError);
+        setResults(((partial as BullSearchResult[]) || []));
         setIsOpen(true);
         return;
       }
