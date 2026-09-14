@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
-    // Verify caller is owner/editor of that farm
+    // Verify caller is owner/editor/technician of that farm
     const { data: myMembership } = await admin
       .from("user_farms")
       .select("role")
