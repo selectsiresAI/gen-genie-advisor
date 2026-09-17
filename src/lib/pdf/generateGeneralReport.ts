@@ -385,9 +385,11 @@ export async function generateGeneralReport(
     }
 
     // Special handling: charts that must render one-per-landscape-page.
-    // Applies to Step 7 histograms and Nexus 3 Dams-vs-Daughters cards.
+    // Applies to progression cards, Step 7 histograms and Nexus 3 cards.
     const perChartSelector =
-      report.type === 'auditoria_step7'
+      report.type === 'auditoria_step4'
+        ? '[data-chart-page="auditoria-step4"]'
+        : report.type === 'auditoria_step7'
         ? '[data-chart-page="histogram"]'
         : report.type === 'nexus3'
         ? '[data-chart-page="nexus3"]'
@@ -395,8 +397,15 @@ export async function generateGeneralReport(
 
     if (perChartSelector) {
       const cards = sectionEl.querySelectorAll(perChartSelector);
-      const baseLabel = report.type === 'nexus3' ? (RL[report.type] ?? report.label) : L.distribution;
-      const fallbackName = report.type === 'nexus3' ? 'Nexus 3' : L.histogram;
+      const isProgression = report.type === 'auditoria_step4';
+      const baseLabel = isProgression || report.type === 'nexus3'
+        ? (RL[report.type] ?? report.label)
+        : L.distribution;
+      const fallbackName = isProgression
+        ? (RL[report.type] ?? report.label)
+        : report.type === 'nexus3'
+        ? 'Nexus 3'
+        : L.histogram;
 
       for (let hIdx = 0; hIdx < cards.length; hIdx++) {
         const card = cards[hIdx] as HTMLElement;
@@ -406,9 +415,14 @@ export async function generateGeneralReport(
           const canvas = await captureElement(card, 2);
           const imgData = canvas.toDataURL('image/png');
 
-          // Add new page in LANDSCAPE orientation (forced)
+          // The loop starts on a blank page reserved by the previous section.
+          // Replace it so every chart page is guaranteed to be landscape.
+          if (hIdx === 0) {
+            doc.deletePage(currentPage);
+          } else {
+            currentPage++;
+          }
           doc.addPage('a4', 'l');
-          currentPage++;
 
           const pageWidth = 297; // mm
           const pageHeight = 210; // mm
@@ -441,6 +455,12 @@ export async function generateGeneralReport(
         }
 
         await new Promise(resolve => requestAnimationFrame(resolve));
+      }
+
+      // Reserve a correctly oriented blank page for the next report.
+      if (i < selectedReports.length - 1) {
+        doc.addPage('a4', orientation);
+        currentPage++;
       }
 
       continue; // Skip standard section processing
@@ -486,7 +506,7 @@ export async function generateGeneralReport(
       
       // Add new page for next report (except for last one)
       if (i < selectedReports.length - 1) {
-        doc.addPage();
+        doc.addPage('a4', orientation);
         currentPage++;
       }
     } catch (error) {

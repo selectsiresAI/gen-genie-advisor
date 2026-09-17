@@ -190,7 +190,11 @@ export default function AuditoriaStep5Section({ farmId }: AuditoriaStep5SectionP
         }));
 
         return (
-          <Card key={key}>
+          <Card
+            key={key}
+            data-chart-page="auditoria-step4"
+            data-chart-label={label}
+          >
             <CardHeader className="border-b px-4 py-3">
               <div className="space-y-1">
                 <CardTitle className="text-base font-semibold">
