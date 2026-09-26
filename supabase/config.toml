@@ -1,10 +1,30 @@
 project_id = "odactdxpecpiyiyaqfgi"
 
+# verify_jwt values below reconciled 2026-09-26 against live edge function
+# settings (mcp Supabase list_edge_functions) so `supabase functions deploy`
+# (deploy-all) never silently flips a function's auth mode. If you change a
+# function's verify_jwt live, update it here too — they must match.
+
+[functions.migrate-toolss]
+verify_jwt = true
+
+[functions.migrate-users]
+verify_jwt = true
+
 [functions.upload-females]
 verify_jwt = true
 
 [functions.import-bulls]
 verify_jwt = true
+
+[functions.create-users]
+verify_jwt = false
+
+[functions.import-farm-technicians]
+verify_jwt = true
+
+[functions."import-females"]
+verify_jwt = false
 
 [functions.migrate-staging]
 verify_jwt = true
@@ -12,14 +32,29 @@ verify_jwt = true
 [functions.sync-temp-passwords]
 verify_jwt = true
 
-[functions.import-farm-technicians]
-verify_jwt = true
-
-[functions."import-females"]
-verify_jwt = true
-
 [functions.translate-i18n]
 verify_jwt = true
+
+[functions.admin-process-results]
+verify_jwt = false
+
+[functions.upload-results]
+verify_jwt = false
+
+[functions.recompute-hhp]
+verify_jwt = false
+
+[functions.share-farm]
+verify_jwt = false
+
+[functions.link-farm-by-tag]
+verify_jwt = false
+
+[functions.deliver-results]
+verify_jwt = false
+
+[functions.admin-reset-password]
+verify_jwt = false
 
 [auth.password]
 min_length = 10
