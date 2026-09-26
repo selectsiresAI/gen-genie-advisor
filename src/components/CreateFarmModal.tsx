@@ -26,6 +26,8 @@ interface CreateFarmModalProps {
 const CreateFarmModal: React.FC<CreateFarmModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const [farmName, setFarmName] = useState('');
   const [ownerName, setOwnerName] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
   const [description, setDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -35,6 +37,8 @@ const CreateFarmModal: React.FC<CreateFarmModalProps> = ({ isOpen, onClose, onSu
   const resetForm = () => {
     setFarmName('');
     setOwnerName('');
+    setCity('');
+    setState('');
     setDescription('');
     setError('');
   };
@@ -62,6 +66,18 @@ const CreateFarmModal: React.FC<CreateFarmModalProps> = ({ isOpen, onClose, onSu
       return;
     }
 
+    if (!city.trim()) {
+      setError(t("createFarm.cityRequired"));
+      setIsLoading(false);
+      return;
+    }
+
+    if (!state.trim()) {
+      setError(t("createFarm.stateRequired"));
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const metadata = description.trim() ? { description: description.trim() } : {};
 
@@ -69,6 +85,8 @@ const CreateFarmModal: React.FC<CreateFarmModalProps> = ({ isOpen, onClose, onSu
         farm_name: farmName.trim(),
         owner_name: ownerName.trim(),
         farm_metadata: metadata,
+        p_city: city.trim(),
+        p_state: state.trim(),
       });
 
       if (error) {
@@ -143,6 +161,34 @@ const CreateFarmModal: React.FC<CreateFarmModalProps> = ({ isOpen, onClose, onSu
                 required
                 disabled={isLoading}
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="farm-city">{t("createFarm.city")}</Label>
+                <Input
+                  id="farm-city"
+                  type="text"
+                  placeholder={t("createFarm.cityPlaceholder")}
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="farm-state">{t("createFarm.state")}</Label>
+                <Input
+                  id="farm-state"
+                  type="text"
+                  placeholder={t("createFarm.statePlaceholder")}
+                  value={state}
+                  onChange={(e) => setState(e.target.value)}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
             </div>
 
             <div className="space-y-2">

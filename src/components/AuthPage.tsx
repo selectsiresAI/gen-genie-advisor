@@ -5,11 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, User, Lock, Mail, UserPlus, LogIn } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2, User, Lock, Mail, UserPlus, LogIn, Phone, Globe, Briefcase } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { useTranslation } from '@/hooks/useTranslation';
+import { COUNTRIES } from '@/lib/countries';
 import toolssLogo from '@/assets/toolss-logo.jpg';
 
 interface AuthPageProps {
@@ -35,6 +37,10 @@ const AuthPage: React.FC<AuthPageProps> = ({
   const [signupPassword, setSignupPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [signupPhone, setSignupPhone] = useState('');
+  const [signupCountry, setSignupCountry] = useState('');
+  const [signupJobTitle, setSignupJobTitle] = useState('');
+  const [signupRoleFunction, setSignupRoleFunction] = useState('');
   useEffect(() => {
     // Verificar se já está logado
     const checkAuth = async () => {
@@ -94,6 +100,26 @@ const AuthPage: React.FC<AuthPageProps> = ({
       setIsLoading(false);
       return;
     }
+    if (!signupPhone.trim()) {
+      setError(t('auth.errorPhoneRequired' as any));
+      setIsLoading(false);
+      return;
+    }
+    if (!signupCountry) {
+      setError(t('auth.errorCountryRequired' as any));
+      setIsLoading(false);
+      return;
+    }
+    if (!signupJobTitle.trim()) {
+      setError(t('auth.errorJobTitleRequired' as any));
+      setIsLoading(false);
+      return;
+    }
+    if (!signupRoleFunction.trim()) {
+      setError(t('auth.errorRoleFunctionRequired' as any));
+      setIsLoading(false);
+      return;
+    }
     if (signupPassword !== confirmPassword) {
       setError(t('auth.errorPasswordMismatch' as any));
       setIsLoading(false);
@@ -115,7 +141,11 @@ const AuthPage: React.FC<AuthPageProps> = ({
         options: {
           emailRedirectTo: redirectUrl,
           data: {
-            full_name: fullName.trim()
+            full_name: fullName.trim(),
+            phone: signupPhone.trim(),
+            country: signupCountry,
+            job_title: signupJobTitle.trim(),
+            role_function: signupRoleFunction.trim()
           }
         }
       });
@@ -133,6 +163,10 @@ const AuthPage: React.FC<AuthPageProps> = ({
         setSignupPassword('');
         setConfirmPassword('');
         setFullName('');
+        setSignupPhone('');
+        setSignupCountry('');
+        setSignupJobTitle('');
+        setSignupRoleFunction('');
         setActiveTab('login');
       }
     } catch (error: any) {
@@ -316,6 +350,45 @@ const AuthPage: React.FC<AuthPageProps> = ({
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                     <Input id="signup-email" type="email" placeholder={t("auth.emailPlaceholder")} value={signupEmail} onChange={e => setSignupEmail(e.target.value)} className="pl-10" required disabled={isLoading} />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-phone">{t("auth.phone")}</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Input id="signup-phone" type="tel" placeholder={t("auth.phonePlaceholder")} value={signupPhone} onChange={e => setSignupPhone(e.target.value)} className="pl-10" required disabled={isLoading} />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-country">{t("auth.country")}</Label>
+                  <Select value={signupCountry} onValueChange={setSignupCountry} disabled={isLoading}>
+                    <SelectTrigger id="signup-country" className="[&>span]:flex [&>span]:items-center [&>span]:gap-2">
+                      <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <SelectValue placeholder={t("auth.countryPlaceholder")} />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-64">
+                      {COUNTRIES.map(c => (
+                        <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-job-title">{t("auth.jobTitle")}</Label>
+                  <div className="relative">
+                    <Briefcase className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Input id="signup-job-title" type="text" placeholder={t("auth.jobTitlePlaceholder")} value={signupJobTitle} onChange={e => setSignupJobTitle(e.target.value)} className="pl-10" required disabled={isLoading} />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-role-function">{t("auth.roleFunction")}</Label>
+                  <div className="relative">
+                    <Briefcase className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Input id="signup-role-function" type="text" placeholder={t("auth.roleFunctionPlaceholder")} value={signupRoleFunction} onChange={e => setSignupRoleFunction(e.target.value)} className="pl-10" required disabled={isLoading} />
                   </div>
                 </div>
 
