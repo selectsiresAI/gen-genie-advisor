@@ -14,6 +14,7 @@ import { HelpButton } from "@/components/help/HelpButton";
 import { HelpHint } from "@/components/help/HelpHint";
 import { formatPtaValue } from "@/utils/ptaFormat";
 import { getAdaptiveYAxisDomainFromValues } from "@/lib/chart-utils";
+import { parseNum } from "@/lib/number";
 
 import {
   fetchFemalesDenormByFarm,
@@ -24,14 +25,14 @@ import {
 type RawRow = Record<string, any>;
 
 function coerceYear(v: any): number | null {
-  const n = Number(v);
+  const n = parseNum(v);
   return Number.isFinite(n) ? n : null;
 }
 
 function pickNumber(row: RawRow, keys: string[], fallback = 0): number {
   for (const k of keys) {
     const v = row?.[k];
-    const n = Number(v);
+    const n = parseNum(v);
     if (Number.isFinite(n)) return n;
   }
   return fallback;
@@ -195,7 +196,7 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
         const slot = byYear.get(year as number)!;
         slot.n++;
         selectedPTAs.forEach((ptaKey) => {
-          const value = Number(female?.[ptaKey]);
+          const value = parseNum(female?.[ptaKey]);
           if (Number.isFinite(value)) {
             slot.sums[ptaKey] = (slot.sums[ptaKey] ?? 0) + value;
             slot.counts[ptaKey] = (slot.counts[ptaKey] ?? 0) + 1;
@@ -222,7 +223,7 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
         const slot = byCategory.get(category)!;
         slot.n++;
         selectedPTAs.forEach((ptaKey) => {
-          const value = Number(female?.[ptaKey]);
+          const value = parseNum(female?.[ptaKey]);
           if (Number.isFinite(value)) {
             slot.sums[ptaKey] = (slot.sums[ptaKey] ?? 0) + value;
             slot.counts[ptaKey] = (slot.counts[ptaKey] ?? 0) + 1;
@@ -247,7 +248,7 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
         const slot = byParity.get(parity)!;
         slot.n++;
         selectedPTAs.forEach((ptaKey) => {
-          const value = Number(female?.[ptaKey]);
+          const value = parseNum(female?.[ptaKey]);
           if (Number.isFinite(value)) {
             slot.sums[ptaKey] = (slot.sums[ptaKey] ?? 0) + value;
             slot.counts[ptaKey] = (slot.counts[ptaKey] ?? 0) + 1;
@@ -286,7 +287,7 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
     if (!females.length || selectedPTAs.length === 0) return [];
     const firstPTA = selectedPTAs[0];
     const values = females
-      .map((female) => Number(female?.[firstPTA]))
+      .map((female) => parseNum(female?.[firstPTA]))
       .filter((value) => Number.isFinite(value));
     if (!values.length) return [];
     const min = Math.min(...values);
@@ -508,7 +509,7 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
                             borderRadius: '8px',
                             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
                           }}
-                          formatter={(value: any, name: string) => [formatPtaValue(name, Number(value)), '']}
+                          formatter={(value: any, name: string) => [formatPtaValue(name, parseNum(value)), '']}
                         />
                         <Legend />
                         {selectedPTAs.map((ptaKey, index) => {
@@ -589,7 +590,7 @@ const ChartsPage: React.FC<ChartsPageProps> = ({ farm, onBack, onNavigateToHerd 
                             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
                           }}
                           formatter={(value: any, name: string) => [
-                            name === 'count' ? `${value} ${t("charts.animals")}` : `${Number(value).toFixed(1)}%`,
+                            name === 'count' ? `${value} ${t("charts.animals")}` : `${parseNum(value).toFixed(1)}%`,
                             name === 'count' ? t("charts.quantity") : t("charts.percentage")
                           ]}
                         />
@@ -945,7 +946,7 @@ const PanoramaRebanhoView: React.FC<{
       const byYear = new Map<number, number[]>();
       females.forEach((female) => {
         const year = female?.birth_date ? new Date(female.birth_date).getFullYear() : undefined;
-        const value = Number(female?.[key]);
+        const value = parseNum(female?.[key]);
         if (Number.isFinite(year) && Number.isFinite(value)) {
           const list = byYear.get(year as number) ?? [];
           list.push(value as number);
