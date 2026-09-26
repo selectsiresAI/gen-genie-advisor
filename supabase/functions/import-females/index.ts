@@ -20,6 +20,28 @@ function jsonResponse(req: Request, body: Record<string, unknown>, status = 200)
   });
 }
 
+// Best-effort structured log for diagnostics (Grafana reads app_logs). Never throws —
+// a logging failure must not break the actual import.
+async function logToAppLogs(
+  supabase: ReturnType<typeof createClient>,
+  level: "error" | "warn" | "info",
+  message: string,
+  context: Record<string, unknown>,
+  userId?: string,
+) {
+  try {
+    await supabase.from("app_logs").insert({
+      level,
+      source: "import-females",
+      message,
+      context,
+      user_id: userId ?? null,
+    });
+  } catch (_err) {
+    // swallow — logging must never break the import
+  }
+}
+
 interface FemaleRecord {
   client_id: string;
   name: string;
@@ -780,12 +802,23 @@ Deno.serve(async (req) => {
       console.log("Upload done: " + inserted + " inserted, " + errors.length + " validation, " + insertErrors.length + " insert errors");
 
       if (inserted === 0 && insertErrors.length > 0) {
+        await logToAppLogs(supabase, "error", "import-females: database write failed, 0 rows inserted", {
+          farm_id: farmId, insert_errors_count: insertErrors.length, sample_errors: insertErrors.slice(0, 5),
+        }, user.id);
         return jsonResponse(req, {
           success: false,
           error: 'Database write failed',
           insert_errors: insertErrors.length,
           details: insertErrors.slice(0, 5),
         }, 500);
+      }
+
+      if (errors.length > 0 || unmappedCols.length > 0) {
+        await logToAppLogs(supabase, "warn", "import-females: upload completed with validation issues", {
+          farm_id: farmId, file_name: file.name, inserted, validation_errors: errors.length,
+          duplicates_removed: duplicatesRemoved, unmapped_columns: unmappedCols,
+          sample_errors: errors.slice(0, 10),
+        }, user.id);
       }
 
       var importBatchId = crypto.randomUUID();
@@ -802,6 +835,9 @@ Deno.serve(async (req) => {
       });
     } catch (error) {
       console.error("Upload handler error", error);
+      await logToAppLogs(supabase, "error", "import-females: unhandled exception in upload handler", {
+        message: String(error),
+      }, user?.id);
       return jsonResponse(req, { error: "Erro ao processar upload", message: String(error) }, 500);
     }
   }
