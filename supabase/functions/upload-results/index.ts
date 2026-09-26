@@ -25,13 +25,29 @@ Deno.serve(async (req: Request) => {
       Deno.env.get("SUPABASE_ANON_KEY")!,
     ).auth.getUser(token);
 
-    // Allow service_role calls (token == service_role key) or authenticated users
+    // Allow service_role calls (token == service_role key) or staff users
     const isServiceRole = token === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!user && !isServiceRole) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Staff-only: any authenticated non-service caller must hold admin/superadmin/tecnico
+    if (user && !isServiceRole) {
+      const [adminCheck, superadminCheck, tecnicoCheck] = await Promise.all([
+        supabase.rpc("has_role_v2", { _user_id: user.id, _role: "admin" }),
+        supabase.rpc("has_role_v2", { _user_id: user.id, _role: "superadmin" }),
+        supabase.rpc("has_role_v2", { _user_id: user.id, _role: "tecnico" }),
+      ]);
+      const isStaff = !!adminCheck.data || !!superadminCheck.data || !!tecnicoCheck.data;
+      if (!isStaff) {
+        return new Response(JSON.stringify({ error: "Staff role required" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     const url = new URL(req.url);
