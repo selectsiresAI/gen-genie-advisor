@@ -276,6 +276,21 @@ Deno.serve(async (req: Request) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
+    console.error("[upload-results] unhandled exception:", err);
+    try {
+      const logClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      );
+      await logClient.from("app_logs").insert({
+        level: "error",
+        source: "upload-results",
+        message: "unhandled exception",
+        context: { message: (err as Error).message },
+      });
+    } catch (_e) {
+      // swallow — logging must never break the response
+    }
     return new Response(JSON.stringify({ error: (err as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

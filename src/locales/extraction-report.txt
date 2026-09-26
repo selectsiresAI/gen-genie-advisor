@@ -1,0 +1,224 @@
+=== RELATÓRIO DE EXTRAÇÃO ===
+
+Total de strings: 1650
+
+Distribuição por módulo:
+  common: 748
+  help: 494
+  admin: 161
+  nexus1: 74
+  feedback: 40
+  charts: 35
+  nexus3: 32
+  dashboard: 21
+  metas: 14
+  nexus2: 12
+  herd: 6
+  segmentation: 5
+  botijao: 4
+  auditoria: 2
+  auth: 1
+  bulls: 1
+
+
+Strings extraídas (primeiras 50):
+
+[admin.verificando_permissoes_de_administrador]
+  Valor: "Verificando permissões de administrador…"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\AdminGuard.tsx:24
+
+[admin.necesita_permisos_administrativos_para]
+  Valor: "Necesita permisos administrativos para acceder a esta área."
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\AdminGuard.tsx:44
+
+[admin.voce_precisa_de_permissoes]
+  Valor: "Você precisa de permissões administrativas para acessar esta área."
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\AdminGuard.tsx:44
+
+[admin.si_cree_que_esto]
+  Valor: "Si cree que esto es un error, contacte al soporte o al administrador de su organización."
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\AdminGuard.tsx:45
+
+[admin.voltar_para_o_inicio]
+  Valor: "Voltar para o início"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\AdminGuard.tsx:47
+
+[admin.nao_foi_possivel_validar]
+  Valor: "Não foi possível validar seu acesso"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\AdminGuard.tsx:88
+
+[admin.intente_nuevamente_mas_tarde]
+  Valor: "Intente nuevamente más tarde o verifique si la función RPC"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\AdminGuard.tsx:92
+
+[admin.tente_novamente_mais_tarde]
+  Valor: "Tente novamente mais tarde ou verifique se a função RPC"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\AdminGuard.tsx:92
+
+[admin.contrasena_min_10_caracteres]
+  Valor: "Contraseña (mín. 10 caracteres)"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\CreateUsersButton.tsx:107
+
+[admin.adicionar_usuario]
+  Valor: "Adicionar usuário"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\CreateUsersButton.tsx:130
+
+[admin.criando_usuarios]
+  Valor: "Criando usuários..."
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\CreateUsersButton.tsx:137
+
+[admin.criar_usuarios]
+  Valor: "Criar Usuários"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\CreateUsersButton.tsx:140
+
+[admin.usuario_nao_autenticado]
+  Valor: "Usuário não autenticado"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\SupportTicketDetail.tsx:93
+
+[admin.respuesta_enviada_con_exito]
+  Valor: "Respuesta enviada con éxito"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\SupportTicketDetail.tsx:106
+
+[admin.resposta_enviada_com_sucesso]
+  Valor: "Resposta enviada com sucesso"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\SupportTicketDetail.tsx:106
+
+[admin.estado_actualizado_con_exito]
+  Valor: "Estado actualizado con éxito"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\SupportTicketDetail.tsx:129
+
+[admin.status_atualizado_com_sucesso]
+  Valor: "Status atualizado com sucesso"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\SupportTicketDetail.tsx:129
+
+[admin.tecnico]
+  Valor: "Técnico"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\SupportTicketDetail.tsx:152
+
+[admin.categoria]
+  Valor: "Categoría:"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\SupportTicketDetail.tsx:214
+
+[admin.descripcion]
+  Valor: "Descripción:"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\SupportTicketDetail.tsx:222
+
+[admin.descricao]
+  Valor: "Descrição:"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\SupportTicketDetail.tsx:222
+
+[admin.historico_de_respostas]
+  Valor: "Histórico de Respostas"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\SupportTicketDetail.tsx:231
+
+[admin.ninguna_respuesta_aun_sea]
+  Valor: "Ninguna respuesta aún. ¡Sea el primero en responder!"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\SupportTicketDetail.tsx:240
+
+[admin.digite_sua_resposta]
+  Valor: "Digite sua resposta..."
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\SupportTicketDetail.tsx:281
+
+[admin.nota_interna_no_visible]
+  Valor: "Nota interna (no visible para el usuario)"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\SupportTicketDetail.tsx:297
+
+[admin.nota_interna_nao_visivel]
+  Valor: "Nota interna (não visível para o usuário)"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\SupportTicketDetail.tsx:297
+
+[admin.erro_ao_carregar_metricas]
+  Valor: "Erro ao carregar métricas:"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\UserEngagementMetrics.tsx:57
+
+[admin.error_al_cargar_metricas]
+  Valor: "Error al cargar métricas"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\UserEngagementMetrics.tsx:60
+
+[admin.erro_ao_carregar_metricas]
+  Valor: "Erro ao carregar métricas"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\UserEngagementMetrics.tsx:60
+
+[admin.medio]
+  Valor: "Médio"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\UserEngagementMetrics.tsx:86
+
+[admin.total_de_usuarios]
+  Valor: "Total de Usuários"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\UserEngagementMetrics.tsx:116
+
+[admin.media_de_sessoes]
+  Valor: "Média de Sessões"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\UserEngagementMetrics.tsx:129
+
+[admin.com_fazendas]
+  Valor: "Com Fazendas"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\UserEngagementMetrics.tsx:142
+
+[admin.fizeram_predicoes]
+  Valor: "Fizeram Predições"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\UserEngagementMetrics.tsx:155
+
+[admin.detalle_por_usuario]
+  Valor: "Detalle por Usuario"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\UserEngagementMetrics.tsx:170
+
+[admin.detalhamento_por_usuario]
+  Valor: "Detalhamento por Usuário"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\UserEngagementMetrics.tsx:170
+
+[admin.usuario]
+  Valor: "Usuário"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\UserEngagementMetrics.tsx:177
+
+[admin.paginas]
+  Valor: "Páginas"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\UserEngagementMetrics.tsx:180
+
+[admin.predicoes]
+  Valor: "Predições"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\UserEngagementMetrics.tsx:182
+
+[admin.sessoes]
+  Valor: "Sessões"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\admin\UserEngagementMetrics.tsx:183
+
+[auth.verifique_suas_credenciais_e]
+  Valor: "Verifique suas credenciais e tente novamente"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\AuthPage.tsx:79
+
+[common.importacao_concluida]
+  Valor: "Importação concluída!"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\AutoBullsImporter.tsx:152
+
+[common.importacion_automatica_de_toros]
+  Valor: "Importación Automática de Toros"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\AutoBullsImporter.tsx:172
+
+[common.importacao_automatica_de_touros]
+  Valor: "Importação Automática de Touros"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\AutoBullsImporter.tsx:172
+
+[botijao.disponivel]
+  Valor: "Disponível"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\BotijaoVirtual.tsx:85
+
+[botijao.erro_ao_carregar_botijao]
+  Valor: "Erro ao carregar botijão salvo:"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\BotijaoVirtual.tsx:257
+
+[botijao.erro_ao_carregar_dados]
+  Valor: "Erro ao carregar dados de nitrogênio:"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\BotijaoVirtual.tsx:309
+
+[botijao.botijao_virtual]
+  Valor: "Botijão Virtual"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\BotijaoVirtual.tsx:706
+
+[bulls.usuario_nao_autenticado]
+  Valor: "Usuário não autenticado"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\BullSearchPage.tsx:482
+
+[common.beta_caseina]
+  Valor: "Beta Caseína"
+  Arquivo: C:\Users\DiegoGuerra\Projects\gen-genie-advisor\src\components\BullSelector.tsx:80

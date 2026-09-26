@@ -1090,8 +1090,18 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Error in import-bulls function:', error);
+    try {
+      await supabase.from('app_logs').insert({
+        level: 'error',
+        source: 'import-bulls',
+        message: 'unhandled exception',
+        context: { message: error instanceof Error ? error.message : String(error) },
+      });
+    } catch (_e) {
+      // swallow — logging must never break the response
+    }
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: error instanceof Error ? error.message : 'Erro desconhecido',
         details: error instanceof Error ? error.stack : undefined
       }),
