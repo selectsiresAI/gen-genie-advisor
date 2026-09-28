@@ -76,15 +76,13 @@ Cada botão chama `onSelectMethod('nexus1')`, `onSelectMethod('nexus2')` ou `onS
 
 ```ts
 const calculateGenomicPrediction = (femalePTA: number, bullPTA: number, traitKey?: string): number => {
-  const isSCS = (traitKey || '').toString().trim().toUpperCase() === 'SCS';
-  const base = (femalePTA + bullPTA) / 2;
-  return isSCS ? base : base * 0.93;
+  return (femalePTA + bullPTA) / 2;
 };
 ```
 
 **Em português:**
 
-> Para cada característica, soma-se o PTA da fêmea com o PTA do touro, divide por 2 e, na maioria dos casos, multiplica por 0,93. A característica **SCS** é a única exceção: ela não recebe essa correção de regressão.
+> Para cada característica, soma-se o PTA da fêmea com o PTA do touro e divide por 2. O fator de correção de regressão 0,93 foi removido em 28/09/2026 (decisão do Diego) — a fórmula não distingue mais SCS das demais características, já que não há mais fator a excluir.
 
 ### Características esperadas
 

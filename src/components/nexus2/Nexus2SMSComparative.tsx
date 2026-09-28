@@ -384,9 +384,7 @@ const Nexus2SMSComparative: React.FC<Nexus2SMSComparativeProps> = ({ selectedFar
 
             if (femalePta != null && bullPta != null) {
               const avg = (Number(femalePta) + Number(bullPta)) / 2;
-              preds[trait.key] = trait.key === 'scs'
-                ? Math.round(avg * 100) / 100
-                : Math.round(avg * 0.93 * 100) / 100;
+              preds[trait.key] = Math.round(avg * 100) / 100;
             } else {
               preds[trait.key] = null;
             }

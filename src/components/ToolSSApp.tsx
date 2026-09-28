@@ -2504,12 +2504,9 @@ function EvolucaoRebanhoPage({ mothers, daughters, onBack }: any) {
     "SCS", "MAST", "PTAT", "UDC", "FLC"
   ];
 
-  // Aplicar fórmula Nexus: ((PTA da fêmea + PTA do touro)/2)*0.93
-  // Exceção: SCS (escala logarítmica) não recebe o fator 0,93
+  // Aplicar fórmula Nexus: (PTA da fêmea + PTA do touro)/2
   const calculateOffspringPTA = (motherPTA: number, bullPTA: number, ptaKey?: string) => {
-    const isSCS = (ptaKey || '').toString().trim().toUpperCase() === 'SCS';
-    const base = (motherPTA + bullPTA) / 2;
-    return isSCS ? base : base * 0.93;
+    return (motherPTA + bullPTA) / 2;
   };
 
   const generateComparisonData = (ptaKey: string) => {
