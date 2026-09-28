@@ -3,8 +3,9 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 // link-farm-by-tag: o técnico (user ToolSS) digita a TAG curta (cod_ssgen) que a
 // Gabriely forneceu; o sistema resolve a fazenda pelo uuid canônico e vincula o
-// técnico (role=technician). Registra tudo em farm_link_audit.
+// técnico (role=owner). Registra tudo em farm_link_audit.
 // TAG PURA (sem convite) — decisão do Diego 27/08/2026.
+// Política 28/09/2026: todo vínculo nasce role=owner (não existe mais 'technician').
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -111,10 +112,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // cria o vínculo como técnico
+    // cria o vínculo como owner (política 28/09/2026: todo vínculo nasce owner)
     const { error: insErr } = await admin
       .from("user_farms")
-      .insert({ user_id: userId, client_id: client.id, role: "technician" });
+      .insert({ user_id: userId, client_id: client.id, role: "owner" });
     if (insErr) throw insErr;
 
     // contagem de fêmeas ativas (resumo)

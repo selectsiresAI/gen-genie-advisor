@@ -83,8 +83,8 @@ serve(async (req) => {
     if (profilesErr) throw new Error(`Error fetching profiles: ${profilesErr.message}`);
 
     const { data: allFarms, error: farmsErr } = await supabase
-      .from('farms')
-      .select('id, name, owner_name');
+      .from('clients')
+      .select('id, farm_name, owner_name');
     if (farmsErr) throw new Error(`Error fetching farms: ${farmsErr.message}`);
 
     // Build lookup maps (normalized name -> record)
@@ -96,11 +96,11 @@ serve(async (req) => {
     // Pre-fetch existing user_farms links to avoid per-row check
     const { data: allLinks } = await supabase
       .from('user_farms')
-      .select('user_id, farm_id');
-    const linkSet = new Set((allLinks || []).map(l => `${l.user_id}:${l.farm_id}`));
+      .select('user_id, client_id');
+    const linkSet = new Set((allLinks || []).map(l => `${l.user_id}:${l.client_id}`));
 
     // Collect inserts for batch operation
-    const toInsert: Array<{ user_id: string; farm_id: string; role: string }> = [];
+    const toInsert: Array<{ user_id: string; client_id: string; role: string }> = [];
 
     // Skip header line
     for (let i = 1; i < lines.length; i++) {
@@ -140,8 +140,8 @@ serve(async (req) => {
         const normalizedOwnerName = ownerName.trim().toLowerCase();
 
         const matchedFarm = (allFarms || []).find(f =>
-          f.name.trim().toLowerCase() === normalizedFarmName ||
-          f.owner_name.trim().toLowerCase() === normalizedOwnerName
+          f.farm_name?.trim().toLowerCase() === normalizedFarmName ||
+          f.owner_name?.trim().toLowerCase() === normalizedOwnerName
         );
 
         if (!matchedFarm) {
@@ -163,7 +163,7 @@ serve(async (req) => {
           continue;
         }
 
-        toInsert.push({ user_id: technicianId, farm_id: farmId, role: 'technician' });
+        toInsert.push({ user_id: technicianId, client_id: farmId, role: 'owner' });
         linkSet.add(`${technicianId}:${farmId}`); // prevent duplicates within same CSV
         results.success++;
 
@@ -187,7 +187,7 @@ serve(async (req) => {
           const { error: singleErr } = await supabase.from('user_farms').insert(row);
           if (singleErr) {
             batchFails++;
-            results.errors.push({ error: singleErr.message, technician: row.user_id, farm: row.farm_id });
+            results.errors.push({ error: singleErr.message, technician: row.user_id, farm: row.client_id });
           }
         }
         results.success -= batchFails;
