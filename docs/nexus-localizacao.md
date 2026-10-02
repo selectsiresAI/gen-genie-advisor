@@ -127,17 +127,25 @@ Esse componente só decide se o usuário quer:
 
 ### Fórmula central
 
-**Arquivo:** [`src/services/prediction.service.ts`](src/services/prediction.service.ts)
+**Arquivo:** [`src/services/prediction.service.ts`](src/services/prediction.service.ts) — função `calculatePedigreePrediction` (linha ~136), chamada por `Nexus2PredictionIndividual.tsx` e `Nexus2PredictionBatch.tsx`.
 
 ```ts
-const PREDICTION_WEIGHTS = {
+export const GENETIC_WEIGHTS = {
   sire: 0.57,
-  maternalGrandsire: 0.28,
-  maternalGreatGrandsire: 0.15,
-};
+  mgs: 0.28,   // avô materno
+  mmgs: 0.15   // bisavô materno
+} as const;
 ```
 
+> A constante também está duplicada em `src/hooks/usePedigreeStore.ts`; ao alterar os pesos, mude nos dois lugares.
+
 > A predição por pedigree combina o PTA do **pai** (57%), do **avô materno** (28%) e do **bisavô materno** (15%).
+
+**Fallback e renormalização (por trait):**
+
+1. **Fallback "média da geração":** se o avô materno (MGS) ou o bisavô materno (MMGS) reais não têm a trait preenchida, usa-se um touro placeholder no lugar — `007HO00001` (2020) para o MGS e `007HO00002` (2017) para o MMGS (parâmetros `mgsPlaceholder` / `mmgsPlaceholder`).
+2. **Renormalização:** se, mesmo após o fallback, algum ancestral continua sem a trait (inclusive o pai), ele sai da conta e o peso dele é redistribuído entre os ancestrais com dado real: `Σ(valor × peso) / Σ(pesos presentes)`.
+3. **Só retorna `null`** quando nenhum dos três ancestrais tem a trait. O resultado é arredondado para 2 casas.
 
 ### Importador de planilha nativa
 
@@ -149,6 +157,13 @@ const PREDICTION_WEIGHTS = {
 São responsáveis por detectar colunas automaticamente (auto-detecção) e mapear os nomes para os campos esperados.
 
 ---
+
+### Calibração DSIII (a partir de 02/10/2026, fase 1)
+
+**Arquivo:** [`src/services/dsiii.calibration.ts`](src/services/dsiii.calibration.ts), chamado no fim de `calculatePedigreePrediction`.
+
+O valor do Nexus 2 (média ponderada com placeholders e renormalização) passa por `a + b · Nexus2` por PTA. 41 PTAs calibrados, 1 provisório (BD), 7 sem sinal de pedigree retornam `null` (MET, RP, DA, KET, MF, SCE, RUA) e 8 sem base ficam como Nexus 2 puro (H LIV, GL, EFC, RFI, F SAV, BWC, GFI, DCE). Os parâmetros vêm de `genetic_prediction/dsii_v14/dsii14_params.json`. A V11 (TPI e método 2) fica para a fase 2.
+
 
 ## 5. Nexus 3 — Acasalamento em Grupos / Projeção de Rebanho
 
@@ -184,6 +199,21 @@ As definições das funções `nx3_mothers_yearly_avg` e `nx3_bulls_lookup` est�
 - `supabase/migrations/20251119143544_3936b3c5-*.sql`
 - `supabase/migrations/20251119193854_9df524aa-*.sql`
 - `supabase/migrations/20251119193539_4c028948-*.sql`
+
+### Fórmula da predição
+
+**Local no código:** [`src/components/nexus/Nexus3Groups.tsx`](src/components/nexus/Nexus3Groups.tsx) — linhas ~150-156. A conta é feita no front-end; as RPCs só fornecem as médias.
+
+```ts
+// Predição sem fator de regressão: (Mãe + MédiaTouros) / 2
+daughters_pred: (m.avg_value + bullsAvg) / 2
+```
+
+> Para cada ano de nascimento das mães: `filha prevista = (média das mães do ano + média dos touros do pacote) / 2`. O fator de regressão não é aplicado.
+
+- `m.avg_value` vem da RPC `nx3_mothers_yearly_avg`.
+- `bullsAvg` (`useMemo`, linhas ~129-146) é a média **ponderada pelo `percent`** de cada touro do pacote (padrão 100 quando ausente): `Σ(PTA × percent) / Σ(percent)`. Touros sem a trait ficam de fora no pacote compartilhado; se não há touros ou a soma dos pesos é 0, retorna 0. Os touros são buscados via RPC `nx3_bulls_lookup`.
+- A lista de traits disponíveis vem da RPC `nx3_list_pta_traits`.
 
 ### Pacotes salvos
 

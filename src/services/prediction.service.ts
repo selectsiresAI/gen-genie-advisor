@@ -1,4 +1,5 @@
 import type { BullsDenormSelection } from '@/supabase/queries/bulls';
+import { applyDsiii } from '@/services/dsiii.calibration';
 
 export const GENETIC_WEIGHTS = {
   sire: 0.57,
@@ -181,7 +182,10 @@ export function calculatePedigreePrediction({
     const totalWeight = contributions.reduce((sum, c) => sum + c.weight, 0);
     const weightedSum = contributions.reduce((sum, c) => sum + c.value * c.weight, 0);
 
-    result[trait.key] = toTwoDecimals(weightedSum / totalWeight);
+    // DSIII (fase 1): a média ponderada acima (Nexus 2) passa pela calibração a + b·Nexus2 por PTA.
+    // PTAs sem sinal de pedigree voltam null; PTAs sem base de calibração ficam como Nexus 2 puro.
+    const calibrated = applyDsiii(trait.key, weightedSum / totalWeight);
+    result[trait.key] = calibrated == null ? null : toTwoDecimals(calibrated);
   }
 
   return result;
