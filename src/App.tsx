@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -23,6 +23,11 @@ import I18nDashboard from "@/pages/admin/I18nDashboard";
 import ResultsProcessingPage from "@/pages/admin/ResultsProcessingPage";
 import PasswordResetPage from "@/pages/admin/PasswordResetPage";
 import { useTranslation } from "@/hooks/useTranslation";
+import { PrivacyGate } from "@/components/privacy/PrivacyGate";
+import { usePrivacyStatus } from "@/hooks/usePrivacyStatus";
+import PrivacyPage from "@/pages/PrivacyPage";
+import { ptx } from "@/lib/privacy";
+import { Button } from "@/components/ui/button";
 
 const AppContent = () => {
   const { locale } = useTranslation();
@@ -31,6 +36,10 @@ const AppContent = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const location = useLocation();
+  const { data: privacy, isLoading: privacyLoading, isError: privacyError, refetch: refetchPrivacy } = usePrivacyStatus();
+  // páginas que abrem sem aceite (a política em si e a redefinição de senha)
+  const isPublicPath = location.pathname === "/privacidade" || location.pathname === "/reset-password";
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -74,6 +83,29 @@ const AppContent = () => {
     );
   }
 
+  // aceite da Política de Privacidade e do Termo de Confidencialidade (LGPD): sem aceitar as versões vigentes, não passa daqui
+  if (user && !isPublicPath) {
+    if (privacyLoading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      );
+    }
+    if (privacyError || !privacy) {
+      return (
+        <div className="flex min-h-screen flex-col items-center justify-center gap-3 p-6 text-center">
+          <p className="text-sm text-muted-foreground">{ptx(locale, "gate.error")}</p>
+          <div className="flex gap-2">
+            <Button onClick={() => void refetchPrivacy()}>{ptx(locale, "gate.retry")}</Button>
+            <Button variant="outline" onClick={() => void supabase.auth.signOut()}>{ptx(locale, "gate.signOut")}</Button>
+          </div>
+        </div>
+      );
+    }
+    if (!privacy.accepted) return <PrivacyGate />;
+  }
+
   return (
     <>
       <Toaster />
@@ -101,6 +133,7 @@ const AppContent = () => {
           }
         />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/privacidade" element={<PrivacyPage />} />
         <Route
           path="/admin/*"
           element={

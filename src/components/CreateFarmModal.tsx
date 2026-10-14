@@ -16,6 +16,7 @@ import { Loader2, Building2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from '@/hooks/useTranslation';
+import { privacyApi, ptx } from '@/lib/privacy';
 
 interface CreateFarmModalProps {
   isOpen: boolean;
@@ -32,7 +33,8 @@ const CreateFarmModal: React.FC<CreateFarmModalProps> = ({ isOpen, onClose, onSu
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const { toast } = useToast();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const [clientAuthorized, setClientAuthorized] = useState(false);
 
   const resetForm = () => {
     setFarmName('');
@@ -41,6 +43,7 @@ const CreateFarmModal: React.FC<CreateFarmModalProps> = ({ isOpen, onClose, onSu
     setState('');
     setDescription('');
     setError('');
+    setClientAuthorized(false);
   };
 
   const handleClose = () => {
@@ -54,6 +57,12 @@ const CreateFarmModal: React.FC<CreateFarmModalProps> = ({ isOpen, onClose, onSu
     setError('');
 
     // Validações
+    if (!clientAuthorized) {
+      setError(ptx(locale, 'farm.authorizeRequired'));
+      setIsLoading(false);
+      return;
+    }
+
     if (!farmName.trim()) {
       setError(t("createFarm.farmNameRequired"));
       setIsLoading(false);
@@ -97,6 +106,14 @@ const CreateFarmModal: React.FC<CreateFarmModalProps> = ({ isOpen, onClose, onSu
         const result = data[0];
         
         if (result.success) {
+          // registra a confirmação de autorização do cliente para esta fazenda (histórico imutável)
+          if (result.farm_id) {
+            try {
+              await privacyApi.farmAuthorization(result.farm_id, locale);
+            } catch (authErr) {
+              console.error('Falha ao registrar a autorização da fazenda:', authErr);
+            }
+          }
           toast({
             title: t("createFarm.success"),
             description: `${farmName} ${t("createFarm.addedToPortfolio")}`,
@@ -202,6 +219,11 @@ const CreateFarmModal: React.FC<CreateFarmModalProps> = ({ isOpen, onClose, onSu
                 rows={3}
               />
             </div>
+
+            <label className="flex cursor-pointer items-start gap-2.5 text-sm">
+              <input type="checkbox" checked={clientAuthorized} onChange={(e) => setClientAuthorized(e.target.checked)} disabled={isLoading} className="mt-0.5 h-4 w-4 shrink-0 accent-[hsl(var(--primary))]" />
+              <span>{ptx(locale, 'farm.authorize')}</span>
+            </label>
 
             {error && (
               <Alert variant="destructive">

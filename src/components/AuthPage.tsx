@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { useTranslation } from '@/hooks/useTranslation';
+import { ptx } from '@/lib/privacy';
 import { COUNTRIES } from '@/lib/countries';
 import toolssLogo from '@/assets/toolss-logo.jpg';
 
@@ -26,7 +27,8 @@ const AuthPage: React.FC<AuthPageProps> = ({
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const { toast } = useToast();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const [acceptPolicy, setAcceptPolicy] = useState(false);
 
   // Estados para login
   const [loginEmail, setLoginEmail] = useState('');
@@ -95,6 +97,11 @@ const AuthPage: React.FC<AuthPageProps> = ({
     setError('');
 
     // Validações básicas
+    if (!acceptPolicy) {
+      setError(ptx(locale, 'signup.required'));
+      setIsLoading(false);
+      return;
+    }
     if (!fullName.trim()) {
       setError(t('auth.errorNameRequired' as any));
       setIsLoading(false);
@@ -412,6 +419,10 @@ const AuthPage: React.FC<AuthPageProps> = ({
                     <AlertDescription>{error}</AlertDescription>
                   </Alert>}
 
+                <label className="flex cursor-pointer items-start gap-2.5 text-sm">
+                  <input type="checkbox" checked={acceptPolicy} onChange={e => setAcceptPolicy(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-[hsl(var(--primary))]" />
+                  <span>{ptx(locale, "signup.accept")} <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline underline-offset-2">{ptx(locale, "link.policy")}</a> {ptx(locale, "signup.and")} <a href="/privacidade#termo" target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline underline-offset-2">{ptx(locale, "link.terms")}</a>.</span>
+                </label>
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -426,6 +437,11 @@ const AuthPage: React.FC<AuthPageProps> = ({
           </Tabs>
 
           <div className="mt-6 pt-6 border-t text-center text-sm text-muted-foreground">
+            <p>
+              <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground">{ptx(locale, "link.policy")}</a>
+              {" · "}
+              <a href="/privacidade#termo" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground">{ptx(locale, "link.terms")}</a>
+            </p>
             <p>
           </p>
             <p className="mt-1">

@@ -39,6 +39,7 @@ import { UserEngagementMetrics } from '@/components/admin/UserEngagementMetrics'
 import { useUserRole } from '@/hooks/useUserRole';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { useTranslation } from '@/hooks/useTranslation';
+import { ptx } from '@/lib/privacy';
 import UserSupportTickets from '@/components/support/UserSupportTickets';
 import { ShareFarmDialog } from '@/components/ShareFarmDialog';
 import { HhpRequiredTraitsCard } from '@/components/HhpRequiredTraitsCard';
@@ -948,6 +949,11 @@ const MainDashboard: React.FC<MainDashboardProps> = ({
               
               <p>Powered by
 Select Sires do Brasil</p>
+              <p className="mt-1">
+                <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground">{ptx(locale, "link.policy")}</a>
+                {" · "}
+                <a href="/privacidade#termo" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground">{ptx(locale, "link.terms")}</a>
+              </p>
             </div>
           </div>
         </div>
