@@ -3,25 +3,13 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { supabase as sharedSupabaseClient } from "../../integrations/supabase/client";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  CartesianGrid,
-  LabelList,
-} from "recharts";
-import type { LabelProps } from "recharts";
 import { ChevronLeft, Download, GripVertical, Loader2, Search as SearchIcon, Sparkles, X } from "lucide-react";
 import { ANIMAL_METRIC_COLUMNS } from "../../constants/animalMetrics";
-import { getAdaptiveYAxisDomainMultiple } from "../../lib/chart-utils";
 import { formatPtaValue } from "@/utils/ptaFormat";
 import { exportSingleChartToPDF, exportMultipleChartsToPDF } from "@/lib/pdf/exportCharts";
 import { format } from "date-fns";
 import { useTranslation } from "@/hooks/useTranslation";
+import Nexus3GainChart, { type GainBull } from "./Nexus3GainChart";
 
 export type MotherPoint = { birth_year: number; avg_value: number };
 export type BullRow = { id: string; code: string; name?: string; trait_value: number; percent?: number };
@@ -43,6 +31,14 @@ interface Nexus3GroupsProps {
   onBack?: () => void;
   selectedFarmId?: string | null;
 }
+
+
+// formatPtaValue devolve o número cru para traços fora das listas; nos cálculos da filha isso vira "2800.5000001"
+const fmtPta = (trait: string, v: number): string => {
+  const out = formatPtaValue(trait, v);
+  const dec = out.split(".")[1];
+  return dec && dec.length > 2 ? Number(v).toFixed(2) : out;
+};
 
 // ---------- Subcomponente: uma seção por característica ----------
 export interface TraitSectionProps {
@@ -148,18 +144,26 @@ export function TraitSection({ trait, farmId, supabase, isEn, isEs, onRemove, sh
   const chartData = useMemo(() => {
     if (!mothers.length) return [];
     // Predição sem fator de regressão: (Mãe + MédiaTouros) / 2
-    return mothers.map((m) => ({
-      year: m.birth_year,
-      mothers_avg: m.avg_value,
-      daughters_pred: (m.avg_value + bullsAvg) / 2,
-    }));
+    return mothers
+      .slice()
+      .sort((a, b) => a.birth_year - b.birth_year)
+      .map((m) => ({
+        year: m.birth_year,
+        mothers_avg: m.avg_value,
+        daughters_pred: (m.avg_value + bullsAvg) / 2,
+      }));
   }, [mothers, bullsAvg]);
 
-
-  const [yMin, yMax] = useMemo(
-    () => getAdaptiveYAxisDomainMultiple(chartData, ["mothers_avg", "daughters_pred"]),
-    [chartData]
-  );
+  // touros com valor nesta característica (alimentam as linhas, a média e a tabela do gráfico)
+  const chartBulls = useMemo<GainBull[]>(() => {
+    if (useShared) {
+      return sharedBulls!
+        .filter((b) => b.values[trait] != null)
+        .map((b) => ({ id: b.id, name: b.name || b.code, value: Number(b.values[trait]), percent: b.percent ?? 100 }));
+    }
+    return chosen.map((b) => ({ id: b.id, name: b.name || b.code, value: Number(b.trait_value ?? 0), percent: b.percent ?? 100 }));
+  }, [chosen, sharedBulls, trait, useShared]);
+  const hasChartBulls = chartBulls.some((b) => b.percent > 0);
 
   const addBull = (b: BullRow) => {
     if (chosen.find((x) => x.id === b.id)) return;
@@ -171,52 +175,6 @@ export function TraitSection({ trait, farmId, supabase, isEn, isEs, onRemove, sh
     setChosen(next);
   };
   const removeBull = (id: string) => setChosen(chosen.filter((b) => b.id !== id));
-
-  const renderChartTooltip = (props: any) => {
-    const { active, payload, label } = props;
-    if (!active || !payload || !payload.length) return null;
-    const mom = payload.find((item: any) => item.dataKey === "mothers_avg")?.value;
-    const dau = payload.find((item: any) => item.dataKey === "daughters_pred")?.value;
-    return (
-      <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-lg text-sm">
-        <div className="font-medium text-gray-900">{isEs ? "Año" : isEn ? "Year" : "Ano"}: {label}</div>
-        <div className="mt-2 space-y-1">
-          <div className="flex items-center justify-between text-[#ED1C24]">
-            <span>{isEs ? "Madres (prom.)" : isEn ? "Dams (avg)" : "Mães (média)"}</span>
-            <span className="font-semibold">{formatPtaValue(trait, mom)}</span>
-          </div>
-          <div className="flex items-center justify-between text-gray-900">
-            <span>{isEs ? "Hijas (predicción)" : isEn ? "Daughters (prediction)" : "Filhas (predição)"}</span>
-            <span className="font-semibold">{formatPtaValue(trait, dau)}</span>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderMotherLabel = ({ x, y, value }: LabelProps) => {
-    if (value === undefined || value === null || x === undefined || y === undefined) return null;
-    const xPos = typeof x === "number" ? x : Number(x);
-    const yPos = typeof y === "number" ? y : Number(y);
-    if (Number.isNaN(xPos) || Number.isNaN(yPos)) return null;
-    return (
-      <text x={xPos} y={yPos - 8} fill="#ED1C24" fontSize={12} fontWeight={600} textAnchor="middle">
-        {formatPtaValue(trait, value as number)}
-      </text>
-    );
-  };
-
-  const renderDaughterLabel = ({ x, y, value }: LabelProps) => {
-    if (value === undefined || value === null || x === undefined || y === undefined) return null;
-    const xPos = typeof x === "number" ? x : Number(x);
-    const yPos = typeof y === "number" ? y : Number(y);
-    if (Number.isNaN(xPos) || Number.isNaN(yPos)) return null;
-    return (
-      <text x={xPos} y={yPos - 8} fill="#111827" fontSize={12} fontWeight={600} textAnchor="middle">
-        {formatPtaValue(trait, value as number)}
-      </text>
-    );
-  };
 
   return (
     <section className="space-y-6 rounded-2xl border-2 border-gray-200 bg-gray-50/50 p-6">
@@ -386,56 +344,15 @@ export function TraitSection({ trait, farmId, supabase, isEn, isEs, onRemove, sh
             {isEs ? "Exportar PDF" : isEn ? "Export PDF" : "Exportar PDF"}
           </button>
         </div>
-        <div className="mt-6 h-[360px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-              <XAxis dataKey="year" stroke="#6B7280" tickLine={false} axisLine={false} />
-              <YAxis
-                stroke="#6B7280"
-                tickLine={false}
-                axisLine={false}
-                domain={[yMin, yMax]}
-                tickFormatter={(value) => Math.round(value).toString()}
-              />
-              <Tooltip content={renderChartTooltip} />
-              <Legend
-                verticalAlign="top"
-                align="right"
-                wrapperStyle={{ paddingBottom: 16 }}
-                formatter={(value) => (
-                  <span className="text-sm text-gray-600">
-                    {value === "mothers_avg"
-                      ? (isEs ? "Madres (prom.)" : isEn ? "Dams (avg)" : "Mães (média)")
-                      : (isEs ? "Hijas (predicción)" : isEn ? "Daughters (prediction)" : "Filhas (predição)")}
-                  </span>
-                )}
-              />
-              <Line
-                type="monotone"
-                dataKey="mothers_avg"
-                stroke="#ED1C24"
-                strokeWidth={2}
-                dot={{ r: 4, strokeWidth: 0, fill: "#ED1C24" }}
-                name="mothers_avg"
-                isAnimationActive={false}
-              >
-                <LabelList dataKey="mothers_avg" content={renderMotherLabel} />
-              </Line>
-              <Line
-                type="monotone"
-                dataKey="daughters_pred"
-                stroke="#111827"
-                strokeWidth={2}
-                dot={{ r: 4, strokeWidth: 0, fill: "#111827" }}
-                name="daughters_pred"
-                isAnimationActive={false}
-              >
-                <LabelList dataKey="daughters_pred" content={renderDaughterLabel} />
-              </Line>
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+        <Nexus3GainChart
+          traitLabel={traitLabel}
+          rows={chartData.map((d) => ({ year: d.year, mothers: d.mothers_avg, daughters: d.daughters_pred }))}
+          bullsAvg={hasChartBulls ? bullsAvg : null}
+          bulls={chartBulls}
+          fmt={(v) => fmtPta(trait, v)}
+          isEn={isEn}
+          isEs={isEs}
+        />
       </div>
     </section>
   );
