@@ -57,7 +57,7 @@ const HEADER_ALIASES: AliasMap = {
 
   // ── Índices econômicos ──
   'ID Fazenda':          ['id fazenda'],
-  'HHP$':                ['hhp$', 'hhp', 'hhp dollar', 'hhp$®', 'health index'],
+  'HHP$':                ['hhp$', 'hhp', 'hhp dollar', 'hhp$®'],
   'TPI':                 ['tpi'],
   'NM$':                 ['nm$', 'nm', 'net merit', 'merito liquido', 'nm dollar', 'nmdollar'],
   'CM$':                 ['cm$', 'cm', 'cm dollar'],
