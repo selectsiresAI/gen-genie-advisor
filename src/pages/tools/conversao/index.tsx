@@ -78,6 +78,16 @@ const parseLegendEntries = (sheet: XLSX.WorkSheet): LegendEntry[] => {
   return entries;
 };
 
+// Destinos que o fuzzy matching não pode alimentar. HHP$ é calculado na importação do rebanho
+// (trigger da Platform) e só deve vir da planilha se a coluna for realmente HHP$. H LIV entra na
+// fórmula do HHP$. Ex.: "Health Index" (CDCB) e haplótipos (HH0..HHM) não são HHP$ nem H LIV.
+const FUZZY_BLOCKED_TARGETS = new Set(
+  ["HHP$", "H_LIV", "TPI", "NM$", "CM$", "FM$", "GM$", "JPI", "JUI"].map((target) => normalizeKey(target)),
+);
+
+// Cabeçalhos de origem sem coluna correspondente no modelo do ToolSS.
+const FUZZY_UNMAPPABLE_HEADERS = new Set(["health_index"]);
+
 const regexHeuristics: Array<{ pattern: RegExp; target: string; mode: "normalized" | "original" }> = [
   { pattern: /^nm(\$)?$/i, target: "NM$", mode: "original" },
   { pattern: /^nm(_dollar)?$/, target: "NM$", mode: "normalized" },
@@ -158,9 +168,18 @@ const ConversaoPage: React.FC = () => {
       }
     }
 
+    // Cabeçalhos sem equivalente no modelo: ficam sem mapeamento (nunca por fuzzy)
+    if (FUZZY_UNMAPPABLE_HEADERS.has(normalizedHeader)) {
+      return undefined;
+    }
+
     let bestScore = 0;
     let bestHeader: string | undefined;
     canonicalLookup.forEach((canonical, key) => {
+      // Índices ($) e H LIV só recebem coluna por alias/regex exato, nunca por semelhança de texto
+      if (FUZZY_BLOCKED_TARGETS.has(key) && key !== normalizedHeader) {
+        return;
+      }
       const normalizedCanonical = normalizeKey(canonical, true);
       const normalizedInput = normalizeKey(normalizedHeader, true);
       const score = jaroWinkler(normalizedInput, normalizedCanonical);

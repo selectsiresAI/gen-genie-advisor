@@ -37,7 +37,6 @@ const entries: Array<Omit<LegendEntry, "source">> = [
   { alias: "hhp$", canonical: "HHP$" },
   { alias: "hhp", canonical: "HHP$" },
   { alias: "hhp$®", canonical: "HHP$" },
-  { alias: "health index", canonical: "HHP$" },
   { alias: "indice de saude", canonical: "HHP$" },
   
   // Índices econômicos
